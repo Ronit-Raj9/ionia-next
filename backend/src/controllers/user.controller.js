@@ -141,10 +141,13 @@ const loginUser = asyncHandler(async (req, res) => {
     const loggedInUser = await User.findById(user._id).select("-password -refreshtoken")
 
     const options = {
-        httpOnly: true,
-        secure: true,
+        // httpOnly: true,
+        // secure: true,
         sameSite: 'strict',
-        path: '/'
+        path: '/',
+        httpOnly: false,  // Set to true if you don’t want frontend JavaScript to access it
+        secure: false,    // Set to true in production (requires HTTPS)
+      
     }
 
     return res
