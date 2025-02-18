@@ -1,10 +1,13 @@
 // analysis/api.ts
-export const fetchAnalysisData = async (subject: string) => {
+export const fetchAnalysisData = async (paperId: string) => {
   try {
-    const response = await fetch(`/exam/jee-mains/previous-year-paper/${subject}/analysis/`);
+    console.log("Paper ID in api request:", paperId);
+    const response = await fetch(`http://localhost:4000/api/v1/attempted-tests/analysis/${paperId}`);
+    console.log("Response:", response);
     if (!response.ok) {
       throw new Error('Failed to fetch data');
     }
+
     const data = await response.json();
     return data;
   } catch (error) {

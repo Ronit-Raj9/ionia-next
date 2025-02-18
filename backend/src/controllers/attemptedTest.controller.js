@@ -64,12 +64,18 @@ const getTestAnalysis = asyncHandler(async (req, res) => {
     const wrongAnswers = attemptedTest.answers.length - correctAnswers;
     const visitedQuestions = attemptedTest.metadata.visitedQuestions.length;
 
+    const marksObtained = correctAnswers; // Marks Obtained
+    const questionsAttempted = visitedQuestions; // Questions Attempted
+    const accuracy = (correctAnswers / attemptedTest.metadata.totalQuestions) * 100; // Accuracy
+    const timeSpent = attemptedTest.totalTimeTaken; // Time Spent
+
+    // Prepare the response data in the format required by frontend
     const analysis = {
-      totalCorrectAnswers: correctAnswers,
-      totalWrongAnswers: wrongAnswers,
-      totalVisitedQuestions: visitedQuestions,
-      totalTimeTaken: attemptedTest.totalTimeTaken,
-      totalQuestions: attemptedTest.metadata.totalQuestions,
+      marksObtained,
+      questionsAttempted,
+      accuracy: accuracy.toFixed(2), // Format to 2 decimal places
+      timeSpent: (timeSpent / 60).toFixed(2), // Convert seconds to minutes and format
+      totalQuestions: attemptedTest.metadata.totalQuestions, // Optional, in case frontend needs it
     };
 
     // Send the analysis data
@@ -78,6 +84,66 @@ const getTestAnalysis = asyncHandler(async (req, res) => {
     throw new ApiError(500, 'Error fetching analysis', error.message);
   }
 });
+
+
+const getAllAnalysis = asyncHandler(async (req, res) => {
+  try {
+    console.log("getAllAnalysis ke andar");
+
+    let attemptedTests;
+    try {
+      // Wrap the database query in a try-catch to handle errors specifically for the query
+      attemptedTests = await AttemptedTest.find({}).populate('answers.questionId');
+    } catch (err) {
+      throw new ApiError(500, 'Error fetching attempted tests', err.message);
+    }
+
+    if (!attemptedTests || attemptedTests.length === 0) {
+      throw new ApiError(404, 'No attempted tests found');
+    }
+
+    console.log("Attempted tests: ", attemptedTests);
+
+    // Map each attempted test to its analysis data
+    const analyses = attemptedTests.map((test) => {
+      // Calculate the number of correct answers. Guard against missing question data.
+      const correctAnswers = test.answers.filter((answer) => {
+        if (answer.questionId && answer.questionId.correctOption !== undefined) {
+          return answer.answerOptionIndex === answer.questionId.correctOption;
+        }
+        return false;
+      }).length;
+
+      // Calculate the number of wrong answers.
+      const wrongAnswers = test.answers.length - correctAnswers;
+
+      // Calculate the number of visited questions.
+      const visitedQuestions =
+        test.metadata && Array.isArray(test.metadata.visitedQuestions)
+          ? test.metadata.visitedQuestions.length
+          : 0;
+
+      return {
+        testId: test._id,
+        totalCorrectAnswers: correctAnswers,
+        totalWrongAnswers: wrongAnswers,
+        totalVisitedQuestions: visitedQuestions,
+        totalTimeTaken: test.totalTimeTaken,
+        totalQuestions:
+          test.metadata && test.metadata.totalQuestions !== undefined
+            ? test.metadata.totalQuestions
+            : 0,
+      };
+    });
+
+    // Send the analysis data for all tests
+    res.status(200).json(new ApiResponse('All test analyses fetched successfully', analyses));
+  } catch (error) {
+    throw new ApiError(500, 'Error fetching all analyses', error.message);
+  }
+});
+
+
 
 // Controller to update the results of a user's test attempt
 const updateTestResults = asyncHandler(async (req, res) => {
@@ -128,4 +194,5 @@ export {
   getTestAnalysis,
   updateTestResults,
   deleteTestResults,
+  getAllAnalysis
 };

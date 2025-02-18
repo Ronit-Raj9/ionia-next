@@ -6,8 +6,7 @@ import { fetchAnalysisData } from './api';
 
 interface AnalysisContextType {
   data: any;
-  subject: string;
-  setSubject: (subject: string) => void;
+  paperId: string;  // Store paperId in context
   loading: boolean;
   error: string | null;
 }
@@ -24,10 +23,10 @@ export const useAnalysisContext = () => {
 
 interface AnalysisProviderProps {
   children: React.ReactNode;
+  paperId: string;  // Accept paperId as a prop
 }
 
-export const AnalysisProvider: React.FC<AnalysisProviderProps> = ({ children }) => {
-  const [subject, setSubject] = useState<string>('Overall');
+export const AnalysisProvider: React.FC<AnalysisProviderProps> = ({ children, paperId }) => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +35,7 @@ export const AnalysisProvider: React.FC<AnalysisProviderProps> = ({ children }) 
     const getData = async () => {
       setLoading(true);
       try {
-        const fetchedData = await fetchAnalysisData(subject);
+        const fetchedData = await fetchAnalysisData(paperId);  // Pass paperId to fetch data
         setData(fetchedData);
         setError(null);
       } catch (err) {
@@ -46,11 +45,13 @@ export const AnalysisProvider: React.FC<AnalysisProviderProps> = ({ children }) 
       }
     };
 
-    getData();
-  }, [subject]);
+    if (paperId) {
+      getData();
+    }
+  }, [paperId]);
 
   return (
-    <AnalysisContext.Provider value={{ data, subject, setSubject, loading, error }}>
+    <AnalysisContext.Provider value={{ data, paperId, loading, error }}>
       {children}
     </AnalysisContext.Provider>
   );

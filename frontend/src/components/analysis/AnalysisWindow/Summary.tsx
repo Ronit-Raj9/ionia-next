@@ -1,4 +1,3 @@
-// analysis/AnalysisWindow/Summary.tsx
 "use client"; // Mark this as a client component
 
 import React from 'react';
