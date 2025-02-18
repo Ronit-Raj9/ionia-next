@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Menu, X, User } from 'lucide-react';
 
+
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<{ username: string } | null>(null);
@@ -17,18 +18,28 @@ export default function Navbar() {
   ];
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const fetchUser = async () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1])); // Decode JWT payload
-        if (payload.username) {
-          setUser({ username: payload.username });
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/current-user `, {
+          credentials: 'include', // Important for sending cookies
+          headers: {
+            'Content-Type': 'application/json'
+          },        
+        });
+        
+        
+        if (response.ok) {
+          const userData = await response.json();
+          console.log("User Data:", userData);
+          setUser({ username: userData.data.user });
+          console.log('User data:', userData);
         }
-        console.log('Decoded Payload:', payload);
       } catch (err) {
-        console.error('Failed to parse token:', err);
+        console.error('Failed to fetch user:', err);
       }
-    }
+    };
+
+    fetchUser();
   }, []);
 
   return (
