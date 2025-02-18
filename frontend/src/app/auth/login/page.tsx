@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext'; // Import the useAuth hook
 
 export default function LoginPage() {
-  const { setToken } = useAuth(); // Destructure setToken from AuthContext
+
+  const { setToken } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,36 +18,34 @@ export default function LoginPage() {
     setError('');
 
     try {
+      console.log("Logging in with email:", email); // Debugging email
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include', // Important: Enables sending/receiving cookies
       });
 
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        const errorText = await response.text();
+        console.error("Error Response:", errorText);
+        throw new Error(`Login failed: ${errorText}`);
       }
 
-      const data = await response.json();
-      const accessToken = data.data.accessToken;
+      // No need to manually store the token; it should be set by the backend
+      console.log("Cookies after login:", document.cookie); // Debugging cookies
 
-      // Store token in localStorage and in AuthContext
-      localStorage.setItem('token', accessToken);
-      setToken(accessToken); // Set the token in context
+      setToken(true); // Indicate authentication state
 
-      // Use router.push to navigate to home without reloading
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulating async API call
-        console.log("Navigating...");
-        router.push('/');
-        console.log("Navigation triggered!");
-    } catch (error) {
-        console.error("Navigation error:", error);
-    }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      router.push('/');
     } catch (err: any) {
+      console.error("Login Error:", err);
       setError(err.message);
     }
   };
+
+  
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
