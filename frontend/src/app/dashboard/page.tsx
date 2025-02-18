@@ -44,10 +44,28 @@ export default function Dashboard() {
     fetchStats();
   }, [token, router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token'); // Clear token from local storage
-    setToken(null); // Update context state
-    router.push('/login'); // Redirect to login page
+  const handleLogout = async () => {
+    try {
+      // Call backend logout endpoint to clear HttpOnly cookies
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+  
+      if (response.ok) {
+        // Clear any existing cookies by setting their expiry to past date
+        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        
+        setToken(null); // Update context state
+        router.push('/login'); // Redirect to login page
+      }
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
   };
 
   return (
