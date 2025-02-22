@@ -5,12 +5,27 @@ import cookieParser from "cookie-parser";
 const app = express();
 
 app.use(cookieParser());
-app.use(cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization'],
-}));
 
+const allowedOrigins = [
+    "https://ionia-next.vercel.app", // Your Vercel frontend
+    "http://localhost:3000" // For local development
+  ];
+  
+  app.use(
+    cors({
+      origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
+      credentials: true, // Allows cookies, sessions, etc.
+      methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+      allowedHeaders: "Content-Type,Authorization"
+    })
+  );
+  
 app.use(express.json({limit: "16kb"}));
 app.use(express.urlencoded({extended: true, limit: "16kb"}));
 app.use(express.static("public"));
