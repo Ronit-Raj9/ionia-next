@@ -154,10 +154,10 @@ const loginUser = asyncHandler(async (req, res) => {
   const options = {
     // httpOnly: true,
     // secure: true,
-    sameSite: "strict",
+    sameSite: "None",
     path: "/",
     httpOnly: false, // Set to true if you don’t want frontend JavaScript to access it
-    secure: false,   // Set to true in production (requires HTTPS)
+    secure: true,   // Set to true in production (requires HTTPS)
   };
 
   return res
@@ -198,9 +198,9 @@ const logoutUser = asyncHandler(async (req, res) => {
   );
 
   const options = {
-    httpOnly: true,
+    httpOnly: false,
     secure: true,
-    sameSite: "strict",
+    sameSite: "None",
     path: "/",
   };
 
