@@ -3,17 +3,32 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-export default function QuestionsPage() {
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");  // Add error state
+// Define the interface for a question
+interface Question {
+  _id: string;
+  question: string;
+  subject: string;
+  examType: string;
+  difficulty: string;
+  // ... any other properties
+}
 
-  // Fetch all questions from the API using the environment variable for the base URL
+
+export default function QuestionsPage() {
+  // Use it when setting up your state:
+  const [questions, setQuestions] = useState<Question[]>([]);  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+
+  // Fetch all questions from the API
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const apiUrl = "http://localhost:4000/api/v1/questions/get"; // Update with your API URL
-        console.log("Fetching questions from:", apiUrl); // Log URL for debugging
+        // Replace with your actual API URL or use an environment variable
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ||
+          "http://localhost:4000/api/v1/questions/get";
+        console.log("Fetching questions from:", apiUrl);
 
         const response = await fetch(apiUrl);
 
@@ -22,12 +37,11 @@ export default function QuestionsPage() {
         }
 
         const data = await response.json();
-        console.log("Fetched questions: ", data);  // Check if data is received correctly
-
-        // Assuming data is inside the 'data' key based on your API response format
-        setQuestions(data.data); // Access 'data' key to get the array of questions
-      } catch (error) {
-        console.error("Error fetching questions:", error);
+        console.log("Fetched questions:", data);
+        // Assuming the API response contains the questions array in data.data
+        setQuestions(data.data);
+      } catch (err: any) {
+        console.error("Error fetching questions:", err);
         setError("Error fetching questions. Please try again.");
       } finally {
         setLoading(false);
@@ -38,21 +52,29 @@ export default function QuestionsPage() {
   }, []);
 
   if (loading) {
-    return <h1 className="text-center mt-20 text-2xl">Loading questions...</h1>;
+    return (
+      <h1 className="text-center mt-20 text-2xl">Loading questions...</h1>
+    );
   }
 
   if (error) {
-    return <h1 className="text-center mt-20 text-2xl text-red-600">{error}</h1>;
+    return (
+      <h1 className="text-center mt-20 text-2xl text-red-600">{error}</h1>
+    );
   }
 
   if (!questions.length) {
-    return <h1 className="text-center mt-20 text-2xl">No questions available</h1>;
+    return (
+      <h1 className="text-center mt-20 text-2xl">No questions available</h1>
+    );
   }
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold text-primary text-center mb-6">All Questions</h1>
-      
+      <h1 className="text-3xl font-bold text-primary text-center mb-6">
+        All Questions
+      </h1>
+
       <div className="mb-6 text-right">
         <Link
           href="/admin/questions/add"

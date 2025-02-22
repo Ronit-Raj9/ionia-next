@@ -1,8 +1,8 @@
 // frontend/app/(auth)/forgot-password/page.tsx
-
+"use client";
 import { FC, useState } from 'react';
 import { Input } from '../../../components/common/Input';
-import { Button } from '../../../components/common/Button';
+// import { Button } from '../../../components/common/Button';
 import { useRouter } from 'next/router';
 
 const ForgotPasswordPage: FC = () => {
@@ -31,7 +31,7 @@ const ForgotPasswordPage: FC = () => {
           onChange={(e) => setEmail(e.target.value)} 
           type="email"
         />
-        <Button label={loading ? 'Processing...' : 'Send Reset Link'} disabled={loading} />
+        {/* <Button label={loading ? 'Processing...' : 'Send Reset Link'} disabled={loading} /> */}
       </form>
     </div>
   );

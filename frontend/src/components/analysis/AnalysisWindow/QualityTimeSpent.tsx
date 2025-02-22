@@ -1,20 +1,20 @@
-// analysis/AnalysisWindow/QualityTimeSpent.tsx
-"use client"; // Mark this as a client component
+"use client";
 
-import React from 'react';
-import { useAnalysisContext } from '../context';
+import React from "react";
+import { useAnalysis } from "@/context/AnalysisContext";
 
-const QualityTimeSpent = () => {
-  const { data, loading, error } = useAnalysisContext();
+const QualityTimeSpent: React.FC = () => {
+  const { analysisData } = useAnalysis();
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  if (!analysisData) {
+    return <div className="bg-gray-50 p-6 rounded-lg shadow text-center text-gray-500">No analysis data available.</div>;
+  }
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg shadow">
       <h2 className="text-lg font-semibold text-gray-700 mb-4">Quality of Time Spent</h2>
-      <p>Insert Bar Chart Here</p>
-      {/* You can replace this with your actual chart component */}
+      {/* Replace this with your actual chart component using analysisData */}
+      <p>Time Spent: {analysisData.timeSpent} seconds</p>
     </div>
   );
 };

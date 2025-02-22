@@ -1,20 +1,30 @@
-// analysis/AnalysisWindow/SubjectWiseTime.tsx
-"use client"; // Mark this as a client component
+"use client";
 
-import React from 'react';
-import { useAnalysisContext } from '../context';
+import React from "react";
+import { useAnalysis } from "@/context/AnalysisContext";
 
-const SubjectWiseTime = () => {
-  const { data, loading, error } = useAnalysisContext();
+const SubjectWiseTime: React.FC = () => {
+  const { analysisData } = useAnalysis();
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>{error}</div>;
+  if (!analysisData) {
+    return (
+      <div className="bg-gray-50 p-6 rounded-lg shadow text-center text-gray-500">
+        No analysis data available.
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg shadow">
-      <h2 className="text-lg font-semibold text-gray-700 mb-4">Subject-Wise Time Spent</h2>
-      <p>Insert Bar Chart Here</p>
-      {/* Replace with your bar chart component */}
+      <h2 className="text-lg font-semibold text-gray-700 mb-4">
+        Subject-Wise Time Spent
+      </h2>
+      {/* Replace the following with your actual bar chart component */}
+      <p>Insert Bar Chart Here using analysis data.</p>
+      {/* For example, you might display a summary: */}
+      <p>Total Questions: {analysisData.totalQuestions}</p>
+      <p>Questions Attempted: {analysisData.questionsAttempted}</p>
+      <p>Time Spent: {analysisData.timeSpent}</p>
     </div>
   );
 };

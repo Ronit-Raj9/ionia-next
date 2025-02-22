@@ -1,16 +1,28 @@
 import { Router } from "express";
-import { addPreviousYearTest, getPreviousYearTests, getTestDetails } from "../controllers/previousYearPaper.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+  addPreviousYearTest,
+  getPreviousYearTests,
+  getTestDetails,
+} from "../controllers/previousYearPaper.controller.js";
+import { verifyJWT, verifyRole } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Route to add a new previous year test (Admin only)
-router.route("/add").post(addPreviousYearTest); // Assuming only admins have the right to add tests
+/**
+ * Only admin can add a new previous year test:
+ *  - Must be authenticated (verifyJWT)
+ *  - Must have role = "admin" (verifyRole("admin"))
+ */
+router
+  .route("/add")
+  .post(verifyJWT, verifyRole("admin"), addPreviousYearTest);
 
-// Route to get previous year tests based on filters
+/**
+ * Everyone (no authentication required) can:
+ *  - View list of previous year tests
+ *  - View details of a particular test
+ */
 router.route("/get").get(getPreviousYearTests);
-
-// Route to get details of a particular test by ID
-router.route("/get/:id").get(getTestDetails); // This route fetches a single test's details by its ID
+router.route("/get/:id").get(getTestDetails);
 
 export default router;

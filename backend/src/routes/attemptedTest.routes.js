@@ -3,21 +3,18 @@ import {
   submitTest, 
   getTestAnalysis, 
   updateTestResults, 
-  deleteTestResults,
-  getAllAnalysis
-} from "../controllers/attemptedTest.controller.js";
+  deleteTestResults
+}
+ from "../controllers/attemptedTest.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
 // Route to submit a test
 router.route("/submit").post(verifyJWT, submitTest);
-
-// Route to get test analysis
-router.route("/analysis/:attemptedTestId").get(verifyJWT,getTestAnalysis);
  
 // Route to get all test analysis
-router.route("/analysis").get(verifyJWT, getAllAnalysis);
+router.route("/analysis").get(verifyJWT, getTestAnalysis);
 
 // Route to update test results
 router.route("/update").put(verifyJWT, updateTestResults);

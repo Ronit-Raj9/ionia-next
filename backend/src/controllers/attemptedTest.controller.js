@@ -8,142 +8,116 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 // Controller to submit test answers and save the attempted test
 const submitTest = asyncHandler(async (req, res) => {
   const { userId, paperId, answers, metadata } = req.body;
-  // console.log(req.body);
 
   try {
-    // Get the total number of questions in the test
+    // Validate required fields
+    if (!userId || !paperId || !answers || !metadata) {
+      throw new ApiError(400, "All fields (userId, paperId, answers, metadata) are required.");
+    }
 
+    // Get the test details and its questions
     const test = await PreviousTest.findById(paperId).populate('questions');
     if (!test) {
       throw new ApiError(404, "Test not found");
     }
 
     // Calculate total time taken for the test from answers
-    const totalTimeTaken = answers.reduce((total, answer) => total + answer.timeSpent, 0);
-    console.log("Save fn ke andar")
-    // Create a new attempted test document
+    const totalTimeTaken = answers.reduce((total, answer) => total + (answer.timeSpent || 0), 0);
+
+    // Validate metadata
+    if (!metadata.selectedLanguage) {
+      throw new ApiError(400, "Selected language is required in metadata.");
+    }
+
+    // Find the last attempt number for this user and test
+    const lastAttempt = await AttemptedTest.findOne({ userId, testId: paperId })
+      .sort({ attemptNumber: -1 })
+      .select('attemptNumber');
+
+    // If no previous attempt exists or the value is invalid, default to 0
+    const lastAttemptNumber = lastAttempt && !isNaN(lastAttempt.attemptNumber)
+      ? Number(lastAttempt.attemptNumber)
+      : 0;
+    const newAttemptNumber = lastAttemptNumber + 1;
+    console.log("New attempt number:", newAttemptNumber);
+
+    // Create a new attempted test document with the computed attemptNumber
     const attemptedTest = new AttemptedTest({
       userId,
       testId: paperId,
+      attemptNumber: newAttemptNumber, // Set at the top level
       answers,
       metadata: {
         totalQuestions: test.questions.length,
-        ...metadata,
+        ...metadata, // Spread additional metadata (must include selectedLanguage)
       },
       totalTimeTaken,
     });
- 
+
     // Save the attempted test to the database
-    console.log("saving test started");
     await attemptedTest.save();
-    console.log("Attempted test database me save ho gya h: ",attemptedTest);
-    // Send success response
-    res.status(201).json(new ApiResponse("Test submitted successfully", attemptedTest));
+
+    // Send success response (status code, data, message)
+    res.status(201).json(new ApiResponse(201, attemptedTest, "Test submitted successfully"));
   } catch (error) {
+    console.error("Error in submitTest:", error);
     throw new ApiError(500, 'Error submitting test', error.message);
   }
 });
 
-// Controller to get the analysis of a test attempt
 const getTestAnalysis = asyncHandler(async (req, res) => {
-  const { attemptedTestId } = req.params;
-  console.log("getTestAnalysis ke andar");
+  const { paperId } = req.query; // Now coming from the URL parameter
+  const userId = req.user._id;    // Get user ID from auth middleware
+
+  console.log("Fetching test analysis for user:", userId, "and paper:", paperId);
 
   try {
-    // Fetch the attempted test
-    const attemptedTest = await AttemptedTest.findById(attemptedTestId).populate('answers.questionId');
-    if (!attemptedTest) {
-      throw new ApiError(404, 'Attempted test not found');
+    if (!paperId) {
+      throw new ApiError(400, "Paper ID is required.");
     }
 
-    // Calculate analysis data
-    const correctAnswers = attemptedTest.answers.filter(answer =>
-      answer.answerOptionIndex === answer.questionId.correctOption
-    ).length;
-
-    const wrongAnswers = attemptedTest.answers.length - correctAnswers;
-    const visitedQuestions = attemptedTest.metadata.visitedQuestions.length;
-
-    const marksObtained = correctAnswers; // Marks Obtained
-    const questionsAttempted = visitedQuestions; // Questions Attempted
-    const accuracy = (correctAnswers / attemptedTest.metadata.totalQuestions) * 100; // Accuracy
-    const timeSpent = attemptedTest.totalTimeTaken; // Time Spent
-
-    // Prepare the response data in the format required by frontend
-    const analysis = {
-      marksObtained,
-      questionsAttempted,
-      accuracy: accuracy.toFixed(2), // Format to 2 decimal places
-      timeSpent: (timeSpent / 60).toFixed(2), // Convert seconds to minutes and format
-      totalQuestions: attemptedTest.metadata.totalQuestions, // Optional, in case frontend needs it
-    };
-
-    // Send the analysis data
-    res.status(200).json(new ApiResponse('Test analysis fetched successfully', analysis));
-  } catch (error) {
-    throw new ApiError(500, 'Error fetching analysis', error.message);
-  }
-});
-
-
-const getAllAnalysis = asyncHandler(async (req, res) => {
-  try {
-    console.log("getAllAnalysis ke andar");
-
-    let attemptedTests;
-    try {
-      // Wrap the database query in a try-catch to handle errors specifically for the query
-      attemptedTests = await AttemptedTest.find({}).populate('answers.questionId');
-    } catch (err) {
-      throw new ApiError(500, 'Error fetching attempted tests', err.message);
-    }
+    // Fetch all attempted tests for the authenticated user and the specified test
+    const attemptedTests = await AttemptedTest.find({ userId, testId: paperId })
+      .populate("answers.questionId")
+      .sort({ attemptNumber: -1 }); // Latest attempt first
 
     if (!attemptedTests || attemptedTests.length === 0) {
-      throw new ApiError(404, 'No attempted tests found');
+      throw new ApiError(404, "No attempted tests found for this user and test.");
     }
 
-    console.log("Attempted tests: ", attemptedTests);
-
-    // Map each attempted test to its analysis data
+    // Map each attempt to its analysis data, including the attemptNumber
     const analyses = attemptedTests.map((test) => {
-      // Calculate the number of correct answers. Guard against missing question data.
       const correctAnswers = test.answers.filter((answer) => {
         if (answer.questionId && answer.questionId.correctOption !== undefined) {
           return answer.answerOptionIndex === answer.questionId.correctOption;
         }
         return false;
       }).length;
-
-      // Calculate the number of wrong answers.
+    
       const wrongAnswers = test.answers.length - correctAnswers;
-
-      // Calculate the number of visited questions.
-      const visitedQuestions =
-        test.metadata && Array.isArray(test.metadata.visitedQuestions)
-          ? test.metadata.visitedQuestions.length
-          : 0;
-
+      const visitedQuestions = test.metadata && Array.isArray(test.metadata.visitedQuestions)
+        ? test.metadata.visitedQuestions.length
+        : 0;
+    
       return {
-        testId: test._id,
+        attemptNumber: test.attemptNumber, // Include attemptNumber
+        testId: test.testId || test._id,    // Depending on your schema, you can also include userId if needed
         totalCorrectAnswers: correctAnswers,
         totalWrongAnswers: wrongAnswers,
         totalVisitedQuestions: visitedQuestions,
         totalTimeTaken: test.totalTimeTaken,
-        totalQuestions:
-          test.metadata && test.metadata.totalQuestions !== undefined
-            ? test.metadata.totalQuestions
-            : 0,
+        totalQuestions: test.metadata && test.metadata.totalQuestions !== undefined
+          ? test.metadata.totalQuestions
+          : 0,
+        createdAt: test.createdAt, // You can add more fields if needed
       };
     });
-
-    // Send the analysis data for all tests
-    res.status(200).json(new ApiResponse('All test analyses fetched successfully', analyses));
+    
+    res.status(200).json(new ApiResponse(200, analyses, "Test analysis fetched successfully"));
   } catch (error) {
-    throw new ApiError(500, 'Error fetching all analyses', error.message);
+    throw new ApiError(500, "Error fetching test analysis", error.message);
   }
 });
-
-
 
 // Controller to update the results of a user's test attempt
 const updateTestResults = asyncHandler(async (req, res) => {
@@ -156,7 +130,7 @@ const updateTestResults = asyncHandler(async (req, res) => {
       throw new ApiError(404, 'Attempted test not found');
     }
 
-    // Update answers and metadata
+    // Update answers, metadata, and totalTimeTaken
     attemptedTest.answers = answers;
     attemptedTest.metadata = metadata;
     attemptedTest.totalTimeTaken = answers.reduce((total, answer) => total + answer.timeSpent, 0);
@@ -164,8 +138,7 @@ const updateTestResults = asyncHandler(async (req, res) => {
     // Save the updated attempted test data
     await attemptedTest.save();
 
-    // Send success response with updated data
-    res.status(200).json(new ApiResponse('Test results updated successfully', attemptedTest));
+    res.status(200).json(new ApiResponse(200, attemptedTest, "Test results updated successfully"));
   } catch (error) {
     throw new ApiError(500, 'Error updating test results', error.message);
   }
@@ -182,8 +155,7 @@ const deleteTestResults = asyncHandler(async (req, res) => {
       throw new ApiError(404, 'Attempted test not found');
     }
 
-    // Return success response
-    res.status(200).json(new ApiResponse('Test results deleted successfully', deletedTest));
+    res.status(200).json(new ApiResponse(200, deletedTest, "Test results deleted successfully"));
   } catch (error) {
     throw new ApiError(500, 'Error deleting test results', error.message);
   }
@@ -193,6 +165,5 @@ export {
   submitTest,
   getTestAnalysis,
   updateTestResults,
-  deleteTestResults,
-  getAllAnalysis
+  deleteTestResults
 };

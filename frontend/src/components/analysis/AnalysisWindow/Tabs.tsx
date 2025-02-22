@@ -1,11 +1,10 @@
-// analysis/AnalysisWindow/Tabs.tsx
-"use client"; // Mark this file as a client component if it uses client hooks
-import React from 'react';
-import { useAnalysisContext } from '../context';
+"use client";
+import React from "react";
+import { useAnalysis } from "@/context/AnalysisContext"; // Ensure your AnalysisContext exports subject and setSubject
 
-const Tabs = () => {
-  const { setSubject } = useAnalysisContext();
-  const tabs = ['Overall', 'Physics', 'Chemistry', 'Mathematics'];
+const Tabs: React.FC = () => {
+  const { subject, setSubject } = useAnalysis();
+  const tabs = ["Overall", "Physics", "Chemistry", "Mathematics"];
 
   return (
     <div className="flex space-x-4 border-b-2 border-gray-200 pb-2">
@@ -13,7 +12,9 @@ const Tabs = () => {
         <button
           key={tab}
           onClick={() => setSubject(tab)}
-          className="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-md focus:outline-none"
+          className={`text-gray-600 hover:text-gray-900 px-4 py-2 rounded-md focus:outline-none ${
+            subject === tab ? "border-b-2 border-blue-600" : ""
+          }`}
         >
           {tab}
         </button>

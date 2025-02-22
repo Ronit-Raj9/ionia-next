@@ -1,56 +1,44 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext'; // Import the useAuth hook
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-
-  const { setToken } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const { login, user, isAuthenticated } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
+
+  // If the user is already logged in, redirect to home.
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     try {
-      console.log("Logging in with email:", email); // Debugging email
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include', // Important: Enables sending/receiving cookies
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Error Response:", errorText);
-        throw new Error(`Login failed: ${errorText}`);
-      }
-
-      // No need to manually store the token; it should be set by the backend
-      console.log("Cookies after login:", document.cookie); // Debugging cookies
-
-      setToken(true); // Indicate authentication state
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.push('/');
+      await login(email, password);
+      // AuthContext's login handles role-based redirect or default redirection.
+      // If you'd rather always go home, you can do:
+      // router.push("/");
     } catch (err: any) {
       console.error("Login Error:", err);
-      setError(err.message);
+      setError("Invalid email or password");
     }
   };
-
-  
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-center mb-4">Login</h2>
       {error && <p className="text-red-500 text-center">{error}</p>}
+
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -59,12 +47,13 @@ export default function LoginPage() {
           <input
             type="email"
             id="email"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
+
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Password
@@ -72,24 +61,24 @@ export default function LoginPage() {
           <input
             type="password"
             id="password"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
+
         <button
           type="submit"
-          className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
         >
           Login
         </button>
       </form>
 
-      {/* Call-to-action for new users */}
       <p className="text-center mt-6 text-gray-600">
-        Don’t have an account?{' '}
-        <Link href="/register" className="text-primary font-medium hover:underline">
+        Don’t have an account?{" "}
+        <Link href="/register" className="text-blue-600 font-medium hover:underline">
           Create an account
         </Link>
       </p>

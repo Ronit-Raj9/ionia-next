@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import StatsCard from '@/components/dashboard/StatsCard';
-import PerformanceChart from '@/components/dashboard/PerformanceChart';
-import RecentTests from '@/components/dashboard/RecentTests';
-import UpcomingTests from '@/components/dashboard/UpcomingTests';
-import { Card } from '@/components/dashboard/card';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useState, useEffect } from "react";
+import StatsCard from "@/components/dashboard/StatsCard";
+import PerformanceChart from "@/components/dashboard/PerformanceChart";
+import RecentTests from "@/components/dashboard/RecentTests";
+import UpcomingTests from "@/components/dashboard/UpcomingTests";
+import { Card } from "@/components/dashboard/card";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Dashboard() {
-  const { token, setToken } = useAuth();
+  const { isAuthenticated, logout, loading } = useAuth();
   const [stats, setStats] = useState({
     totalTests: 0,
     averageScore: 0,
@@ -20,9 +20,14 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!token) {
-      router.push('/login');
+    // Wait until the auth check is complete.
+    if (loading) return;
+    if (!isAuthenticated) {
+      console.log("Not authenticated, redirecting to login");
+      router.push("/login");
       return;
+    } else {
+      console.log("Authenticated:", isAuthenticated);
     }
 
     // Fetch dashboard statistics (simulate API call)
@@ -37,36 +42,25 @@ export default function Dashboard() {
         };
         setStats(data);
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        console.error("Failed to fetch dashboard stats:", error);
       }
     };
 
     fetchStats();
-  }, [token, router]);
+  }, [isAuthenticated, loading, router]);
 
   const handleLogout = async () => {
     try {
-      // Call backend logout endpoint to clear HttpOnly cookies
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-  
-      if (response.ok) {
-        // Clear any existing cookies by setting their expiry to past date
-        document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        
-        setToken(null); // Update context state
-        router.push('/login'); // Redirect to login page
-      }
+      await logout();
+      // Logout handles redirection.
     } catch (err) {
-      console.error('Logout failed:', err);
+      console.error("Logout failed:", err);
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -117,7 +117,7 @@ export default function Home() {
         <h2 className="text-3xl font-semibold mb-6">Ready to Start Your Journey?</h2>
         <p className="text-lg mb-6 max-w-2xl mx-auto">
           Take the first step toward acing your exams with our platform. Choose your test, start practicing, and track your progress. Join us now!
-        </p>
+        </p> 
         <Link
           href="/register"
           className="bg-yellow-500 text-gray-800 px-8 py-3 rounded-lg hover:bg-yellow-400 transition duration-300 shadow-lg transform hover:scale-105"

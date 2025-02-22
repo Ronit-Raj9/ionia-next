@@ -4,10 +4,12 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
-    "start": "node -r dotenv/config --experimental-json-modules src/index.js"
+  "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
+  "start": "node -r dotenv/config --experimental-json-modules src/index.js",
+  "build": "echo 'No build step required'",
+  "deploy": "npm install --only=prod && npm start"
+},
 
-  },
   "author": "Ronit",
   "license": "ISC",
   "description": "",
