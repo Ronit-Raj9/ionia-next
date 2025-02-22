@@ -8,6 +8,8 @@ app.use(cookieParser());
 
 const allowedOrigins = [
     "https://ionia-next.vercel.app", // Your Vercel frontend
+    "https://ionia-next-f9tep6a9p-ronit-raj9s-projects.vercel.app/",
+    "https://ionia-next-git-main-ronit-raj9s-projects.vercel.app/",
     "http://localhost:3000" // For local development
   ];
   
