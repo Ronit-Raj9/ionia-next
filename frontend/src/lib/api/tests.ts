@@ -1,9 +1,9 @@
 // lib/api/tests.ts
 import axios from 'axios';
 
-const API_URL = process.env.API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-// Generic API response interface (adjust fields as needed)
+// Generic API response interface
 export interface APIResponse<T> {
   data: T;
   success: boolean;
@@ -19,9 +19,9 @@ export type Test = {
 // Get a single test by ID
 export const getTestById = async (testId: string): Promise<APIResponse<Test>> => {
   try {
-    const response = await axios.get(`${API_URL}/tests/${testId}`);
+    const response = await axios.get<APIResponse<Test>>(`${API_URL}/tests/${testId}`);
     return response.data;
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Error fetching test:', error);
     throw new Error('Failed to fetch test');
   }
@@ -30,23 +30,23 @@ export const getTestById = async (testId: string): Promise<APIResponse<Test>> =>
 // Get tests by subject
 export const getTestsBySubject = async (subjectId: string): Promise<APIResponse<Test[]>> => {
   try {
-    const response = await axios.get(`${API_URL}/tests/${subjectId}`);
+    const response = await axios.get<APIResponse<Test[]>>(`${API_URL}/tests/${subjectId}`);
     return response.data;
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Error fetching tests:', error);
     throw new Error('Failed to fetch tests');
   }
 };
 
-// Submit test answers; change the answers type if you have a more specific interface
+// Submit test answers
 export const submitTestAnswers = async (
   testId: string,
   answers: unknown
 ): Promise<APIResponse<Test>> => {
   try {
-    const response = await axios.post(`${API_URL}/tests/${testId}/submit`, answers);
+    const response = await axios.post<APIResponse<Test>>(`${API_URL}/tests/${testId}/submit`, answers);
     return response.data;
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Error submitting test:', error);
     throw new Error('Failed to submit test');
   }

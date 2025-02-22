@@ -1,4 +1,4 @@
-// hooks/useTestProgress.ts
+"use client";
 import { useState, useEffect } from 'react';
 
 export const useTestProgress = (totalQuestions: number) => {
@@ -16,31 +16,27 @@ export const useTestProgress = (totalQuestions: number) => {
   };
 
   const nextQuestion = () => {
-    if (currentQuestion < totalQuestions) {
-      setCurrentQuestion(currentQuestion + 1);
-    }
+    setCurrentQuestion(prev => (prev < totalQuestions ? prev + 1 : prev));
   };
 
   const previousQuestion = () => {
-    if (currentQuestion > 1) {
-      setCurrentQuestion(currentQuestion - 1);
-    }
+    setCurrentQuestion(prev => (prev > 1 ? prev - 1 : prev));
   };
 
   const markQuestionAsAnswered = (questionNumber: number) => {
-    setAnsweredQuestions(new Set(answeredQuestions.add(questionNumber)));
-  };
-
-  const startTimer = () => {
-    if (!isTestStarted) return;
-    setTimer(prev => prev + 1);
+    setAnsweredQuestions(prev => new Set([...prev, questionNumber]));
   };
 
   useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
     if (isTestStarted) {
-      const interval = setInterval(startTimer, 1000);
-      return () => clearInterval(interval);
+      interval = setInterval(() => {
+        setTimer(prev => prev + 1);
+      }, 1000);
     }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [isTestStarted]);
 
   return {

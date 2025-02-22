@@ -1,7 +1,18 @@
 // analysis/hooks/useAnalysisData.ts
-import { useAnalysisContext } from '../context';
+"use client";
+import { useState } from "react";
 
 export const useAnalysisData = () => {
-  const { data, subject, setSubject, loading, error } = useAnalysisContext();
+  // Dummy data structure
+  const dummyData = [
+    { id: "1", name: "Math", score: 85, timeSpent: 120 },
+    { id: "2", name: "Science", score: 92, timeSpent: 90 },
+  ];
+
+  const [data] = useState(dummyData);
+  const [subject, setSubject] = useState("Math");
+  const [loading] = useState(false);
+  const [error] = useState(null);
+
   return { data, subject, setSubject, loading, error };
 };

@@ -1,4 +1,5 @@
 // components/practice/PracticeQuestion.tsx
+"use client";
 import { FC } from 'react';
 
 interface PracticeQuestionProps {

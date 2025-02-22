@@ -1,4 +1,5 @@
 // src/app/layout.tsx
+"use client";
 import { AuthProvider } from '@/context/AuthContext'; // Import the AuthProvider
 import '@/styles/globals.css'; // Your global styles
 

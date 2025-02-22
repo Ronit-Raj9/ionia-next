@@ -1,5 +1,5 @@
 // frontend/app/(auth)/register/loading.tsx
-
+"uae client";
 import React from 'react';
 
 const Loading = () => {

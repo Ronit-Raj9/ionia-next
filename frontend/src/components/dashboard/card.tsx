@@ -1,4 +1,5 @@
 // components/ui/card.tsx
+"use client";
 import { ReactNode } from 'react';
 
 interface CardProps {

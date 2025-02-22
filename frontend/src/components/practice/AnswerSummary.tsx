@@ -1,5 +1,5 @@
 // frontend/components/practice/AnswerSummary.tsx
-
+"use client";
 import { FC } from 'react';
 
 interface AnswerSummaryProps {

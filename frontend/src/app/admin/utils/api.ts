@@ -16,7 +16,7 @@ export const fetchQuestions = async () => {
 };
 
 // Create a new test series
-export const createTestSeries = async (testData: any) => {
+export const createTestSeries = async (testData: Record<string, unknown>) => {
   try {
     const response = await fetch("http://localhost:4000/api/v1/previous-year-papers/add", {
       method: "POST",
@@ -60,7 +60,7 @@ export async function fetchTests() {
 // Fetch details for a single test by ID
 export const fetchTestDetails = async (id: string) => {
   try {
-    console.log("Test id url: " , `http://localhost:4000/api/v1/previous-year-papers/get/${id}`);
+    console.log("Test id url: ", `http://localhost:4000/api/v1/previous-year-papers/get/${id}`);
     const response = await fetch(`http://localhost:4000/api/v1/previous-year-papers/get/${id}`);  // Replace with correct API endpoint
 
     if (!response.ok) {
@@ -73,4 +73,4 @@ export const fetchTestDetails = async (id: string) => {
     console.error("Error fetching test details:", error);
     throw error;
   }
-}
+};

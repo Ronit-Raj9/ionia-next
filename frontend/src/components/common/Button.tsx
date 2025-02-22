@@ -1,4 +1,5 @@
 // components/common/Button.tsx
+"use client";
 import React from 'react';
 
 type ButtonProps = {

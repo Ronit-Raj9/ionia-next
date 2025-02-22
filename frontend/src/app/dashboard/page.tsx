@@ -93,8 +93,9 @@ export default function Dashboard() {
 
       {/* Recent and Upcoming Tests Section */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <RecentTests />
-        <UpcomingTests />
+        {/* Passing an empty array for tests; replace with actual data when available */}
+        <RecentTests tests={[]} />
+        <UpcomingTests tests={[]} />
       </section>
     </div>
   );

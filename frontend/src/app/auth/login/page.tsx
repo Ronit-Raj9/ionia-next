@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-  const { login, user, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,12 +25,13 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      // AuthContext's login handles role-based redirect or default redirection.
-      // If you'd rather always go home, you can do:
-      // router.push("/");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login Error:", err);
-      setError("Invalid email or password");
+      if (err instanceof Error) {
+        setError("Invalid email or password: " + err.message);
+      } else {
+        setError("Invalid email or password");
+      }
     }
   };
 

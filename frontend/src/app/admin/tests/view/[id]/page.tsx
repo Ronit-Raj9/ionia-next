@@ -5,6 +5,7 @@ import { useParams } from "next/navigation"; // Use this in the app directory
 import { fetchTestDetails } from "../../../utils/api";
 
 interface Question {
+  _id: string; // Added _id property
   question: string;
   options: string[];
   correctOption: number;
@@ -24,17 +25,19 @@ interface Test {
 }
 
 const TestDetailsPage = () => {
-  const { id } = useParams(); // Extract the test ID from the URL
+  const { id } = useParams(); // id is of type string | string[]
   const [test, setTest] = useState<Test | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
-      console.log("Test id: ", id);
+      // Convert id to a string if it's an array
+      const testId = Array.isArray(id) ? id[0] : id;
+      console.log("Test id: ", testId);
       const getTestDetails = async () => {
         try {
-          const response = await fetchTestDetails(id);
+          const response = await fetchTestDetails(testId);
           const data = response?.data; // Extracting the data object from response
           setTest(data || null);
           console.log("Test data: ", data);

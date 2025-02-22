@@ -1,4 +1,5 @@
 // src/app/layout.tsx
+'use client';
 import { AuthProvider } from '@/context/AuthContext'; // Import your AuthProvider
 import '@/styles/globals.css'; // Your styles or other global imports
 import Navbar from '@/components/common/Navbar';

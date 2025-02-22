@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import QuestionGrid from "./Navigation/QuestionGrid";
 import NavigationButtons from "./Navigation/NavigationButtons";
 import QuestionStatus from "./StatusPanel/QuestionStatus";
@@ -12,7 +11,7 @@ import LanguageSelector from "./Controls/LanguageSelector";
 import CandidateInfo from "./Header/CandidateInfo";
 import Timer from "./Header/Timer";
 import QuestionPanel from "./QuestionPanel";
-import { useAnalysis } from "@/context/AnalysisContext";
+// Removed unused: import { useAnalysis } from "@/context/AnalysisContext";
 
 interface TestWindowProps {
   examType: string;
@@ -30,12 +29,10 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
   const [isClient, setIsClient] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [timeSpentOnQuestions, setTimeSpentOnQuestions] = useState<Map<number, number>>(new Map());
   const [startTime, setStartTime] = useState<number>(Date.now());
 
   const router = useRouter();
-  const { setAnalysisData } = useAnalysis();
 
   useEffect(() => {
     setIsClient(true);
@@ -53,7 +50,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
     });
     if (currentQuestion < totalQuestions) {
       setCurrentQuestion((prev) => prev + 1);
-      setVisitedQuestions((prev) => new Set(prev.add(currentQuestion)));
+      setVisitedQuestions((prev) => new Set([...prev, currentQuestion]));
       setStartTime(currentTime);
     }
   };
@@ -68,7 +65,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
     if (!selectedAnswers.has(currentQuestion)) {
       alert("Please choose an option before saving and moving to the next question.");
     } else {
-      setAnsweredQuestions((prev) => new Set(prev.add(currentQuestion)));
+      setAnsweredQuestions((prev) => new Set([...prev, currentQuestion]));
       handleNext();
     }
   };
@@ -90,14 +87,14 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
     if (!selectedAnswers.has(currentQuestion)) {
       alert("Please choose an option before marking the question for review.");
     } else {
-      setAnsweredQuestions((prev) => new Set(prev.add(currentQuestion)));
-      setMarkedForReview((prev) => new Set(prev.add(currentQuestion)));
+      setAnsweredQuestions((prev) => new Set([...prev, currentQuestion]));
+      setMarkedForReview((prev) => new Set([...prev, currentQuestion]));
       handleNext();
     }
   };
 
   const handleMarkNext = () => {
-    setMarkedForReview((prev) => new Set(prev.add(currentQuestion)));
+    setMarkedForReview((prev) => new Set([...prev, currentQuestion]));
     handleNext();
   };
 
@@ -109,7 +106,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
     });
     setAnsweredQuestions((prev) => {
       if (!prev.has(questionIndex)) {
-        return new Set(prev.add(questionIndex));
+        return new Set([...prev, questionIndex]);
       }
       return prev;
     });
@@ -129,7 +126,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
       return updated;
     });
     setCurrentQuestion(questionNumber);
-    setVisitedQuestions((prev) => new Set(prev.add(questionNumber)));
+    setVisitedQuestions((prev) => new Set([...prev, questionNumber]));
     setStartTime(currentTime);
   };
 
@@ -211,11 +208,11 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
         try {
           await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate async wait
           console.log("Navigating...");
-          router.push(`/exam/jee-mains/previous-year-paper/${paperId}/analysis/`);
+          router.push(`/exam/${examType}/previous-year-paper/${paperId}/analysis/`);
           console.log("Navigation triggered!");
         } catch (routerError) {
           console.error("Router push failed, using window.location:", routerError);
-          window.location.href = `/exam/jee-mains/previous-year-paper/${paperId}/analysis/`;
+          window.location.href = `/exam/${examType}/previous-year-paper/${paperId}/analysis/`;
         }
       } else {
         const errorText = await response.text();

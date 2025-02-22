@@ -1,5 +1,5 @@
 // frontend/components/practice/ResultPage.tsx
-
+"use client";
 import { FC } from 'react';
 import AnswerSummary from './AnswerSummary';
 

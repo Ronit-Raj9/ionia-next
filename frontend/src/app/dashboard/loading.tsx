@@ -1,5 +1,5 @@
 // frontend/app/dashboard/loading.tsx
-
+"use client";
 import React from 'react';
 
 const DashboardLoading = () => {

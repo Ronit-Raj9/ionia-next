@@ -40,10 +40,15 @@ export default function QuestionsPage() {
         console.log("Fetched questions:", data);
         // Assuming the API response contains the questions array in data.data
         setQuestions(data.data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching questions:", err);
-        setError("Error fetching questions. Please try again.");
-      } finally {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Error fetching questions. Please try again.");
+        }
+      }
+       finally {
         setLoading(false);
       }
     };

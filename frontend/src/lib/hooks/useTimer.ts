@@ -1,4 +1,5 @@
 // lib/hooks/useTimer.ts
+"use client";
 import { useState, useEffect } from 'react';
 
 export const useTimer = (initialTime: number) => {

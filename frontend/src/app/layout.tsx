@@ -1,4 +1,5 @@
 // src/app/layout.tsx
+// "use client";
 import { Inter } from "next/font/google";
 import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";

@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+"use client";
+import React, { useEffect, useState, useRef } from "react";
+import axios from "axios";
 
 interface OptionProps {
   option: string;
@@ -32,6 +33,18 @@ const QuestionOptions: React.FC<OptionProps> = ({
   </div>
 );
 
+interface Question {
+  _id: string;
+  question: string;
+  options: string[];
+}
+
+interface ApiResponse {
+  data: {
+    questions: Question[];
+  };
+}
+
 interface QuestionPanelProps {
   examType: string;
   paperId: string;
@@ -39,47 +52,43 @@ interface QuestionPanelProps {
   selectedAnswers: Map<number, number>;
   handleOptionChange: (questionIndex: number, answerOptionIndex: number, questionId: string) => void;
   setTotalQuestions: (total: number) => void;
-  setAnsweredQuestions: (answeredQuestions: Set<number>) => void;
+  setAnsweredQuestions: (answered: Set<number>) => void;
   handleQuestionIds: (ids: string[]) => void;
 }
 
 const QuestionPanel: React.FC<QuestionPanelProps> = React.memo(
   ({
-    examType,
     paperId,
     currentQuestion,
     selectedAnswers,
     handleOptionChange,
     setTotalQuestions,
-    setAnsweredQuestions,
     handleQuestionIds,
   }) => {
-    const [questions, setQuestions] = useState<any[]>([]);
+    const [questions, setQuestions] = useState<Question[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-    const hasFetchedData = useRef(false); // Track if data has already been fetched
+    const hasFetchedData = useRef(false);
 
     useEffect(() => {
-      if (hasFetchedData.current) return; // Prevent re-fetch if already fetched
-
-      hasFetchedData.current = true; // Set flag to true once data is fetched
+      if (hasFetchedData.current) return;
+      hasFetchedData.current = true;
 
       const fetchData = async () => {
         try {
-          const response = await axios.get(
+          const response = await axios.get<ApiResponse>(
             `http://localhost:4000/api/v1/previous-year-papers/get/${paperId}`
           );
-          const questionData = response.data.data.questions;
 
+          const questionData: Question[] = response.data.data.questions;
           setQuestions(questionData);
 
-          // Extract question IDs and pass to parent
-          const ids = questionData.map((question: any) => question._id);
+          const ids = questionData.map((question) => question._id);
           handleQuestionIds(ids);
 
           setTotalQuestions(questionData.length);
           setLoading(false);
         } catch (error) {
-          console.error('Error fetching data:', error);
+          console.error("Error fetching data:", error);
           setLoading(false);
         }
       };
@@ -97,7 +106,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = React.memo(
         <p className="text-md mb-6">{currentQuestionData?.question}</p>
 
         <div className="space-y-4">
-          {currentQuestionData?.options.map((option: string, index: number) => (
+          {currentQuestionData?.options.map((option, index) => (
             <QuestionOptions
               key={index}
               option={option}
@@ -105,7 +114,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = React.memo(
               questionNumber={currentQuestion}
               selectedAnswer={selectedAnswers.get(currentQuestion)}
               handleOptionChange={(qNumber, aIndex) =>
-                handleOptionChange(qNumber, aIndex, currentQuestionData._id)
+                handleOptionChange(qNumber, aIndex, currentQuestionData?._id ?? "")
               }
             />
           ))}
@@ -114,5 +123,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = React.memo(
     );
   }
 );
+
+QuestionPanel.displayName = "QuestionPanel";
 
 export default QuestionPanel;

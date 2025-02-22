@@ -2,6 +2,7 @@
 
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 const Instructions = () => {
   const router = useRouter();
@@ -13,12 +14,11 @@ const Instructions = () => {
     if (!paperId) {
       console.error("paperId is missing!");
     }
-  }, [paperId]);
+  }, [paperId, examType]); // Added examType to dependency array
 
   // Redirect to the test page once the user agrees to the instructions
   const handleProceed = () => {
     if (paperId && examType) {
-      // Ensure we are redirecting to the correct test page with paperId
       router.push(`/exam/${examType}/previous-year-paper/${paperId}/test`);
     } else {
       console.error("Invalid paperId or examType");
@@ -35,10 +35,12 @@ const Instructions = () => {
             <h2 className="text-sm">Government of India</h2>
           </div>
           <div>
-            <img
+            <Image
               src="https://nta.ac.in/Images/logo.png" // Replace with an actual logo link or local asset
               alt="National Testing Agency Logo"
               className="h-12"
+              width={48}
+              height={48}
             />
           </div>
         </div>
@@ -56,13 +58,10 @@ const Instructions = () => {
           <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
             <li>Total duration of JEE-Main is 180 minutes.</li>
             <li>
-              The clock will be set at the server. The countdown timer in the
-              top right corner of the screen will display the remaining time
-              available for you to complete the examination.
+              The clock will be set at the server. The countdown timer in the top right corner of the screen will display the remaining time available for you to complete the examination.
             </li>
             <li>
-              The Questions Palette displayed on the right side of the screen
-              will show the status of each question using symbols.
+              The Questions Palette displayed on the right side of the screen will show the status of each question using symbols.
             </li>
             <li>You can navigate through questions and sections as needed.</li>
           </ul>
@@ -101,12 +100,10 @@ const Instructions = () => {
           <ul className="list-decimal list-inside space-y-2 text-sm text-gray-700">
             <li>To answer a question, click on the question number.</li>
             <li>
-              Click "Save & Next" to save your answer for the current question
-              and move to the next one.
+              Click &quot;Save &amp; Next&quot; to save your answer for the current question and move to the next one.
             </li>
             <li>
-              Click "Mark for Review & Next" to mark the current question for
-              review and move to the next question.
+              Click &quot;Mark for Review &amp; Next&quot; to mark the current question for review and move to the next question.
             </li>
           </ul>
         </section>
@@ -120,10 +117,7 @@ const Instructions = () => {
             checked={isChecked}
             onChange={() => setIsChecked(!isChecked)}
           />
-          <label
-            htmlFor="agree"
-            className="text-sm text-gray-700 cursor-pointer"
-          >
+          <label htmlFor="agree" className="text-sm text-gray-700 cursor-pointer">
             I have read and understood the instructions.
           </label>
         </div>
@@ -134,7 +128,7 @@ const Instructions = () => {
               : "bg-gray-300 cursor-not-allowed"
           } text-white px-4 py-2 rounded-md w-full`}
           disabled={!isChecked}
-          onClick={handleProceed} // Use the function here
+          onClick={handleProceed}
         >
           Proceed
         </button>

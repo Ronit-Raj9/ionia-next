@@ -1,4 +1,3 @@
-// analysis/api.ts
 export const fetchAnalysisData = async (paperId: string) => {
   try {
     console.log("Paper ID in api request:", paperId);
@@ -7,10 +6,9 @@ export const fetchAnalysisData = async (paperId: string) => {
     if (!response.ok) {
       throw new Error('Failed to fetch data');
     }
-
     const data = await response.json();
     return data;
-  } catch (error) {
+  } catch {
     throw new Error('Failed to fetch data');
   }
 };

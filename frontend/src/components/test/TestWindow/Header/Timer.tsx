@@ -1,4 +1,6 @@
+"use client";
 import React, { useState, useEffect } from 'react';
+
 
 const Timer: React.FC = () => {
     const [timeLeft, setTimeLeft] = useState<number>(1800); // 30 minutes timer (1800 seconds)
