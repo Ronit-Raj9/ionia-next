@@ -26,7 +26,7 @@ export default function QuestionsPage() {
       try {
         // Replace with your actual API URL or use an environment variable
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL ||
+          `${process.env.NEXT_PUBLIC_API_URL}/questions/get` ||
           "http://localhost:4000/api/v1/questions/get";
         console.log("Fetching questions from:", apiUrl);
 

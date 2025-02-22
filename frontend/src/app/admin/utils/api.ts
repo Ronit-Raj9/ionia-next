@@ -3,7 +3,7 @@
 // Fetch all questions
 export const fetchQuestions = async () => {
   try {
-    const res = await fetch("http://localhost:4000/api/v1/questions/get");
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions/get`);
     if (!res.ok) {
       throw new Error("Failed to fetch questions");
     }

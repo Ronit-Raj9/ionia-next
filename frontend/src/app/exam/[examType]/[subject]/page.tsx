@@ -22,7 +22,7 @@ export default function SubjectPage() {
       try {
         console.log(examType, subject);
         const response = await fetch(
-          `http://localhost:4000/api/v1/questions/get?examType=${examType}&subject=${subject}`
+          `${process.env.NEXT_PUBLIC_API_URL}/questions/get?examType=${examType}&subject=${subject}`
         );
         const data = await response.json();
         console.log("Fetched questions: ", data);

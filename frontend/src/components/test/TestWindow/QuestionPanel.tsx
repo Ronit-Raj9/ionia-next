@@ -76,7 +76,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = React.memo(
       const fetchData = async () => {
         try {
           const response = await axios.get<ApiResponse>(
-            `http://localhost:4000/api/v1/previous-year-papers/get/${paperId}`
+            `${process.env.NEXT_PUBLIC_API_URL}/previous-year-papers/get/${paperId}`
           );
 
           const questionData: Question[] = response.data.data.questions;

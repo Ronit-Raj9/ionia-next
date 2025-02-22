@@ -38,7 +38,7 @@ export default function AddQuestion() {
     e.preventDefault();
     setLoading(true);
 
-    const uploadUrl = "http://localhost:4000/api/v1/questions/upload"; // Adjust backend URL if needed
+    const uploadUrl = `${process.env.NEXT_PUBLIC_API_URL}/questions/upload`; // Adjust backend URL if needed
 
     try {
       const response = await fetch(uploadUrl, {
