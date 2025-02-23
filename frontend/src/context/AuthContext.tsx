@@ -33,9 +33,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const router = useRouter();
 
   /**
-   * checkAuth
-   * - Calls /users/current-user to see if a valid session exists.
-   * - Expects response JSON: { statusCode, data: { ...user fields }, ... }
+   * Check authentication status on page load or refresh
    */
   const checkAuth = async (): Promise<void> => {
     try {
@@ -43,20 +41,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         `${process.env.NEXT_PUBLIC_API_URL}/users/current-user`,
         { credentials: "include" }
       );
+
       if (!response.ok) {
-        setUser(null);
-        setIsAuthenticated(false);
-        return;
+        throw new Error("Not authenticated");
       }
+
       const result = await response.json();
-      // In your /current-user response, the user is in result.data
-      const currentUser = result.data;
-      if (currentUser) {
-        setUser(currentUser);
+      if (result.data) {
+        setUser(result.data);
         setIsAuthenticated(true);
       } else {
-        setUser(null);
-        setIsAuthenticated(false);
+        throw new Error("Invalid user data");
       }
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -67,18 +62,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  // On mount, check if user is already authenticated.
+  /**
+   * Automatically check authentication when the app loads
+   */
   useEffect(() => {
     checkAuth();
   }, []);
 
   /**
-   * login
-   * - Calls /users/login with email and password.
-   * - Expects response JSON: { statusCode, data: { user: { ... }, accessToken, refreshToken }, ... }
+   * Login function
    */
   const login = async (email: string, password: string): Promise<void> => {
     try {
+      setLoading(true);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/users/login`,
         {
@@ -88,35 +84,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           body: JSON.stringify({ email, password }),
         }
       );
+
       if (!response.ok) {
         throw new Error("Login failed");
       }
+
       const result = await response.json();
-      // Here, the user object is at result.data.user
-      const loggedInUser = result.data?.user;
-      if (!loggedInUser) {
-        throw new Error("No user object returned from login.");
+      if (!result.data?.user) {
+        throw new Error("Invalid login response");
       }
-      setUser(loggedInUser);
+
+      setUser(result.data.user);
       setIsAuthenticated(true);
-      // Role-based redirect:
-      if (loggedInUser.role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+
+      // Redirect based on role
+      router.push(result.data.user.role === "admin" ? "/admin" : "/dashboard");
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("Login error:", error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   /**
-   * logout
-   * - Calls /users/logout, resets local auth state, and redirects to /login.
+   * Logout function
    */
   const logout = async (): Promise<void> => {
     try {
+      setLoading(true);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/users/logout`,
         {
@@ -125,25 +121,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           headers: { "Content-Type": "application/json" },
         }
       );
-      if (response.ok) {
-        // Clear non-HTTP-only cookies (if applicable)
-        document.cookie =
-          "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie =
-          "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        setUser(null);
-        setIsAuthenticated(false);
-        router.push("/login");
+
+      if (!response.ok) {
+        throw new Error("Logout failed");
       }
+
+      // Clear authentication state
+      setUser(null);
+      setIsAuthenticated(false);
+
+      // Redirect to login page
+      router.push("/login");
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error("Logout error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider
-      value={{ isAuthenticated, user, loading, login, logout, checkAuth }}
-    >
+    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );
