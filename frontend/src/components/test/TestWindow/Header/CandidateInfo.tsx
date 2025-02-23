@@ -2,36 +2,41 @@
 
 import React, { useEffect, useState } from "react";
 
-// Helper function to get a cookie by name
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(";")[0] || null;
-  return null;
-}
-
 const CandidateInfo: React.FC = () => {
   const [candidate, setCandidate] = useState<{ name: string; username: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = getCookie("accessToken");
-      if (token) {
-        try {
-          // Decode the JWT (assuming it's a base64 encoded JSON payload)
-          const decodedToken = JSON.parse(atob(token.split(".")[1]));
-          const candidateName = decodedToken.fullName || "Unknown";
-          const username = decodedToken.username || "";
-          setCandidate({ name: candidateName, username });
-          console.log("Candidate info:", candidateName, username);
-        } catch (error) {
-          console.error("Failed to decode token:", error);
+    const fetchUser = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/current-user`, {
+          credentials: "include", // Ensures cookies (session) are sent with the request
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch user data");
+        }
+
+        const result = await response.json();
+        const currentUser = result.data;
+
+        if (currentUser) {
+          setCandidate({
+            name: currentUser.fullName || "Unknown",
+            username: currentUser.username || "",
+          });
+        } else {
           setCandidate(null);
         }
+      } catch (error) {
+        console.error("Error fetching candidate info:", error);
+        setCandidate(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }
+    };
+
+    fetchUser();
   }, []);
 
   return (
