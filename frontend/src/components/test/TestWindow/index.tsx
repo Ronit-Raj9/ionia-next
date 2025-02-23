@@ -11,7 +11,6 @@ import LanguageSelector from "./Controls/LanguageSelector";
 import CandidateInfo from "./Header/CandidateInfo";
 import Timer from "./Header/Timer";
 import QuestionPanel from "./QuestionPanel";
-// Removed unused: import { useAnalysis } from "@/context/AnalysisContext";
 
 interface TestWindowProps {
   examType: string;
@@ -130,15 +129,6 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
     setStartTime(currentTime);
   };
 
-  // Helper function to get a cookie by name
-  // const getCookie = (name: string): string | null => {
-  //   const value = `; ${document.cookie}`;
-  //   console.log("Cookie value: ", value)
-  //   const parts = value.split(`; ${name}=`);
-  //   if (parts.length === 2) return parts.pop()?.split(";")[0] || null;
-  //   return null;
-  // };
-  
   const handleSubmit = async () => {
     if (!isClient) return;
     setIsSubmitting(true);

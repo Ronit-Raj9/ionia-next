@@ -26,6 +26,7 @@ const submitTest = asyncHandler(async (req, res) => {
     const userId = decoded._id; // Extract userId from decoded token
 
     const { paperId, answers, metadata } = req.body;
+    console.log("metadata:", metadata);
 
     // Validate required fields
     if (!paperId || !answers || !metadata) {
@@ -73,6 +74,8 @@ const submitTest = asyncHandler(async (req, res) => {
 
     // Save the attempted test to the database
     await attemptedTest.save();
+
+    console.log("attempedted Test", attemptedTest);
 
     // Send success response
     res.status(201).json(new ApiResponse(201, attemptedTest, "Test submitted successfully"));
