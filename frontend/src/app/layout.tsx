@@ -5,6 +5,8 @@ import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { AnalysisProvider } from "@/context/AnalysisContext";
+import { Analytics } from "@vercel/analytics/react"
+
 import "@/styles/globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -32,8 +34,11 @@ export default function RootLayout({
               <Footer />
             </div>
           </AnalysisProvider>
+          <Analytics/>
         </AuthProvider>
+
       </body>
     </html>
   );
 }
+
