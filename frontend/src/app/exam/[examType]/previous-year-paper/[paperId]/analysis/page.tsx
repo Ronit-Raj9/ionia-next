@@ -19,19 +19,15 @@ const AnalysisPageContent = ({ paperId }: { paperId: string }) => {
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        const token = getCookie("accessToken");
-        if (!token) {
-          console.error("Access token not found. User might not be logged in.");
-          return;
-        }
+  
 
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/attempted-tests/analysis?paperId=${paperId}`,
           {
             method: "GET",
+            credentials: "include",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
           }
         );
