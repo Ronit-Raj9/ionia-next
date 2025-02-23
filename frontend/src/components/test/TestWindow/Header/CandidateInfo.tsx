@@ -24,6 +24,7 @@ const CandidateInfo: React.FC = () => {
           const candidateName = decodedToken.fullName || "Unknown";
           const username = decodedToken.username || "";
           setCandidate({ name: candidateName, username });
+          console.log("Candidate info:", candidateName, username);
         } catch (error) {
           console.error("Failed to decode token:", error);
           setCandidate(null);
