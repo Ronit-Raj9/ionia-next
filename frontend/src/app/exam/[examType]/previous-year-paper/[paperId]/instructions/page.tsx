@@ -36,12 +36,13 @@ const Instructions = () => {
           </div>
           <div>
             <Image
-              src="https://nta.ac.in/Images/logo.png" // Replace with an actual logo link or local asset
+              src="/nta.jpeg"  // Remove "public" from the path
               alt="National Testing Agency Logo"
               className="h-12"
               width={48}
               height={48}
             />
+
           </div>
         </div>
       </header>

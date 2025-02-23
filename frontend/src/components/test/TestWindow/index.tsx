@@ -131,13 +131,14 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
   };
 
   // Helper function to get a cookie by name
-  const getCookie = (name: string): string | null => {
-    const value = `; ${document.cookie}`;
-    console.log("Cookie value: ", value)
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(";")[0] || null;
-    return null;
-  };
+  // const getCookie = (name: string): string | null => {
+  //   const value = `; ${document.cookie}`;
+  //   console.log("Cookie value: ", value)
+  //   const parts = value.split(`; ${name}=`);
+  //   if (parts.length === 2) return parts.pop()?.split(";")[0] || null;
+  //   return null;
+  // };
+  
   const handleSubmit = async () => {
     if (!isClient) return;
     setIsSubmitting(true);
