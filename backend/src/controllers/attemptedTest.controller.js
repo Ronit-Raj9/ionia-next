@@ -4,7 +4,6 @@ import { PreviousTest } from "../models/previousYearPaper.model.js";
 import { AttemptedTest } from "../models/attemptedTest.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"; // Import JWT for token verification
-import { JWT_SECRET } from "../config.js"; // Ensure you have your secret key stored securely
 
 // Controller to submit test answers and save the attempted test
 const submitTest = asyncHandler(async (req, res) => {
@@ -18,7 +17,7 @@ const submitTest = asyncHandler(async (req, res) => {
     // Verify and decode token
     let decoded;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
     } catch (err) {
       throw new ApiError(401, "Unauthorized - Invalid or expired token.");
     }
