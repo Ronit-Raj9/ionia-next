@@ -7,28 +7,36 @@ const app = express();
 app.use(cookieParser());
 
 const allowedOrigins = [
-    "https://ionia-next.vercel.app", // Your Vercel frontend
-    "https://ionia-next-f9tep6a9p-ronit-raj9s-projects.vercel.app/",
-    "https://ionia-next-git-main-ronit-raj9s-projects.vercel.app/",
-    "https://www.ionia.sbs/",
-    "https://ionia.sbs/",
-    "http://localhost:3000" // For local development
-  ];
+  "https://ionia-next.vercel.app",
+  "https://www.ionia.sbs",
+  "https://ionia.sbs",
+  "http://localhost:3000",
+  "https://ionia-next-production.up.railway.app"  // Add your Railway backend URL
+];
+
   
   app.use(
     cors({
       origin: function (origin, callback) {
+        console.log("Request Origin:", origin);  // Debugging CORS issues
         if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           callback(new Error("Not allowed by CORS"));
         }
       },
-      credentials: true, // Allows cookies, sessions, etc.
+      credentials: true,
       methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-      allowedHeaders: "Content-Type,Authorization"
+      allowedHeaders: ["Content-Type", "Authorization"]
     })
   );
+  app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+    next();
+  });
   
 app.use(express.json({limit: "16kb"}));
 app.use(express.urlencoded({extended: true, limit: "16kb"}));
