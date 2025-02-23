@@ -10,6 +10,7 @@ const submitTest = asyncHandler(async (req, res) => {
   try {
     // Extract token from cookies
     const token = req.cookies.accessToken; // Ensure frontend sends credentials: "include"
+    console.log("Token in Backend coming from frontend:", token);
     if (!token) {
       throw new ApiError(401, "Unauthorized - No authentication token provided.");
     }
