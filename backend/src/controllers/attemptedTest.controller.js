@@ -1,18 +1,35 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { PreviousTest } from "../models/previousYearPaper.model.js";
-import { Question } from "../models/question.model.js";
 import { AttemptedTest } from "../models/attemptedTest.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken"; // Import JWT for token verification
+import { JWT_SECRET } from "../config.js"; // Ensure you have your secret key stored securely
 
 // Controller to submit test answers and save the attempted test
 const submitTest = asyncHandler(async (req, res) => {
-  const { userId, paperId, answers, metadata } = req.body;
-
   try {
+    // Extract token from cookies
+    const token = req.cookies.accessToken; // Ensure frontend sends credentials: "include"
+    if (!token) {
+      throw new ApiError(401, "Unauthorized - No authentication token provided.");
+    }
+
+    // Verify and decode token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      throw new ApiError(401, "Unauthorized - Invalid or expired token.");
+    }
+
+    const userId = decoded._id; // Extract userId from decoded token
+
+    const { paperId, answers, metadata } = req.body;
+
     // Validate required fields
-    if (!userId || !paperId || !answers || !metadata) {
-      throw new ApiError(400, "All fields (userId, paperId, answers, metadata) are required.");
+    if (!paperId || !answers || !metadata) {
+      throw new ApiError(400, "All fields (paperId, answers, metadata) are required.");
     }
 
     // Get the test details and its questions
@@ -43,13 +60,13 @@ const submitTest = asyncHandler(async (req, res) => {
 
     // Create a new attempted test document with the computed attemptNumber
     const attemptedTest = new AttemptedTest({
-      userId,
+      userId, // Now extracted from token
       testId: paperId,
-      attemptNumber: newAttemptNumber, // Set at the top level
+      attemptNumber: newAttemptNumber,
       answers,
       metadata: {
         totalQuestions: test.questions.length,
-        ...metadata, // Spread additional metadata (must include selectedLanguage)
+        ...metadata,
       },
       totalTimeTaken,
     });
@@ -57,7 +74,7 @@ const submitTest = asyncHandler(async (req, res) => {
     // Save the attempted test to the database
     await attemptedTest.save();
 
-    // Send success response (status code, data, message)
+    // Send success response
     res.status(201).json(new ApiResponse(201, attemptedTest, "Test submitted successfully"));
   } catch (error) {
     console.error("Error in submitTest:", error);
