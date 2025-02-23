@@ -2,14 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-interface Question {
-  id: string;
-  question: string;
-  // Add additional properties if needed.
-}
-
 export default function CreateTestPage() {
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState([]);
   const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
   const [examType, setExamType] = useState("");
   const [year, setYear] = useState("");
@@ -183,7 +177,7 @@ export default function CreateTestPage() {
 
         <button
           type="button"
-          className="w-full p-4 bg-primary text-white rounded"
+          className="mytxtgreen w-full p-4 bg-primary text-white rounded"
           onClick={handleCreateTest}
           disabled={loading}
         >
