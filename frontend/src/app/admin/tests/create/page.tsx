@@ -34,7 +34,6 @@ export default function CreateTestPage() {
   const [filterYear, setFilterYear] = useState("");
   const [filterSubject, setFilterSubject] = useState("");
   const [filterDifficulty, setFilterDifficulty] = useState("");
-  const [filterSection, setFilterSection] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -63,10 +62,22 @@ export default function CreateTestPage() {
         setQuestions(allQuestions);
         setFilteredQuestions(allQuestions);
 
-        // Extract unique subjects and years
-        const uniqueSubjects = [...new Set(allQuestions.map((q: Question) => q.subject))];
-        const uniqueYears = [...new Set(allQuestions.map((q: Question) => q.year))].sort((a, b) => Number(b) - Number(a));
-
+        // Extract unique subjects and years, converting subjects to lowercase
+        const uniqueSubjects = Array.from(
+          new Set(
+            allQuestions.map((q: Question) => 
+              typeof q.subject === "string" ? q.subject.toLowerCase() : ""
+            )
+          )
+        ) as string[];
+        
+        const uniqueYears = Array.from(
+          new Set(
+            allQuestions.map((q: Question) => q.year)
+          )
+        ).filter(Boolean) as string[];
+        
+        
         setSubjects(uniqueSubjects);
         setYears(uniqueYears);
       } catch (error) {
@@ -83,13 +94,6 @@ export default function CreateTestPage() {
     if (filterYear) filtered = filtered.filter((q) => q.year === filterYear);
     if (filterSubject) filtered = filtered.filter((q) => q.subject === filterSubject);
     if (filterDifficulty) filtered = filtered.filter((q) => q.difficulty === filterDifficulty);
-    if (filterSection)
-      filtered = filtered.filter(
-        (q) =>
-          q.sectionPhysics === filterSection ||
-          q.sectionChemistry === filterSection ||
-          q.sectionMathematics === filterSection
-      );
 
     // Search works independently
     if (searchTerm.trim()) {
@@ -97,7 +101,7 @@ export default function CreateTestPage() {
     }
 
     setFilteredQuestions(filtered);
-  }, [filterExamType, filterYear, filterSubject, filterDifficulty, filterSection, searchTerm, questions]);
+  }, [filterExamType, filterYear, filterSubject, filterDifficulty, searchTerm, questions]);
 
   const handleCreateTest = async () => {
     if (!testTitle || !testExamType || !testYear || !testShift || !testTime || selectedQuestions.length === 0) {

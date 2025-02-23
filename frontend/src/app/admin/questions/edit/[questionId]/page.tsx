@@ -3,14 +3,30 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 
+type QuestionDataType = {
+  question: string;
+  options: string[];
+  correctOption: number;
+  examType: string;
+  subject: string;
+  sectionPhysics?: string; // Optional if not always required
+  sectionChemistry?: string;
+  sectionMathematics?: string;
+  difficulty: string;
+  year: string;
+  languageLevel: string;
+  solutionMode: string;
+};
+
+
 export default function EditQuestion() {
-  const [questionData, setQuestionData] = useState({
+  const [questionData, setQuestionData] = useState<QuestionDataType>({
     question: "",
-    options: ["", "", "", ""],
+    options: ["", "", "", ""], // Default 4 options
     correctOption: 0,
     examType: "",
     subject: "",
-    sectionPhysics: "",
+    sectionPhysics: "", // Keeping consistent with type definition
     sectionChemistry: "",
     sectionMathematics: "",
     difficulty: "",
@@ -18,9 +34,10 @@ export default function EditQuestion() {
     languageLevel: "",
     solutionMode: "",
   });
+  
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const params = useParams();
   
@@ -52,7 +69,11 @@ export default function EditQuestion() {
           options: data.data?.options || ["", "", "", ""], // Ensure options is always an array
         });
       } catch (err) {
-        setError(err.message);
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
       } finally {
         setLoading(false);
       }
@@ -62,9 +83,12 @@ export default function EditQuestion() {
   }, [id]);
 
   // Handle input changes for normal fields and options array
-  const handleInputChange = (e, index) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    index?: number
+  ) => {
     const { name, value } = e.target;
-
+  
     if (index !== undefined) {
       const newOptions = [...(questionData.options || ["", "", "", ""])];
       newOptions[index] = value;
@@ -73,9 +97,10 @@ export default function EditQuestion() {
       setQuestionData((prev) => ({ ...prev, [name]: value }));
     }
   };
+  
 
   // Handle form submission
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
   
@@ -84,7 +109,7 @@ export default function EditQuestion() {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/update/${id}`,
         {
-          method: "PATCH", // ✅ Use PATCH instead of PUT
+          method: "PATCH",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
@@ -98,13 +123,18 @@ export default function EditQuestion() {
       }
   
       alert("✅ Question updated successfully!");
-      router.push("/admin/questions"); // Redirect after success
+      router.push("/admin/questions");
     } catch (err) {
-      alert(`❌ Error: ${err.message}`);
+      if (err instanceof Error) {
+        alert(`❌ Error: ${err.message}`);
+      } else {
+        alert("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }
   };
+  
   
 
   if (error) {
@@ -172,20 +202,23 @@ export default function EditQuestion() {
             "difficulty",
             "year",
             "languageLevel",
-            "solutionMode"
+            "solutionMode",
           ].map((field) => (
             <div key={field}>
-              <label className="block text-lg capitalize">{field.replace(/([A-Z])/g, ' $1')}</label>
+              <label className="block text-lg capitalize">
+                {field.replace(/([A-Z])/g, " $1")}
+              </label>
               <input
                 type="text"
                 name={field}
-                value={questionData[field] || ""}
+                value={questionData[field as keyof QuestionDataType] || ""}  // ✅ Explicitly define as keyof QuestionDataType
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-md"
                 required
               />
             </div>
           ))}
+
 
           {/* Submit Button */}
           <button 
