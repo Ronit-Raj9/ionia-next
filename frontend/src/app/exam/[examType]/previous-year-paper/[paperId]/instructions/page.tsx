@@ -28,21 +28,11 @@ const Instructions = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header Section */}
-      <header className="bg-blue-100 py-4 px-6 border-b">
-        <div className="flex justify-between items-center">
+      <header className="bg-white py-4 px-6 border-b">
+        <div className="flex items-center">
           <div>
-            <h1 className="text-lg font-semibold">Ministry of Education</h1>
-            <h2 className="text-sm">Government of India</h2>
-          </div>
-          <div>
-            <Image
-              src="/nta.jpeg"  // Remove "public" from the path
-              alt="National Testing Agency Logo"
-              className="h-12"
-              width={48}
-              height={48}
-            />
-
+            <h2 className="text-xl font-bold">Ionia</h2>
+            <p className="text-green-600">Enquire beyond horizon</p>
           </div>
         </div>
       </header>
