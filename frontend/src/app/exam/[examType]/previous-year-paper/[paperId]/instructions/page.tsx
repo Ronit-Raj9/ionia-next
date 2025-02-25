@@ -30,13 +30,10 @@ const Instructions = () => {
       {/* Header Section */}
       <header className="bg-blue-100 py-4 px-6 border-b">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-lg font-semibold">Ministry of Education</h1>
-            <h2 className="text-sm">Government of India</h2>
-          </div>
+          
           <div>
             <Image
-              src="/nta.jpeg"  // Remove "public" from the path
+              src="nta.jpeg"  // Remove "public" from the path
               alt="National Testing Agency Logo"
               className="h-12"
               width={48}
