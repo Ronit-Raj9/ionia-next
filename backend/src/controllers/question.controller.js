@@ -4,7 +4,6 @@ import {User} from "../models/user.model.js";
 import { Question } from "../models/question.model.js";
 import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
-import jwt from "jsonwebtoken";
 
 const uploadQuestion = asyncHandler( async (req, res) => {
     const {
@@ -73,10 +72,72 @@ const getQuestions = asyncHandler(async (req, res) => {
     }
 });
 
+const getQuestionById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    console.log("req.params", req.params);
+
+    // Find the question by ID
+    const question = await Question.findById(id);
+    if (!question) {
+        throw new ApiError(404, "Question not found");
+    }
+
+    res.status(200).json({
+        message: "Question retrieved successfully",
+        data: question,
+    });
+});
+
+
+const updateQuestion = asyncHandler(async (req, res) => {
+    const { id } = req.params; // Extract question ID from URL params
+    const updateData = req.body; // Get the updated data from request body
+
+    // Check if the question exists
+    const existingQuestion = await Question.findById(id);
+    if (!existingQuestion) {
+        throw new ApiError(404, "Question not found");
+    }
+
+    // Merge the existing question data with the new updates
+    Object.keys(updateData).forEach((key) => {
+        if (updateData[key] !== undefined) {
+            existingQuestion[key] = updateData[key]; // Update only provided fields
+        }
+    });
+
+    // Save the updated question
+    await existingQuestion.save();
+
+    res.status(200).json({
+        message: "Question updated successfully",
+        data: existingQuestion,
+    });
+});
+
+const deleteQuestion = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    // Find and delete the question
+    const deletedQuestion = await Question.findByIdAndDelete(id);
+
+    if (!deletedQuestion) {
+        throw new ApiError(404, "Question not found");
+    }
+
+    res.status(200).json({
+        message: "Question deleted successfully",
+        data: deletedQuestion,
+    });
+});
+
 
 export {
     uploadQuestion,
-    getQuestions
+    getQuestions,
+    updateQuestion,
+    getQuestionById,
+    deleteQuestion
 }
 
 

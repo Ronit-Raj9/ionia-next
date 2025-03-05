@@ -43,6 +43,7 @@ export default function AddQuestion() {
     try {
       const response = await fetch(uploadUrl, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },

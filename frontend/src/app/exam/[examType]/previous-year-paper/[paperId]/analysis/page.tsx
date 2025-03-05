@@ -9,29 +9,19 @@ const AnalysisPageContent = ({ paperId }: { paperId: string }) => {
   const { setAnalysisData } = useAnalysis();
 
   // Helper to get a cookie value by name
-  const getCookie = (name: string): string | null => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(";")[0] || null;
-    return null;
-  };
 
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        const token = getCookie("accessToken");
-        if (!token) {
-          console.error("Access token not found. User might not be logged in.");
-          return;
-        }
+  
 
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/attempted-tests/analysis?paperId=${paperId}`,
           {
             method: "GET",
+            credentials: "include",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
           }
         );

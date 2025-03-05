@@ -11,7 +11,6 @@ import LanguageSelector from "./Controls/LanguageSelector";
 import CandidateInfo from "./Header/CandidateInfo";
 import Timer from "./Header/Timer";
 import QuestionPanel from "./QuestionPanel";
-// Removed unused: import { useAnalysis } from "@/context/AnalysisContext";
 
 interface TestWindowProps {
   examType: string;
@@ -130,39 +129,14 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
     setStartTime(currentTime);
   };
 
-  // Helper function to get a cookie by name
-  const getCookie = (name: string): string | null => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(";")[0] || null;
-    return null;
-  };
-
   const handleSubmit = async () => {
     if (!isClient) return;
     setIsSubmitting(true);
-
-    // Retrieve token from cookie
-    const token = getCookie("accessToken");
-    console.log("Token:", token);
-
-    if (!token) {
-      alert("No authentication token found. Please log in again.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Decode JWT token (assuming standard JWT structure)
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const decodedToken = JSON.parse(atob(base64));
-    const userId = decodedToken._id;
-
+  
     const totalTimeTaken = Date.now() - startTime;
-
+  
     const payload = {
       paperId,
-      userId,
       answers: Array.from(selectedAnswers.entries()).map(([serialNumber, optionIndex]) => {
         const questionId = questionIds[serialNumber - 1];
         return {
@@ -186,25 +160,26 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
         selectedLanguage,
       },
     };
-
+  
     console.log("Submitting payload:", payload);
-
+  
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attempted-tests/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include", // Ensure the cookie is sent with the request
         body: JSON.stringify(payload),
       });
+  
       console.log("Response:", response);
-
+  
       if (response.ok) {
         const result = await response.json();
         alert("Submission successful!");
         console.log("Backend response:", result);
-
+  
         try {
           await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate async wait
           console.log("Navigating...");
@@ -226,7 +201,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId }) => {
       setIsSubmitting(false);
     }
   };
-
+  
   if (!isClient) return null;
 
   return (
