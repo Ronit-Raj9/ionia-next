@@ -37,7 +37,7 @@ export default function CreateTestPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false); // Controls visibility of filters
+  const [showFilters, setShowFilters] = useState(false);
   const router = useRouter();
 
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -62,22 +62,19 @@ export default function CreateTestPage() {
         setQuestions(allQuestions);
         setFilteredQuestions(allQuestions);
 
-        // Extract unique subjects and years, converting subjects to lowercase
+        // Extract unique subjects (in lowercase) and years
         const uniqueSubjects = Array.from(
           new Set(
-            allQuestions.map((q: Question) => 
+            allQuestions.map((q: Question) =>
               typeof q.subject === "string" ? q.subject.toLowerCase() : ""
             )
           )
         ) as string[];
-        
+
         const uniqueYears = Array.from(
-          new Set(
-            allQuestions.map((q: Question) => q.year)
-          )
+          new Set(allQuestions.map((q: Question) => q.year))
         ).filter(Boolean) as string[];
-        
-        
+
         setSubjects(uniqueSubjects);
         setYears(uniqueYears);
       } catch (error) {
@@ -90,14 +87,24 @@ export default function CreateTestPage() {
   useEffect(() => {
     let filtered = questions;
 
-    if (filterExamType) filtered = filtered.filter((q) => q.examType === filterExamType);
-    if (filterYear) filtered = filtered.filter((q) => q.year === filterYear);
-    if (filterSubject) filtered = filtered.filter((q) => q.subject === filterSubject);
-    if (filterDifficulty) filtered = filtered.filter((q) => q.difficulty === filterDifficulty);
+    if (filterExamType) {
+      filtered = filtered.filter((q) => q.examType === filterExamType);
+    }
+    if (filterYear) {
+      filtered = filtered.filter((q) => q.year === filterYear);
+    }
+    if (filterSubject) {
+      filtered = filtered.filter((q) => q.subject === filterSubject);
+    }
+    if (filterDifficulty) {
+      filtered = filtered.filter((q) => q.difficulty === filterDifficulty);
+    }
 
-    // Search works independently
+    // Search works independently of filters
     if (searchTerm.trim()) {
-      filtered = questions.filter((q) => q.question.toLowerCase().includes(searchTerm.toLowerCase()));
+      filtered = questions.filter((q) =>
+        q.question.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
     setFilteredQuestions(filtered);
@@ -143,7 +150,9 @@ export default function CreateTestPage() {
 
   const handleQuestionSelect = (questionId: string) => {
     setSelectedQuestions((prev) =>
-      prev.includes(questionId) ? prev.filter((id) => id !== questionId) : [...prev, questionId]
+      prev.includes(questionId)
+        ? prev.filter((id) => id !== questionId)
+        : [...prev, questionId]
     );
   };
 
@@ -152,7 +161,7 @@ export default function CreateTestPage() {
       alert("Please fill in all test metadata fields.");
       return;
     }
-    setShowFilters(true); // Show filters after metadata is filled
+    setShowFilters(true);
   };
 
   return (
@@ -291,7 +300,9 @@ export default function CreateTestPage() {
               />
             </div>
 
-            <h2 className="text-xl mt-6 font-semibold">Select Questions ({selectedQuestions.length} selected)</h2>
+            <h2 className="text-xl mt-6 font-semibold">
+              Select Questions ({selectedQuestions.length} selected)
+            </h2>
 
             <div className="border p-4 max-h-96 overflow-y-auto">
               {filteredQuestions.length === 0 ? (
@@ -313,7 +324,11 @@ export default function CreateTestPage() {
                           {question.options.map((option, index) => (
                             <div
                               key={index}
-                              className={`ml-4 ${index === question.correctOption ? "text-green-600 font-bold" : "text-gray-700"}`}
+                              className={`ml-4 ${
+                                index === question.correctOption
+                                  ? "text-green-600 font-bold"
+                                  : "text-gray-700"
+                              }`}
                             >
                               {String.fromCharCode(65 + index)}. {option}
                             </div>
