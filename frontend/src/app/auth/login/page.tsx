@@ -1,57 +1,48 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext'; // Import the useAuth hook
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-  const { setToken } = useAuth(); // Destructure setToken from AuthContext
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  // Removed 'user' because it wasn't being used
+  const { login, isAuthenticated } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const router = useRouter();
+
+  // If the user is already logged in, redirect to home.
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Invalid credentials');
+      await login(email, password);
+      // AuthContext's login function will handle role-based redirect or default redirection
+    } catch (err: unknown) {
+      // Replace 'any' with 'unknown' and use a type guard
+      if (err instanceof Error) {
+        console.error("Login error:", err.message);
+      } else {
+        console.error("Login error:", err);
       }
-
-      const data = await response.json();
-      const accessToken = data.data.accessToken;
-
-      // Store token in localStorage and in AuthContext
-      localStorage.setItem('token', accessToken);
-      setToken(accessToken); // Set the token in context
-
-      // Use router.push to navigate to home without reloading
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulating async API call
-        console.log("Navigating...");
-        router.push('/');
-        console.log("Navigation triggered!");
-    } catch (error) {
-        console.error("Navigation error:", error);
-    }
-    } catch (err: any) {
-      setError(err.message);
+      setError("Invalid email or password");
     }
   };
 
   return (
-    <div className="other-container max-w-md mx-auto mb-10 p-6 bg-white rounded-lg shadow-md mt-24">
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-center mb-4">Login</h2>
       {error && <p className="text-red-500 text-center">{error}</p>}
+
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -60,12 +51,13 @@ export default function LoginPage() {
           <input
             type="email"
             id="email"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
+
         <div>
           <label htmlFor="password" className="block text-sm font-medium text-gray-700">
             Password
@@ -73,24 +65,24 @@ export default function LoginPage() {
           <input
             type="password"
             id="password"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
+
         <button
           type="submit"
-          className="mygreen w-full bg-green-700 text-white py-2 px-4 rounded hover:bg-green-700 transition-colors"
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
         >
           Login
         </button>
       </form>
 
-      {/* Call-to-action for new users */}
       <p className="text-center mt-6 text-gray-600">
-        Don’t have an account?{' '}
-        <Link href="/register" className="text-primary font-medium hover:underline">
+        Don’t have an account?{" "}
+        <Link href="/register" className="text-blue-600 font-medium hover:underline">
           Create an account
         </Link>
       </p>
