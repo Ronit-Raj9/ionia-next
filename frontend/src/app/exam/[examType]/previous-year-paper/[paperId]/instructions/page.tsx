@@ -1,8 +1,6 @@
 "use client";
-
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import Image from "next/image";
 
 const Instructions = () => {
   const router = useRouter();
@@ -14,7 +12,7 @@ const Instructions = () => {
     if (!paperId) {
       console.error("paperId is missing!");
     }
-  }, [paperId, examType]); // Added examType to dependency array
+  }, [paperId, examType]);
 
   // Redirect to the test page once the user agrees to the instructions
   const handleProceed = () => {
@@ -30,16 +28,8 @@ const Instructions = () => {
       {/* Header Section */}
       <header className="bg-blue-100 py-4 px-6 border-b">
         <div className="flex justify-between items-center">
-          
           <div>
-            <Image
-              src="nta.jpeg"  // Remove "public" from the path
-              alt="National Testing Agency Logo"
-              className="h-12"
-              width={48}
-              height={48}
-            />
-
+            {/* Image removed */}
           </div>
         </div>
       </header>
@@ -56,10 +46,13 @@ const Instructions = () => {
           <ul className="list-disc list-inside space-y-2 text-sm text-gray-700">
             <li>Total duration of JEE-Main is 180 minutes.</li>
             <li>
-              The clock will be set at the server. The countdown timer in the top right corner of the screen will display the remaining time available for you to complete the examination.
+              The clock will be set at the server. The countdown timer in the top right
+              corner of the screen will display the remaining time available for you to
+              complete the examination.
             </li>
             <li>
-              The Questions Palette displayed on the right side of the screen will show the status of each question using symbols.
+              The Questions Palette displayed on the right side of the screen will show
+              the status of each question using symbols.
             </li>
             <li>You can navigate through questions and sections as needed.</li>
           </ul>
@@ -98,10 +91,12 @@ const Instructions = () => {
           <ul className="list-decimal list-inside space-y-2 text-sm text-gray-700">
             <li>To answer a question, click on the question number.</li>
             <li>
-              Click &quot;Save &amp; Next&quot; to save your answer for the current question and move to the next one.
+              Click &quot;Save &amp; Next&quot; to save your answer for the current question
+              and move to the next one.
             </li>
             <li>
-              Click &quot;Mark for Review &amp; Next&quot; to mark the current question for review and move to the next question.
+              Click &quot;Mark for Review &amp; Next&quot; to mark the current question for
+              review and move to the next question.
             </li>
           </ul>
         </section>
@@ -135,7 +130,7 @@ const Instructions = () => {
       {/* Footer */}
       <footer className="bg-gray-100 py-4 text-center mt-8 border-t">
         <p className="text-xs text-gray-500">
-          © All Rights Reserved - National Testing Agency
+          © All Rights Reserved - Ionia
         </p>
       </footer>
     </div>

@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { fetchTests } from "../utils/api"; // Ensure this function exists and fetches data
+// Make sure your fetchTests utility is correctly implemented
+import { fetchTests } from "../utils/api"; 
 
 interface Test {
   _id: string;
@@ -20,9 +21,9 @@ export default function TestPage() {
   useEffect(() => {
     async function getTests() {
       try {
-        const response = await fetchTests(); // Fetch the test data
-        console.log("Mera sara test ka response: ", response); // Debugging log to see the full response structure
-        setResponseData(response.data); // Directly store the 'data' from the response
+        const response = await fetchTests();
+        console.log("Mera sara test ka response: ", response);
+        setResponseData(response.data);
       } catch (error) {
         console.error("Error fetching tests:", error);
       } finally {
@@ -47,15 +48,15 @@ export default function TestPage() {
       </h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {responseData.map((test: Test) => {
-          console.log("Test ka id: ", `/admin/tests/view/${test._id}`);
           return (
             <div
               key={test._id}
               className="bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 p-6 flex items-center space-x-6 w-full"
             >
+              {/* Use a leading slash for the src */}
               <div className="w-1/4 relative">
                 <Image
-                  src="/placeholder-image.jpg"
+                  src="/test.png"      // <-- FIXED: leading slash
                   alt="Test Icon"
                   className="rounded-lg w-full h-auto object-cover"
                   width={100}
