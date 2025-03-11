@@ -1,69 +1,75 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Menu, X, User } from 'lucide-react';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Menu, X, User } from "lucide-react";
+
+interface IUserData {
+  username: string;
+  role?: string;
+}
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<{ username: string } | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [user, setUser] = useState<IUserData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'JEE Mains', href: '/exam/jee-mains' },
-    { name: 'JEE Advanced', href: '/exam/jee-advanced' },
-    { name: 'CUET', href: '/exam/cuet' },
-    { name: 'CBSE', href: '/exam/cbse' },
-    { name: 'Practice', href: '/practice' },
+    { name: "Home", href: "/" },
+    { name: "JEE Mains", href: "/exam/jee-mains" },
+    { name: "JEE Advanced", href: "/exam/jee-advanced" },
+    { name: "CUET", href: "/exam/cuet" },
+    { name: "Practice", href: "/practice" },
   ];
 
-  // Load user from token (if available)
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const fetchUser = async () => {
       try {
-        const payload = JSON.parse(atob(token.split('.')[1])); // Decode JWT payload
-        if (payload.username) {
-          setUser({ username: payload.username });
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/users/current-user`,
+          {
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setUser({
+            username: data.data.username,
+            role: data.data.role,
+          });
+        } else {
+          setUser(null);
         }
       } catch (err) {
-        console.error('Failed to parse token:', err);
+        console.error("Failed to fetch user:", err);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchUser();
   }, []);
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  // Prevent scrolling when menu is open
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : 'auto';
-  }, [isOpen]);
+  if (loading) {
+    return (
+      <nav className="bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-2">
+          <p className="text-center text-gray-500">Loading...</p>
+        </div>
+      </nav>
+    );
+  }
 
   return (
-    <nav className="fixed mb-40 top-0 left-0 w-full bg-white shadow-md z-50">
+    <nav className="bg-white shadow-sm fixed top-0 left-0 w-full z-50">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between h-16 items-center">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-4xl font-bold text-green-600">iONIA<br></br><span className="logo-b">Enquire beyond horizon</span></span>
-            
-            
+            <span className="text-2xl font-bold text-blue-600">TestSeries</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -72,11 +78,19 @@ export default function Navbar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-gray-700 hover:text-green-600 transition"
+                className="text-gray-700 hover:text-blue-600 transition"
               >
                 {item.name}
               </Link>
             ))}
+            {user && user.role === "admin" && (
+              <Link
+                href="/admin"
+                className="text-gray-700 hover:text-blue-600 transition"
+              >
+                Admin Panel
+              </Link>
+            )}
             {user ? (
               <Link
                 href="/dashboard"
@@ -88,71 +102,68 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/login"
-                className="mygreen text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
               >
                 Sign In
               </Link>
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="text-gray-700 hover:text-blue-600 md:hidden"
-          >
-            {isOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Navigation Menu */}
-      <div
-        ref={menuRef}
-        className={`fixed top-0 left-0 w-full bg-white shadow-lg transition-transform duration-300 md:hidden ${
-          isOpen ? 'translate-y-0' : '-translate-y-full'
-        }`}
-      >
-        {/* Close Button Inside Menu */}
-        <div className="flex justify-end p-4">
-          <button
-            onClick={() => setIsOpen(false)}
-            className="text-gray-700 hover:text-red-600"
-          >
-            <X size={28} />
-          </button>
+          {/* Mobile Navigation Button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-gray-700 hover:text-blue-600"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile Menu Links */}
-        <div className="pt-2 pb-4 space-y-4">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
-              onClick={() => setIsOpen(false)}
-            >
-              {item.name}
-            </Link>
-          ))}
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="flex items-center px-4 py-2 space-x-2 text-gray-700 hover:bg-blue-50 rounded-md"
-              onClick={() => setIsOpen(false)}
-            >
-              <User className="text-blue-600" size={20} />
-              <span>{user.username}</span>
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
-              onClick={() => setIsOpen(false)}
-            >
-              Sign In
-            </Link>
-          )}
-        </div>
+        {/* Mobile Navigation Menu */}
+        {isOpen && (
+          <div className="md:hidden">
+            <div className="pt-2 pb-3 space-y-1">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="block px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ))}
+              {user && user.role === "admin" && (
+                <Link
+                  href="/admin"
+                  className="block px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Admin Panel
+                </Link>
+              )}
+              {user ? (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-md"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User className="text-blue-600" size={20} />
+                  <span>{user.username}</span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="block px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Sign In
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

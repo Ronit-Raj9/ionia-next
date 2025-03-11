@@ -45,6 +45,9 @@ export default function CreateTestPage() {
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [availableYears, setAvailableYears] = useState<string[]>([]);
 
+  // availableYears has been removed as it is not used
+
+
   // Fetch questions on mount
   useEffect(() => {
     async function loadQuestions() {
@@ -65,8 +68,8 @@ export default function CreateTestPage() {
         setQuestions(allQuestions);
         setFilteredQuestions(allQuestions);
 
-        // Extract unique subjects (in lowercase) and years
-        const uniqueSubjects = Array.from(
+        // Extract unique subjects (in lowercase)
+        const uniqueSubjects = (Array.from(
           new Set(
             allQuestions.map((q: Question) =>
               typeof q.subject === "string" ? q.subject.toLowerCase() : ""

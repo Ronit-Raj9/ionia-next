@@ -32,12 +32,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Header */}
         <div className="mb-6 flex justify-between items-center">
           <h1 className="mytxtdim text-3xl font-semibold text-primary">Test Series Management</h1>
-          <div>
-            {/* Log Out Button */}
-            <button className="px-4 py-2 bg-primary mytxtgreen rounded-md">
-              Log Out
-            </button>
-          </div>
         </div>
 
         {/* Render children (pages content like the tests list, test creation form, etc.) */}
