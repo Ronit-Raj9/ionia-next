@@ -2,11 +2,25 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 
+// Define a union type for valid exam keys.
+type ExamKey = "jee-mains" | "jee-advanced" | "cuet";
+
 export default function ExamTypePage() {
   const params = useParams();
-  const { examType } = params || {};
+  let { examType } = params || {};
 
-  const examDetails = {
+  // If examType is an array, use the first element.
+  if (Array.isArray(examType)) {
+    examType = examType[0];
+  }
+
+  // Check that examType is defined and a string.
+  if (!examType || typeof examType !== "string") {
+    return <h1 className="text-center mt-20 text-2xl">Exam Type Not Found</h1>;
+  }
+
+  // Define exam details with a typed record.
+  const examDetails: Record<ExamKey, { title: string; description: string; subjects: string[] }> = {
     "jee-mains": {
       title: "JEE Mains Test Series",
       description: "Comprehensive practice for JEE Mains",
@@ -24,11 +38,13 @@ export default function ExamTypePage() {
     },
   };
 
-  const details = examDetails[examType];
-
-  if (!details) {
+  // Validate that examType is a valid key.
+  if (!(examType in examDetails)) {
     return <h1 className="text-center mt-20 text-2xl">Exam Type Not Found</h1>;
   }
+
+  // Cast examType to the valid union type.
+  const details = examDetails[examType as ExamKey];
 
   return (
     <div className="other-container container mx-auto p-6 mt-10">

@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import '../styles/globals.css';
-import { useEffect } from 'react';
+
 
 export default function Home() {
   // useEffect(() => {

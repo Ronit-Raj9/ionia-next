@@ -35,8 +35,12 @@ export default function RegisterPage() {
       }
 
       router.push('/login');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An unexpected error occurred');
+      }
     }
   };
 
