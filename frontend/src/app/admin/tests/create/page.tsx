@@ -43,7 +43,10 @@ export default function CreateTestPage() {
 
   // Options for filtering (extracted from the questions data)
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
+
   // availableYears has been removed as it is not used
+
 
   // Fetch questions on mount
   useEffect(() => {
@@ -72,9 +75,13 @@ export default function CreateTestPage() {
               typeof q.subject === "string" ? q.subject.toLowerCase() : ""
             )
           )
-        ).filter(Boolean)) as string[];
+        );
+        const uniqueYears = Array.from(
+          new Set(allQuestions.map((q: Question) => q.year))
+        ).filter(Boolean);
 
         setAvailableSubjects(uniqueSubjects);
+        setAvailableYears(uniqueYears);
       } catch (error) {
         console.error("Error fetching questions:", error);
       }
