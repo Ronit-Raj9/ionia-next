@@ -33,6 +33,7 @@ const Instructions = () => {
           <div>
             <h2 className="text-xl font-bold">Ionia</h2>
             <p className="text-green-600">Enquire beyond horizon</p>
+
           </div>
         </div>
       </header>
@@ -127,9 +128,7 @@ const Instructions = () => {
 
       {/* Footer */}
       <footer className="bg-gray-100 py-4 text-center mt-8 border-t">
-        <p className="text-xs text-gray-500">
-          © All Rights Reserved - National Testing Agency
-        </p>
+        
       </footer>
     </div>
   );
