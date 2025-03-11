@@ -43,7 +43,7 @@ export default function CreateTestPage() {
 
   // Options for filtering (extracted from the questions data)
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
-  // Removed availableYears as it is not used
+  // availableYears has been removed as it is not used
 
   // Fetch questions on mount
   useEffect(() => {
