@@ -1,102 +1,217 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import StatsCard from "@/components/dashboard/StatsCard";
-import PerformanceChart from "@/components/dashboard/PerformanceChart";
-import RecentTests from "@/components/dashboard/RecentTests";
-import UpcomingTests from "@/components/dashboard/UpcomingTests";
-import { Card } from "@/components/dashboard/card";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
+import { getCurrentUser } from "@/redux/slices/authSlice";
+import { fetchTestHistory } from "@/redux/slices/testSlice";
+import { RootState } from "@/redux/store";
+import { Card } from "@/components/dashboard/card";
+import PerformanceChart, { PerformanceData } from "@/components/dashboard/PerformanceChart";
+import SubjectPerformance, { SubjectData } from "@/components/dashboard/SubjectPerformance";
+import { FiRefreshCw, FiAlertTriangle, FiActivity, FiCalendar, FiCheckCircle, FiTarget } from "react-icons/fi";
+import { ClipLoader } from "react-spinners";
 
 export default function Dashboard() {
-  const { isAuthenticated, logout, loading } = useAuth();
-  const [stats, setStats] = useState({
-    totalTests: 0,
-    averageScore: 0,
-    testsThisWeek: 0,
-    accuracy: 0,
-  });
+  const dispatch = useAppDispatch();
   const router = useRouter();
+  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
+  const { testHistory, loading: testHistoryLoading } = useAppSelector((state: RootState) => state.test);
+
+  // Transform test history object into array for performance chart
+  const performanceChartData = useMemo(() => {
+    return Object.entries(testHistory).map(([testId, result]) => ({
+      date: new Date(parseInt(testId)).toLocaleDateString(),
+      score: result.score,
+      accuracy: (result.correctAnswers / (result.correctAnswers + result.incorrectAnswers)) * 100
+    })) as PerformanceData[];
+  }, [testHistory]);
+
+  // Create data for subject performance chart with mock subjects
+  const subjectChartData = useMemo(() => {
+    // Create an array of sample subjects since our TestResults doesn't include subjects
+    const subjects = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+    
+    // Convert test history to array with mock subjects for the SubjectPerformance chart
+    return Object.entries(testHistory).map(([testId, result], index) => ({
+      subject: subjects[index % subjects.length], // Assign mock subjects in a cycle
+      score: result.score,
+      accuracy: (result.correctAnswers / (result.correctAnswers + result.incorrectAnswers)) * 100
+    })) as SubjectData[];
+  }, [testHistory]);
 
   useEffect(() => {
-    // Wait until the auth check is complete.
-    if (loading) return;
-    if (!isAuthenticated) {
-      console.log("Not authenticated, redirecting to login");
-      router.push("/login");
-      return;
-    } else {
-      console.log("Authenticated:", isAuthenticated);
+    if (!isAuthenticated && !authLoading) {
+      router.push('/auth/login');
     }
+  }, [isAuthenticated, authLoading, router]);
 
-    // Fetch dashboard statistics (simulate API call)
-    const fetchStats = async () => {
-      try {
-        // Replace this mock data with a real API call
-        const data = {
-          totalTests: 24,
-          averageScore: 76.5,
-          testsThisWeek: 3,
-          accuracy: 82,
-        };
-        setStats(data);
-      } catch (error) {
-        console.error("Failed to fetch dashboard stats:", error);
-      }
-    };
-
-    fetchStats();
-  }, [isAuthenticated, loading, router]);
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      // Logout handles redirection.
-    } catch (err) {
-      console.error("Logout failed:", err);
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(getCurrentUser());
+      dispatch(fetchTestHistory());
     }
-  };
+  }, [dispatch, isAuthenticated]);
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (authLoading || testHistoryLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <ClipLoader color="#10B981" size={40} />
+      </div>
+    );
   }
 
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Calculate statistics
+  const totalTests = Object.keys(testHistory).length;
+  const averageScore = totalTests > 0
+    ? Math.round(Object.values(testHistory).reduce((acc, test) => acc + test.score, 0) / totalTests)
+    : 0;
+  const bestScore = totalTests > 0
+    ? Math.max(...Object.values(testHistory).map(test => test.score))
+    : 0;
+  const lastTestDate = totalTests > 0
+    ? new Date(Math.max(...Object.keys(testHistory).map(id => parseInt(id)))).toLocaleDateString()
+    : 'Never';
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-        >
-          Logout
-        </button>
-      </header>
+    <div className="p-6 max-w-full">
+      {/* Welcome Section */}
+      <div className="mb-8 animate-fade-in">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+          Dashboard Overview
+        </h1>
+        <p className="text-base text-gray-600 mt-2">
+          Track your test performance and progress
+        </p>
+      </div>
 
-      {/* Statistics Section */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatsCard title="Total Tests" value={stats.totalTests} icon="clipboard" />
-        <StatsCard title="Average Score" value={`${stats.averageScore}%`} icon="chart" />
-        <StatsCard title="Tests This Week" value={stats.testsThisWeek} icon="calendar" />
-        <StatsCard title="Accuracy" value={`${stats.accuracy}%`} icon="target" />
-      </section>
+      {/* Stats Cards */}
+      <div className="mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Tests Card */}
+          <Card className="transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white border border-emerald-100">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="p-3 bg-emerald-100 rounded-full">
+                    <FiActivity className="w-6 h-6 text-emerald-600" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-emerald-600">Total Tests</p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{totalTests}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
 
-      {/* Performance Chart Section */}
-      <section className="mb-8">
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Performance Trend</h2>
-          <PerformanceChart />
+          {/* Average Score Card */}
+          <Card className="transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white border border-emerald-100">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="p-3 bg-emerald-100 rounded-full">
+                    <FiCheckCircle className="w-6 h-6 text-emerald-600" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-emerald-600">Average Score</p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{averageScore}%</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Best Score Card */}
+          <Card className="transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white border border-emerald-100">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="p-3 bg-emerald-100 rounded-full">
+                    <FiTarget className="w-6 h-6 text-emerald-600" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-emerald-600">Best Score</p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{bestScore}%</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Last Test Card */}
+          <Card className="transform transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white border border-emerald-100">
+            <div className="p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="p-3 bg-emerald-100 rounded-full">
+                    <FiCalendar className="w-6 h-6 text-emerald-600" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-emerald-600">Last Test</p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{lastTestDate}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Performance Trend */}
+        <Card>
+          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+            <div className="px-6 pt-6 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Performance Trend</h3>
+              <button
+                onClick={() => dispatch(fetchTestHistory())}
+                className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
+              >
+                <FiRefreshCw className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="h-[300px] sm:h-[400px]">
+              {performanceChartData.length > 0 ? (
+                <PerformanceChart data={performanceChartData} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  No performance data available
+                </div>
+              )}
+            </div>
+          </div>
         </Card>
-      </section>
 
-      {/* Recent and Upcoming Tests Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Passing an empty array for tests; replace with actual data when available */}
-        <RecentTests tests={[]} />
-        <UpcomingTests tests={[]} />
-      </section>
+        {/* Subject Performance */}
+        <Card>
+          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+            <div className="px-6 pt-6 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Subject Performance</h3>
+              <button
+                onClick={() => dispatch(fetchTestHistory())}
+                className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
+              >
+                <FiRefreshCw className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="h-[300px] sm:h-[400px]">
+              {subjectChartData.length > 0 ? (
+                <SubjectPerformance data={subjectChartData} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  No performance data available
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

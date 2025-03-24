@@ -3,13 +3,20 @@
 import { useState, useEffect } from "react";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 
-interface HeaderProps {
-  attempts: string[];
+interface TestInfo {
+  testName?: string;
+  attemptNumber?: number;
+  attempts?: string[];
 }
 
-const Header: React.FC<HeaderProps> = ({ attempts = [] }) => {
+interface HeaderProps {
+  testInfo: TestInfo;
+}
+
+const Header: React.FC<HeaderProps> = ({ testInfo = {} }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedAttempt, setSelectedAttempt] = useState("");
+  const attempts: string[] = testInfo?.attempts || [`Attempt ${testInfo?.attemptNumber || 1}`];
 
   // Set the default selected attempt when attempts are available
   useEffect(() => {
@@ -25,49 +32,53 @@ const Header: React.FC<HeaderProps> = ({ attempts = [] }) => {
   };
 
   return (
-    <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg shadow">
-      {/* Left Section */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Report Card</h1>
-        <p className="text-sm text-gray-500">JEE Main 2024 (27 Jan Shift 1)</p>
-      </div>
+    <div className="bg-white border-b border-gray-200 shadow-sm mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          {/* Left Section */}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Analysis Report</h1>
+            <p className="text-sm text-gray-500">{testInfo?.testName || 'Test Analysis'}</p>
+          </div>
 
-      {/* Right Section */}
-      <div className="flex items-center space-x-4">
-        {/* View Solution Button */}
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
-          View Solution
-        </button>
+          {/* Right Section */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* View Solution Button */}
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 transition-colors text-sm font-medium">
+              View Solution
+            </button>
 
-        {/* Reattempt Button */}
-        <button className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition">
-          Reattempt
-        </button>
+            {/* Reattempt Button */}
+            <button className="px-4 py-2 bg-green-600 text-white rounded-md shadow-sm hover:bg-green-700 transition-colors text-sm font-medium">
+              Reattempt
+            </button>
 
-        {/* Dropdown */}
-        <div className="relative">
-          <button
-            onClick={toggleDropdown}
-            className="flex items-center px-4 py-2 bg-gray-100 text-gray-800 rounded-lg shadow hover:bg-gray-200 transition"
-          >
-            {selectedAttempt || "No Attempts"}
-            <ChevronDownIcon className="w-5 h-5 ml-2" />
-          </button>
-          {isDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-              {attempts.map((attempt, index) => (
-                <button
-                  key={index}
-                  onClick={() => selectAttempt(attempt)}
-                  className={`block w-full text-left px-4 py-2 hover:bg-gray-100 transition ${
-                    selectedAttempt === attempt ? "bg-gray-100 font-semibold" : ""
-                  }`}
-                >
-                  {attempt}
-                </button>
-              ))}
+            {/* Dropdown */}
+            <div className="relative">
+              <button
+                onClick={toggleDropdown}
+                className="flex items-center px-4 py-2 bg-gray-100 text-gray-800 rounded-md shadow-sm hover:bg-gray-200 transition-colors text-sm font-medium"
+              >
+                <span className="mr-1">{selectedAttempt || "No Attempts"}</span>
+                <ChevronDownIcon className="w-4 h-4" />
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-10 py-1">
+                  {attempts.map((attempt: string, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => selectAttempt(attempt)}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
+                        selectedAttempt === attempt ? "bg-gray-100 font-medium" : ""
+                      }`}
+                    >
+                      {attempt}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

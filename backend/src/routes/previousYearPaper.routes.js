@@ -3,6 +3,7 @@ import {
   addPreviousYearTest,
   getPreviousYearTests,
   getTestDetails,
+  deleteTest,
 } from "../controllers/previousYearPaper.controller.js";
 import { verifyJWT, verifyRole } from "../middlewares/auth.middleware.js";
 
@@ -24,5 +25,14 @@ router
  */
 router.route("/get").get(getPreviousYearTests);
 router.route("/get/:id").get(getTestDetails);
+
+/**
+ * Only admin can delete a test:
+ *  - Must be authenticated (verifyJWT)
+ *  - Must have role = "admin" (verifyRole("admin"))
+ */
+router
+  .route("/delete/:id")
+  .delete(verifyJWT, verifyRole("admin"), deleteTest);
 
 export default router;

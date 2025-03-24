@@ -2,14 +2,14 @@
 import { Card } from '@/components/dashboard/card';
 import {
   Clipboard,
-  ChartBar,
+  BarChart,
   Calendar,
   Target,
 } from 'lucide-react';
 
 const icons = {
   clipboard: Clipboard,
-  chart: ChartBar,
+  chart: BarChart,
   calendar: Calendar,
   target: Target,
 };

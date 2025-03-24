@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
 
@@ -13,6 +14,8 @@ const allowedOrigins = [
   "https://www.ionia.sbs",
   "https://ionia.sbs",
   "http://localhost:3000", // For local development
+  "http://localhost:3001", // For local development
+  "http://localhost:3002", // For local development
   "https://ionia-next-production.up.railway.app" // Your Railway backend URL
 ];
 
@@ -62,17 +65,22 @@ import userRouter from "./routes/user.routes.js";
 import questionRouter from "./routes/question.routes.js";
 import previousYearPaperRouter from "./routes/previousYearPaper.routes.js";
 import attemptedTestRouter from "./routes/attemptedTest.routes.js";  
+import scheduledTestRouter from "./routes/scheduledTest.routes.js";
 
 // ✅ Routes Declaration
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/questions", questionRouter);
 app.use("/api/v1/previous-year-papers", previousYearPaperRouter);
 app.use("/api/v1/attempted-tests", attemptedTestRouter);  
+app.use("/api/v1/scheduled-tests", scheduledTestRouter);
 
 // ✅ Example Endpoint
 app.get("/", (req, res) => {
   res.send("API is running...");
 });
+
+// Error handling middleware
+app.use(errorHandler);
 
 // ✅ Export the App
 export { app };

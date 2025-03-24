@@ -82,8 +82,32 @@ const getTestDetails = asyncHandler(async (req, res) => {
     }
 });
 
+// Controller to delete a test by ID (Admin only)
+const deleteTest = asyncHandler(async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if test exists
+        const test = await PreviousTest.findById(id);
+        if (!test) {
+            throw new ApiError(404, "Test not found");
+        }
+
+        // Delete the test
+        await PreviousTest.findByIdAndDelete(id);
+
+        // Return success response
+        res.status(200).json(
+            new ApiResponse(200, null, "Test deleted successfully")
+        );
+    } catch (error) {
+        throw new ApiError(500, "Error deleting test", error.message);
+    }
+});
+
 export {
     addPreviousYearTest,
     getPreviousYearTests,
     getTestDetails,
+    deleteTest,
 };

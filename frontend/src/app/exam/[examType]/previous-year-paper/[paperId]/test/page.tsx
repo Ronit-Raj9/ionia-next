@@ -1,37 +1,71 @@
 "use client";
 
-import TestWindow from "@/components/test/TestWindow";
 import { useParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import TestWindow from "@/components/test/TestWindow";
+import './styles.css';
 
-const TestPage = () => {
-  const { examType, paperId } = useParams();
-
+export default function TestPage() {
+  const params = useParams();
+  const [isClient, setIsClient] = useState(false);
+  
+  // Ensure we're running on the client side to prevent hydration mismatches
   useEffect(() => {
-    if (!examType || !paperId) {
-      console.error("Missing examType or paperId parameters!");
+    setIsClient(true);
+    
+    // Hide any parent headers or footers
+    const hideElements = () => {
+      const elements = document.querySelectorAll('header, footer, nav');
+      elements.forEach(el => {
+        if (el.parentElement?.id !== 'test-window-container') {
+          (el as HTMLElement).style.display = 'none';
+        }
+      });
+      
+      // Set body styles for the test page
+      document.body.style.overflow = 'hidden';
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+    };
+    
+    if (isClient) {
+      hideElements();
+      // Set timeout to ensure elements are hidden after React hydration
+      setTimeout(hideElements, 100);
     }
-  }, [examType, paperId]);
-
-  // Convert examType and paperId to strings (take the first element if they are arrays)
-  const examTypeStr = Array.isArray(examType) ? examType[0] : examType || "";
-  const paperIdStr = Array.isArray(paperId) ? paperId[0] : paperId || "";
-
+    
+    return () => {
+      // Restore elements when navigating away
+      const elements = document.querySelectorAll('header, footer, nav');
+      elements.forEach(el => {
+        (el as HTMLElement).style.display = '';
+      });
+      document.body.style.overflow = '';
+    };
+  }, [isClient]);
+  
+  // Convert params to strings (take the first element if they are arrays)
+  const examType = Array.isArray(params.examType) ? params.examType[0] : params.examType || "";
+  const paperId = Array.isArray(params.paperId) ? params.paperId[0] : params.paperId || "";
+  
+  // Log params for debugging
+  useEffect(() => {
+    if (isClient && examType && paperId) {
+      console.log(`Test page params: examType=${examType}, paperId=${paperId}`);
+    }
+  }, [isClient, examType, paperId]);
+  
+  // If not client-side yet, return minimal content to prevent hydration issues
+  if (!isClient) {
+    return <div className="min-h-screen bg-white"></div>;
+  }
+  
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Custom Header */}
-      <header className="bg-blue-100 py-4 px-6 border-b">
-        <h1 className="text-lg font-semibold">Test Window</h1>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto p-4">
-        <TestWindow examType={examTypeStr} paperId={paperIdStr} />
-      </main>
-
-      {/* No Footer */}
+    <div id="test-window-container" className="min-h-screen bg-white">
+      <TestWindow 
+        examType={examType} 
+        paperId={paperId} 
+      />
     </div>
   );
-};
-
-export default TestPage;
+}

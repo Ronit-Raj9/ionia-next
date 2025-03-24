@@ -9,6 +9,7 @@ import {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserStatistics,
 } from "../controllers/user.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
@@ -73,5 +74,7 @@ router
     upload.single("coverImage"),
     updateUserCoverImage
   );
+
+router.route("/statistics").get(verifyJWT, getUserStatistics);
 
 export default router;

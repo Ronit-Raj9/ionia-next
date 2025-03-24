@@ -1,21 +1,20 @@
 "use client";
 
 import React from "react";
-import { useAnalysis } from "@/context/AnalysisContext";
+import { useAppSelector } from "@/redux/hooks/hooks";
 
 const AttemptsAnalysis: React.FC = () => {
-  const { analysisData } = useAnalysis();
+  const analysisData = useAppSelector((state) => state.analysis);
 
-  if (!analysisData) {
+  if (!analysisData.testInfo) {
     return <div>No analysis data available.</div>;
-  } 
-   console.log("analysisData web page pe: ", analysisData);
+  }
 
-
-  // Compute the attempt percentage as (questionsAttempted / totalQuestions) * 100
-  const { questionsAttempted, totalQuestions } = analysisData;
-  const attemptPercentage =
-    totalQuestions > 0 ? (questionsAttempted / totalQuestions) * 100 : 0;
+  // Compute the attempt percentage as (answeredQuestions / totalQuestions) * 100
+  const totalQuestions = analysisData.performance.totalQuestions || 0;
+  const questionsAttempted = (analysisData.performance.totalCorrectAnswers || 0) + 
+                            (analysisData.performance.totalWrongAnswers || 0);
+  const attemptPercentage = totalQuestions > 0 ? (questionsAttempted / totalQuestions) * 100 : 0;
 
   return (
     <div className="bg-gray-50 p-6 rounded-lg shadow">

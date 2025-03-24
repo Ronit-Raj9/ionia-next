@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { AttemptedTest } from "../models/attemptedTest.model.js";
 
 /**
  * Helper function to generate both Access Token and Refresh Token,
@@ -156,7 +157,7 @@ const loginUser = asyncHandler(async (req, res) => {
     // secure: true,
     sameSite: "None",
     path: "/",
-    httpOnly: false, // Set to true if you don’t want frontend JavaScript to access it
+    httpOnly: false, // Set to true if you don't want frontend JavaScript to access it
     secure: true,   // Set to true in production (requires HTTPS)
   };
 
@@ -408,6 +409,57 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Cover image updated successfully"));
 });
 
+/**
+ * getUserStatistics
+ * - Returns user statistics
+ */
+const getUserStatistics = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  try {
+    // Get all attempted tests for this user
+    const attemptedTests = await AttemptedTest.find({ userId });
+    
+    // Calculate statistics
+    const totalTests = attemptedTests.length;
+    
+    // Calculate average score
+    const totalScore = attemptedTests.reduce((sum, test) => {
+      const correctAnswers = test.totalCorrectAnswers || 0;
+      const totalQuestions = test.metadata?.totalQuestions || 1;
+      const score = (correctAnswers / totalQuestions) * 100;
+      return sum + score;
+    }, 0);
+    const averageScore = totalTests > 0 ? totalScore / totalTests : 0;
+    
+    // Calculate tests taken this week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const testsThisWeek = attemptedTests.filter(test => 
+      new Date(test.createdAt) >= oneWeekAgo
+    ).length;
+    
+    // Calculate overall accuracy
+    const totalCorrect = attemptedTests.reduce((sum, test) => sum + (test.totalCorrectAnswers || 0), 0);
+    const totalAnswered = attemptedTests.reduce((sum, test) => {
+      return sum + ((test.totalCorrectAnswers || 0) + (test.totalWrongAnswers || 0));
+    }, 0);
+    const accuracy = totalAnswered > 0 ? (totalCorrect / totalAnswered) * 100 : 0;
+    
+    // Return the statistics
+    return res.status(200).json(
+      new ApiResponse(200, {
+        totalTests,
+        averageScore,
+        testsThisWeek,
+        accuracy
+      }, "User statistics fetched successfully")
+    );
+  } catch (error) {
+    throw new ApiError(500, "Error fetching user statistics", error.message);
+  }
+});
+
 export {
   registerUser,
   loginUser,
@@ -418,4 +470,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserStatistics
 };

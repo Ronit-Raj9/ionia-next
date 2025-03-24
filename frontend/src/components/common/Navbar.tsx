@@ -1,170 +1,187 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, User } from "lucide-react";
-
-interface IUserData {
-  username: string;
-  role?: string;
-}
+import { usePathname } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
+import { getCurrentUser } from "@/redux/slices/authSlice";
+import { toggleNavbar, setNavbarOpen } from "@/redux/slices/uiSlice";
+import { RootState } from "@/redux/store";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [user, setUser] = useState<IUserData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const pathname = usePathname();
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, user } = useAppSelector((state: RootState) => state.auth);
+  const { isNavbarOpen } = useAppSelector((state: RootState) => state.ui);
 
-  const navigation = [
+  useEffect(() => {
+    if (localStorage.getItem('token')) {
+      dispatch(getCurrentUser());
+    }
+  }, [dispatch]);
+
+  const navItems = [
     { name: "Home", href: "/" },
-    { name: "JEE Mains", href: "/exam/jee-mains" },
-    { name: "JEE Advanced", href: "/exam/jee-advanced" },
-    { name: "CUET", href: "/exam/cuet" },
+    { name: "JEE Mains", href: "/jee-mains" },
+    { name: "JEE Advanced", href: "/jee-advanced" },
+    { name: "CUET", href: "/cuet" },
     { name: "Practice", href: "/practice" },
   ];
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/users/current-user`,
-          {
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+  const displayName = user?.fullName || 'Guest';
 
-        if (response.ok) {
-          const data = await response.json();
-          setUser({
-            username: data.data.username,
-            role: data.data.role,
-          });
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error("Failed to fetch user:", err);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const isAdmin = user?.role === 'admin';
 
-    fetchUser();
-  }, []);
-
-  if (loading) {
-    return (
-      <nav className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-2">
-          <p className="text-center text-gray-500">Loading...</p>
-        </div>
-      </nav>
-    );
+  if (pathname.startsWith('/dashboard')) {
+    return null;
   }
 
   return (
-    <nav className="bg-white shadow-sm fixed top-0 left-0 w-full z-50">
+    <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between h-16 items-center">
-          {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold text-blue-600">TestSeries</span>
+        <div className="flex items-center justify-between h-16">
+          <Link href="/" className="flex items-center space-x-2">
+            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent">
+              Ionia
+            </span>
           </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navigation.map((item) => (
+            {navItems.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-gray-700 hover:text-blue-600 transition"
+                className={`text-sm font-medium transition-colors hover:text-emerald-600 ${
+                  pathname === item.href ? "text-emerald-600" : "text-gray-600"
+                }`}
               >
                 {item.name}
               </Link>
             ))}
-            {user && user.role === "admin" && (
-              <Link
-                href="/admin"
-                className="text-gray-700 hover:text-blue-600 transition"
-              >
-                Admin Panel
-              </Link>
-            )}
-            {user ? (
-              <Link
-                href="/dashboard"
-                className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition"
-              >
-                <User className="text-blue-600" size={20} />
-                <span>{user.username}</span>
-              </Link>
-            ) : (
-              <Link
-                href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-              >
-                Sign In
-              </Link>
-            )}
           </div>
 
-          {/* Mobile Navigation Button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-700 hover:text-blue-600"
-            >
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation Menu */}
-        {isOpen && (
-          <div className="md:hidden">
-            <div className="pt-2 pb-3 space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="block px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              {user && user.role === "admin" && (
-                <Link
-                  href="/admin"
-                  className="block px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Admin Panel
-                </Link>
-              )}
-              {user ? (
+          <div className="hidden md:flex items-center space-x-4">
+            {isAuthenticated ? (
+              <>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      className="w-5 h-5"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-sm font-medium">Admin</span>
+                  </Link>
+                )}
                 <Link
                   href="/dashboard"
-                  className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-blue-50 rounded-md"
-                  onClick={() => setIsOpen(false)}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors"
                 >
-                  <User className="text-blue-600" size={20} />
-                  <span>{user.username}</span>
+                  <User className="w-5 h-5" />
+                  <span className="text-sm font-medium">{displayName}</span>
                 </Link>
-              ) : (
+              </>
+            ) : (
+              <>
                 <Link
-                  href="/login"
-                  className="block px-3 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md"
-                  onClick={() => setIsOpen(false)}
+                  href="/auth/login"
+                  className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
                 >
                   Sign In
                 </Link>
-              )}
-            </div>
+                <Link
+                  href="/auth/register"
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
-        )}
+
+          <button
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:text-emerald-600 hover:bg-gray-100 transition-colors"
+            onClick={() => dispatch(toggleNavbar())}
+          >
+            {isNavbarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {isNavbarOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="md:hidden bg-white border-t border-gray-200"
+          >
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex flex-col space-y-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`text-sm font-medium transition-colors hover:text-emerald-600 ${
+                      pathname === item.href ? "text-emerald-600" : "text-gray-600"
+                    }`}
+                    onClick={() => dispatch(setNavbarOpen(false))}
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+                {isAuthenticated ? (
+                  <>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
+                        onClick={() => dispatch(setNavbarOpen(false))}
+                      >
+                        Admin Panel
+                      </Link>
+                    )}
+                    <Link
+                      href="/dashboard"
+                      className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
+                      onClick={() => dispatch(setNavbarOpen(false))}
+                    >
+                      {displayName}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
+                      onClick={() => dispatch(setNavbarOpen(false))}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      href="/auth/register"
+                      className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                      onClick={() => dispatch(setNavbarOpen(false))}
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

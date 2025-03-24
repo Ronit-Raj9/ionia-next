@@ -1,25 +1,52 @@
 import { Router } from "express";
 import { 
-  submitTest, 
-  getTestAnalysis, 
-  updateTestResults, 
-  deleteTestResults
-}
- from "../controllers/attemptedTest.controller.js";
+  submitTest,
+  getDetailedTestAnalysis,
+  getTimeAnalytics,
+  getErrorAnalysis,
+  getNavigationPatterns,
+  getDifficultyAnalysis,
+  getInteractionMetrics,
+  getPerformanceTrends,
+  getSubjectAnalysis,
+  getBehavioralInsights,
+  deleteTestAttempt
+} from "../controllers/attemptedTest.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// Route to submit a test
+// Submit test attempt with complete analytics
 router.route("/submit").post(verifyJWT, submitTest);
- 
-// Route to get all test analysis
-router.route("/analysis").get(verifyJWT, getTestAnalysis);
 
-// Route to update test results
-router.route("/update").put(verifyJWT, updateTestResults);
+// Get detailed analysis for a specific test attempt
+router.route("/analysis").get(verifyJWT, getDetailedTestAnalysis);
 
-// Route to delete test results
-router.route("/delete/:attemptedTestId").delete(verifyJWT, deleteTestResults);
+// Get time-based analytics
+router.route("/time-analytics").get(verifyJWT, getTimeAnalytics);
+
+// Get error pattern analysis
+router.route("/error-analysis").get(verifyJWT, getErrorAnalysis);
+
+// Get navigation patterns
+router.route("/navigation-patterns").get(verifyJWT, getNavigationPatterns);
+
+// Get difficulty analysis
+router.route("/difficulty-analysis").get(verifyJWT, getDifficultyAnalysis);
+
+// Get interaction metrics
+router.route("/interaction-metrics").get(verifyJWT, getInteractionMetrics);
+
+// Get performance trends across multiple attempts
+router.route("/performance-trends").get(verifyJWT, getPerformanceTrends);
+
+// Get subject-wise analysis
+router.route("/subject-analysis").get(verifyJWT, getSubjectAnalysis);
+
+// Get behavioral insights
+router.route("/behavioral-insights").get(verifyJWT, getBehavioralInsights);
+
+// Delete test attempt
+router.route("/delete/:testId").delete(verifyJWT, deleteTestAttempt);
 
 export default router;
