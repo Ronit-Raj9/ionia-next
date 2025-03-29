@@ -1,0 +1,28 @@
+{
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://ionia-next-production.up.railway.app/api/v1"
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; connect-src 'self' https://ionia-next-production.up.railway.app https://*.vercel.app https://*.railway.app; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel.app; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.vercel.app https://*.railway.app; font-src 'self' data:; frame-src 'self'"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
+} 
