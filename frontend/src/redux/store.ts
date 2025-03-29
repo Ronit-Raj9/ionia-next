@@ -8,6 +8,7 @@ import authReducer from './slices/authSlice';
 import analysisReducer from './slices/analysisSlice';
 import timeTrackingReducer from './slices/timeTrackingSlice';
 import uiReducer from './slices/uiSlice';
+import questionReducer from './slices/questionSlice';
 
 // Combine all your reducers
 const rootReducer = combineReducers({
@@ -16,6 +17,7 @@ const rootReducer = combineReducers({
   analysis: analysisReducer,
   timeTracking: timeTrackingReducer,
   ui: uiReducer,
+  question: questionReducer,
 });
 
 // Configuration for redux-persist

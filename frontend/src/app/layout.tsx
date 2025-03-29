@@ -22,12 +22,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ReduxProvider>
-          <div className="min-h-screen flex flex-col bg-gray-100">
-            <Navbar />
-            <main className="flex-grow bg-white py-12 px-6 sm:px-8 md:px-16 lg:px-24 transition-all duration-300">
-              <div className="max-w-7xl mx-auto">{children}</div>
+          <div className="flex flex-col min-h-screen">
+            <Navbar className="fixed top-0 left-0 right-0 h-16 z-50" />
+            <main className="flex-1 pt-16">
+              {children}
             </main>
-            <Footer />
+            <Footer className="sticky bottom-0 z-40 bg-green-900" />
             <Notifications />
           </div>
         </ReduxProvider>

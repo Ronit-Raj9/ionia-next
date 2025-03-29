@@ -28,49 +28,46 @@ export default function AdminLayout({
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Main Content Area with Sidebar */}
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <div className="w-64 bg-green-800 text-white flex-shrink-0 min-h-screen">
-          <div className="h-full flex flex-col">
-            <div className="flex items-center h-16 px-4 bg-green-900">
-              <h1 className="text-xl font-bold">Admin Panel</h1>
-            </div>
-            <nav className="flex-1 px-2 py-4">
-              {navigation.map((item) => {
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center px-4 py-3 mb-1 text-sm font-medium rounded-lg 
-                      transition-all duration-200 cursor-pointer select-none
+    <div className="flex w-full min-h-[calc(100vh-4rem)]">
+      {/* Fixed Sidebar */}
+      <div className="fixed left-0 w-64 top-16 bottom-0 bg-green-800 text-white z-30">
+        <div className="h-full flex flex-col">
+          <div className="flex items-center h-16 px-4 bg-green-900">
+            <h1 className="text-xl font-bold">Admin Panel</h1>
+          </div>
+          <nav className="flex-1 px-2 py-4 overflow-y-auto">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-4 py-3 mb-1 text-sm font-medium rounded-lg 
+                    transition-all duration-200 cursor-pointer select-none
+                    ${isActive 
+                      ? 'bg-green-700 text-white shadow-sm' 
+                      : 'text-green-100 hover:bg-green-700/50 active:bg-green-700/70'
+                    }`}
+                >
+                  <item.icon 
+                    className={`h-5 w-5 mr-3 transition-colors duration-200
                       ${isActive 
-                        ? 'bg-green-700 text-white shadow-sm' 
-                        : 'text-green-100 hover:bg-green-700/50 active:bg-green-700/70'
-                      }`}
-                  >
-                    <item.icon 
-                      className={`h-5 w-5 mr-3 transition-colors duration-200
-                        ${isActive 
-                          ? 'text-white' 
-                          : 'text-green-200 group-hover:text-white'
-                        }`} 
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+                        ? 'text-white' 
+                        : 'text-green-200 group-hover:text-white'
+                      }`} 
+                  />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="flex-1 bg-gray-50 min-h-screen">
-          <div className="w-full h-full p-6">
-            {children}
-          </div>
+      {/* Main Content */}
+      <div className="ml-64 flex-1 bg-gray-50 relative">
+        <div className="min-h-[calc(100vh-4rem-16rem)] pb-16">
+          {children}
         </div>
       </div>
     </div>
