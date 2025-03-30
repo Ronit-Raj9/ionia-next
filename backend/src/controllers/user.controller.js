@@ -34,7 +34,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 /**
  * registerUser
- * 1. Get user details from frontend (including optional role)
+ * 1. Get user details from frontend
  * 2. Validate required fields
  * 3. Check if user already exists by username or email
  * 4. Check for uploaded images (avatar, coverImage) and upload them to Cloudinary
@@ -43,15 +43,12 @@ const generateAccessAndRefreshToken = async (userId) => {
  * 7. Confirm user creation
  * 8. Return response
  *
- * Role-based note:
- *  - By default, new users have role = "user".
- *  - If a role is specified as "admin", you can optionally restrict this to
- *    only an existing admin user. For that, you would typically wrap this
- *    controller in a route protected by verifyJWT + verifyRole('admin').
+ * Note: Role is not accepted from client; the default role="user" from the model is used
+ * Admin roles should be set directly in the database
  */
 const registerUser = asyncHandler(async (req, res) => {
-  // 1. Destructure user details (including an optional role) from the request
-  const { fullName, email, username, password, role } = req.body;
+  // 1. Destructure user details from the request
+  const { fullName, email, username, password } = req.body;
 
   // 2. Validate required fields
   if ([fullName, email, username, password].some((field) => field?.trim() === "")) {
@@ -84,31 +81,24 @@ const registerUser = asyncHandler(async (req, res) => {
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-  // 5. Decide the role to assign
-  //    - By default, new accounts are "user"
-  //    - If your app allows specifying role=admin, ensure you protect this route
-  //      with verifyRole('admin') or a similar check if you only want admins to
-  //      create admin accounts.
-  const assignedRole = role || "user";
-
-  // 6. Create the user document in the database
+  // 5. Create the user document in the database with default role from model
   const user = await User.create({
     fullName,
     avatar: avatar?.url || "",
     coverImage: coverImage?.url || "",
     email,
     password,
-    username: username.toLowerCase(),
-    role: assignedRole, // role is stored here
+    username: username?.toLowerCase() || "",
+    // No role specified - the model default "user" will be used
   });
 
-  // 7. Fetch the newly created user, omitting password & refreshToken
+  // 6. Fetch the newly created user, omitting password & refreshToken
   const createdUser = await User.findById(user._id).select("-password -refreshToken");
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
-  // 8. Return the final user object in the response (without sensitive fields)
+  // 7. Return the final user object in the response (without sensitive fields)
   return res
     .status(201)
     .json(new ApiResponse(200, createdUser, "User registered successfully"));
@@ -460,6 +450,37 @@ const getUserStatistics = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * checkUsername
+ * - Checks if a username is available (not taken by another user)
+ * - Returns success if available, error if already taken
+ */
+const checkUsername = asyncHandler(async (req, res) => {
+  const { username } = req.body;
+  
+  // Validate input
+  if (!username || username.trim() === "") {
+    throw new ApiError(400, "Username is required");
+  }
+  
+  // Format the username (lowercase) same way as we store it
+  const formattedUsername = username.toLowerCase();
+  
+  // Check if username exists
+  const existingUser = await User.findOne({ username: formattedUsername });
+  
+  if (existingUser) {
+    return res
+      .status(400)
+      .json(new ApiResponse(400, {}, "Username already taken"));
+  }
+  
+  // Username is available
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { available: true }, "Username is available"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -470,5 +491,6 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
-  getUserStatistics
+  getUserStatistics,
+  checkUsername
 };

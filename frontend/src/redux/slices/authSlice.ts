@@ -4,21 +4,22 @@ import { API } from '@/lib/api';
 // Types
 export interface IUser {
   id: string;
-  name: string;
-  email: string;
   fullName: string;
+  email: string;
   username: string;
   role: string;
+  name?: string; // Make name optional to maintain compatibility
 }
 
 interface LoginResponse {
   user: IUser;
-  token: string;
+  accessToken: string;
+  refreshToken?: string; // Make refreshToken optional to maintain compatibility
 }
 
 interface AuthState {
   user: IUser | null;
-  token: string | null;
+  accessToken: string | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -27,7 +28,7 @@ interface AuthState {
 // Initial state
 const initialState: AuthState = {
   user: null,
-  token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
+  accessToken: typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null,
   isAuthenticated: false,
   loading: false,
   error: null,
@@ -41,8 +42,8 @@ export const login = createAsyncThunk<
 >('auth/login', async ({ email, password }, { rejectWithValue }) => {
   try {
     const response = await API.auth.login(email, password);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
+    if (response.data.accessToken) {
+      localStorage.setItem('accessToken', response.data.accessToken);
     }
     return response.data;
   } catch (error: any) {
@@ -52,13 +53,13 @@ export const login = createAsyncThunk<
 
 export const register = createAsyncThunk<
   LoginResponse,
-  { name: string; email: string; password: string },
+  { fullName: string; email: string; username: string; password: string },
   { rejectValue: string }
 >('auth/register', async (userData, { rejectWithValue }) => {
   try {
     const response = await API.auth.register(userData);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
+    if (response.data.accessToken) {
+      localStorage.setItem('accessToken', response.data.accessToken);
     }
     return response.data;
   } catch (error: any) {
@@ -71,7 +72,7 @@ export const logout = createAsyncThunk<void, void, { rejectValue: string }>(
   async (_, { rejectWithValue }) => {
     try {
       await API.auth.logout();
-      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
     } catch (error) {
       console.error('Logout error:', error);
       return rejectWithValue(error instanceof Error ? error.message : 'Logout failed');
@@ -94,8 +95,8 @@ export const getCurrentUser = createAsyncThunk<IUser, void, { rejectValue: strin
 export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
   async (_, { dispatch }) => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    const accessToken = localStorage.getItem('accessToken');
+    if (accessToken) {
       await dispatch(getCurrentUser());
     }
   }
@@ -127,7 +128,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.accessToken = action.payload.accessToken;
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
@@ -142,7 +143,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.accessToken = action.payload.accessToken;
       })
       .addCase(register.rejected, (state, action) => {
         state.loading = false;
@@ -151,7 +152,7 @@ const authSlice = createSlice({
       // Logout
       .addCase(logout.fulfilled, (state) => {
         state.user = null;
-        state.token = null;
+        state.accessToken = null;
         state.isAuthenticated = false;
       })
       // Get Current User
@@ -169,8 +170,8 @@ const authSlice = createSlice({
         state.error = action.payload as string;
         state.isAuthenticated = false;
         state.user = null;
-        state.token = null;
-        localStorage.removeItem('token');
+        state.accessToken = null;
+        localStorage.removeItem('accessToken');
       });
   },
 });

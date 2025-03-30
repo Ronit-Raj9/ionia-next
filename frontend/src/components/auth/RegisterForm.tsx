@@ -16,7 +16,12 @@ const RegisterForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      await registerUser(name, email, password); // ✅ Fixed argument issue
+      await registerUser({ 
+        fullName: name, 
+        email, 
+        username: email.split('@')[0], // Generate a default username from email
+        password 
+      });
       router.push("/auth/login");
     } catch (err: unknown) {
       if (err instanceof Error) {

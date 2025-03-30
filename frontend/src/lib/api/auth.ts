@@ -1,23 +1,28 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 // Define Auth Response type
 export interface AuthResponse {
   user: {
     id: string;
-    name: string;
+    fullName: string;
     email: string;
-    token: string;
+    username: string;
+    role: string;
   };
+  accessToken: string;
+  refreshToken?: string; // Make refreshToken optional
 }
 
 // User profile type
 export interface User {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
-  token: string;
+  username: string;
+  role: string;
+  accessToken: string;
 }
 
 // Login User
@@ -27,12 +32,8 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
 };
 
 // Register User
-export const registerUser = async (email: string, password: string, name: string): Promise<AuthResponse> => {
-  const response = await axios.post<AuthResponse>(`${API_URL}/auth/register`, {
-    email,
-    password,
-    name,
-  });
+export const registerUser = async (userData: { fullName: string; email: string; username: string; password: string }): Promise<AuthResponse> => {
+  const response = await axios.post<AuthResponse>(`${API_URL}/auth/register`, userData);
   return response.data;
 };
 

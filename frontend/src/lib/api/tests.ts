@@ -1,7 +1,7 @@
 // lib/api/tests.ts
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 // Generic API response interface
 export interface APIResponse<T> {

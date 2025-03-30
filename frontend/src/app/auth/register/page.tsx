@@ -6,42 +6,128 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks/hooks';
 import { register, clearError } from '@/redux/slices/authSlice';
+import { toast } from 'react-hot-toast';
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: ''
+  });
   const router = useRouter();
   const dispatch = useAppDispatch();
   
   const { loading, error } = useAppSelector((state) => state.auth);
+  const [usernameError, setUsernameError] = useState('');
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState(false);
 
   useEffect(() => {
     // Clear any existing errors when component mounts
     dispatch(clearError());
   }, [dispatch]);
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Validate passwords match
-    if (password !== confirmPassword) {
-      dispatch(clearError());
-      return;
-    }
-
-    // Validate password strength
-    if (password.length < 6) {
-      dispatch(clearError());
-      return;
-    }
-
-    const result = await dispatch(register({ name, email, password }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
     
-    if (!result.hasOwnProperty('error')) {
-      // Registration successful, redirect to login
-      router.push('/auth/login?registered=true');
+    // Reset username availability when user starts typing
+    if (name === 'username') {
+      setUsernameAvailable(false);
+      setUsernameError('');
+    }
+  };
+
+  const validateUsername = (username: string): boolean => {
+    // Username should be 3-20 characters and include only letters, numbers, and underscores
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      setUsernameError("Username must be 3-20 characters and can only contain letters, numbers, and underscores");
+      return false;
+    }
+    return true;
+  };
+
+  const checkUsernameAvailability = async (username: string): Promise<void> => {
+    if (!username || username.trim() === "" || !validateUsername(username)) {
+      return;
+    }
+    
+    try {
+      setIsCheckingUsername(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/check-username`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setUsernameAvailable(true);
+        setUsernameError('');
+      } else {
+        setUsernameAvailable(false);
+        setUsernameError(data.message || "Username is not available");
+      }
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameAvailable(false);
+      setUsernameError("Error checking username availability");
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
+  const handleUsernameBlur = () => {
+    if (formData.username && validateUsername(formData.username)) {
+      checkUsernameAvailability(formData.username);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    // Reset errors
+    setUsernameError('');
+    
+    // Validate username format
+    if (!validateUsername(formData.username)) {
+      return;
+    }
+
+    // Validate password match
+    if (formData.password !== formData.confirmPassword) {
+      setUsernameError("Passwords do not match");
+      return;
+    }
+    
+    try {
+      // Check username availability again before submission
+      await checkUsernameAvailability(formData.username);
+      
+      // Only proceed if username is available
+      if (!usernameAvailable) {
+        return; // Stop if username is not available
+      }
+      
+      // Proceed with registration
+      const result = await dispatch(register({ ...formData }));
+      
+      if (!result.hasOwnProperty('error')) {
+        toast.success("Registration successful! Please log in.");
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error(error);
+      setUsernameError("An error occurred during registration");
     }
   };
 
@@ -69,7 +155,7 @@ export default function RegisterPage() {
 
         <motion.form
           className="mt-8 space-y-6"
-          onSubmit={handleRegister}
+          onSubmit={handleSubmit}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.5 }}
@@ -86,19 +172,48 @@ export default function RegisterPage() {
 
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
-              <label htmlFor="name" className="sr-only">
+              <label htmlFor="fullName" className="sr-only">
                 Full Name
               </label>
               <input
-                id="name"
-                name="name"
+                id="fullName"
+                name="fullName"
                 type="text"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
                 placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={formData.fullName}
+                onChange={handleChange}
               />
+            </div>
+            <div>
+              <label htmlFor="username" className="sr-only">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
+                  usernameError ? 'border-red-300' : 
+                  usernameAvailable ? 'border-green-300' : 
+                  'border-gray-300'
+                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm`}
+                placeholder="Username"
+                value={formData.username}
+                onChange={handleChange}
+                onBlur={handleUsernameBlur}
+              />
+              {isCheckingUsername && (
+                <p className="text-gray-500 text-xs mt-1">Checking username availability...</p>
+              )}
+              {usernameError && (
+                <p className="text-red-500 text-xs mt-1">{usernameError}</p>
+              )}
+              {usernameAvailable && !usernameError && (
+                <p className="text-green-500 text-xs mt-1">Username is available!</p>
+              )}
             </div>
             <div>
               <label htmlFor="email" className="sr-only">
@@ -112,8 +227,8 @@ export default function RegisterPage() {
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={handleChange}
               />
             </div>
             <div>
@@ -128,8 +243,8 @@ export default function RegisterPage() {
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={handleChange}
               />
             </div>
             <div>
@@ -138,14 +253,14 @@ export default function RegisterPage() {
               </label>
               <input
                 id="confirm-password"
-                name="confirm-password"
+                name="confirmPassword"
                 type="password"
                 autoComplete="new-password"
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                placeholder="Confirm Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
               />
             </div>
           </div>

@@ -5,19 +5,26 @@ import { loginUser, registerUser, getUserProfile } from "../api/auth";
 interface AuthResponse {
   user: {
     id: string;
-    name: string;
+    fullName: string;
     email: string;
-    token: string;
+    username: string;
+    role: string;
+    name?: string; // Make name optional
     // Add more fields as necessary
   };
+  accessToken: string;
+  refreshToken?: string; // Make refreshToken optional
 }
 
 // Define User type
 interface User {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
-  token: string;
+  username: string;
+  role: string;
+  accessToken: string;
+  name?: string; // Make name optional
 }
 
 export const useAuth = () => {
@@ -28,8 +35,12 @@ export const useAuth = () => {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const data: AuthResponse = await loginUser(email, password); // ✅ Ensure loginUser returns a typed response
-      setUser(data.user);
+      const data: AuthResponse = await loginUser(email, password);
+      // Create a user object that includes the accessToken
+      setUser({
+        ...data.user,
+        accessToken: data.accessToken
+      });
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message || "Login failed");
@@ -41,11 +52,15 @@ export const useAuth = () => {
     }
   };
 
-  const register = async (email: string, password: string, name: string) => {
+  const register = async (userData: { fullName: string; email: string; username: string; password: string }) => {
     setLoading(true);
     try {
-      const data: AuthResponse = await registerUser(email, password, name); // ✅ Ensure registerUser returns typed data
-      setUser(data.user);
+      const data: AuthResponse = await registerUser(userData);
+      // Create a user object that includes the accessToken
+      setUser({
+        ...data.user,
+        accessToken: data.accessToken
+      });
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message || "Registration failed");

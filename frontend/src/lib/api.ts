@@ -145,8 +145,15 @@ import { IUser } from '@/redux/slices/authSlice';
 import { Test, TestResults } from '@/redux/slices/testSlice';
 
 interface LoginResponse {
-  user: IUser;
-  token: string;
+  user: {
+    id: string;
+    fullName: string;
+    email: string;
+    username: string;
+    role: string; // Ensure role is included
+  };
+  accessToken: string;
+  refreshToken: string;
 }
 
 // Base API URL
@@ -166,7 +173,7 @@ export const API = {
       fetchWithCache<APIResponse<void>>(`${API_BASE}/users/logout`, {
         method: 'POST',
       }),
-    register: (userData: { name: string; email: string; password: string }) => 
+    register: (userData: { fullName: string; email: string; username: string; password: string }) => 
       fetchWithCache<APIResponse<LoginResponse>>(`${API_BASE}/users/register`, {
         method: 'POST',
         body: JSON.stringify(userData),

@@ -10,6 +10,7 @@ import {
   updateUserAvatar,
   updateUserCoverImage,
   getUserStatistics,
+  checkUsername,
 } from "../controllers/user.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
@@ -30,6 +31,9 @@ router.route("/register").post(
 );
 
 router.route("/login").post(loginUser);
+
+// Add new route for checking username availability
+router.route("/check-username").post(checkUsername);
 
 /**
  * Protected Routes (Must be Authenticated)
