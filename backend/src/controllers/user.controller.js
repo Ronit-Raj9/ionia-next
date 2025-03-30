@@ -143,12 +143,11 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // Cookie options
   const options = {
-    // httpOnly: true,
-    // secure: true,
-    sameSite: "None",
     path: "/",
-    httpOnly: false, // Set to true if you don't want frontend JavaScript to access it
-    secure: true,   // Set to true in production (requires HTTPS)
+    httpOnly: false, // Allow frontend JavaScript to access it for token management
+    secure: true,    // Require HTTPS
+    sameSite: "None", // Allow cross-site requests
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
   };
 
   return res
@@ -189,10 +188,11 @@ const logoutUser = asyncHandler(async (req, res) => {
   );
 
   const options = {
+    path: "/",
     httpOnly: false,
     secure: true,
     sameSite: "None",
-    path: "/",
+    maxAge: 0, // Expire immediately
   };
 
   return res
@@ -240,8 +240,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     console.log("end");
 
     const options = {
-      httpOnly: true,
+      path: "/",
+      httpOnly: false,
       secure: true,
+      sameSite: "None",
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     };
 
     const { accessToken, newrefreshToken } = await generateAccessAndRefreshToken(

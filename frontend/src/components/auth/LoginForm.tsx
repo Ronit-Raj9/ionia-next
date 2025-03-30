@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import CookieConsent from '../common/CookieConsent';
+import { loginUser } from '../../lib/api/auth';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -14,9 +14,22 @@ export default function LoginForm() {
 
   useEffect(() => {
     // Check if cookies are enabled
-    if (!navigator.cookieEnabled) {
-      setShowCookieWarning(true);
-    }
+    const checkCookies = () => {
+      try {
+        // Try to set a test cookie
+        document.cookie = "testcookie=1; SameSite=None; Secure";
+        const cookiesEnabled = document.cookie.indexOf("testcookie=") !== -1;
+        
+        // Check if user has given cookie consent
+        const hasConsent = localStorage.getItem('cookieConsent') !== null;
+        
+        setShowCookieWarning(!cookiesEnabled || !hasConsent);
+      } catch (e) {
+        setShowCookieWarning(true);
+      }
+    };
+    
+    checkCookies();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -24,53 +37,33 @@ export default function LoginForm() {
     setError('');
     setIsLoading(true);
 
-    // Check if cookies are enabled
-    if (!navigator.cookieEnabled) {
-      setError('Please enable cookies to login');
-      setIsLoading(false);
-      return;
-    }
-
-    // Check for cookie consent
-    const cookieConsent = localStorage.getItem('cookieConsent');
-    if (!cookieConsent) {
-      setError('Please accept cookies to continue');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      console.log('Attempting login with API URL:', process.env.NEXT_PUBLIC_API_URL);
+      // Use the enhanced loginUser function from auth.ts
+      const response = await loginUser(email, password);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
-
-      if (data.token) {
-        // Store the token
-        localStorage.setItem('token', data.token);
-        // Set a cookie as well for better compatibility
-        document.cookie = `auth_token=${data.token}; path=/; secure; samesite=strict`;
+      // Store tokens in localStorage as a backup for mobile browsers
+      if (response.accessToken) {
+        localStorage.setItem('accessToken', response.accessToken);
+        
+        // Set additional client-side cookies as a fallback
+        document.cookie = `accessToken=${response.accessToken}; path=/; SameSite=None; Secure; max-age=604800`;
+        
+        // Navigate to dashboard
         router.push('/dashboard');
       } else {
-        throw new Error('No token received');
+        throw new Error('Authentication failed. No access token received.');
       }
     } catch (err: unknown) {
       console.error('Login error:', err);
+      
       if (err instanceof Error) {
-        setError(err.message);
+        // Check for common cookie-related errors
+        if (err.message.includes('cookies')) {
+          setShowCookieWarning(true);
+          setError("Please enable cookies in your browser and accept our cookie policy to login.");
+        } else {
+          setError(err.message || "Login failed. Please check your credentials.");
+        }
       } else {
         setError("An unexpected error occurred. Please try again.");
       }
@@ -85,7 +78,7 @@ export default function LoginForm() {
         <h2 className="text-2xl font-bold text-center mb-4">Welcome back</h2>
         {showCookieWarning && (
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded mb-4">
-            Cookies are required for this application to work properly. Please enable cookies in your browser settings.
+            Cookies are required for this application to function properly. Please enable cookies in your browser settings and accept our cookie policy.
           </div>
         )}
         {error && (
@@ -138,7 +131,6 @@ export default function LoginForm() {
           </Link>
         </div>
       </div>
-      <CookieConsent />
     </>
   );
 }

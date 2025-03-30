@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Navbar from "@/components/common/Navbar";
 import Footer from "@/components/common/Footer";
 import Notifications from "@/components/common/Notifications";
+import CookieConsent from "@/components/common/CookieConsent";
 import { ReduxProvider } from "@/redux/provider";
 import "@/styles/globals.css";
 
@@ -29,6 +30,7 @@ export default function RootLayout({
             </main>
             <Footer className="z-40 bg-green-900" />
             <Notifications />
+            <CookieConsent />
           </div>
         </ReduxProvider>
       </body>

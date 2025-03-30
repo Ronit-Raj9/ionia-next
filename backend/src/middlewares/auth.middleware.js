@@ -5,36 +5,47 @@ import { User } from "../models/user.model.js";
 
 /**
  * verifyJWT
- *  - Reads the token from cookies or Authorization header
+ *  - Reads the token from cookies, Authorization header, or request body
  *  - Verifies it and attaches user to req.user
  *  - Throws 401 Unauthorized if invalid
  */
 export const verifyJWT = asyncHandler(async (req, res, next) => {
-  // 1. Get token from cookies or Bearer scheme in headers
-  const token =
-    req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
-
-  if (!token) {
-    throw new ApiError(401, "Unauthorized request. No access token found.");
-  }
-
-  // 2. Verify and decode the token
-  let decodedToken;
   try {
-    decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    // 1. Get token from multiple possible sources for maximum compatibility
+    const token = 
+      req.cookies?.accessToken || 
+      req.header("Authorization")?.replace("Bearer ", "") || 
+      req.body?.accessToken || 
+      req.query?.accessToken;
+
+    if (!token) {
+      throw new ApiError(401, "Unauthorized request. No access token found.");
+    }
+
+    // 2. Verify and decode the token
+    const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
+    // 3. Fetch user from DB to ensure the user still exists
+    const user = await User.findById(decodedToken._id).select("-password -refreshToken");
+    if (!user) {
+      throw new ApiError(401, "Invalid Access Token. User not found.");
+    }
+
+    // 4. Attach user to request
+    req.user = user;
+    next();
   } catch (error) {
-    throw new ApiError(401, "Invalid or expired access token.");
+    // Handle common JWT errors with clearer messages
+    if (error.name === 'JsonWebTokenError') {
+      throw new ApiError(401, "Invalid access token.");
+    } else if (error.name === 'TokenExpiredError') {
+      throw new ApiError(401, "Access token expired.");
+    } else if (error instanceof ApiError) {
+      throw error;
+    } else {
+      throw new ApiError(401, "Authentication failed. Please login again.");
+    }
   }
-
-  // 3. Fetch user from DB to ensure the user still exists
-  const user = await User.findById(decodedToken._id).select("-password -refreshToken");
-  if (!user) {
-    throw new ApiError(401, "Invalid Access Token. User not found.");
-  }
-
-  // 4. Attach user to request
-  req.user = user;
-  next();
 });
 
 /**

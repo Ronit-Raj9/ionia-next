@@ -13,12 +13,28 @@ export default function CookieConsent() {
   }, []);
 
   const handleAcceptAll = () => {
+    // Set cookie consent in localStorage
     localStorage.setItem('cookieConsent', 'all');
+    
+    // Set a test cookie to ensure cookies are enabled
+    document.cookie = "cookiesEnabled=true; path=/; SameSite=None; Secure";
+    
+    // For mobile browsers, set a specific flag
+    document.cookie = "mobileConsent=true; path=/; SameSite=None; Secure; max-age=31536000";
+    
     setShowConsent(false);
   };
 
   const handleAcceptNecessary = () => {
+    // Set cookie consent in localStorage
     localStorage.setItem('cookieConsent', 'necessary');
+    
+    // Set a test cookie to ensure cookies are enabled
+    document.cookie = "cookiesEnabled=true; path=/; SameSite=None; Secure";
+    
+    // For mobile browsers, set a specific flag for necessary cookies
+    document.cookie = "mobileConsent=necessary; path=/; SameSite=None; Secure; max-age=31536000";
+    
     setShowConsent(false);
   };
 
@@ -31,8 +47,8 @@ export default function CookieConsent() {
           <div className="mb-4 md:mb-0 md:mr-4">
             <h3 className="text-lg font-semibold mb-2">Cookie Settings</h3>
             <p className="text-gray-600 text-sm">
-              We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic. 
-              By clicking "Accept All", you consent to our use of cookies.
+              We use cookies for authentication and to enhance your browsing experience. 
+              Please accept cookies to enable login and registration functionality.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
