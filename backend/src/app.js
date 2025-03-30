@@ -16,10 +16,7 @@ const allowedOrigins = [
   "http://localhost:3000", // For local development
   "http://localhost:3001", // For local development
   "http://localhost:3002", // For local development
-  "https://ionia-next-production.up.railway.app", // Your Railway backend URL
-  "https://ionia-next-ronit-rajvs-projects.vercel.app", // Vercel preview deployment
-  "https://ionia-next-git-main-ronit-rajvs-projects.vercel.app", // Vercel branch deployment
-  "https://ionia-next.onrender.com" // Render deployment (if you use it)
+  "https://ionia-next-production.up.railway.app" // Your Railway backend URL
 ];
 
 // ✅ Setup CORS Middleware
@@ -30,27 +27,21 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(null, true); // Allow any origin in production for now - you can restrict this later
-        console.log("Origin not in allowed list, but accepted:", origin);
+        callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,  // 🔥 Required to send cookies
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 
 // ✅ Ensure Cookies Are Set Properly
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header("Access-Control-Allow-Origin", origin);
-  } else {
-    res.header("Access-Control-Allow-Origin", "*"); // Fallback for development
-  }
+  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
   res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With");
+  res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
   next();
 });
 

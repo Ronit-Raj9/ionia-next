@@ -11,9 +11,13 @@ const fadeInUp = {
   transition: { duration: 0.6 }
 };
 
-export default function Footer({ className }: { className?: string }) {
+interface FooterProps {
+  className?: string;
+}
+
+export default function Footer({ className = "" }: FooterProps) {
   return (
-    <footer className={`bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900 text-white w-full ${className || ''}`}>
+    <footer className={`bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900 text-white relative overflow-hidden ${className}`}>
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:24px_24px] opacity-20"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]"></div>
       

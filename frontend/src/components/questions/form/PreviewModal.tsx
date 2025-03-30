@@ -35,12 +35,12 @@ const PreviewModal: React.FC<PreviewModalProps> = ({ formData, onConfirm, onCanc
             </div>
           </div>
           
-          {formData.questionType === 'numerical' ? (
+          {formData.questionType === 'numerical' && formData.numericalAnswer ? (
             <div className="border-b pb-2">
               <h3 className="font-semibold">Numerical Answer</h3>
-              <p>Exact Value: {formData.numericalAnswer?.exactValue}</p>
-              <p>Acceptable Range: {formData.numericalAnswer?.range?.min} to {formData.numericalAnswer?.range?.max}</p>
-              <p>Unit: {formData.numericalAnswer?.unit || "None"}</p>
+              <p>Exact Value: {formData.numericalAnswer.exactValue}</p>
+              <p>Acceptable Range: {formData.numericalAnswer.range.min} to {formData.numericalAnswer.range.max}</p>
+              <p>Unit: {formData.numericalAnswer.unit || "None"}</p>
             </div>
           ) : (
             <div className="border-b pb-2">

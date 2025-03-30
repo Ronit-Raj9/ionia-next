@@ -2,7 +2,6 @@ import React from 'react';
 import { PlusCircle, MinusCircle, X } from 'lucide-react';
 import { StepProps } from '../../utils/types';
 import FileUpload from '../../inputs/FileUpload';
-import { getErrorMessage } from '../../utils/helpers';
 
 interface SolutionHintsProps extends StepProps {
   addHint: () => void;
@@ -56,8 +55,8 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
           </div>
         </div>
         <p className="mt-1 text-xs text-gray-500">Either Solution Text or Solution Image is required</p>
-        {getErrorMessage(errors, 'solution') && (
-          <p className="mt-1 text-sm text-red-500">{getErrorMessage(errors, 'solution')}</p>
+        {errors.solution && (
+          <p className="mt-1 text-sm text-red-500">{errors.solution}</p>
         )}
       </div>
       
@@ -102,8 +101,8 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
                     className="w-full p-2 border rounded-md text-sm"
                     placeholder={`Enter hint ${index + 1}`}
                   />
-                  {getErrorMessage(errors, [`hints`, index.toString(), `text`]) && (
-                    <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, [`hints`, index.toString(), `text`])}</p>
+                  {errors.hints && errors.hints[index] && (
+                    <p className="text-red-500 text-xs mt-1">{errors.hints[index] as string}</p>
                   )}
                 </div>
                 
@@ -165,8 +164,8 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
                       placeholder="What students might do wrong..."
                     />
-                    {getErrorMessage(errors, `commonMistakes[${index}].description`) && (
-                      <p className="mt-1 text-sm text-red-500">{getErrorMessage(errors, `commonMistakes[${index}].description`)}</p>
+                    {errors[`commonMistakes[${index}].description`] && (
+                      <p className="mt-1 text-sm text-red-500">{errors[`commonMistakes[${index}].description`]}</p>
                     )}
                   </div>
                   
@@ -180,8 +179,8 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
                       className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[60px] transition-shadow"
                       placeholder="Why this is incorrect and how to avoid it..."
                     />
-                    {getErrorMessage(errors, `commonMistakes[${index}].explanation`) && (
-                      <p className="mt-1 text-sm text-red-500">{getErrorMessage(errors, `commonMistakes[${index}].explanation`)}</p>
+                    {errors[`commonMistakes[${index}].explanation`] && (
+                      <p className="mt-1 text-sm text-red-500">{errors[`commonMistakes[${index}].explanation`]}</p>
                     )}
                   </div>
                 </div>

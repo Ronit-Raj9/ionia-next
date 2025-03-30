@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { StepProps } from '../../utils/types';
-import { getErrorMessage } from '../../utils/helpers';
 import { 
   EXAM_TYPES, 
   CLASS_OPTIONS, 
@@ -142,8 +141,8 @@ const DetailsClassification: React.FC<StepProps> = ({
               </option>
             ))}
           </select>
-          {getErrorMessage(errors, 'examType') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'examType')}</p>
+          {errors.examType && (
+            <p className="text-red-500 text-xs mt-1">{errors.examType}</p>
           )}
         </div>
 
@@ -164,8 +163,8 @@ const DetailsClassification: React.FC<StepProps> = ({
               </option>
             ))}
           </select>
-          {getErrorMessage(errors, 'class') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'class')}</p>
+          {errors.class && (
+            <p className="text-red-500 text-xs mt-1">{errors.class}</p>
           )}
         </div>
 
@@ -183,8 +182,8 @@ const DetailsClassification: React.FC<StepProps> = ({
               <option key={year} value={year}>{year}</option>
             ))}
           </select>
-          {getErrorMessage(errors, 'year') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'year')}</p>
+          {errors.year && (
+            <p className="mt-1 text-sm text-red-500">{errors.year}</p>
           )}
         </div>
       </div>
@@ -212,8 +211,8 @@ const DetailsClassification: React.FC<StepProps> = ({
           {!formData.examType && (
             <p className="text-gray-500 text-xs mt-1">Please select an exam type first</p>
           )}
-          {getErrorMessage(errors, 'subject') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'subject')}</p>
+          {errors.subject && (
+            <p className="text-red-500 text-xs mt-1">{errors.subject}</p>
           )}
         </div>
 
@@ -234,8 +233,8 @@ const DetailsClassification: React.FC<StepProps> = ({
               </option>
             ))}
           </select>
-          {getErrorMessage(errors, 'section') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'section')}</p>
+          {errors.section && (
+            <p className="text-red-500 text-xs mt-1">{errors.section}</p>
           )}
         </div>
       </div>
@@ -258,8 +257,8 @@ const DetailsClassification: React.FC<StepProps> = ({
             </option>
           ))}
         </select>
-        {getErrorMessage(errors, 'chapter') && (
-          <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'chapter')}</p>
+        {errors.chapter && (
+          <p className="text-red-500 text-xs mt-1">{errors.chapter}</p>
         )}
       </div>
 
@@ -278,8 +277,8 @@ const DetailsClassification: React.FC<StepProps> = ({
               <option key={level.value} value={level.value}>{level.label}</option>
             ))}
           </select>
-          {getErrorMessage(errors, 'difficulty') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'difficulty')}</p>
+          {errors.difficulty && (
+            <p className="mt-1 text-sm text-red-500">{errors.difficulty}</p>
           )}
         </div>
 
@@ -296,8 +295,8 @@ const DetailsClassification: React.FC<StepProps> = ({
               <option key={language.value} value={language.value}>{language.label}</option>
             ))}
           </select>
-          {getErrorMessage(errors, 'language') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'language')}</p>
+          {errors.language && (
+            <p className="mt-1 text-sm text-red-500">{errors.language}</p>
           )}
         </div>
 
@@ -314,8 +313,8 @@ const DetailsClassification: React.FC<StepProps> = ({
               <option key={level.value} value={level.value}>{level.label}</option>
             ))}
           </select>
-          {getErrorMessage(errors, 'languageLevel') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'languageLevel')}</p>
+          {errors.languageLevel && (
+            <p className="mt-1 text-sm text-red-500">{errors.languageLevel}</p>
           )}
         </div>
       </div>
@@ -333,8 +332,8 @@ const DetailsClassification: React.FC<StepProps> = ({
             onChange={(e) => handleInputChange(e, 'marks')}
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
           />
-          {getErrorMessage(errors, 'marks') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'marks')}</p>
+          {errors.marks && (
+            <p className="mt-1 text-sm text-red-500">{errors.marks}</p>
           )}
         </div>
 
@@ -350,8 +349,8 @@ const DetailsClassification: React.FC<StepProps> = ({
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
           />
           <p className="mt-1 text-xs text-gray-500">Enter as negative value (e.g., -0.25)</p>
-          {getErrorMessage(errors, 'negativeMarks') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'negativeMarks')}</p>
+          {errors.negativeMarks && (
+            <p className="mt-1 text-sm text-red-500">{errors.negativeMarks}</p>
           )}
         </div>
 
@@ -367,9 +366,6 @@ const DetailsClassification: React.FC<StepProps> = ({
             className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
           />
           <p className="mt-1 text-xs text-gray-500">Time students should take to solve (in seconds)</p>
-          {getErrorMessage(errors, 'expectedTime') && (
-            <p className="text-red-500 text-xs mt-1">{getErrorMessage(errors, 'expectedTime')}</p>
-          )}
         </div>
       </div>
 

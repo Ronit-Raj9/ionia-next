@@ -10,7 +10,11 @@ import { toggleNavbar, setNavbarOpen } from "@/redux/slices/uiSlice";
 import { RootState } from "@/redux/store";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function Navbar({ className }: { className?: string }) {
+interface NavbarProps {
+  className?: string;
+}
+
+export default function Navbar({ className = "" }: NavbarProps) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useAppSelector((state: RootState) => state.auth);
@@ -39,7 +43,7 @@ export default function Navbar({ className }: { className?: string }) {
   }
 
   return (
-    <nav className={`fixed w-full z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 ${className || ''}`}>
+    <nav className={`fixed w-full z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 ${className}`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center space-x-2">

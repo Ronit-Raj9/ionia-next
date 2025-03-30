@@ -4,7 +4,6 @@ import { PlusCircle, MinusCircle, Upload, X, CheckCircle } from 'lucide-react';
 import { StepProps } from '../../utils/types';
 import FileUpload from '../../inputs/FileUpload';
 import { QUESTION_TYPES, QUESTION_CATEGORIES, QUESTION_SOURCES } from '../../utils/constants';
-import { getErrorMessage } from '../../utils/helpers';
 
 interface QuestionContentProps extends StepProps {
   handleCorrectOptionChange: (index: number) => void;
@@ -101,8 +100,8 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
           </div>
         </div>
         <p className="mt-1 text-xs text-gray-500">Either Question Text or Question Image is required</p>
-        {getErrorMessage(errors, 'question') && (
-          <p className="mt-1 text-sm text-red-500">{getErrorMessage(errors, 'question')}</p>
+        {errors.question && (
+          <p className="mt-1 text-sm text-red-500">{errors.question}</p>
         )}
       </div>
 
@@ -122,8 +121,8 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
             )}
           </div>
           
-          {getErrorMessage(errors, 'options') && (
-            <p className="text-sm text-red-500">{getErrorMessage(errors, 'options')}</p>
+          {errors.options && (
+            <p className="text-sm text-red-500">{errors.options}</p>
           )}
           
           <div className="space-y-3">
@@ -185,8 +184,8 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
             <p className="text-xs text-gray-500">Click on the circle next to an option to mark it as correct</p>
           </div>
           
-          {getErrorMessage(errors, 'correctOptions') && (
-            <p className="text-sm text-red-500">{getErrorMessage(errors, 'correctOptions')}</p>
+          {errors.correctOptions && (
+            <p className="text-sm text-red-500">{errors.correctOptions}</p>
           )}
         </div>
         ) : (
@@ -209,8 +208,8 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
                   step="any"
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
                 />
-                {getErrorMessage(errors, 'numericalAnswer.exactValue') && (
-                  <p className="mt-1 text-sm text-red-500">{getErrorMessage(errors, 'numericalAnswer.exactValue')}</p>
+                {errors['numericalAnswer.exactValue'] && (
+                  <p className="mt-1 text-sm text-red-500">{errors['numericalAnswer.exactValue']}</p>
                 )}
               </div>
               
@@ -276,8 +275,8 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
               </div>
             </div>
             
-            {getErrorMessage(errors, 'numericalAnswer.range') && (
-              <p className="text-sm text-red-500">{getErrorMessage(errors, 'numericalAnswer.range')}</p>
+            {errors['numericalAnswer.range'] && (
+              <p className="text-sm text-red-500">{errors['numericalAnswer.range']}</p>
             )}
           </div>
         )}

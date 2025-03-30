@@ -142,7 +142,7 @@ export interface QuestionFormData {
 
 // Form validation
 export interface ValidationErrors {
-  [key: string]: string | { [key: string]: string } | ValidationErrors[];
+  [key: string]: string;
 }
 
 // Props for component communication

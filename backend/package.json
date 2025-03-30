@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "scripts": {
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js",
     "start": "node -r dotenv/config --experimental-json-modules src/index.js",

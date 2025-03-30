@@ -27,7 +27,7 @@ export default function RootLayout({
             <main className="flex-1 pt-16">
               {children}
             </main>
-            <Footer className="bg-green-900" />
+            <Footer className="z-40 bg-green-900" />
             <Notifications />
           </div>
         </ReduxProvider>
