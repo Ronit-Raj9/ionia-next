@@ -50,7 +50,8 @@ const defaultFormData: QuestionFormData = {
   feedback: {
     studentReports: [],
     teacherNotes: []
-  }
+  },
+  isActive: true
 };
 
 export const useQuestionForm = () => {

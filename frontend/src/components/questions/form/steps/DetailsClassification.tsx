@@ -12,17 +12,23 @@ import {
   YEARS,
   SUBJECT_VALUES
 } from '../../utils/constants';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
 
 const DetailsClassification: React.FC<StepProps> = ({
   formData,
   errors,
   handleInputChange,
+  handleFileUpload,
   setErrors
 }) => {
   // State for chapter options
   const [chapterOptions, setChapterOptions] = useState<Array<{value: string, label: string}>>([]);
   const [sectionOptions, setSectionOptions] = useState<Array<{value: string, label: string}>>([]);
   
+  // Get sections and chapters from Redux store
+  const { sections, chapters } = useSelector((state: RootState) => state.question);
+
   // Get available subjects based on exam type and class
   const getAvailableSubjects = () => {
     if (!formData.examType) return [];
@@ -112,6 +118,12 @@ const DetailsClassification: React.FC<StepProps> = ({
       }
     }
   }, [formData.subject, formData.class, formData.section]);
+
+  // Get available chapters based on selected subject
+  const availableChapters = formData.subject ? chapters[formData.subject.toLowerCase()] || [] : [];
+  
+  // Get available sections based on selected subject
+  const availableSections = formData.subject ? sections[formData.subject.toLowerCase()] || [] : [];
 
   return (
     <div className="space-y-6">

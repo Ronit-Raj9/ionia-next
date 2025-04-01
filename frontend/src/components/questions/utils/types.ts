@@ -138,6 +138,7 @@ export interface QuestionFormData {
     studentReports: any[];
     teacherNotes: any[];
   };
+  isActive: boolean;
 }
 
 // Form validation

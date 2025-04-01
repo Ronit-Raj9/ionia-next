@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Loader2, History, BarChart2, CheckCircle } from "lucide-react";
+import { Question } from "@/types/question";
 
 // Import local components
 import QuestionEditForm from "@/components/questions/edit/QuestionEditForm";
@@ -51,23 +52,6 @@ const TabsContent = ({
 }) => {
   return <div className={className || ''}>{children}</div>;
 };
-
-// Define interface for question data
-interface Question {
-  _id: string;
-  question: {
-    text: string;
-    image: {
-      url: string;
-      publicId: string;
-    };
-  };
-  subject: string;
-  examType: string;
-  difficulty: string;
-  isVerified: boolean;
-  [key: string]: any; // Allow for additional properties
-}
 
 export default function EditQuestionPage() {
   const [question, setQuestion] = useState<Question | null>(null);

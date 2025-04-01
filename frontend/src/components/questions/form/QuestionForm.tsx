@@ -85,7 +85,8 @@ const initialFormData: QuestionFormData = {
   feedback: {
     studentReports: [],
     teacherNotes: []
-  }
+  },
+  isActive: true
 };
 
 const QuestionForm: React.FC = () => {
