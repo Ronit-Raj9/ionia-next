@@ -1111,9 +1111,9 @@ export default function QuestionsPage() {
               showFilters ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full lg:opacity-100 lg:translate-x-0'
             }`}
           >
-            <div className="lg:sticky lg:top-6 bg-white rounded-xl shadow-sm border border-green-100 flex flex-col max-h-[calc(100vh-3rem)]">
+            <div className="lg:sticky lg:top-4 bg-white rounded-xl shadow-sm border border-green-100 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
               {/* Fixed Header */}
-              <div className="p-6 border-b border-green-100">
+              <div className="p-6 border-b border-green-100 bg-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <FunnelIcon className="h-5 w-5 text-green-600 mr-2" />
@@ -1430,6 +1430,12 @@ export default function QuestionsPage() {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: #16a34a;
+        }
+
+        /* Add these new styles */
+        .custom-scrollbar {
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
         }
       `}</style>
     </div>
