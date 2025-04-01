@@ -6,25 +6,19 @@ interface QuestionPreviewProps {
   formData: QuestionFormData;
 }
 
-
 const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
-  // Option 1: Log before the return statement
+  // Remove the console logs once fixed
   console.log("Question test:", formData.question.text);
   
-  // Option 2: Use useEffect for logging after render
-  React.useEffect(() => {
-    console.log("Question data after render:", formData.question);
-  }, [formData.question]);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 w-full">
       {/* Question Content Section */}
       <PreviewSection title="Question Content">
-        <div className="space-y-2">
-          <div className="flex items-start gap-4">
+        <div className="space-y-4">
+          <div className="flex items-start gap-6">
             <div className="flex-1">
               {formData.question.text && (
-                <div className="prose max-w-none">
+                <div className="prose max-w-none text-lg">
                   <p className="text-gray-800">{formData.question.text}</p>
                 </div>
               )}
@@ -34,36 +28,50 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
                 <img 
                   src={formData.question.image.url} 
                   alt="Question" 
-                  className="max-w-[200px] rounded-lg border border-gray-200"
+                  className="max-w-[300px] rounded-lg border border-gray-200"
                 />
               </div>
             )}
           </div>
-          <Badge variant="outline" className="text-sm">
-            {formData.questionType === 'numerical' ? 'Numerical' : 
-             formData.questionType === 'single' ? 'Single Choice' : 'Multiple Choice'}
-          </Badge>
+          <div className="flex gap-3 mt-3">
+            <Badge variant="outline" className="text-sm px-3 py-1">
+              {formData.questionType === 'numerical' ? 'Numerical' : 
+               formData.questionType === 'single' ? 'Single Choice' : 'Multiple Choice'}
+            </Badge>
+            <Badge variant={formData.questionSource === 'pyq' ? "default" : "outline"} className="text-sm px-3 py-1">
+              {formData.questionSource === 'pyq' ? 'Previous Year Question' : 
+               formData.questionSource === 'custom' ? 'Custom Question' :
+               formData.questionSource === 'india_book' ? 'Indian Book' : 
+               formData.questionSource === 'foreign_book' ? 'Foreign Book' : 'Other Source'}
+            </Badge>
+          </div>
         </div>
       </PreviewSection>
 
       {/* Classification Section */}
       <PreviewSection title="Classification">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-x-8 gap-y-4">
           <PreviewField label="Exam Type" value={formData.examType} />
           <PreviewField label="Class" value={formData.class} />
           <PreviewField label="Subject" value={formData.subject} />
-          <PreviewField label="Section" value={formData.section} />
+          {formData.section && <PreviewField label="Section" value={formData.section} />}
           <PreviewField label="Chapter" value={formData.chapter} />
           <PreviewField label="Difficulty" value={formData.difficulty} />
           <PreviewField label="Marks" value={formData.marks.toString()} />
           <PreviewField label="Negative Marks" value={formData.negativeMarks.toString()} />
+          <PreviewField label="Expected Time" value={`${formData.expectedTime} seconds`} />
+          {formData.questionSource === 'pyq' && (
+            <PreviewField label="Year" value={formData.year || 'Not specified'} />
+          )}
+          {formData.language && <PreviewField label="Language" value={formData.language} />}
+          {formData.languageLevel && <PreviewField label="Language Level" value={formData.languageLevel} />}
         </div>
       </PreviewSection>
 
       {/* Answer Section */}
       {formData.questionType === 'numerical' ? (
         <PreviewSection title="Numerical Answer">
-          <div className="space-y-2">
+          <div className="space-y-4 px-3 py-2 bg-gray-50 rounded-lg">
             {formData.numericalAnswer && (
               <>
                 <PreviewField label="Exact Value" value={formData.numericalAnswer.exactValue.toString()} />
@@ -80,20 +88,24 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
         </PreviewSection>
       ) : (
         <PreviewSection title="Multiple Choice Options">
-          <div className="space-y-2">
+          <div className="space-y-4">
             {formData.options?.map((option, index) => (
               <div 
                 key={index}
-                className={`p-3 rounded-lg border ${
+                className={`p-4 rounded-lg border ${
                   formData.correctOptions.includes(index) 
                     ? 'border-green-500 bg-green-50' 
                     : 'border-gray-200'
                 }`}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-6">
                   <div className="flex-1">
-                    <p className={`${formData.correctOptions.includes(index) ? 'font-medium' : ''}`}>
+                    <p className={`${formData.correctOptions.includes(index) ? 'font-medium text-lg' : 'text-lg'}`}>
+                      <span className="mr-3 font-semibold">{String.fromCharCode(65 + index)}.</span>
                       {option.text}
+                      {formData.correctOptions.includes(index) && (
+                        <span className="ml-2 text-green-600">✓ Correct</span>
+                      )}
                     </p>
                   </div>
                   {option.image?.url && (
@@ -101,7 +113,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
                       <img 
                         src={option.image.url} 
                         alt={`Option ${index + 1}`} 
-                        className="max-w-[100px] rounded border border-gray-200" 
+                        className="max-w-[180px] rounded border border-gray-200" 
                       />
                     </div>
                   )}
@@ -114,9 +126,9 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
 
       {/* Solution Section */}
       <PreviewSection title="Solution">
-        <div className="space-y-2">
+        <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
           {formData.solution.text && (
-            <div className="prose max-w-none">
+            <div className="prose max-w-none text-lg">
               <p className="text-gray-800">{formData.solution.text}</p>
             </div>
           )}
@@ -124,7 +136,7 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
             <img 
               src={formData.solution.image.url} 
               alt="Solution" 
-              className="max-w-[300px] rounded-lg border border-gray-200" 
+              className="max-w-[400px] rounded-lg border border-gray-200 mt-3" 
             />
           )}
         </div>
@@ -133,19 +145,20 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
       {/* Hints Section */}
       {formData.hints.length > 0 && (
         <PreviewSection title={`Hints (${formData.hints.length})`}>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {formData.hints.map((hint, index) => (
-              <div key={index} className="p-3 rounded-lg border border-gray-200">
-                <div className="flex items-start gap-4">
+              <div key={index} className="p-4 rounded-lg border border-gray-200 bg-yellow-50">
+                <h4 className="font-medium mb-2 text-lg">Hint {index + 1}</h4>
+                <div className="flex items-start gap-6">
                   <div className="flex-1">
-                    <p className="text-gray-800">{hint.text}</p>
+                    <p className="text-gray-800 text-lg">{hint.text}</p>
                   </div>
                   {hint.image?.url && (
                     <div className="flex-shrink-0">
                       <img 
                         src={hint.image.url} 
                         alt={`Hint ${index + 1}`} 
-                        className="max-w-[100px] rounded border border-gray-200" 
+                        className="max-w-[180px] rounded border border-gray-200" 
                       />
                     </div>
                   )}
@@ -156,15 +169,33 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
         </PreviewSection>
       )}
 
+      {/* Common Mistakes Section */}
+      {formData.commonMistakes && formData.commonMistakes.length > 0 && (
+        <PreviewSection title="Common Mistakes">
+          <div className="space-y-3 p-4 bg-red-50 rounded-lg">
+            <ul className="list-disc pl-6 space-y-3">
+              {formData.commonMistakes.map((mistake, index) => (
+                <li key={index} className="text-gray-800 mb-3">
+                  <div className="font-medium text-lg">{mistake.description}</div>
+                  {mistake.explanation && (
+                    <div className="text-md text-gray-600 ml-3 mt-1">{mistake.explanation}</div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </PreviewSection>
+      )}
+
       {/* Tags Section */}
       {(formData.tags.length > 0 || formData.prerequisites.length > 0 || formData.relatedTopics.length > 0) && (
         <PreviewSection title="Tags & Topics">
           {formData.tags.length > 0 && (
-            <div className="space-y-1">
-              <h4 className="text-sm font-medium text-gray-600">Tags</h4>
-              <div className="flex flex-wrap gap-1">
+            <div className="space-y-2 mb-4">
+              <h4 className="text-md font-medium text-gray-700">Tags</h4>
+              <div className="flex flex-wrap gap-2">
                 {formData.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary">
+                  <Badge key={index} variant="secondary" className="px-3 py-1 text-md">
                     {tag}
                   </Badge>
                 ))}
@@ -173,11 +204,11 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
           )}
           
           {formData.prerequisites.length > 0 && (
-            <div className="space-y-1 mt-3">
-              <h4 className="text-sm font-medium text-gray-600">Prerequisites</h4>
-              <div className="flex flex-wrap gap-1">
+            <div className="space-y-2 mb-4">
+              <h4 className="text-md font-medium text-gray-700">Prerequisites</h4>
+              <div className="flex flex-wrap gap-2">
                 {formData.prerequisites.map((prereq, index) => (
-                  <Badge key={index} variant="outline">
+                  <Badge key={index} variant="outline" className="px-3 py-1 text-md">
                     {prereq}
                   </Badge>
                 ))}
@@ -186,11 +217,11 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
           )}
           
           {formData.relatedTopics.length > 0 && (
-            <div className="space-y-1 mt-3">
-              <h4 className="text-sm font-medium text-gray-600">Related Topics</h4>
-              <div className="flex flex-wrap gap-1">
+            <div className="space-y-2">
+              <h4 className="text-md font-medium text-gray-700">Related Topics</h4>
+              <div className="flex flex-wrap gap-2">
                 {formData.relatedTopics.map((topic, index) => (
-                  <Badge key={index} variant="outline">
+                  <Badge key={index} variant="outline" className="px-3 py-1 text-md">
                     {topic}
                   </Badge>
                 ))}
@@ -205,8 +236,8 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
 
 // Helper Components
 const PreviewSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <section className="border-b border-gray-200 pb-4">
-    <h3 className="text-lg font-semibold mb-3 text-gray-900">{title}</h3>
+  <section className="border-b border-gray-200 pb-6">
+    <h3 className="text-xl font-semibold mb-4 text-gray-900">{title}</h3>
     {children}
   </section>
 );
@@ -214,7 +245,7 @@ const PreviewSection: React.FC<{ title: string; children: React.ReactNode }> = (
 const PreviewField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div>
     <dt className="text-sm font-medium text-gray-600">{label}</dt>
-    <dd className="mt-1 text-sm text-gray-900">{value}</dd>
+    <dd className="mt-1 text-md text-gray-900">{value}</dd>
   </div>
 );
 

@@ -264,6 +264,18 @@ const QuestionForm: React.FC = () => {
       formDataToSend.append("language", transformedData.language);
       formDataToSend.append("languageLevel", transformedData.languageLevel);
       
+      // IMPORTANT: Handle year field properly for PYQs
+      // If the question is a previous year question, year is mandatory
+      if (transformedData.questionSource === 'pyq') {
+        if (!transformedData.year || transformedData.year === 'not applicable') {
+          throw new Error('Year must be specified for previous year questions');
+        }
+        formDataToSend.append("year", transformedData.year);
+      } else {
+        // For other question sources, year is optional but we still send it
+        formDataToSend.append("year", transformedData.year || 'not applicable');
+      }
+      
       // IMPORTANT: Handle section field properly for all subjects
       const subject = transformedData.subject?.toLowerCase();
 
@@ -512,11 +524,14 @@ const QuestionForm: React.FC = () => {
             formData={formData}
             errors={errors}
             handleInputChange={handleInputChange}
-            handleFileUpload={handleFileUpload}
-            setErrors={setErrors}
+            handleArrayField={handleArrayField}
             handleTagInput={handleTagInput}
             removeTag={removeTag}
+            addCommonMistake={addCommonMistake}
+            removeCommonMistake={removeCommonMistake}
             clearFormData={clearFormData}
+            handleFileUpload={handleFileUpload}
+            setErrors={setErrors}
           />
         )}
 

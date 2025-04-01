@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fi';
 import { useAppDispatch } from '@/redux/hooks/hooks';
 import { logout } from '@/redux/slices/authSlice';
+import { clearAllCachedData } from '@/lib/api';
 
 interface SidebarProps {
   username: string;
@@ -66,9 +67,22 @@ const Sidebar: React.FC<SidebarProps> = ({ username }) => {
     router.push(href);
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    router.push('/auth/login');
+  const handleLogout = async () => {
+    try {
+      console.log('Logging out...');
+      // Clear all cached data first
+      clearAllCachedData();
+      
+      // Dispatch the logout action
+      await dispatch(logout()).unwrap();
+      
+      console.log('Logout successful, redirecting to login page');
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Even if there's an error, we should still redirect to login
+      router.push('/auth/login');
+    }
   };
 
   return (

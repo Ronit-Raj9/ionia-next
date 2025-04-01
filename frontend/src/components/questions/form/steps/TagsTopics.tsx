@@ -5,14 +5,21 @@ import { StepProps } from '../../utils/types';
 interface TagsTopicsProps extends StepProps {
   handleTagInput: (e: React.KeyboardEvent<HTMLInputElement>, field: 'tags' | 'relatedTopics' | 'prerequisites') => void;
   removeTag: (index: number, field: 'tags' | 'relatedTopics' | 'prerequisites') => void;
+  handleArrayField: (e: React.ChangeEvent<HTMLInputElement>, field: string) => void;
+  addCommonMistake: () => void;
+  removeCommonMistake: (index: number) => void;
   clearFormData: () => void;
 }
 
 const TagsTopics: React.FC<TagsTopicsProps> = ({
   formData,
   errors,
+  handleInputChange,
+  handleArrayField,
   handleTagInput,
   removeTag,
+  addCommonMistake,
+  removeCommonMistake,
   clearFormData
 }) => {
   return (

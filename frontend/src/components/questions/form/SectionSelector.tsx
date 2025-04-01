@@ -10,12 +10,14 @@ interface SectionSelectorProps {
   formData: QuestionFormData;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, field: string) => void;
   setFormData: React.Dispatch<React.SetStateAction<QuestionFormData>>;
+  subjectKey?: string;
 }
 
 const SectionSelector: React.FC<SectionSelectorProps> = ({ 
   formData, 
   handleInputChange,
-  setFormData 
+  setFormData,
+  subjectKey 
 }) => {
   const [availableChapters, setAvailableChapters] = useState<Array<{value: string, label: string}>>([]);
   

@@ -97,14 +97,24 @@ export const fetchWithCache = async <T>(
     });
     
     if (!response.ok) {
+      // Clone the response before reading it as JSON to avoid "body stream already read" error
+      const clonedResponse = response.clone();
+      let errorMessage;
+      
       try {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'API request failed');
+        errorMessage = errorData.message || 'API request failed';
       } catch (jsonError) {
-        // Handle non-JSON error responses
-        const errorText = await response.text();
-        throw new Error(errorText || `API request failed with status ${response.status}`);
+        // If JSON parsing fails, try to get text instead
+        try {
+          errorMessage = await clonedResponse.text();
+        } catch (textError) {
+          // If both methods fail, use status code
+          errorMessage = `API request failed with status ${response.status}`;
+        }
       }
+      
+      throw new Error(errorMessage);
     }
     
     const data = await response.json();
@@ -134,6 +144,21 @@ export const clearCache = (url?: string, options?: RequestInit) => {
   } else {
     apiCache.clear();
   }
+};
+
+/**
+ * Clears all API cached data and local storage tokens
+ * Used during logout to ensure a fresh state
+ */
+export const clearAllCachedData = () => {
+  // Clear all API cache
+  apiCache.clear();
+  
+  // Remove any auth-related items from localStorage
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('redirectTo');
+  
+  console.log('All cached API data cleared');
 };
 
 interface APIResponse<T> {
@@ -172,7 +197,8 @@ export const API = {
     logout: () => 
       fetchWithCache<APIResponse<void>>(`${API_BASE}/users/logout`, {
         method: 'POST',
-      }),
+        credentials: 'include', // Ensure cookies are sent
+      }, true), // Skip cache for logout to ensure fresh request
     register: (userData: { fullName: string; email: string; username: string; password: string }) => 
       fetchWithCache<APIResponse<LoginResponse>>(`${API_BASE}/users/register`, {
         method: 'POST',
@@ -180,6 +206,16 @@ export const API = {
       }),
     getCurrentUser: () => 
       fetchWithCache<APIResponse<IUser>>(`${API_BASE}/users/current-user`),
+    forgotPassword: (email: string) =>
+      fetchWithCache<APIResponse<void>>(`${API_BASE}/users/forgot-password`, {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }, true), // Skip cache for password reset
+    resetPassword: (token: string, password: string) =>
+      fetchWithCache<APIResponse<void>>(`${API_BASE}/users/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ token, password }),
+      }, true), // Skip cache for password reset
   },
   questions: {
     getAll: (filters?: Record<string, string>) => {
