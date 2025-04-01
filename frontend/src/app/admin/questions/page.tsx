@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast, Toaster } from 'react-hot-toast';
+import { useAppSelector } from '@/redux/hooks/hooks';
 
 interface Question {
   _id: string;
@@ -119,6 +120,8 @@ interface Filters {
 }
 
 export default function QuestionsPage() {
+  const { user } = useAppSelector((state) => state.auth);
+  const isSuperAdmin = user?.role === 'superadmin';
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -382,7 +385,11 @@ export default function QuestionsPage() {
     setCurrentPage(1);
   };
 
-  const handleDeleteClick = (questionId: string) => {
+  const handleDelete = (questionId: string) => {
+    if (!isSuperAdmin) {
+      toast.error('Only superadmins can delete questions');
+      return;
+    }
     setSelectedQuestionId(questionId);
     setShowDeleteModal(true);
   };
@@ -404,31 +411,20 @@ export default function QuestionsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete question');
+        if (response.status === 403) {
+          toast.error('You do not have permission to delete questions');
+        } else {
+          throw new Error(errorData.message || 'Failed to delete question');
+        }
+        return;
       }
 
-      // Remove the deleted question from the state
-      setQuestions(prevQuestions => 
-        prevQuestions.filter(q => q._id !== selectedQuestionId)
-      );
-
-      toast.success("Question permanently deleted!", {
-        duration: 3000,
-        style: {
-          background: '#10B981',
-          color: '#FFFFFF',
-          borderRadius: '8px',
-        },
-      });
-
+      toast.success('Question deleted successfully');
       setShowDeleteModal(false);
-      setSelectedQuestionId(null);
-    } catch (error) {
-      console.error('Error deleting question:', error);
-      setError(error instanceof Error ? error.message : 'Failed to delete question');
-      toast.error("Failed to delete question. Please try again.", {
-        duration: 3000
-      });
+      // Refresh questions list
+      fetchQuestions();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete question');
     } finally {
       setDeletingId(null);
     }
@@ -885,9 +881,11 @@ export default function QuestionsPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteClick(question._id);
+                              handleDelete(question._id);
                             }}
-                            className="px-3 py-1 text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors"
+                            className={`px-3 py-1 text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 transition-colors ${!isSuperAdmin && 'opacity-50 cursor-not-allowed'}`}
+                            disabled={!isSuperAdmin}
+                            title={!isSuperAdmin ? 'Only superadmins can delete questions' : ''}
                           >
                             Delete
                           </button>
