@@ -366,7 +366,7 @@ const getQuestions = asyncHandler(async (req, res) => {
         section,
         year,
         page = 1,
-        limit = 10,
+        limit = 30,
         sortBy = 'createdAt',
         sortOrder = 'desc'
     } = req.query;

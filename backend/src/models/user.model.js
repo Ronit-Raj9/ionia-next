@@ -39,6 +39,13 @@ const userSchema = new Schema(
     refreshToken: {
       type: String,
     },
+    // Reset password fields
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
     // NEW: Role field
     role: {
       type: String,

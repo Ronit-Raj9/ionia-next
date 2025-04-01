@@ -11,6 +11,8 @@ import {
   updateUserCoverImage,
   getUserStatistics,
   checkUsername,
+  forgotPassword,
+  resetPassword
 } from "../controllers/user.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
@@ -34,6 +36,10 @@ router.route("/login").post(loginUser);
 
 // Add new route for checking username availability
 router.route("/check-username").post(checkUsername);
+
+// Password reset routes (public)
+router.route("/forgot-password").post(forgotPassword);
+router.route("/reset-password").post(resetPassword);
 
 /**
  * Protected Routes (Must be Authenticated)

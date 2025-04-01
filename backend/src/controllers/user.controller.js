@@ -5,6 +5,8 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { AttemptedTest } from "../models/attemptedTest.model.js";
+import crypto from "crypto";
+import { sendEmail } from "../utils/emailService.js";
 
 /**
  * Helper function to generate both Access Token and Refresh Token,
@@ -484,6 +486,169 @@ const checkUsername = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { available: true }, "Username is available"));
 });
 
+/**
+ * forgotPassword
+ * - Generates a password reset token and sends email with link
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+  try {
+    console.log("Received forgot password request:", req.body);
+    const { email } = req.body;
+    
+    if (!email) {
+      throw new ApiError(400, "Email is required");
+    }
+    
+    // Find user by email
+    const user = await User.findOne({ email });
+    console.log("User found:", user ? "Yes" : "No");
+    
+    if (!user) {
+      // For security reasons, don't reveal that the email doesn't exist,
+      // but still return a success response
+      return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "If your email is registered, you will receive a password reset link"));
+    }
+    
+    // Generate a reset token (random bytes)
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    
+    // Hash the token for security before storing it
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+    
+    // Set token expiry (10 minutes from now)
+    const tokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    
+    // Store the token in the user document
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = tokenExpiry;
+    await user.save({ validateBeforeSave: false });
+    
+    // Create reset URL (frontend URL where user will be redirected)
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${frontendURL}/auth/reset-password?token=${resetToken}`;
+    
+    console.log("Reset URL generated:", resetUrl);
+    
+    // Email content
+    const subject = "Password Reset Request";
+    const text = `You requested a password reset. Please use the following link to reset your password. This link is valid for 10 minutes: ${resetUrl}`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h1 style="color: #10b981; text-align: center;">Password Reset Request</h1>
+        <p>Hello ${user.fullName || user.username},</p>
+        <p>You requested a password reset for your Ionia account.</p>
+        <p>Please click the button below to reset your password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
+        </div>
+        <p>This link is valid for 10 minutes and can only be used once.</p>
+        <p>If you didn't request this, please ignore this email or contact support if you have concerns.</p>
+        <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
+          &copy; ${new Date().getFullYear()} Ionia. All rights reserved.
+        </p>
+      </div>
+    `;
+    
+    try {
+      await sendEmail({
+        email: user.email,
+        subject,
+        text,
+        html
+      });
+      
+      console.log("Password reset email sent successfully");
+      
+      return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Password reset link sent to your email"));
+        
+    } catch (emailError) {
+      console.error("Error sending email:", emailError);
+      
+      // If email sending fails, reset the stored token
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      
+      throw new ApiError(500, "Error sending email, please try again later");
+    }
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    
+    // If it's already an ApiError, rethrow it
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    // Otherwise wrap it in an ApiError
+    throw new ApiError(500, "An error occurred processing your request");
+  }
+});
+
+/**
+ * resetPassword
+ * - Verifies the reset token and updates the password
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  try {
+    console.log("Received reset password request:", { ...req.body, password: "[REDACTED]" });
+    const { token, password } = req.body;
+    
+    if (!token || !password) {
+      throw new ApiError(400, "Token and new password are required");
+    }
+    
+    // Hash the provided token to compare with stored hashed token
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+    
+    console.log("Looking for user with token:", hashedToken);
+    
+    // Find user with this token and check if token is still valid
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      console.log("Invalid or expired token");
+      throw new ApiError(400, "Invalid or expired token");
+    }
+    
+    console.log("User found with valid token, updating password");
+    
+    // Update password and clear reset token fields
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    
+    await user.save();
+    console.log("Password reset successful");
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Password has been reset successfully"));
+  } catch (error) {
+    console.error("Reset password error:", error);
+    
+    // If it's already an ApiError, rethrow it
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    // Otherwise wrap it in an ApiError
+    throw new ApiError(500, "An error occurred resetting your password");
+  }
+});
+
 export {
   registerUser,
   loginUser,
@@ -495,5 +660,7 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserStatistics,
-  checkUsername
+  checkUsername,
+  forgotPassword,
+  resetPassword
 };

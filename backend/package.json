@@ -10,7 +10,9 @@
     "deploy": "npm install --only=prod && npm start",
     "lint": "eslint .",
     "test": "jest",
-    "migrate": "node src/scripts/run-migrations.js"
+    "migrate": "node src/scripts/run-migrations.js",
+    "migrate:reset-password": "node src/scripts/migrations/add-reset-password-fields.js",
+    "test:email": "node -r dotenv/config src/scripts/test-email.js"
   },
   "author": "Ronit",
   "license": "ISC",

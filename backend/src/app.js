@@ -16,7 +16,8 @@ const allowedOrigins = [
   "http://localhost:3000", // For local development
   "http://localhost:3001", // For local development
   "http://localhost:3002", // For local development
-  "https://ionia-next-production.up.railway.app" // Your Railway backend URL
+  "https://ionia-next-production.up.railway.app", // Your Railway backend URL
+  /^https:\/\/ionia-next.*\.vercel\.app$/ // Allow all Vercel preview URLs
 ];
 
 // ✅ Setup CORS Middleware
@@ -24,34 +25,57 @@ app.use(
   cors({
     origin: function (origin, callback) {
       console.log("Request Origin:", origin);  // Debugging CORS issues
-      if (!origin || allowedOrigins.includes(origin)) {
+      
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Check if origin matches any of our allowed origins
+      const isAllowed = allowedOrigins.some(allowedOrigin => {
+        if (allowedOrigin instanceof RegExp) {
+          return allowedOrigin.test(origin);
+        }
+        return allowedOrigin === origin;
+      });
+
+      if (isAllowed) {
         callback(null, true);
       } else {
+        console.log(`Origin ${origin} not allowed by CORS`);
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,  // 🔥 Required to send cookies
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    allowedHeaders: ["Content-Type", "Authorization"]
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    exposedHeaders: ["Set-Cookie"]
   })
 );
 
 // ✅ Ensure Cookies Are Set Properly
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE");
-  res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
-  next();
-});
+  // Get the origin from the request headers
+  const origin = req.headers.origin;
+  
+  // Only set CORS headers if we have an origin (browser requests)
+  if (origin) {
+    // Check if origin is allowed
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
 
-// ✅ Set Secure Cookies in Responses
-app.use((req, res, next) => {
-  res.cookie("token", "your_token_here", {
-    httpOnly: true,   // Prevent client-side JavaScript from accessing cookies
-    secure: true,     // 🔥 Ensures cookies are sent only over HTTPS
-    sameSite: "None", // 🔥 Allows cross-origin cookies
-  });
+    if (isAllowed) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Access-Control-Allow-Credentials", "true");
+      res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+      res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,Cookie");
+      res.header("Access-Control-Expose-Headers", "Set-Cookie");
+    }
+  }
   next();
 });
 
