@@ -211,20 +211,20 @@ interface QuestionState {
 
 // Helper function to get empty image files state
 const getEmptyImageFiles = (): ImageFiles => ({
-  questionImage: undefined,
-  solutionImage: undefined,
-  optionImages: [],
-  hintImages: []
+    questionImage: undefined,
+    solutionImage: undefined,
+    optionImages: [],
+    hintImages: []
 });
 
 // Helper function to get default expanded sections state
 const getDefaultExpandedSections = () => ({
-  question: true,
-  options: false,
-  solution: false,
-  hints: false,
-  commonMistakes: false,
-  history: false
+    question: true,
+    options: false,
+    solution: false,
+    hints: false,
+    commonMistakes: false,
+    history: false
 });
 
 // Helper function to clear localStorage drafts

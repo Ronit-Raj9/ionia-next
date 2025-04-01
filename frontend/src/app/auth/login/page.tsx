@@ -21,15 +21,19 @@ export default function LoginPage() {
   }, [dispatch]);
 
   useEffect(() => {
-    // Redirect if already authenticated
-    if (isAuthenticated) {
-      router.push('/dashboard');
+    // Only redirect if authenticated and not in loading state
+    if (isAuthenticated && !loading) {
+      const redirectTo = localStorage.getItem('redirectTo') || '/dashboard';
+      localStorage.removeItem('redirectTo'); // Clear the redirect path
+      router.replace(redirectTo);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, loading, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(login({ email, password }));
+    if (!loading) { // Prevent multiple submissions
+      dispatch(login({ email, password }));
+    }
   };
 
   // Check for success message from registration

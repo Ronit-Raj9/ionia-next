@@ -106,25 +106,24 @@ export const getCurrentUser = createAsyncThunk<IUser, void, { rejectValue: strin
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401) {
-        // Token expired, try to refresh
-        try {
-          const refreshResponse = await API.auth.refreshToken();
-          if (refreshResponse.data.accessToken) {
-            localStorage.setItem('accessToken', refreshResponse.data.accessToken);
-            localStorage.setItem('lastTokenRefresh', Date.now().toString());
-            // Retry getting current user with new token
-            const retryResponse = await API.auth.getCurrentUser();
-            return retryResponse.data;
-          }
-        } catch (refreshError) {
-          // If refresh fails, clear auth state and redirect
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('lastTokenRefresh');
-          window.location.href = '/auth/login';
-          return rejectWithValue('Session expired. Please login again.');
-        }
+        // Clear auth state and redirect without attempting refresh
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('lastTokenRefresh');
+        return rejectWithValue('Session expired. Please login again.');
       }
       return rejectWithValue(error.response?.data?.message || 'Failed to get user data');
+    }
+  }
+);
+
+export const updateUserData = createAsyncThunk<IUser, void, { rejectValue: string }>(
+  'auth/updateUserData',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await API.auth.getCurrentUser();
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to update user data');
     }
   }
 );
@@ -135,28 +134,30 @@ export const checkAuth = createAsyncThunk(
     const accessToken = localStorage.getItem('accessToken');
     const lastRefresh = localStorage.getItem('lastTokenRefresh');
     
-    if (accessToken) {
-      // Check if token needs refresh (e.g., if it's older than 30 minutes)
+    if (!accessToken) return;
+
+    try {
+      // Always get fresh user data
+      await dispatch(getCurrentUser());
+      
+      // Check if token needs refresh
       const shouldRefresh = lastRefresh && 
         (Date.now() - parseInt(lastRefresh)) > 30 * 60 * 1000;
       
       if (shouldRefresh) {
-        try {
-          const refreshResponse = await API.auth.refreshToken();
-          if (refreshResponse.data.accessToken) {
-            localStorage.setItem('accessToken', refreshResponse.data.accessToken);
-            localStorage.setItem('lastTokenRefresh', Date.now().toString());
-          }
-        } catch (error) {
-          console.error('Token refresh failed:', error);
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('lastTokenRefresh');
-          window.location.href = '/auth/login';
-          return;
+        const refreshResponse = await API.auth.refreshToken();
+        if (refreshResponse.data.accessToken) {
+          localStorage.setItem('accessToken', refreshResponse.data.accessToken);
+          localStorage.setItem('lastTokenRefresh', Date.now().toString());
+          // Get fresh user data after token refresh
+          await dispatch(getCurrentUser());
         }
       }
-      
-      await dispatch(getCurrentUser());
+    } catch (error) {
+      // On error, clear auth state
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('lastTokenRefresh');
+      return;
     }
   }
 );
@@ -175,6 +176,10 @@ const authSlice = createSlice({
     updateLastTokenRefresh: (state) => {
       state.lastTokenRefresh = Date.now();
       localStorage.setItem('lastTokenRefresh', state.lastTokenRefresh.toString());
+    },
+    refreshUserData: (state) => {
+      // This will trigger a re-fetch of user data
+      state.loading = true;
     },
   },
   extraReducers: (builder) => {
@@ -240,6 +245,13 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload;
+        // Clear API cache to ensure fresh data
+        if (typeof window !== 'undefined') {
+          // Import dynamically to avoid circular dependency
+          import('@/lib/api').then(({ clearCache }) => {
+            clearCache();
+          });
+        }
       })
       .addCase(getCurrentUser.rejected, (state, action) => {
         state.loading = false;
@@ -250,9 +262,23 @@ const authSlice = createSlice({
         state.lastTokenRefresh = null;
         localStorage.removeItem('accessToken');
         localStorage.removeItem('lastTokenRefresh');
+      })
+      // Update User Data
+      .addCase(updateUserData.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateUserData.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+      })
+      .addCase(updateUserData.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const { clearError, setRedirectTo, updateLastTokenRefresh } = authSlice.actions;
+export const { clearError, setRedirectTo, updateLastTokenRefresh, refreshUserData } = authSlice.actions;
 export default authSlice.reducer; 

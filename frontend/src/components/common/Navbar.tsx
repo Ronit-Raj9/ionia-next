@@ -28,9 +28,9 @@ export default function Navbar({ className = "" }: NavbarProps) {
 
   const navItems = [
     { name: "Home", href: "/" },
-    { name: "JEE Mains", href: "/jee-mains" },
-    { name: "JEE Advanced", href: "/jee-advanced" },
-    { name: "CUET", href: "/cuet" },
+    { name: "JEE Mains", href: "/exam/jee-mains" },
+    { name: "JEE Advanced", href: "/exam/jee-advanced" },
+    { name: "CUET", href: "/exam/cuet" },
     { name: "Practice", href: "/practice" },
   ];
 

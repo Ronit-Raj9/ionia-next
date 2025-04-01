@@ -47,7 +47,7 @@ const refreshToken = async () => {
     console.error('Token refresh error:', error);
     refreshSubscribers = [];
     clearAllCachedData();
-    window.location.href = '/auth/login';
+    // Don't redirect here, let the auth slice handle it
     throw error;
   } finally {
     isRefreshing = false;
@@ -113,6 +113,30 @@ const getCacheKey = (url: string, options?: RequestInit): string => {
   return `${method}:${url}:${body}`;
 };
 
+// Add cache invalidation patterns
+const CACHE_INVALIDATION_PATTERNS = {
+  user: ['/users/current-user', '/users/profile'],
+  auth: ['/users/login', '/users/register', '/users/logout'],
+  all: ['*']
+};
+
+/**
+ * Clear cache based on patterns
+ */
+export const invalidateCache = (pattern: keyof typeof CACHE_INVALIDATION_PATTERNS) => {
+  const patterns = CACHE_INVALIDATION_PATTERNS[pattern];
+  if (patterns.includes('*')) {
+    apiCache.clear();
+    return;
+  }
+  
+  for (const [key] of apiCache) {
+    if (patterns.some(p => key.includes(p))) {
+      apiCache.delete(key);
+    }
+  }
+};
+
 /**
  * Fetch data with caching and token refresh handling
  */
@@ -147,7 +171,7 @@ export const fetchWithCache = async <T>(
     });
 
     // Handle token expiration
-    if (response.status === 401) {
+    if (response.status === 401 && !url.includes('/refresh-token')) {
       try {
         const newToken = await refreshToken();
         if (newToken) {
@@ -166,6 +190,12 @@ export const fetchWithCache = async <T>(
           }
           
           const data = await newResponse.json();
+          
+          // Invalidate relevant caches on successful auth-related requests
+          if (url.includes('/users/')) {
+            invalidateCache('user');
+          }
+          
           if (!skipCache) {
             apiCache.set(cacheKey, {
               data,
@@ -177,7 +207,6 @@ export const fetchWithCache = async <T>(
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
         clearAllCachedData();
-        window.location.href = '/auth/login';
         throw refreshError;
       }
     }
@@ -199,8 +228,13 @@ export const fetchWithCache = async <T>(
       
       throw new Error(errorMessage);
     }
-    
+
     const data = await response.json();
+    
+    // Invalidate relevant caches on successful auth-related requests
+    if (url.includes('/users/')) {
+      invalidateCache('user');
+    }
     
     if (!skipCache) {
       apiCache.set(cacheKey, {
@@ -208,10 +242,9 @@ export const fetchWithCache = async <T>(
         timestamp: Date.now(),
       });
     }
-    
     return data as T;
   } catch (error) {
-    console.error(`Error fetching ${url}:`, error);
+    console.error('API request failed:', error);
     throw error;
   }
 };
@@ -279,6 +312,7 @@ export const API = {
       });
       if (response.data.accessToken) {
         localStorage.setItem('accessToken', response.data.accessToken);
+        invalidateCache('auth');
       }
       return response;
     },
@@ -305,7 +339,7 @@ export const API = {
     getCurrentUser: async () => {
       return fetchWithCache<APIResponse<IUser>>(`${API_BASE}/users/current-user`, {
         method: 'GET',
-      });
+      }, true); // Skip cache for current user to always get fresh data
     },
     forgotPassword: (email: string) =>
       fetchWithCache<APIResponse<void>>(`${API_BASE}/users/forgot-password`, {
