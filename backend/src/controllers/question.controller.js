@@ -407,7 +407,7 @@ const getQuestions = asyncHandler(async (req, res) => {
             .sort(sort)
             .skip((pageNum - 1) * limitNum)
             .limit(limitNum)
-            .populate('author', 'name email')
+            .populate('author', 'username email')
             .lean();
 
         return res.status(200).json(

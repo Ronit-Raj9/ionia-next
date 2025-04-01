@@ -137,6 +137,28 @@ export const invalidateCache = (pattern: keyof typeof CACHE_INVALIDATION_PATTERN
   }
 };
 
+// Handle API errors
+const handleApiError = async (response: Response) => {
+  const clonedResponse = response.clone();
+  let errorMessage;
+  
+  try {
+    const errorData = await response.json();
+    errorMessage = errorData.message || errorData.error || 'API request failed';
+  } catch (jsonError) {
+    try {
+      errorMessage = await clonedResponse.text();
+    } catch (textError) {
+      errorMessage = `Request failed with status ${response.status}`;
+    }
+  }
+  
+  const error = new Error(errorMessage);
+  (error as any).status = response.status;
+  (error as any).response = { data: { message: errorMessage } };
+  throw error;
+};
+
 /**
  * Fetch data with caching and token refresh handling
  */
@@ -175,7 +197,6 @@ export const fetchWithCache = async <T>(
       try {
         const newToken = await refreshToken();
         if (newToken) {
-          // Retry the original request with new token
           const newResponse = await fetch(url, {
             ...options,
             credentials: 'include',
@@ -186,7 +207,7 @@ export const fetchWithCache = async <T>(
           });
 
           if (!newResponse.ok) {
-            throw new Error('Request failed after token refresh');
+            await handleApiError(newResponse);
           }
           
           const data = await newResponse.json();
@@ -212,21 +233,7 @@ export const fetchWithCache = async <T>(
     }
 
     if (!response.ok) {
-      const clonedResponse = response.clone();
-      let errorMessage;
-      
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || 'API request failed';
-      } catch (jsonError) {
-        try {
-          errorMessage = await clonedResponse.text();
-        } catch (textError) {
-          errorMessage = `API request failed with status ${response.status}`;
-        }
-      }
-      
-      throw new Error(errorMessage);
+      await handleApiError(response);
     }
 
     const data = await response.json();

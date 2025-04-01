@@ -90,6 +90,7 @@ import questionRouter from "./routes/question.routes.js";
 import previousYearPaperRouter from "./routes/previousYearPaper.routes.js";
 import attemptedTestRouter from "./routes/attemptedTest.routes.js";  
 import scheduledTestRouter from "./routes/scheduledTest.routes.js";
+import analyticsRouter from './routes/analytics.routes.js';
 
 // ✅ Routes Declaration
 app.use("/api/v1/users", userRouter);
@@ -97,6 +98,7 @@ app.use("/api/v1/questions", questionRouter);
 app.use("/api/v1/previous-year-papers", previousYearPaperRouter);
 app.use("/api/v1/attempted-tests", attemptedTestRouter);  
 app.use("/api/v1/scheduled-tests", scheduledTestRouter);
+app.use('/api', analyticsRouter);
 
 // ✅ Example Endpoint
 app.get("/", (req, res) => {

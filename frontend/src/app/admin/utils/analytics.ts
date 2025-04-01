@@ -4,8 +4,9 @@ export interface TestAnalytics {
   totalTests: number;
   totalQuestions: number;
   activeUsers: number;
-  testsBySubject: { [key: string]: number };
-  completionRates: { [key: string]: number };
+  totalStudents: number;
+  testsBySubject: Record<string, number>;
+  completionRates: Record<string, number>;
   recentTests: Array<{
     id: string;
     title: string;
@@ -13,74 +14,27 @@ export interface TestAnalytics {
     attempts: number;
     createdAt: string;
   }>;
+  recentQuestions: Array<{
+    id: string;
+    title: string;
+    subject: string;
+    createdAt: string;
+  }>;
 }
 
-export async function fetchTestAnalytics(): Promise<TestAnalytics> {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+export const fetchTestAnalytics = async (): Promise<TestAnalytics> => {
   try {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL;
-    
-    // Fetch data from your actual API endpoints
-    const [questionsResponse, testsResponse] = await Promise.all([
-      fetch(`${API_URL}/questions/get`, {
-        credentials: 'include',
-      }),
-      fetch(`${API_URL}/previous-year-papers/get`, {
-        credentials: 'include',
-      })
-    ]);
-
-    if (!questionsResponse.ok || !testsResponse.ok) {
-      throw new Error('Failed to fetch analytics data');
-    }
-
-    const questionsData = await questionsResponse.json();
-    const testsData = await testsResponse.json();
-
-    // Process the data
-    const questions = questionsData.data || [];
-    const tests = testsData.data || [];
-
-    // Calculate analytics
-    const totalTests = tests.length;
-    const totalQuestions = questions.length;
-    
-    // Calculate tests by subject
-    const testsBySubject = tests.reduce((acc: { [key: string]: number }, test: any) => {
-      const subject = test.subject || 'Other';
-      acc[subject] = (acc[subject] || 0) + 1;
-      return acc;
-    }, {});
-
-    // Calculate completion rates (based on attempts)
-    const completionRates = tests.reduce((acc: { [key: string]: number }, test: any) => {
-      const attempts = test.attempts || 0;
-      const totalPossible = test.totalPossible || 1;
-      acc[test.id] = (attempts / totalPossible) * 100;
-      return acc;
-    }, {});
-
-    // Get 5 most recent tests
-    const recentTests = tests
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5)
-      .map((test: any) => ({
-        id: test.id,
-        title: test.title,
-        questions: test.questions?.length || 0,
-        attempts: test.attempts || 0,
-        createdAt: test.createdAt,
-      }));
-
-    return {
-      totalTests,
-      totalQuestions,
-      activeUsers: 0, // This can be updated if you have an endpoint for active users
-      testsBySubject,
-      completionRates,
-      recentTests,
-    };
+    const response = await axios.get(`${API_URL}/api/v1/admin/analytics`, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    return response.data;
   } catch (error) {
     console.error('Error fetching analytics:', error);
     throw error;
   }
-} 
+}; 

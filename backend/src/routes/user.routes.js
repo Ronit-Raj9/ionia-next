@@ -63,14 +63,14 @@ router.route("/current-user").get(verifyJWT, getCurrrentUser);
 // Example: Any authenticated user or admin can update their own account
 router
   .route("/update-account")
-  .patch(verifyJWT, verifyRole("user", "admin"), updateAccountDetails);
+  .patch(verifyJWT, verifyRole("user", "admin", "superadmin"), updateAccountDetails);
 
 // Example: Only authenticated user or admin can update avatar
 router
   .route("/avatar")
   .patch(
     verifyJWT,
-    verifyRole("user", "admin"),
+    verifyRole("user", "admin", "superadmin"),
     upload.single("avatar"),
     updateUserAvatar
   );
@@ -80,7 +80,7 @@ router
   .route("/cover-image")
   .patch(
     verifyJWT,
-    verifyRole("user", "admin"),
+    verifyRole("user", "admin", "superadmin"),
     upload.single("coverImage"),
     updateUserCoverImage
   );

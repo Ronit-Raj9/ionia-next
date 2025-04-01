@@ -233,13 +233,60 @@ const clearLocalStorageDrafts = () => {
     localStorage.removeItem('questionDraft');
     localStorage.removeItem('tempQuestionData');
     localStorage.removeItem('questionFormState');
+    localStorage.removeItem('selectedChapter');
+    localStorage.removeItem('selectedSection');
   }
+};
+
+// Helper function to save form state to localStorage
+const saveFormStateToLocalStorage = (formData: QuestionFormState) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stateToSave = {
+        ...formData,
+        subject: formData.subject,
+        section: formData.section,
+        chapter: formData.chapter
+      };
+      localStorage.setItem('questionFormState', JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error('Error saving form state:', error);
+    }
+  }
+};
+
+// Helper function to load form state from localStorage
+const loadFormStateFromLocalStorage = (): QuestionFormState | null => {
+  if (typeof window !== 'undefined') {
+    try {
+      const savedState = localStorage.getItem('questionFormState');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        return {
+          ...defaultFormState,
+          ...parsedState,
+          subject: parsedState.subject || '',
+          section: parsedState.section || '',
+          chapter: parsedState.chapter || '',
+          // Ensure other fields are preserved
+          examType: parsedState.examType || defaultFormState.examType,
+          class: parsedState.class || defaultFormState.class,
+          difficulty: parsedState.difficulty || defaultFormState.difficulty,
+          languageLevel: parsedState.languageLevel || defaultFormState.languageLevel
+        };
+      }
+    } catch (error) {
+      console.error('Error loading form state:', error);
+    }
+  }
+  return null;
 };
 
 // Helper function to reset state to default
 const resetStateToDefault = (state: QuestionState) => {
+  const savedState = loadFormStateFromLocalStorage();
   state.questionData = null;
-  state.tempQuestionData = defaultFormState;
+  state.tempQuestionData = savedState || defaultFormState;
   state.imageFiles = getEmptyImageFiles();
   state.expandedSections = getDefaultExpandedSections();
   state.unsavedChanges = false;
@@ -460,6 +507,7 @@ const questionSlice = createSlice({
 
       if (field === 'all') {
         state.tempQuestionData = value as QuestionFormState;
+        saveFormStateToLocalStorage(value as QuestionFormState);
         return;
       }
 
@@ -481,6 +529,7 @@ const questionSlice = createSlice({
       }
 
       state.tempQuestionData = newTempData;
+      saveFormStateToLocalStorage(newTempData);
     },
     updateImageFiles: (state, action: PayloadAction<{
       type: string;

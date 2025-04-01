@@ -479,28 +479,6 @@ const QuestionForm: React.FC = () => {
               handleFileUpload={handleFileUpload}
               setErrors={setErrors}
             />
-            
-            {/* Show physics curriculum selector if needed */}
-            {formData.subject === "physics" && (
-              <div className="mt-6">
-                <h3 className="text-lg font-medium mb-3">Physics Classification</h3>
-                <SectionSelector 
-                  formData={formData}
-                  handleInputChange={handleInputChange}
-                  setFormData={setFormData}
-                />
-                
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCurriculumModal(true)}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-                  >
-                    View complete physics curriculum
-                  </button>
-                </div>
-              </div>
-            )}
           </>
         )}
 

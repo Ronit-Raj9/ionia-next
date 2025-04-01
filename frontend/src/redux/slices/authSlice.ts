@@ -130,34 +130,41 @@ export const updateUserData = createAsyncThunk<IUser, void, { rejectValue: strin
 
 export const checkAuth = createAsyncThunk(
   'auth/checkAuth',
-  async (_, { dispatch }) => {
+  async (_, { dispatch, rejectWithValue }) => {
     const accessToken = localStorage.getItem('accessToken');
     const lastRefresh = localStorage.getItem('lastTokenRefresh');
     
-    if (!accessToken) return;
+    if (!accessToken) {
+      return rejectWithValue('No access token found');
+    }
 
     try {
-      // Always get fresh user data
-      await dispatch(getCurrentUser());
+      // Get fresh user data
+      const userResponse = await dispatch(getCurrentUser()).unwrap();
       
       // Check if token needs refresh
       const shouldRefresh = lastRefresh && 
-        (Date.now() - parseInt(lastRefresh)) > 30 * 60 * 1000;
+        (Date.now() - parseInt(lastRefresh)) > 25 * 60 * 1000; // Refresh 5 minutes before expiry
       
       if (shouldRefresh) {
-        const refreshResponse = await API.auth.refreshToken();
-        if (refreshResponse.data.accessToken) {
-          localStorage.setItem('accessToken', refreshResponse.data.accessToken);
-          localStorage.setItem('lastTokenRefresh', Date.now().toString());
-          // Get fresh user data after token refresh
-          await dispatch(getCurrentUser());
+        try {
+          const refreshResponse = await API.auth.refreshToken();
+          if (refreshResponse.data?.accessToken) {
+            localStorage.setItem('accessToken', refreshResponse.data.accessToken);
+            localStorage.setItem('lastTokenRefresh', Date.now().toString());
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          // Don't throw error here, continue with current token
         }
       }
-    } catch (error) {
-      // On error, clear auth state
+      
+      return userResponse;
+    } catch (error: any) {
+      // Clear auth state on error
       localStorage.removeItem('accessToken');
       localStorage.removeItem('lastTokenRefresh');
-      return;
+      return rejectWithValue(error.message || 'Authentication check failed');
     }
   }
 );
@@ -171,16 +178,31 @@ const authSlice = createSlice({
       state.error = null;
     },
     setRedirectTo: (state, action) => {
-      localStorage.setItem('redirectTo', action.payload);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('redirectTo', action.payload);
+      }
     },
     updateLastTokenRefresh: (state) => {
       state.lastTokenRefresh = Date.now();
-      localStorage.setItem('lastTokenRefresh', state.lastTokenRefresh.toString());
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('lastTokenRefresh', state.lastTokenRefresh.toString());
+      }
     },
     refreshUserData: (state) => {
-      // This will trigger a re-fetch of user data
       state.loading = true;
     },
+    logout: (state) => {
+      state.user = null;
+      state.accessToken = null;
+      state.isAuthenticated = false;
+      state.loading = false;
+      state.lastTokenRefresh = null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('lastTokenRefresh');
+        localStorage.removeItem('redirectTo');
+      }
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -195,10 +217,12 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
         state.lastTokenRefresh = Date.now();
+        state.error = null;
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.isAuthenticated = false;
       })
       // Register
       .addCase(register.pending, (state) => {
@@ -245,13 +269,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload;
-        // Clear API cache to ensure fresh data
-        if (typeof window !== 'undefined') {
-          // Import dynamically to avoid circular dependency
-          import('@/lib/api').then(({ clearCache }) => {
-            clearCache();
-          });
-        }
+        state.error = null;
       })
       .addCase(getCurrentUser.rejected, (state, action) => {
         state.loading = false;
@@ -260,8 +278,10 @@ const authSlice = createSlice({
         state.user = null;
         state.accessToken = null;
         state.lastTokenRefresh = null;
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('lastTokenRefresh');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('lastTokenRefresh');
+        }
       })
       // Update User Data
       .addCase(updateUserData.pending, (state) => {

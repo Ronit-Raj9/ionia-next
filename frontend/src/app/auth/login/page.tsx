@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks/hooks';
 import { login, clearError } from '@/redux/slices/authSlice';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
   const dispatch = useAppDispatch();
   
@@ -18,23 +20,46 @@ export default function LoginPage() {
   useEffect(() => {
     // Clear any existing errors when component mounts
     dispatch(clearError());
-  }, [dispatch]);
-
-  useEffect(() => {
-    // Only redirect if authenticated and not in loading state
-    if (isAuthenticated && !loading) {
+    setErrorMessage(null);
+    
+    // If user is already authenticated, redirect them
+    if (isAuthenticated && !loading && !isRedirecting) {
+      setIsRedirecting(true);
       const redirectTo = localStorage.getItem('redirectTo') || '/dashboard';
       localStorage.removeItem('redirectTo'); // Clear the redirect path
       router.replace(redirectTo);
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, loading, router, dispatch, isRedirecting]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loading) { // Prevent multiple submissions
-      dispatch(login({ email, password }));
+    if (!loading && !isRedirecting) {
+      try {
+        setErrorMessage(null); // Clear any existing errors
+        await dispatch(login({ email, password })).unwrap();
+      } catch (error: any) {
+        // Handle different types of error responses
+        const errorMsg = typeof error === 'string' ? error : 
+                        error?.response?.data?.message ||
+                        error?.message ||
+                        'Login failed. Please try again.';
+        setErrorMessage(errorMsg);
+        console.error('Login failed:', errorMsg);
+      }
     }
   };
+
+  // If we're in the process of redirecting, show a loading state
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="text-lg font-medium">Redirecting...</span>
+        </div>
+      </div>
+    );
+  }
 
   // Check for success message from registration
   const searchParams = new URLSearchParams(
@@ -70,25 +95,42 @@ export default function LoginPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.5 }}
         >
-          {error && (
-            <motion.div
-              className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              {error}
-            </motion.div>
-          )}
+          <AnimatePresence mode="wait">
+            {(error || errorMessage) && (
+              <motion.div
+                key="error"
+                className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center space-x-2">
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <span>{error || errorMessage}</span>
+                </div>
+              </motion.div>
+            )}
 
-          {registrationSuccess && (
-            <motion.div
-              className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              Registration successful! Please log in with your credentials.
-            </motion.div>
-          )}
+            {registrationSuccess && (
+              <motion.div
+                key="success"
+                className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+              >
+                <div className="flex items-center space-x-2">
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>Registration successful! Please log in with your credentials.</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="rounded-md shadow-sm -space-y-px">
             <div>

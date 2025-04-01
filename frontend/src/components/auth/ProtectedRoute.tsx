@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, ReactNode } from 'react';
+import { useEffect, ReactNode, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '@/redux/store';
@@ -16,31 +16,44 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated, user, loading } = useSelector((state: RootState) => state.auth);
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     const verifyAuth = async () => {
       try {
-        // Try to get current user if we have a token
+        // Only check auth if we have a token and aren't already authenticated
         if (!isAuthenticated && localStorage.getItem('accessToken')) {
-          await dispatch(checkAuth());
+          await dispatch(checkAuth()).unwrap();
         }
       } catch (error) {
         console.error('Auth verification failed:', error);
-        // Save the current path for redirect after login
-        localStorage.setItem('redirectTo', window.location.pathname);
-        router.push('/auth/login');
+        // Only redirect if component is still mounted
+        if (mounted) {
+          localStorage.setItem('redirectTo', window.location.pathname);
+          router.replace('/auth/login');
+        }
+      } finally {
+        if (mounted) {
+          setIsChecking(false);
+        }
       }
     };
 
     verifyAuth();
+
+    return () => {
+      mounted = false;
+    };
   }, [dispatch, isAuthenticated, router]);
 
-  // Show loading state
-  if (loading) {
+  // Show loading state only during initial check
+  if (loading || isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <span className="text-lg font-medium">Verifying authentication...</span>
         </div>
       </div>
@@ -51,7 +64,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
   if (!isAuthenticated || !user) {
     // Save the current path for redirect after login
     localStorage.setItem('redirectTo', window.location.pathname);
-    router.push('/auth/login');
+    router.replace('/auth/login');
     return null;
   }
 
