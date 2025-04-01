@@ -23,8 +23,8 @@ interface Question {
   _id: string;
   author: {
     _id: string;
-    name: string;
     email: string;
+    username: string;
   };
   question: {
     text: string;
@@ -327,6 +327,7 @@ export default function QuestionsPage() {
         }
       });
 
+
       if (!response.ok) {
         throw new Error('Failed to fetch questions');
       }
@@ -564,7 +565,6 @@ export default function QuestionsPage() {
       [questionId]: !prev[questionId]
     }));
   };
-
   // Add this useEffect to initialize expanded state when questions change
   useEffect(() => {
     const newExpandedState: { [key: string]: boolean } = {};
@@ -791,7 +791,7 @@ export default function QuestionsPage() {
                       onClick={() => toggleQuestionExpand(question._id)}
                     >
                       <div className="flex justify-between items-start">
-                      <div className="flex-1">
+                        <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium
                               ${question.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
@@ -812,7 +812,18 @@ export default function QuestionsPage() {
                                 ? 'Updating...' 
                                 : question.isActive ? 'Active' : 'Inactive'}
                             </span>
-                        </div>
+                            <span className="text-xs text-gray-600 ml-2 flex items-center">
+                              <span className="font-medium">{question.author?.username || 'Unknown Author'}</span>
+                              <span className="mx-1">•</span>
+                              <span>{new Date(question.createdAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}</span>
+                            </span>
+                          </div>
                           <div className="flex items-center justify-between">
                             {!expandedQuestions[question._id] && (
                               <h3 className="text-base font-medium text-gray-900 line-clamp-2">
@@ -1027,6 +1038,22 @@ export default function QuestionsPage() {
                             <div className="bg-gray-50 rounded-lg p-4">
                               <h4 className="text-sm font-medium text-gray-700 mb-3">Question Details</h4>
                               <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">Author:</span>
+                                  <span className="font-medium text-gray-900">{question.author?.username || 'Unknown Author'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">Added On:</span>
+                                  <span className="font-medium text-gray-900">
+                                    {new Date(question.createdAt).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
                                 <div className="flex justify-between text-sm">
                                   <span className="text-gray-600">Subject:</span>
                                   <span className="font-medium text-gray-900">{question.subject}</span>
