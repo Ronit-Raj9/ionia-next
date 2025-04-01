@@ -8,6 +8,52 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 const preloadQueue: Array<{ url: string; options?: RequestInit }> = [];
 let isProcessingQueue = false;
 
+// Token refresh handling
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+const subscribeTokenRefresh = (cb: (token: string) => void) => {
+  refreshSubscribers.push(cb);
+};
+
+const onTokenRefreshed = (token: string) => {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+};
+
+const refreshToken = async () => {
+  try {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      const response = await fetch(`${API_BASE}/users/refresh-token`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+
+      const data = await response.json();
+      if (data.data?.accessToken) {
+        localStorage.setItem('accessToken', data.data.accessToken);
+        localStorage.setItem('lastTokenRefresh', Date.now().toString());
+        onTokenRefreshed(data.data.accessToken);
+        return data.data.accessToken;
+      }
+      throw new Error('No access token in refresh response');
+    }
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    refreshSubscribers = [];
+    clearAllCachedData();
+    window.location.href = '/auth/login';
+    throw error;
+  } finally {
+    isRefreshing = false;
+  }
+};
+
 /**
  * Process the preload queue in the background
  */
@@ -68,7 +114,7 @@ const getCacheKey = (url: string, options?: RequestInit): string => {
 };
 
 /**
- * Fetch data with caching
+ * Fetch data with caching and token refresh handling
  */
 export const fetchWithCache = async <T>(
   url: string,
@@ -85,19 +131,58 @@ export const fetchWithCache = async <T>(
     }
   }
   
-  // Fetch fresh data
+  // Add authorization header if token exists
+  const accessToken = localStorage.getItem('accessToken');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...(options?.headers || {}),
+  };
+
   try {
     const response = await fetch(url, {
       ...options,
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options?.headers || {}),
-      },
+      headers,
     });
-    
+
+    // Handle token expiration
+    if (response.status === 401) {
+      try {
+        const newToken = await refreshToken();
+        if (newToken) {
+          // Retry the original request with new token
+          const newResponse = await fetch(url, {
+            ...options,
+            credentials: 'include',
+            headers: {
+              ...headers,
+              Authorization: `Bearer ${newToken}`,
+            },
+          });
+
+          if (!newResponse.ok) {
+            throw new Error('Request failed after token refresh');
+          }
+          
+          const data = await newResponse.json();
+          if (!skipCache) {
+            apiCache.set(cacheKey, {
+              data,
+              timestamp: Date.now(),
+            });
+          }
+          return data as T;
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        clearAllCachedData();
+        window.location.href = '/auth/login';
+        throw refreshError;
+      }
+    }
+
     if (!response.ok) {
-      // Clone the response before reading it as JSON to avoid "body stream already read" error
       const clonedResponse = response.clone();
       let errorMessage;
       
@@ -105,11 +190,9 @@ export const fetchWithCache = async <T>(
         const errorData = await response.json();
         errorMessage = errorData.message || 'API request failed';
       } catch (jsonError) {
-        // If JSON parsing fails, try to get text instead
         try {
           errorMessage = await clonedResponse.text();
         } catch (textError) {
-          // If both methods fail, use status code
           errorMessage = `API request failed with status ${response.status}`;
         }
       }
@@ -119,7 +202,6 @@ export const fetchWithCache = async <T>(
     
     const data = await response.json();
     
-    // Cache the response (don't cache errors)
     if (!skipCache) {
       apiCache.set(cacheKey, {
         data,
@@ -156,6 +238,7 @@ export const clearAllCachedData = () => {
   
   // Remove any auth-related items from localStorage
   localStorage.removeItem('accessToken');
+  localStorage.removeItem('lastTokenRefresh');
   localStorage.removeItem('redirectTo');
   
   console.log('All cached API data cleared');
@@ -189,23 +272,41 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v
  */
 export const API = {
   auth: {
-    login: (email: string, password: string) => 
-      fetchWithCache<APIResponse<LoginResponse>>(`${API_BASE}/users/login`, {
+    login: async (email: string, password: string) => {
+      const response = await fetchWithCache<APIResponse<LoginResponse>>(`${API_BASE}/users/login`, {
         method: 'POST',
         body: JSON.stringify({ email, password }),
-      }),
-    logout: () => 
-      fetchWithCache<APIResponse<void>>(`${API_BASE}/users/logout`, {
-        method: 'POST',
-        credentials: 'include', // Ensure cookies are sent
-      }, true), // Skip cache for logout to ensure fresh request
-    register: (userData: { fullName: string; email: string; username: string; password: string }) => 
-      fetchWithCache<APIResponse<LoginResponse>>(`${API_BASE}/users/register`, {
+      });
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+      }
+      return response;
+    },
+    logout: async () => {
+      try {
+        await fetchWithCache<APIResponse<void>>(`${API_BASE}/users/logout`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+      } finally {
+        clearAllCachedData();
+      }
+    },
+    register: async (userData: { fullName: string; email: string; username: string; password: string }) => {
+      const response = await fetchWithCache<APIResponse<LoginResponse>>(`${API_BASE}/users/register`, {
         method: 'POST',
         body: JSON.stringify(userData),
-      }),
-    getCurrentUser: () => 
-      fetchWithCache<APIResponse<IUser>>(`${API_BASE}/users/current-user`),
+      });
+      if (response.data.accessToken) {
+        localStorage.setItem('accessToken', response.data.accessToken);
+      }
+      return response;
+    },
+    getCurrentUser: async () => {
+      return fetchWithCache<APIResponse<IUser>>(`${API_BASE}/users/current-user`, {
+        method: 'GET',
+      });
+    },
     forgotPassword: (email: string) =>
       fetchWithCache<APIResponse<void>>(`${API_BASE}/users/forgot-password`, {
         method: 'POST',
@@ -216,6 +317,12 @@ export const API = {
         method: 'POST',
         body: JSON.stringify({ token, password }),
       }, true), // Skip cache for password reset
+    refreshToken: async () => {
+      return fetchWithCache<APIResponse<{ accessToken: string }>>(`${API_BASE}/users/refresh-token`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    },
   },
   questions: {
     getAll: (filters?: Record<string, string>) => {

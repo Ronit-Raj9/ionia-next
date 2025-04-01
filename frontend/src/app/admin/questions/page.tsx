@@ -686,7 +686,7 @@ export default function QuestionsPage() {
               <div>
                 <h1 className="text-2xl font-bold text-green-800">Questions Management</h1>
                 <p className="text-sm text-green-600 mt-1">
-                  {filteredQuestions.length} questions found
+                  {totalQuestions} total questions
                   {activeFiltersCount > 0 && ` • ${activeFiltersCount} filters applied`}
                 </p>
               </div>
@@ -707,15 +707,15 @@ export default function QuestionsPage() {
                     </>
                   )}
                 </button>
-              <Link
-                href="/admin/questions/add"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-            Add New Question
-        </Link>
+                <Link
+                  href="/admin/questions/add"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add New Question
+                </Link>
               </div>
-      </div>
+            </div>
 
             {/* Search and Filter Toggle for Mobile */}
             <div className="lg:hidden flex items-center gap-4 mb-6">
