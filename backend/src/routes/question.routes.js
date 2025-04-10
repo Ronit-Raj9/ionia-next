@@ -51,7 +51,7 @@ const router = Router();
 router.route("/upload")
     .post(
         verifyJWT, 
-        verifyRole("admin", "superadmin"),
+        verifyRole(["admin", "superadmin"]),
         upload.fields([
             { name: 'questionImage', maxCount: 4 },
             { name: 'solutionImage', maxCount: 4 },
@@ -70,18 +70,18 @@ router.route("/upload")
     );
 
 /**
- * Both admin and user can get questions:
+ * Admin/Superadmin can get questions for management:
  *  - Must be authenticated (verifyJWT)
- *  - Must have role = "admin" or "user" (verifyRole("admin", "user"))
+ *  - Must have role = "admin" or "superadmin"
  */
 router.route("/")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestions);
+    .get(verifyJWT, verifyRole(["admin", "superadmin"]), getQuestions);
 
 router.route("/:id")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionById)
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionById)
     .patch(
         verifyJWT, 
-        verifyRole("admin", "superadmin"),
+        verifyRole(["admin", "superadmin"]),
         upload.fields([
             { name: 'questionImage', maxCount: 4 },
             { name: 'solutionImage', maxCount: 4 },
@@ -98,13 +98,13 @@ router.route("/:id")
         ]),
         updateQuestion
     )
-    .delete(verifyJWT, verifyRole("admin", "superadmin"), deleteQuestion);
+    .delete(verifyJWT, verifyRole(["admin", "superadmin"]), deleteQuestion);
 
 router.route("/bulk-upload")
-    .post(verifyJWT, verifyRole("admin", "superadmin"), bulkUploadQuestions);
+    .post(verifyJWT, verifyRole(["admin", "superadmin"]), bulkUploadQuestions);
 
 router.route("/verify/:id")
-    .patch(verifyJWT, verifyRole("admin", "superadmin"), verifyQuestion);
+    .patch(verifyJWT, verifyRole(["admin", "superadmin"]), verifyQuestion);
 
 router.route("/:id/feedback")
     .post(
@@ -116,97 +116,97 @@ router.route("/:id/feedback")
 router.route("/:id/teacher-note")
     .post(
         verifyJWT,
-        verifyRole("admin", "superadmin"),
+        verifyRole(["admin", "superadmin"]),
         upload.single('image'),
         addTeacherNote
     );
 
 router.route("/advanced-search")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByFilters);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByFilters);
 
 router.route("/by-subject/:subject")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsBySubject);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsBySubject);
 
 router.route("/by-exam/:examType")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByExamType);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByExamType);
 
 router.route("/similar/:id")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getSimilarQuestions);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getSimilarQuestions);
 
 router.route("/stats/:id")
-    .patch(verifyJWT, verifyRole("admin", "user", "superadmin"), updateQuestionStats);
+    .patch(verifyJWT, verifyRole(["admin", "user", "superadmin"]), updateQuestionStats);
 
 router.route("/:id/feedback/:reportId/status")
-    .patch(verifyJWT, verifyRole("admin", "superadmin"), updateFeedbackStatus);
+    .patch(verifyJWT, verifyRole(["admin", "superadmin"]), updateFeedbackStatus);
 
 router.route("/:id/history")
-    .get(verifyJWT, verifyRole("admin", "superadmin"), getQuestionRevisionHistory);
+    .get(verifyJWT, verifyRole(["admin", "superadmin"]), getQuestionRevisionHistory);
 
 router.route("/:id/statistics")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionStatistics);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionStatistics);
 
 router.route("/:id/check-numerical")
-    .post(verifyJWT, verifyRole("admin", "user", "superadmin"), checkNumericalAnswer);
+    .post(verifyJWT, verifyRole(["admin", "user", "superadmin"]), checkNumericalAnswer);
 
 router.route("/:id/duplicate")
-    .post(verifyJWT, verifyRole("admin", "superadmin"), duplicateQuestion);
+    .post(verifyJWT, verifyRole(["admin", "superadmin"]), duplicateQuestion);
 
 router.route("/:id/publish-check")
-    .get(verifyJWT, verifyRole("admin", "superadmin"), checkPublishEligibility);
+    .get(verifyJWT, verifyRole(["admin", "superadmin"]), checkPublishEligibility);
 
 router.route("/by-prerequisites")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByPrerequisites);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByPrerequisites);
 
 router.route("/by-difficulty-level")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByConceptualDifficulty);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByConceptualDifficulty);
 
 router.route("/bulk-delete")
-    .post(verifyJWT, verifyRole("superadmin"), bulkDeleteQuestions);
+    .post(verifyJWT, verifyRole(["admin", "superadmin"]), bulkDeleteQuestions);
 
 router.route("/by-tag/:tag")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByTag);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByTag);
 
 router.route("/:id/hints")
-    .patch(verifyJWT, verifyRole("admin", "superadmin"), updateQuestionHints);
+    .patch(verifyJWT, verifyRole(["admin", "superadmin"]), updateQuestionHints);
 
 router.route("/by-language-level/:level")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByLanguageLevel);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByLanguageLevel);
 
 router.route("/by-year/:year")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByYear);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByYear);
 
 router.route("/with-common-mistakes")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsWithCommonMistakes);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsWithCommonMistakes);
 
 router.route("/:id/common-mistakes")
-    .patch(verifyJWT, verifyRole("admin", "superadmin"), updateCommonMistakes);
+    .patch(verifyJWT, verifyRole(["admin", "superadmin"]), updateCommonMistakes);
 
 router.route("/:id/change-history")
-    .get(verifyJWT, verifyRole("admin", "superadmin"), getDetailedChangeHistory);
+    .get(verifyJWT, verifyRole(["admin", "superadmin"]), getDetailedChangeHistory);
 
 router.route("/:id/revert/:version")
-    .post(verifyJWT, verifyRole("admin", "superadmin"), revertToVersion);
+    .post(verifyJWT, verifyRole(["admin", "superadmin"]), revertToVersion);
 
 router.route("/:id/toggle-status")
-    .patch(verifyJWT, verifyRole("admin", "superadmin"), toggleQuestionStatus);
+    .patch(verifyJWT, verifyRole(["admin", "superadmin"]), toggleQuestionStatus);
 
 router.route("/:id/permanent-delete")
     .delete(
         verifyJWT, 
-        verifyRole("superadmin"),
+        verifyRole(["admin", "superadmin"]),
         permanentlyDeleteQuestion
     );
 
 router.route("/by-class/:classValue")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByClass);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByClass);
 
 router.route("/by-difficulty-exam/:difficulty/:examType")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsByDifficultyAndExam);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsByDifficultyAndExam);
 
 router.route("/by-section/:subject/:section")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsBySection);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsBySection);
 
 router.route("/by-source/:source")
-    .get(verifyJWT, verifyRole("admin", "user", "superadmin"), getQuestionsBySource);
+    .get(verifyJWT, verifyRole(["admin", "user", "superadmin"]), getQuestionsBySource);
 
 export default router;

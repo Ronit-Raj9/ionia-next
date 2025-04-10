@@ -2,13 +2,26 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { HYDRATE } from 'next-redux-wrapper';
 import { API, clearCache } from '@/lib/api';
 import { addNotification } from './uiSlice';
+import { toast } from 'react-hot-toast';
 
 // Define test question interface
 export interface TestQuestion {
   _id: string;
-  question: string;
-  options: string[];
-  correctOption: number;
+  question: {
+    text: string;
+    image?: {
+      url: string;
+      publicId?: string;
+    } | null;
+  };
+  options: {
+    text: string;
+    image?: {
+      url: string;
+      publicId?: string;
+    } | null;
+  }[];
+  correctOption?: number;
   subject: string;
   examType: string;
   difficulty: string;
@@ -79,41 +92,69 @@ const initialState: TestState = {
 
 // Async thunks for test management
 export const fetchTest = createAsyncThunk(
-  'test/fetchTest',
-  async (paperId: string, { rejectWithValue, getState, dispatch }) => {
+  "test/fetchTest",
+  async (paperId: string, { rejectWithValue, dispatch }) => {
     try {
-      // Check if test is already in cache
-      const state = getState() as { test: TestState };
-      if (state.test.cachedTests[paperId]) {
-        return state.test.cachedTests[paperId];
+      console.log(`🚀 Fetching test with ID: ${paperId}`);
+      
+      // Make direct fetch to see raw response
+      try {
+        const rawResponse = await fetch(`/api/v1/tests/${paperId}/attempt`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        const rawData = await rawResponse.clone().json();
+        console.log("🔴 RAW API Response:", JSON.stringify(rawData, null, 2));
+      } catch (rawError) {
+        console.error("Error fetching raw data:", rawError);
       }
       
-      dispatch(addNotification({
-        message: "Loading test data...",
-        type: "info"
-      }));
+      // Continue with regular API call
+      const response = await API.tests.getTestForAttempt(paperId);
       
-      const result = await API.tests.getById(paperId);
-      if (!result.data) {
-        throw new Error('Test not found');
+      console.log("🟢 API Response Object Structure:", {
+        dataType: typeof response.data,
+        hasData: !!response.data,
+        keys: response.data ? Object.keys(response.data) : []
+      });
+      
+      if (response.data?.questions) {
+        console.log("🟡 Questions array type:", Array.isArray(response.data.questions));
+        console.log("🟡 Questions count:", response.data.questions.length);
+        
+        if (response.data.questions.length > 0) {
+          const firstQuestion = response.data.questions[0];
+          console.log("🟡 First question type:", typeof firstQuestion);
+          console.log("🟡 First question keys:", Object.keys(firstQuestion));
+          
+          if (firstQuestion.question) {
+            console.log("🟠 Question property type:", typeof firstQuestion.question);
+            console.log("🟠 Question property value:", JSON.stringify(firstQuestion.question));
+          }
+          
+          if (firstQuestion.options) {
+            console.log("🟠 Options property type:", typeof firstQuestion.options);
+            console.log("🟠 Options array length:", firstQuestion.options.length);
+            if (firstQuestion.options.length > 0) {
+              console.log("🟠 First option:", JSON.stringify(firstQuestion.options[0]));
+            }
+          }
+        }
       }
       
-      dispatch(addNotification({
-        message: "Test loaded successfully",
-        type: "success"
-      }));
-      
-      return result.data as Test;
-    } catch (error) {
-      dispatch(addNotification({
-        message: error instanceof Error ? error.message : 'Failed to load test',
-        type: "error"
-      }));
-      
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching test:", error);
+      let errorMessage = "Failed to fetch test";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
-      return rejectWithValue('An unknown error occurred');
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -318,15 +359,23 @@ const testSlice = createSlice({
       .addCase(fetchTest.fulfilled, (state, action) => {
         // Process the payload first before assigning to state
         const testData = action.payload as Test;
-        const processedTest = {
-          ...testData,
-          questions: testData.questions.map((q: TestQuestion) => ({
+        
+        // Process questions
+        let processedQuestions = [];
+        
+        if (testData.questions && Array.isArray(testData.questions)) {
+          processedQuestions = testData.questions.map((q: any) => ({
             ...q,
             userAnswer: undefined,
             isMarked: false,
             timeTaken: 0,
             isVisited: false,
-          }))
+          }));
+        }
+        
+        const processedTest = {
+          ...testData,
+          questions: processedQuestions
         };
         
         // Now assign the processed data to state

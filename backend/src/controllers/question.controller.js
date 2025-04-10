@@ -351,6 +351,12 @@ const uploadQuestion = asyncHandler(async (req, res) => {
 });
 
 const getQuestions = asyncHandler(async (req, res) => {
+    // === DEBUG LOGGING START ===
+    console.log(`\n--- DEBUG: GET /questions Request ---`);
+    console.log(`User making request:`, req.user?.email, `(Role: ${req.user?.role})`);
+    console.log(`Query parameters:`, req.query);
+    // === DEBUG LOGGING END ===
+    
     const {
         examType,
         subject,
@@ -409,6 +415,12 @@ const getQuestions = asyncHandler(async (req, res) => {
             .limit(limitNum)
             .populate('author', 'username email')
             .lean();
+        
+        // === DEBUG LOGGING START ===
+        console.log(`Found ${totalQuestions} total questions matching filter.`);
+        console.log(`Returning ${questions.length} questions for page ${pageNum}.`);
+        console.log(`--- DEBUG: End GET /questions Request ---\n`);
+        // === DEBUG LOGGING END ===
 
         return res.status(200).json(
             new ApiResponse(200, {
@@ -419,6 +431,7 @@ const getQuestions = asyncHandler(async (req, res) => {
             }, "Questions retrieved successfully")
         );
     } catch (error) {
+        console.error("❌ Error in getQuestions:", error); // Log the specific error
         throw new ApiError(500, `Error fetching questions: ${error.message}`);
     }
 });

@@ -87,18 +87,65 @@ app.use(express.static("public"));
 // ✅ Routes Import
 import userRouter from "./routes/user.routes.js";
 import questionRouter from "./routes/question.routes.js";
-import previousYearPaperRouter from "./routes/previousYearPaper.routes.js";
+// import previousYearPaperRouter from "./routes/previousYearPaper.routes.js"; // REMOVE: No longer needed
 import attemptedTestRouter from "./routes/attemptedTest.routes.js";  
-import scheduledTestRouter from "./routes/scheduledTest.routes.js";
 import analyticsRouter from './routes/analytics.routes.js';
+import testRouter from './routes/test.routes.js'; // Use this for ALL test types, including PYQ
 
 // ✅ Routes Declaration
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/questions", questionRouter);
-app.use("/api/v1/previous-year-papers", previousYearPaperRouter);
 app.use("/api/v1/attempted-tests", attemptedTestRouter);  
-app.use("/api/v1/scheduled-tests", scheduledTestRouter);
-app.use('/api', analyticsRouter);
+app.use('/api', analyticsRouter); 
+app.use('/api/v1/tests', testRouter); // Use this router for fetching/managing PYQs as well
+
+// ✅ Add direct debug endpoint for admin analytics
+app.get('/api/debug-analytics', async (req, res) => {
+  try {
+    console.log('Debug analytics endpoint accessed');
+    res.json({
+      totalTests: 5,
+      totalQuestions: 150,
+      activeUsers: 25,
+      totalStudents: 100,
+      testsBySubject: {
+        'Physics': 20,
+        'Chemistry': 15,
+        'Mathematics': 30
+      },
+      completionRates: {
+        'Physics Test 1': 75,
+        'Chemistry Basics': 60
+      },
+      recentTests: [
+        {
+          id: '1',
+          title: 'Physics Test 1', 
+          questions: 20,
+          attempts: 15,
+          createdAt: new Date().toISOString()
+        }
+      ],
+      recentQuestions: [
+        {
+          id: '1',
+          title: 'Newton\'s Laws Question', 
+          subject: 'Physics',
+          createdAt: new Date().toISOString()
+        }
+      ]
+    });
+  } catch (error) {
+    console.error('Debug endpoint error:', error);
+    res.status(500).json({ error: 'Debug endpoint failed' });
+  }
+});
+
+// Log all incoming requests for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // ✅ Example Endpoint
 app.get("/", (req, res) => {

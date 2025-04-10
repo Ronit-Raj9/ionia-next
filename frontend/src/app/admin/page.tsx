@@ -17,6 +17,7 @@ import { fetchTestAnalytics } from './utils/analytics';
 import Link from 'next/link';
 import { TestAnalytics } from './utils/analytics';
 import { toast } from 'react-hot-toast';
+import axios from 'axios';
 
 interface StatItem {
   name: string;
@@ -61,11 +62,31 @@ export default function AdminPage() {
       try {
         setLoading(true);
         setError(null);
+        console.log("Starting analytics fetch...");
         const data = await fetchTestAnalytics();
+        console.log("Analytics data received:", data);
+        // Check if we have valid data structure
+        if (!data || typeof data !== 'object') {
+          throw new Error("Invalid data structure received from API");
+        }
         setAnalytics(data);
+        toast.success('Analytics loaded successfully');
       } catch (error) {
         console.error('Failed to load analytics:', error);
-        setError('Could not retrieve data from the server');
+        if (axios.isAxiosError(error)) {
+          if (error.response) {
+            const errorMsg = `Server error: ${error.response.status} - ${error.response.data?.message || error.response.data?.error || 'Could not retrieve data'}`;
+            console.error(errorMsg);
+            setError(errorMsg);
+          } else if (error.request) {
+            setError('No response from server. Please check your network connection.');
+          } else {
+            setError(`Error preparing request: ${error.message}`);
+          }
+        } else {
+          setError('Could not retrieve data from the server');
+        }
+        
         setAnalytics({
           totalTests: 0,
           totalQuestions: 0,
@@ -76,6 +97,8 @@ export default function AdminPage() {
           recentTests: [],
           recentQuestions: []
         });
+        
+        toast.error('Failed to load analytics data');
       } finally {
         setLoading(false);
       }
@@ -83,6 +106,11 @@ export default function AdminPage() {
 
     loadAnalytics();
   }, []);
+
+  const formatValue = (value: number | undefined): string => {
+    if (value === undefined || value === null) return 'N/A';
+    return value.toLocaleString();
+  };
 
   const mainStats: StatItem[] = [
     { 
@@ -172,10 +200,19 @@ export default function AdminPage() {
                     {loading ? (
                       <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
                     ) : error ? (
-                      <p className="text-2xl font-semibold text-gray-400">N/A</p>
+                      <div className="text-center py-6">
+                        <ExclamationCircleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                        <p className="text-sm text-red-500 mb-4">{error}</p>
+                        <button 
+                          onClick={() => window.location.reload()}
+                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
+                        >
+                          Retry
+                        </button>
+                      </div>
                     ) : (
                       <p className="text-2xl font-semibold text-gray-900">
-                        {stat.value.toLocaleString()}
+                        {formatValue(stat.value)}
                       </p>
                     )}
                   </dd>

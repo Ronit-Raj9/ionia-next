@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
-import { PreviousTest } from "../models/previousYearPaper.model.js";
+import { Test } from "../models/test.model.js";
 import { AttemptedTest } from "../models/attemptedTest.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"; // Import JWT for token verification
@@ -56,36 +56,37 @@ const submitTest = asyncHandler(async (req, res) => {
     }
 
     // Get the test details
-    const test = await PreviousTest.findById(testId);
+    const test = await Test.findById(testId).populate('questions');
     if (!test) {
-      throw new ApiError(404, "Test not found");
+      throw new ApiError(404, "Test definition not found");
     }
 
     // Process the answers to ensure they have all required fields
-    const processedAnswers = answers.map(answer => ({
-      questionId: answer.questionId,
-      answerOptionIndex: answer.answerOptionIndex !== undefined ? answer.answerOptionIndex : null,
-      timeSpent: answer.timeSpent || 0
-    }));
-    
-    console.log("Processed answers:", processedAnswers.length);
-
-    // Precompute correct/wrong answers to avoid depending on post-save hook
     let correctAnswers = 0;
     let wrongAnswers = 0;
-    
-    for (const answer of processedAnswers) {
-      // Find the corresponding question
-      const question = test.questions.find(q => q._id.toString() === answer.questionId);
-      if (question && answer.answerOptionIndex !== null) {
-        if (answer.answerOptionIndex === question.correctOption) {
+    const questionMap = new Map(test.questions.map(q => [q._id.toString(), q]));
+
+    const processedAnswers = answers.map(answer => {
+      const question = questionMap.get(answer.questionId?.toString());
+      if (!question) {
+        console.warn(`Question ID ${answer.questionId} not found in test ${testId}`);
+        return null;
+      }
+      if (answer.answerOptionIndex !== undefined && answer.answerOptionIndex !== null) {
+        if (question.correctOptions?.includes(answer.answerOptionIndex)) {
           correctAnswers++;
         } else {
           wrongAnswers++;
         }
       }
-    }
+      return {
+        questionId: answer.questionId,
+        answerOptionIndex: answer.answerOptionIndex !== undefined ? answer.answerOptionIndex : null,
+        timeSpent: answer.timeSpent || 0
+      };
+    }).filter(a => a !== null);
     
+    console.log("Processed answers count:", processedAnswers.length);
     console.log("Calculated results:", { correctAnswers, wrongAnswers });
 
     // Create a new attempted test document
@@ -100,7 +101,7 @@ const submitTest = asyncHandler(async (req, res) => {
       
       // Ensure metadata is properly formatted
       metadata: {
-        totalQuestions: test.questions.length,
+        totalQuestions: test.questionCount,
         answeredQuestions: (metadata?.answeredQuestions && Array.isArray(metadata.answeredQuestions)) 
                           ? metadata.answeredQuestions 
                           : [],
@@ -152,6 +153,8 @@ const submitTest = asyncHandler(async (req, res) => {
       // Pre-computed totals
       totalCorrectAnswers: correctAnswers,
       totalWrongAnswers: wrongAnswers,
+      totalUnattempted: test.questionCount - correctAnswers - wrongAnswers,
+      score: (correctAnswers * (test.markingScheme?.correct ?? 1)) + (wrongAnswers * (test.markingScheme?.incorrect ?? 0)),
       totalVisitedQuestions: (metadata?.visitedQuestions && Array.isArray(metadata.visitedQuestions)) 
                             ? metadata.visitedQuestions.length 
                             : 0
@@ -161,10 +164,12 @@ const submitTest = asyncHandler(async (req, res) => {
     await attemptedTest.save();
     console.log("Test successfully saved with ID:", attemptedTest._id);
 
+    let analysisUrlPath = `/results/${attemptedTest._id}`;
+
     res.status(201).json(
       new ApiResponse(201, {
         attemptId: attemptedTest._id,
-        analysisUrl: `/exam/${test.examType}/previous-year-paper/${testId}/analysis`,
+        analysisUrl: analysisUrlPath,
       }, "Test submitted successfully")
     );
   } catch (error) {
@@ -189,21 +194,18 @@ const getDetailedTestAnalysis = asyncHandler(async (req, res) => {
     }
 
     const userId = decoded._id;
-    const { paperId } = req.query;
+    const { attemptId } = req.params;
 
-    if (!paperId) {
-      throw new ApiError(400, "Paper ID is required.");
+    if (!attemptId || !mongoose.Types.ObjectId.isValid(attemptId)) {
+      throw new ApiError(400, "Valid Attempt ID is required.");
     }
+    
+    console.log("Fetching analysis for attempt:", { userId, attemptId });
 
-    console.log("Fetching analysis for:", { userId, paperId });
-
-    const attemptedTest = await AttemptedTest.findOne({ 
-      userId, 
-      testId: paperId 
-    }).sort({ attemptNumber: -1 });
+    const attemptedTest = await AttemptedTest.findOne({ _id: attemptId, userId });
 
     if (!attemptedTest) {
-      throw new ApiError(404, "No attempted test found.");
+      throw new ApiError(404, "Attempted test not found for this user.");
     }
     
     console.log("Found attempted test:", {
@@ -213,42 +215,41 @@ const getDetailedTestAnalysis = asyncHandler(async (req, res) => {
       wrongAnswers: attemptedTest.totalWrongAnswers
     });
 
-    const test = await PreviousTest.findById(paperId);
+    const test = await Test.findById(attemptedTest.testId).populate('questions');
     if (!test) {
-      throw new ApiError(404, "Test not found");
+      throw new ApiError(404, "Original test definition not found for this attempt");
     }
 
-    const answersWithCorrectness = attemptedTest.answers.map(answer => {
-      const question = test.questions.find(
-        q => q._id.toString() === answer.questionId.toString()
-      );
-    
-      return {
-        questionId: answer.questionId,
-        selectedOption: answer.answerOptionIndex,
-        timeSpent: answer.timeSpent || 0,
-        isCorrect: question?.correctOption === answer.answerOptionIndex
-      };
-    });
-    
+    const questionMap = new Map(test.questions.map(q => [q._id.toString(), q]));
+
     let correctCount = 0;
     let wrongCount = 0;
-    
-    answersWithCorrectness.forEach(answer => {
-      if (answer.selectedOption !== null) {
-        if (answer.isCorrect) {
+    const answersWithCorrectness = attemptedTest.answers.map(answer => {
+      const question = questionMap.get(answer.questionId?.toString());
+      let isCorrect = false;
+      if (question && answer.answerOptionIndex !== undefined && answer.answerOptionIndex !== null) {
+        if (question.correctOptions?.includes(answer.answerOptionIndex)) {
+          isCorrect = true;
           correctCount++;
         } else {
           wrongCount++;
         }
       }
+      return {
+        questionId: answer.questionId,
+        selectedOption: answer.answerOptionIndex,
+        timeSpent: answer.timeSpent || 0,
+        isCorrect: isCorrect,
+        correctAnswer: question?.correctOptions
+      };
     });
 
     const detailedAnalysis = {
       testInfo: {
-        testId: paperId,
-        testName: test.name || 'Test',
-        attemptNumber: attemptedTest.attemptNumber,
+        testId: test._id,
+        attemptId: attemptedTest._id,
+        testTitle: test.title,
+        testCategory: test.testCategory,
         language: attemptedTest.language || 'English',
         duration: attemptedTest.totalTimeTaken || 0,
         startTime: attemptedTest.startTime,
@@ -262,16 +263,18 @@ const getDetailedTestAnalysis = asyncHandler(async (req, res) => {
           subject: q.subject || 'General',
           topic: q.topic || 'General',
           difficulty: q.difficulty || 'Medium',
-          correctOption: q.correctOption
+          correctOption: q.correctOptions?.join(', ') || 'N/A'
         }))
       },
       performance: {
-        totalQuestions: test.questions.length,
-        totalCorrectAnswers: attemptedTest.totalCorrectAnswers || correctCount,
-        totalWrongAnswers: attemptedTest.totalWrongAnswers || wrongCount,
+        totalQuestions: test.questionCount,
+        totalCorrectAnswers: correctCount,
+        totalWrongAnswers: wrongCount,
+        totalUnattempted: test.questionCount - correctCount - wrongCount,
+        score: attemptedTest.score,
+        percentage: attemptedTest.score / test.totalMarks * 100,
         totalVisitedQuestions: attemptedTest.totalVisitedQuestions || 
                               (attemptedTest.metadata?.visitedQuestions?.length || 0),
-        accuracy: (correctCount / test.questions.length) * 100
       },
       subjectWise: (() => {
         const subjects = {};
@@ -292,7 +295,7 @@ const getDetailedTestAnalysis = asyncHandler(async (req, res) => {
           if (answer && answer.answerOptionIndex !== null) {
             subjects[q.subject].attempted++;
             subjects[q.subject].timeSpent += answer.timeSpent || 0;
-            if (answer.answerOptionIndex === q.correctOption) {
+            if (answer.isCorrect) {
               subjects[q.subject].correct++;
             }
           }

@@ -98,7 +98,7 @@ export async function middleware(request: NextRequest) {
 
       if (shouldRefresh) {
         try {
-          const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/refresh-token`, {
+          const refreshResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/refresh-token`, {
             method: 'POST',
             credentials: 'include',
             headers: {

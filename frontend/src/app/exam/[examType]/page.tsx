@@ -66,6 +66,12 @@ export default function ExamTypePage() {
         >
           <h2 className="text-2xl font-semibold text-center text-primary">Previous Year Paper</h2>
         </Link>
+        <Link
+          href={`/exam/${examType}/mock-test`}
+          className="block p-6 bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
+        >
+          <h2 className="text-2xl font-semibold text-center text-primary">Mock Test</h2>
+        </Link>
       </div>
     </div>
   );

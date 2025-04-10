@@ -45,13 +45,33 @@ const checkCookieConsent = (): boolean => {
   }
 };
 
+// For production, ensure we're using the correct API URL
+const getBaseUrl = (): string => {
+  if (typeof window === 'undefined') return API_URL;
+  
+  return process.env.NEXT_PUBLIC_API_URL || 
+    (window.location.hostname === 'localhost' ? API_URL : window.location.origin + '/api/v1');
+};
+
 // Create axios instance with credentials
 const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true,
+  baseURL: getBaseUrl(),
+  withCredentials: process.env.NODE_ENV === 'development',
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   }
+});
+
+// Add request interceptor to handle credentials conditionally
+api.interceptors.request.use((config) => {
+  // Only include credentials when domains match or in development
+  if (typeof window !== 'undefined') {
+    const baseUrl = config.baseURL || '';
+    config.withCredentials = process.env.NODE_ENV === 'development' || 
+      baseUrl.includes(window.location.hostname);
+  }
+  return config;
 });
 
 // Login User
@@ -61,6 +81,7 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
     throw new Error("Please accept cookies to enable login functionality");
   }
   
+  try {
   const response = await api.post<AuthResponse>(`/users/login`, { email, password });
   
   // Store token in localStorage as backup for mobile browsers that limit cookies
@@ -69,6 +90,14 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
   }
   
   return response.data;
+  } catch (error) {
+    console.error("Login error:", error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
+    throw error;
+  }
 };
 
 // Register User

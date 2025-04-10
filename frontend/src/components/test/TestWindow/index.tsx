@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks/hooks';
 import { 
@@ -8,7 +8,11 @@ import {
   setActiveQuestion, 
   answerQuestion,
   submitTest,
-  markQuestionVisited
+  markQuestionVisited,
+  startTest,
+  toggleMarkQuestion,
+  completeTest,
+  updateTimeRemaining
 } from '@/redux/slices/testSlice';
 import { RootState } from '@/redux/store';
 import QuestionPanel from './QuestionPanel';
@@ -23,6 +27,7 @@ import { startQuestionTimer, pauseQuestionTimer, resetTimeTracking, updateQuesti
 import { setAnalysisData } from '@/redux/slices/analysisSlice';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from '@/redux/slices/authSlice';
+import type { Test } from '@/redux/slices/testSlice';
 
 interface TestWindowProps {
   examType: string;
@@ -40,7 +45,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     activeQuestion, 
     timeRemaining, 
     loading, 
-    error,
+    error: reduxError,
     isTestCompleted
   } = useAppSelector((state: RootState) => state.test);
 
@@ -55,8 +60,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   const [questionVisits, setQuestionVisits] = useState<number[]>([]);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [testStartTime] = useState(Date.now());
   const [firstVisitTimes, setFirstVisitTimes] = useState<Record<string, number>>({});
   const [lastVisitTimes, setLastVisitTimes] = useState<Record<string, number>>({});
@@ -64,6 +68,8 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   const [networkDisconnections, setNetworkDisconnections] = useState<Array<{startTime: number, endTime: number}>>([]);
   const [pageReloads, setPageReloads] = useState(0);
   const [navigationEvents, setNavigationEvents] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [test, setTest] = useState<Test | null>(null);
 
   // Initialize them when test data loads
   useEffect(() => {
@@ -98,13 +104,49 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
 
   // Fetch test data
   useEffect(() => {
-    if (isClient) {
-      const finalTestId = paperId;
-      if (finalTestId) {
-        dispatch(fetchTest(finalTestId));
+    const loadTest = async () => {
+      if (paperId) {
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+          console.log("🔍 Making request to fetch test:", paperId);
+          // Log raw fetch response before Redux processing
+          const rawResponse = await fetch(`/api/v1/tests/${paperId}/attempt`, {
+            credentials: 'include'
+          });
+          console.log("📦 Raw API Response Status:", rawResponse.status);
+          const rawData = await rawResponse.clone().json();
+          console.log("📋 Raw API Response Data:", JSON.stringify(rawData, null, 2));
+          
+          // Continue with regular Redux fetch
+          dispatch(fetchTest(paperId))
+            .unwrap()
+            .then((data) => {
+              console.log("🧩 Redux processed test data structure:", Object.keys(data));
+              if (data.questions && data.questions.length > 0) {
+                console.log("🔢 First question keys:", Object.keys(data.questions[0]));
+                console.log("📝 First question content:", JSON.stringify(data.questions[0], null, 2));
+              }
+              setTest(data as unknown as Test);
+              // Start timer when test is loaded
+              dispatch(startTest());
+            })
+            .catch((err) => {
+              console.error("❌ Error in fetchTest Redux action:", err);
+              setError(`Failed to load test: ${err.message || "Unknown error"}`);
+            });
+        } catch (error) {
+          console.error("🚨 Raw fetch error:", error);
+          setError(`Failed to load test: ${error instanceof Error ? error.message : "Unknown error"}`);
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
-  }, [dispatch, paperId, isClient]);
+    };
+
+    loadTest();
+  }, [dispatch, paperId]);
   
   // Fetch user data if not already in the store
   useEffect(() => {
@@ -306,7 +348,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Updated handleSubmit using currentTest data to derive analytics
   const handleSubmit = async () => {
     if (!isClient) return;
-    setIsSubmitting(true);
+    setIsLoading(true);
 
     try {
       const currentTime = Date.now();
@@ -559,7 +601,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       console.error("Error submitting data:", err);
       toast?.error("An error occurred while submitting the test. Please try again.");
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
   
@@ -674,6 +716,22 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     );
   }, [timeTrackingState]);
   
+  // Data validity checks
+  const isTestDataValid = React.useMemo(() => {
+    if (!currentTest) return false;
+    if (!Array.isArray(currentTest.questions)) return false;
+    if (currentTest.questions.length === 0) return false;
+    
+    // Check that questions have the required fields
+    return currentTest.questions.every(q => 
+      q && 
+      typeof q.question === 'string' && 
+      Array.isArray(q.options) && 
+      q.options.length > 0
+    );
+  }, [currentTest]);
+
+  // If not client-side yet, return minimal content to prevent hydration issues
   if (!isClient) {
     return null;
   }
@@ -721,159 +779,55 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     );
   }
   
+  if (!isTestDataValid) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+        <div className="bg-orange-100 border border-orange-400 text-orange-700 px-4 py-3 rounded max-w-md">
+          <p className="font-bold">Invalid test data</p>
+          <p>The test data appears to be incomplete or malformed. Please try a different test.</p>
+          <pre className="mt-2 text-xs bg-orange-50 p-2 rounded overflow-auto max-h-32">
+            {JSON.stringify(currentTest, null, 2)}
+          </pre>
+          <button 
+            onClick={() => router.push(`/exam/${examType}`)}
+            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Return to Exams
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const { total } = getTestStats();
   const currentQuestionData = currentTest.questions[activeQuestion];
   if (!currentQuestionData) {
-    return null;
-  }
-  const isLastQuestion = activeQuestion === currentTest.questions.length - 1;
-
-  if (isSubmitting) {
     return (
-      <div className="fixed inset-0 bg-gray-900/50 flex items-center justify-center z-50">
-        <div className="bg-white p-8 rounded-lg shadow-xl flex flex-col items-center">
-          <ClipLoader size={50} color="#3B82F6" />
-          <p className="mt-4 text-gray-700 text-lg font-medium">Submitting your test...</p>
-          <p className="mt-2 text-gray-500">Please don't close this window</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded max-w-md">
+          <p className="font-bold">Question not found</p>
+          <p>The requested question (#{activeQuestion + 1}) could not be loaded.</p>
+          <button
+            onClick={() => dispatch(setActiveQuestion(0))}
+            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+          >
+            Go to First Question
+          </button>
+          <button
+            onClick={() => router.push(`/exam/${examType}`)}
+            className="mt-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Return to Exams
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {submitError && (
-        <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
-          <p className="font-bold">Error</p>
-          <p>{submitError}</p>
-        </div>
-      )}
-      <div className="max-w-[1400px] mx-auto bg-white min-h-screen flex flex-col shadow-xl">
-        <div className="border-b bg-white shadow-sm p-4 sticky top-0 z-50 backdrop-blur-sm bg-white/90">
-          <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center ring-2 ring-blue-500/20 transition-transform hover:scale-105">
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-6 w-6 text-blue-600" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  >
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                </div>
-              </div>
-              <CandidateInfo 
-                name={getUserName()} 
-                testName={examType.toLowerCase()} 
-              />
-            </div>
-            <div className="flex items-center gap-8">
-              <Timer 
-                timeRemaining={timeRemaining} 
-                onTimeEnd={handleTimeEnd}
-              />
-              <LanguageSelector 
-                selectedLanguage={language} 
-                onLanguageChange={(newLanguage) => setLanguage(newLanguage)} 
-              />
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-1 bg-gray-50/50">
-          <div className="w-3/4 p-8">
-            <div className="bg-white rounded-xl shadow-sm p-8 transition-all duration-300 hover:shadow-md">
-              <QuestionPanel
-                currentQuestion={activeQuestion}
-                selectedAnswer={currentQuestionData?.userAnswer}
-                question={currentQuestionData}
-                handleOptionChange={handleOptionChange}
-              />
-              <div className="mt-8 space-y-4">
-                <ActionButtons
-                  onSaveAndNext={handleSaveAndNext}
-                  onClear={handleClear}
-                  onSaveAndMark={handleSaveAndMark}
-                  onMarkForReview={handleMarkForReview}
-                  onSubmit={handleSubmit}
-                  onNext={handleNext}
-                  onPrevious={handlePrevious}
-                  confirmSubmit={confirmSubmit}
-                  isLastQuestion={isLastQuestion}
-                  isFirstQuestion={activeQuestion === 0}
-                  hasSelectedOption={currentQuestionData?.userAnswer !== undefined}
-                  isSubmitting={isSubmitting}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="w-1/4 p-8 bg-white border-l">
-            <div className="space-y-6">
-              <QuestionStatus
-                questions={currentTest.questions}
-                total={total}
-              />
-              <QuestionGrid
-                questions={currentTest.questions}
-                activeQuestion={activeQuestion}
-                onQuestionClick={handleQuestionClick}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-4 text-center">
-          <p className="text-sm text-gray-600 font-medium">
-            © All Rights Reserved - National Testing Agency
-          </p>
-        </div>
-      </div>
-      {confirmSubmit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">Confirm Submission</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to submit the test? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setConfirmSubmit(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className={`
-                  px-4 py-2 rounded-md font-medium text-white
-                  ${isSubmitting 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700'}
-                `}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center space-x-2">
-                    <ClipLoader size={16} color="#ffffff" />
-                    <span>Submitting...</span>
-                  </div>
-                ) : (
-                  'Confirm Submit'
-                )}
-              </button>
-            </div>
-            {submitError && (
-              <p className="mt-4 text-red-600 text-sm">{submitError}</p>
-            )}
-          </div>
-        </div>
-      )}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+      <ClipLoader size={50} color="#3B82F6" />
+      <p className="mt-4 text-gray-700 text-lg">Loading test...</p>
     </div>
   );
 };

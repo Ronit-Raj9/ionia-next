@@ -1,9 +1,16 @@
 "use client";
 import React from "react";
 import { TestQuestion } from "@/redux/slices/testSlice";
+import Image from "next/image";
 
 interface OptionProps {
-  option: string;
+  option: {
+    text: string;
+    image?: {
+      url: string;
+      publicId?: string;
+    } | null;
+  };
   optionIndex: number;
   questionNumber: number;
   selectedAnswer: number | undefined;
@@ -35,12 +42,22 @@ const QuestionOptions: React.FC<OptionProps> = ({
       `}>
         {String.fromCharCode(65 + optionIndex)}
       </div>
-      <p className={`
-        flex-1 text-base transition-colors duration-300
-        ${selectedAnswer === optionIndex ? 'text-blue-700 font-medium' : 'text-gray-700'}
-      `}>
-        {option}
-      </p>
+      <div className="flex-1">
+        {option.text && (
+          <p className={`text-base transition-colors duration-300 ${selectedAnswer === optionIndex ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+            {option.text}
+          </p>
+        )}
+        {option.image && option.image.url && (
+          <div className="mt-2">
+            <img 
+              src={option.image.url} 
+              alt={`Option ${String.fromCharCode(65 + optionIndex)}`}
+              className="max-h-40 object-contain rounded-md"
+            />
+          </div>
+        )}
+      </div>
     </div>
     {selectedAnswer === optionIndex && (
       <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-fadeIn">
@@ -66,7 +83,28 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
   handleOptionChange,
 }) => {
   if (!question) {
-    return <div className="p-4 text-center">Question not found</div>;
+    return (
+      <div className="p-4 text-center border border-yellow-300 bg-yellow-50 rounded-lg">
+        <p className="text-yellow-800 font-medium">Question not found</p>
+      </div>
+    );
+  }
+  
+  // Check if essential question data is missing or malformed
+  const isQuestionMalformed = 
+    !question.question || 
+    (!question.question.text && (!question.question.image || !question.question.image.url)) ||
+    !Array.isArray(question.options) ||
+    question.options.length === 0;
+    
+  if (isQuestionMalformed) {
+    console.error('Malformed question data:', question);
+    return (
+      <div className="p-4 text-center border border-red-300 bg-red-50 rounded-lg">
+        <p className="text-red-800 font-medium">Question data is malformed</p>
+        <p className="text-red-600 text-sm mt-2">The question appears to be in an incorrect format. Please contact support.</p>
+      </div>
+    );
   }
 
   return (
@@ -91,13 +129,24 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
       </div>
       
       <div className="prose prose-blue max-w-none">
-        <p className="text-lg text-gray-700 leading-relaxed">
-          {question.question}
-        </p>
+        {question.question.text && (
+          <p className="text-lg text-gray-700 leading-relaxed">
+            {question.question.text}
+          </p>
+        )}
+        {question.question.image && question.question.image.url && (
+          <div className="mt-4">
+            <img 
+              src={question.question.image.url} 
+              alt="Question image"
+              className="max-h-96 object-contain rounded-md"
+            />
+          </div>
+        )}
       </div>
 
       <div className="space-y-4 mt-8">
-        {question.options.map((option, index) => (
+        {question.options && Array.isArray(question.options) ? question.options.map((option, index) => (
           <QuestionOptions
             key={index}
             option={option}
@@ -106,7 +155,9 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
             selectedAnswer={selectedAnswer}
             handleOptionChange={handleOptionChange}
           />
-        ))}
+        )) : (
+          <div className="p-4 text-center text-gray-500">No options available for this question</div>
+        )}
       </div>
     </div>
   );

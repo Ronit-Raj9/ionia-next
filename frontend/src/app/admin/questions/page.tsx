@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   FunnelIcon, 
   PlusIcon,
@@ -51,12 +51,12 @@ interface Question {
     unit: string;
   };
   examType: 'jee_main' | 'jee_adv' | 'cuet' | 'neet' | 'cbse_10' | 'cbse_12' | 'none';
-  class: 'class_11' | 'class_12' | 'none';
+  class: 'class_9' | 'class_10' | 'class_11' | 'class_12' | 'none';
   subject: string;
   chapter: string;
-  sectionPhysics?: string;
-  sectionChemistry?: string;
-  sectionMathematics?: string;
+  section?: string;
+  questionCategory?: 'theoretical' | 'numerical';
+  questionSource?: 'custom' | 'india_book' | 'foreign_book' | 'pyq';
   difficulty: 'easy' | 'medium' | 'hard';
   prerequisites: string[];
   conceptualDifficulty: number;
@@ -90,16 +90,16 @@ interface Question {
 }
 
 interface Filters {
-  subject: string;
-  examType: string;
-  difficulty: string;
-  chapter: string;
-  language: string;
-  languageLevel: string;
-  questionType: string;
+  subject: string[];
+  examType: string[];
+  difficulty: string[];
+  chapter: string[];
+  language: string[];
+  languageLevel: string[];
+  questionType: string[];
   isVerified: boolean | null;
   isActive: boolean | null;
-  year: string;
+  year: string[];
   conceptualDifficulty: {
     min: number;
     max: number;
@@ -110,13 +110,13 @@ interface Filters {
   limit: number;
   sortBy: string;
   sortOrder: 'asc' | 'desc';
-  sectionPhysics?: string;
-  sectionChemistry?: string;
-  sectionMathematics?: string;
+  section: string[];
+  questionCategory: string[];
+  questionSource: string[];
   solutionMode: string;
   dateRange: string;
   hasOptions: boolean | null;
-  class: string;
+  class: string[];
 }
 
 export default function QuestionsPage() {
@@ -126,16 +126,16 @@ export default function QuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>({
-    subject: '',
-    examType: '',
-    difficulty: '',
-    chapter: '',
-    language: '',
-    languageLevel: '',
-    questionType: '',
+    subject: [],
+    examType: [],
+    difficulty: [],
+    chapter: [],
+    language: [],
+    languageLevel: [],
+    questionType: [],
     isVerified: null,
     isActive: null,
-    year: '',
+    year: [],
     conceptualDifficulty: null,
     marks: null,
     tags: [],
@@ -143,17 +143,18 @@ export default function QuestionsPage() {
     limit: 30,
     sortBy: 'createdAt',
     sortOrder: 'desc',
-    sectionPhysics: '',
-    sectionChemistry: '',
-    sectionMathematics: '',
+    section: [],
+    questionCategory: [],
+    questionSource: [],
     solutionMode: '',
     dateRange: 'all',
     hasOptions: null,
-    class: 'none'
+    class: []
   });
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     advanced: false,
+    additional: false,
     sorting: false
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,20 +169,28 @@ export default function QuestionsPage() {
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [questionsPerPage] = useState(30);
+  const [activeTab, setActiveTab] = useState('basic');
 
   // Filter options
   const filterOptions = {
-    subjects: ['Physics', 'Chemistry', 'Mathematics'],
-    examTypes: ['jee_main', 'jee_adv', 'cuet', 'neet', 'cbse_10', 'cbse_12', 'none'],
+    subjects: ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'General Knowledge', 'Computer Science', 'Information Practice'],
+    examTypes: ['jee_main', 'jee_adv', 'cuet', 'neet', 'cbse_11', 'cbse_12', 'none'],
     difficulties: ['easy', 'medium', 'hard'],
     languages: ['english', 'hindi'],
     languageLevels: ['basic', 'intermediate', 'advanced'],
     questionTypes: ['single', 'multiple', 'numerical'],
-    classes: ['class_11', 'class_12', 'none'],
+    classes: ['class_9', 'class_10', 'class_11', 'class_12', 'none'],
+    questionCategories: ['theoretical', 'numerical'],
+    questionSources: ['custom', 'india_book', 'foreign_book', 'pyq'],
     sections: {
-      Physics: ['Mechanics', 'Electricity and Magnetism', 'Modern Physics', 'Waves and Optics', 'Thermodynamics'],
-      Chemistry: ['Physical Chemistry', 'Organic Chemistry', 'Inorganic Chemistry', 'Analytical Chemistry'],
-      Mathematics: ['Algebra', 'Calculus', 'Geometry', 'Trigonometry', 'Statistics']
+      Physics: ['mechanics', 'electromagnetism', 'thermodynamics', 'optics', 'modern_physics', 'none'],
+      Chemistry: ['organic', 'inorganic', 'physical', 'analytical', 'none'],
+      Mathematics: ['algebra', 'calculus', 'geometry', 'statistics', 'trigonometry', 'none'],
+      Biology: ['botany', 'zoology', 'human_physiology', 'ecology', 'genetics', 'none'],
+      English: ['reading_comprehension', 'vocabulary', 'grammar', 'writing', 'none'],
+      General_Knowledge: ['gk', 'current_affairs', 'general_science', 'mathematical_reasoning', 'logical_reasoning', 'none'],
+      Computer_Science: ['programming', 'data_structures', 'algorithms', 'databases', 'none'],
+      Information_Practice: ['programming', 'databases', 'web_development', 'none']
     }
   };
 
@@ -202,20 +211,20 @@ export default function QuestionsPage() {
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (filters.subject) count++;
-    if (filters.examType) count++;
-    if (filters.difficulty) count++;
-    if (filters.year) count++;
-    if (filters.sectionPhysics) count++;
-    if (filters.sectionChemistry) count++;
-    if (filters.sectionMathematics) count++;
-    if (filters.languageLevel) count++;
+    if (filters.subject.length > 0) count++;
+    if (filters.examType.length > 0) count++;
+    if (filters.difficulty.length > 0) count++;
+    if (filters.year.length > 0) count++;
+    if (filters.section.length > 0) count++;
+    if (filters.languageLevel.length > 0) count++;
+    if (filters.questionCategory.length > 0) count++;
+    if (filters.questionSource.length > 0) count++;
     if (filters.solutionMode) count++;
     if (filters.dateRange !== 'all') count++;
     if (filters.hasOptions !== null) count++;
     if (filters.isVerified !== null) count++;
     if (filters.sortBy !== 'createdAt') count++;
-    if (filters.class !== 'none') count++;
+    if (filters.class.length > 0) count++;
     if (searchQuery) count++;
     return count;
   };
@@ -232,19 +241,23 @@ export default function QuestionsPage() {
 
     // Apply filters
     filtered = filtered.filter(q => {
-      const matchesSubject = !filters.subject || q.subject.toLowerCase() === filters.subject.toLowerCase();
-      const matchesExamType = !filters.examType || q.examType === filters.examType;
-      const matchesDifficulty = !filters.difficulty || q.difficulty === filters.difficulty;
-      const matchesYear = !filters.year || q.year === filters.year;
-      const matchesLanguageLevel = !filters.languageLevel || q.languageLevel === filters.languageLevel;
-      const matchesClass = !filters.class || filters.class === 'none' || q.class === filters.class;
+      const matchesSubject = filters.subject.length === 0 || filters.subject.some(s => s.toLowerCase() === q.subject.toLowerCase());
+      const matchesExamType = filters.examType.length === 0 || filters.examType.includes(q.examType);
+      const matchesDifficulty = filters.difficulty.length === 0 || filters.difficulty.includes(q.difficulty);
+      const matchesYear = filters.year.length === 0 || filters.year.includes(q.year);
+      const matchesLanguageLevel = filters.languageLevel.length === 0 || filters.languageLevel.includes(q.languageLevel);
+      const matchesClass = filters.class.length === 0 || filters.class.includes(q.class);
+      const matchesQuestionType = filters.questionType.length === 0 || filters.questionType.includes(q.questionType);
       
-      // Section matching
-      const matchesSection = 
-        (!filters.sectionPhysics && !filters.sectionChemistry && !filters.sectionMathematics) ||
-        (q.sectionPhysics === filters.sectionPhysics) ||
-        (q.sectionChemistry === filters.sectionChemistry) ||
-        (q.sectionMathematics === filters.sectionMathematics);
+      // For fields that may not exist in some questions
+      const matchesSection = filters.section.length === 0 || 
+                             (q.section && filters.section.includes(q.section));
+      
+      const matchesQuestionCategory = filters.questionCategory.length === 0 || 
+                                     (q.questionCategory && filters.questionCategory.includes(q.questionCategory));
+      
+      const matchesQuestionSource = filters.questionSource.length === 0 || 
+                                   (q.questionSource && filters.questionSource.includes(q.questionSource));
 
       // Solution mode matching (based on whether solution has text or image)
       const matchesSolutionMode = !filters.solutionMode || (
@@ -264,7 +277,8 @@ export default function QuestionsPage() {
 
       return matchesSubject && matchesExamType && matchesDifficulty && 
              matchesYear && matchesLanguageLevel && matchesSolutionMode && 
-             matchesSection && matchesDateRange && matchesClass;
+             matchesSection && matchesDateRange && matchesClass && 
+             matchesQuestionType && matchesQuestionCategory && matchesQuestionSource;
     });
 
     // Apply sorting
@@ -298,38 +312,73 @@ export default function QuestionsPage() {
       setError(null);
       const API_URL = process.env.NEXT_PUBLIC_API_URL;
       
-      // Only include filters that have actual values
       const queryParams = new URLSearchParams({
         page: currentPage.toString(),
         limit: questionsPerPage.toString()
       });
 
+      // Add multi-select filters
+      const addArrayParams = (key: string, values: string[]) => {
+        if (values.length > 0) {
+          values.forEach(value => queryParams.append(`${key}[]`, value));
+        }
+      };
+
+      // Add array filters
+      addArrayParams('subject', filters.subject);
+      addArrayParams('examType', filters.examType);
+      addArrayParams('difficulty', filters.difficulty);
+      addArrayParams('year', filters.year);
+      addArrayParams('section', filters.section);
+      addArrayParams('languageLevel', filters.languageLevel);
+      addArrayParams('questionType', filters.questionType);
+      addArrayParams('class', filters.class);
+      addArrayParams('questionCategory', filters.questionCategory);
+      addArrayParams('questionSource', filters.questionSource);
+      addArrayParams('tags', filters.tags);
+
       // Only add additional filters if they have values
       if (filters.sortBy && filters.sortBy !== 'createdAt') queryParams.append('sortBy', filters.sortBy);
       if (filters.sortOrder !== 'desc') queryParams.append('sortOrder', filters.sortOrder);
-      if (filters.subject) queryParams.append('subject', filters.subject);
-      if (filters.examType) queryParams.append('examType', filters.examType);
-      if (filters.difficulty) queryParams.append('difficulty', filters.difficulty);
-      if (filters.chapter) queryParams.append('chapter', filters.chapter);
-      if (filters.language) queryParams.append('language', filters.language);
-      if (filters.languageLevel) queryParams.append('languageLevel', filters.languageLevel);
-      if (filters.questionType) queryParams.append('questionType', filters.questionType);
+      if (filters.chapter.length > 0) queryParams.append('chapter', filters.chapter[0]);
+      if (filters.language.length > 0) queryParams.append('language', filters.language[0]);
       if (filters.isVerified !== null) queryParams.append('isVerified', filters.isVerified.toString());
       if (filters.isActive !== null) queryParams.append('isActive', filters.isActive.toString());
-      if (filters.year) queryParams.append('year', filters.year);
-      if (filters.class && filters.class !== 'none') queryParams.append('class', filters.class);
+      if (filters.solutionMode) queryParams.append('solutionMode', filters.solutionMode);
+
+      // Retrieve the access token
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        // Handle cases where the token might be missing (e.g., redirect to login)
+        console.error("Access token not found, cannot fetch questions.");
+        setError("Authentication token missing. Please login again.");
+        setLoading(false);
+        return; // Stop execution if no token
+      }
+
+      console.log(`Fetching questions with token: Bearer ${accessToken.substring(0, 10)}...`); // Log part of the token
 
       const response = await fetch(`${API_URL}/questions?${queryParams}`, {
         method: 'GET',
-        credentials: 'include',
+        credentials: 'include', 
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
         }
       });
 
-
       if (!response.ok) {
-        throw new Error('Failed to fetch questions');
+        // Handle specific error codes like 403 Forbidden
+        if (response.status === 403) {
+          const errorData = await response.json();
+          console.error("Permission denied (403):", errorData);
+          setError(errorData.message || "You don't have permission to view these questions.");
+        } else {
+          throw new Error(`Failed to fetch questions (Status: ${response.status})`);
+        }
+        // Don't proceed if response was not ok
+        setLoading(false);
+        return; 
       }
 
       const data = await response.json();
@@ -337,12 +386,13 @@ export default function QuestionsPage() {
         setQuestions(data.data.questions);
         setTotalQuestions(data.data.totalQuestions);
         setTotalPages(data.data.totalPages);
+        console.log(`Successfully fetched ${data.data.questions.length} questions.`);
       } else {
-        throw new Error(data.message || 'Failed to fetch questions');
+        throw new Error(data.message || 'Failed to process questions data');
       }
     } catch (error) {
       console.error('Failed to fetch questions:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch questions');
+      setError(error instanceof Error ? error.message : 'An unknown error occurred while fetching questions');
     } finally {
       setLoading(false);
     }
@@ -357,16 +407,16 @@ export default function QuestionsPage() {
 
   const resetFilters = () => {
     setFilters({
-      subject: '',
-      examType: '',
-      difficulty: '',
-      chapter: '',
-      language: '',
-      languageLevel: '',
-      questionType: '',
+      subject: [],
+      examType: [],
+      difficulty: [],
+      chapter: [],
+      language: [],
+      languageLevel: [],
+      questionType: [],
       isVerified: null,
       isActive: null,
-      year: '',
+      year: [],
       conceptualDifficulty: null,
       marks: null,
       tags: [],
@@ -374,13 +424,13 @@ export default function QuestionsPage() {
       limit: 30,
       sortBy: 'createdAt',
       sortOrder: 'desc',
-      sectionPhysics: '',
-      sectionChemistry: '',
-      sectionMathematics: '',
+      section: [],
+      questionCategory: [],
+      questionSource: [],
       solutionMode: '',
       dateRange: 'all',
       hasOptions: null,
-      class: 'none'
+      class: []
     });
     setSearchQuery('');
     setCurrentPage(1);
@@ -478,27 +528,146 @@ export default function QuestionsPage() {
     }
   };
 
-  const handleSectionChange = (value: string) => {
-    const newFilters = { ...filters };
-    
-    // Reset all section filters
-    newFilters.sectionPhysics = '';
-    newFilters.sectionChemistry = '';
-    newFilters.sectionMathematics = '';
-
-    // Set the appropriate section based on subject
-    if (filters.subject === 'Physics') {
-      newFilters.sectionPhysics = value;
-    } else if (filters.subject === 'Chemistry') {
-      newFilters.sectionChemistry = value;
-    } else if (filters.subject === 'Mathematics') {
-      newFilters.sectionMathematics = value;
-    }
-
-    setFilters(newFilters);
+  const handleSectionChange = (values: string[]) => {
+    setFilters(prev => ({
+      ...prev,
+      section: values
+    }));
   };
 
-  // Custom select component for better UI
+  // Custom multi-select dropdown with checkboxes - Update parent state immediately
+  const CheckboxMultiSelect = ({ 
+    values, 
+    onChange,
+    options, 
+    placeholder,
+    className = ""
+  }: { 
+    values: string[], 
+    onChange: (values: string[]) => void, 
+    options: string[] | { value: string, label: string }[],
+    placeholder: string,
+    className?: string
+  }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null); // Ref for the main button container
+    const panelRef = useRef<HTMLDivElement>(null); // Ref for the dropdown panel itself
+
+    // Handle outside click to close dropdown
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        // Close if clicked outside the button AND outside the panel
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+            panelRef.current && !panelRef.current.contains(event.target as Node)) {
+          setIsOpen(false);
+        }
+      };
+      
+      // Add listener only when dropdown is open
+      if (isOpen) {
+        document.addEventListener("mousedown", handleClickOutside);
+      }
+      
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [isOpen]); // Re-run when isOpen changes
+    
+    const formatOptions = (): { value: string, label: string }[] => {
+      return options.map(option => 
+        typeof option === 'string' 
+          ? { value: option, label: option }
+          : option
+      );
+    };
+    
+    const formattedOptions = formatOptions();
+    
+    // Toggle options and call parent onChange immediately
+    const toggleOption = (value: string) => {
+      let newValues;
+      if (values.includes(value)) {
+        newValues = values.filter(v => v !== value);
+      } else {
+        newValues = [...values, value];
+      }
+      onChange(newValues); // Update parent state immediately
+    };
+    
+    // Toggle all options and call parent onChange immediately
+    const toggleAll = () => {
+      let newValues: string[];
+      if (values.length === formattedOptions.length) {
+        newValues = [];
+      } else {
+        newValues = formattedOptions.map(opt => opt.value);
+      }
+      onChange(newValues); // Update parent state immediately
+    };
+    
+    // Display text based on parent prop values
+    const displayText = values.length > 0 
+      ? `${values.length} selected` 
+      : placeholder;
+      
+    return (
+      <div className="relative" ref={dropdownRef}>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`w-full rounded-lg border-green-200 focus:ring-green-500 focus:border-green-500 bg-white 
+            transition-all duration-200 cursor-pointer hover:border-green-400 text-left
+            pl-4 pr-10 py-2.5 text-sm text-gray-700 border shadow-sm
+            ${className}`}
+        >
+          <div className="flex items-center justify-between">
+            <span className={values.length === 0 ? "text-gray-500" : "text-gray-800"}>
+              {displayText}
+            </span>
+            <ChevronDownIcon className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isOpen ? "transform rotate-180" : ""}`} />
+          </div>
+        </button>
+        
+        {isOpen && (
+          <div 
+            ref={panelRef} // Add ref to the panel
+            className="absolute z-10 mt-1 w-full bg-white border border-green-200 rounded-lg shadow-lg py-1 max-h-60 overflow-y-auto custom-scrollbar"
+            // Prevent clicks inside the panel from closing it via the document listener
+            onMouseDown={(e) => e.stopPropagation()} 
+          >
+            <div className="sticky top-0 bg-green-50 border-b border-green-200 px-3 py-2">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={values.length === formattedOptions.length && formattedOptions.length > 0}
+                  onChange={toggleAll}
+                  className="h-4 w-4 rounded border-green-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="ml-2 text-sm font-medium text-green-800">Select All</span>
+              </div>
+            </div>
+            {formattedOptions.map((option) => (
+              <label 
+                key={option.value} 
+                className="flex items-center px-3 py-2 hover:bg-green-50 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={values.includes(option.value)}
+                  // Use onChange for checkbox toggle logic
+                  onChange={() => toggleOption(option.value)} 
+                  className="h-4 w-4 rounded border-green-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="ml-2 text-sm text-gray-700">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Keep the original CustomSelect for single-select dropdowns
   const CustomSelect = ({ 
     value, 
     onChange, 
@@ -836,14 +1005,14 @@ export default function QuestionsPage() {
                                 toggleQuestionExpand(question._id);
                               }}
                               className="ml-4 text-green-600 hover:text-green-700 focus:outline-none"
-                            >
+                            >                              
                               {expandedQuestions[question._id] ? (
                                 <ChevronUpIcon className="h-5 w-5" />
                               ) : (
                                 <ChevronDownIcon className="h-5 w-5" />
                               )}
                             </button>
-                            </div>
+                          </div>
                           {!expandedQuestions[question._id] && (
                             <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                               <span>{question.subject} • {question.chapter}</span>
@@ -854,18 +1023,18 @@ export default function QuestionsPage() {
                               {question.statistics.timesAttempted > 0 && (
                                 <span>Success Rate: {question.statistics.successRate}%</span>
                               )}
-                        </div>
+                            </div>
                           )}
-                      </div>
+                        </div>
                         <div className="flex space-x-2 ml-4">
-                        <Link
-                          href={`/admin/questions/edit/${question._id}`}
+                          <Link
+                            href={`/admin/questions/edit/${question._id}`}
                             className="px-3 py-1 text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 transition-colors"
                             onClick={(e) => e.stopPropagation()}
-                        >
-                Edit
-              </Link>
-                        <button
+                          >
+                            Edit
+                          </Link>
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleQuestionStatus(question._id, !question.isActive);
@@ -949,7 +1118,10 @@ export default function QuestionsPage() {
                                 <div className="flex items-center justify-between mb-2">
                                   <h4 className="text-sm font-medium text-gray-700">Options:</h4>
                                   <button
-                                    onClick={() => toggleQuestionExpand(question._id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleQuestionExpand(question._id);
+                                    }}
                                     className="inline-flex items-center px-2 py-1 text-sm text-green-600 hover:text-green-700 focus:outline-none"
                                   >
                                     {expandedQuestions[question._id] ? (
@@ -957,13 +1129,13 @@ export default function QuestionsPage() {
                                         <ChevronUpIcon className="h-4 w-4 mr-1" />
                                         Collapse
                                       </>
-                          ) : (
-                            <>
+                                    ) : (
+                                      <>
                                         <ChevronDownIcon className="h-4 w-4 mr-1" />
                                         Expand
-                            </>
-                          )}
-                        </button>
+                                      </>
+                                    )}
+                                  </button>
                                 </div>
                                 <div className={`space-y-3 transition-all duration-300 ${
                                   expandedQuestions[question._id] ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'
@@ -1130,16 +1302,13 @@ export default function QuestionsPage() {
             <PaginationControls />
           </div>
 
-          {/* Filters Sidebar - Now with improved sticky positioning and scrolling */}
-          <div 
-            className={`lg:w-96 transition-all duration-300 ease-in-out ${
+          {/* Filters Sidebar - Improved layout with better organization */}
+          <div className={`lg:w-96 transition-all duration-300 ease-in-out ${
               showFilters ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full lg:opacity-100 lg:translate-x-0'
-            }`}
-          >
+          }`}>
             <div className="lg:sticky lg:top-4 bg-white rounded-xl shadow-sm border border-green-100 flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
               {/* Fixed Header */}
-              <div className="p-6 border-b border-green-100 bg-white">
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 border-b border-green-100 bg-white">
                   <div className="flex items-center">
                     <FunnelIcon className="h-5 w-5 text-green-600 mr-2" />
                     <h2 className="text-lg font-medium text-green-800">Filters</h2>
@@ -1155,37 +1324,47 @@ export default function QuestionsPage() {
                       </span>
                     </button>
                   )}
-                </div>
               </div>
 
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="p-6 space-y-6">
-                  {/* Basic Filters Section */}
-                  <div className="filter-section">
+              {/* Tab Navigation */}
+              <div className="flex border-b border-green-100">
+                {[
+                  { id: 'basic', label: 'Basic', icon: <AdjustmentsHorizontalIcon className="h-4 w-4" /> },
+                  { id: 'advanced', label: 'Advanced', icon: <AcademicCapIcon className="h-4 w-4" /> },
+                  { id: 'additional', label: 'Additional', icon: <AdjustmentsHorizontalIcon className="h-4 w-4" /> },
+                  { id: 'sorting', label: 'Sorting', icon: <ClockIcon className="h-4 w-4" /> }
+                ].map(tab => (
                     <button
-                      onClick={() => setExpandedSections(prev => ({ ...prev, basic: !prev.basic }))}
-                      className="flex items-center justify-between w-full mb-2 text-green-800 hover:text-green-600"
-                    >
-                      <div className="flex items-center">
-                        <AdjustmentsHorizontalIcon className="h-5 w-5 mr-2" />
-                        <span className="font-medium">Basic Filters</span>
-                      </div>
-                      <ChevronDownIcon 
-                        className={`h-5 w-5 transition-transform duration-200 ${
-                          expandedSections.basic ? 'transform rotate-180' : ''
-                        }`}
-                      />
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 py-3 text-xs font-medium flex flex-col items-center justify-center transition-colors duration-200
+                      ${activeTab === tab.id 
+                        ? 'bg-green-50 text-green-700 border-b-2 border-green-600' 
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'}`}
+                  >
+                    {tab.icon}
+                    <span className="mt-1">{tab.label}</span>
                     </button>
-                    
-                    {expandedSections.basic && (
+                ))}
+              </div>
+
+              {/* Scrollable Content - Show only active tab content */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="p-4">
+                  {/* Basic Filters Tab */}
+                  {activeTab === 'basic' && (
                       <div className="space-y-4">
+                      <div className="flex items-center mb-2">
+                        <AdjustmentsHorizontalIcon className="h-5 w-5 text-green-600 mr-2" />
+                        <h3 className="text-sm font-medium text-green-800">Basic Filters</h3>
+                      </div>
+                      
                         {/* Subject Filter */}
                         <div className="filter-group">
                           <label className="block text-sm font-medium text-green-700 mb-2">Subject</label>
-                          <CustomSelect
-                            value={filters.subject}
-                            onChange={(value) => setFilters({ ...filters, subject: value })}
+                        <CheckboxMultiSelect
+                          values={filters.subject}
+                          onChange={(values) => setFilters({ ...filters, subject: values })}
                             options={filterOptions.subjects}
                             placeholder="All Subjects"
                           />
@@ -1194,26 +1373,25 @@ export default function QuestionsPage() {
                         {/* Year Filter */}
                         <div className="filter-group">
                           <label className="block text-sm font-medium text-green-700 mb-2">Year</label>
-                          <CustomSelect
-                            value={filters.year}
-                            onChange={(value) => setFilters({ ...filters, year: value })}
+                        <CheckboxMultiSelect
+                          values={filters.year}
+                          onChange={(values) => setFilters({ ...filters, year: values })}
                             options={['2024', '2023', '2022', '2021', '2020', '2019']}
                             placeholder="All Years"
                           />
                         </div>
 
                         {/* Section Filter */}
-                          <div className="filter-group animate-fadeIn">
+                      <div className="filter-group">
                             <label className="block text-sm font-medium text-green-700 mb-2">Section</label>
-                            <CustomSelect
-                            value={
-                              filters.sectionPhysics || 
-                              filters.sectionChemistry || 
-                              filters.sectionMathematics || 
-                              ''
-                            }
+                        <CheckboxMultiSelect
+                          values={filters.section}
                             onChange={handleSectionChange}
-                            options={filterOptions.sections[filters.subject as keyof typeof filterOptions.sections] || []}
+                          options={filters.subject.length > 0 
+                            ? filters.subject.flatMap(subj => 
+                                filterOptions.sections[subj as keyof typeof filterOptions.sections] || []
+                              )
+                            : []}
                               placeholder="All Sections"
                             />
                           </div>
@@ -1225,10 +1403,19 @@ export default function QuestionsPage() {
                             {filterOptions.difficulties.map((diff) => (
                               <button
                                 key={diff}
-                                onClick={() => setFilters({ ...filters, difficulty: filters.difficulty === diff ? '' : diff })}
+                              onClick={() => {
+                                // Toggle value in array
+                                setFilters(prev => {
+                                  if (prev.difficulty.includes(diff)) {
+                                    return { ...prev, difficulty: prev.difficulty.filter(d => d !== diff) };
+                                  } else {
+                                    return { ...prev, difficulty: [...prev.difficulty, diff] };
+                                  }
+                                });
+                              }}
                                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 
-                                  ${filters.difficulty === diff
-                                    ? 'bg-green-100 text-green-800 border border-green-200 shadow-sm transform scale-105'
+                                ${filters.difficulty.includes(diff)
+                                  ? 'bg-green-100 text-green-800 border border-green-200 shadow-sm'
                                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-green-200'
                                   }`}
                               >
@@ -1239,33 +1426,21 @@ export default function QuestionsPage() {
                         </div>
                       </div>
                     )}
-                  </div>
 
-                  {/* Advanced Filters Section */}
-                  <div className="filter-section border-t pt-4">
-                    <button
-                      onClick={() => setExpandedSections(prev => ({ ...prev, advanced: !prev.advanced }))}
-                      className="flex items-center justify-between w-full mb-2 text-green-800 hover:text-green-600"
-                    >
-                      <div className="flex items-center">
-                        <AcademicCapIcon className="h-5 w-5 mr-2" />
-                        <span className="font-medium">Advanced Filters</span>
+                  {/* Advanced Filters Tab */}
+                  {activeTab === 'advanced' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center mb-2">
+                        <AcademicCapIcon className="h-5 w-5 text-green-600 mr-2" />
+                        <h3 className="text-sm font-medium text-green-800">Advanced Filters</h3>
                       </div>
-                      <ChevronDownIcon 
-                        className={`h-5 w-5 transition-transform duration-200 ${
-                          expandedSections.advanced ? 'transform rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-
-                    {expandedSections.advanced && (
-                      <div className="space-y-4">
+                      
                         {/* Exam Type Filter */}
                         <div className="filter-group">
                           <label className="block text-sm font-medium text-green-700 mb-2">Exam Type</label>
-                          <CustomSelect
-                            value={filters.examType}
-                            onChange={(value) => setFilters({ ...filters, examType: value })}
+                        <CheckboxMultiSelect
+                          values={filters.examType}
+                          onChange={(values) => setFilters({ ...filters, examType: values })}
                             options={filterOptions.examTypes}
                             placeholder="All Exam Types"
                           />
@@ -1274,24 +1449,69 @@ export default function QuestionsPage() {
                         {/* Class Filter */}
                         <div className="filter-group">
                           <label className="block text-sm font-medium text-green-700 mb-2">Class</label>
-                          <CustomSelect
-                            value={filters.class}
-                            onChange={(value) => setFilters({ ...filters, class: value })}
+                        <CheckboxMultiSelect
+                          values={filters.class}
+                          onChange={(values) => setFilters({ ...filters, class: values })}
                             options={[
-                              { value: 'none', label: 'All Classes' },
+                            { value: 'class_9', label: 'Class 9' },
+                            { value: 'class_10', label: 'Class 10' },
                               { value: 'class_11', label: 'Class 11' },
-                              { value: 'class_12', label: 'Class 12' }
+                            { value: 'class_12', label: 'Class 12' },
+                            { value: 'none', label: 'Not Applicable' }
                             ]}
                             placeholder="Select Class"
+                          />
+                        </div>
+
+                      {/* Question Type */}
+                      <div className="filter-group">
+                        <label className="block text-sm font-medium text-green-700 mb-2">Question Type</label>
+                        <CheckboxMultiSelect
+                          values={filters.questionType}
+                          onChange={(values) => setFilters({ ...filters, questionType: values })}
+                          options={filterOptions.questionTypes}
+                          placeholder="All Question Types"
+                        />
+                      </div>
+
+                      {/* Question Category */}
+                      <div className="filter-group">
+                        <label className="block text-sm font-medium text-green-700 mb-2">Question Category</label>
+                        <CheckboxMultiSelect
+                          values={filters.questionCategory}
+                          onChange={(values) => setFilters({ ...filters, questionCategory: values })}
+                          options={filterOptions.questionCategories}
+                          placeholder="All Categories"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Additional Filters Tab */}
+                  {activeTab === 'additional' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center mb-2">
+                        <AdjustmentsHorizontalIcon className="h-5 w-5 text-green-600 mr-2" />
+                        <h3 className="text-sm font-medium text-green-800">Additional Options</h3>
+                      </div>
+                      
+                      {/* Question Source */}
+                      <div className="filter-group">
+                        <label className="block text-sm font-medium text-green-700 mb-2">Question Source</label>
+                        <CheckboxMultiSelect
+                          values={filters.questionSource}
+                          onChange={(values) => setFilters({ ...filters, questionSource: values })}
+                          options={filterOptions.questionSources}
+                          placeholder="All Sources"
                           />
                         </div>
 
                         {/* Language Level */}
                         <div className="filter-group">
                           <label className="block text-sm font-medium text-green-700 mb-2">Language Level</label>
-                          <CustomSelect
-                            value={filters.languageLevel}
-                            onChange={(value) => setFilters({ ...filters, languageLevel: value })}
+                        <CheckboxMultiSelect
+                          values={filters.languageLevel}
+                          onChange={(values) => setFilters({ ...filters, languageLevel: values })}
                             options={filterOptions.languageLevels}
                             placeholder="All Levels"
                           />
@@ -1348,39 +1568,51 @@ export default function QuestionsPage() {
                         </div>
                       </div>
                     )}
-                  </div>
 
-                  {/* Sorting Section */}
-                  <div className="filter-section border-t pt-4">
-                    <button
-                      onClick={() => setExpandedSections(prev => ({ ...prev, sorting: !prev.sorting }))}
-                      className="flex items-center justify-between w-full mb-2 text-green-800 hover:text-green-600"
-                    >
-                      <div className="flex items-center">
-                        <ClockIcon className="h-5 w-5 mr-2" />
-                        <span className="font-medium">Sort Questions</span>
+                  {/* Sorting Tab */}
+                  {activeTab === 'sorting' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center mb-2">
+                        <ClockIcon className="h-5 w-5 text-green-600 mr-2" />
+                        <h3 className="text-sm font-medium text-green-800">Sort Questions</h3>
                       </div>
-                      <ChevronDownIcon 
-                        className={`h-5 w-5 transition-transform duration-200 ${
-                          expandedSections.sorting ? 'transform rotate-180' : ''
-                        }`}
-                      />
-                    </button>
-
-                    {expandedSections.sorting && (
-                      <div className="space-y-4">
+                      
                         <div className="filter-group">
+                        <label className="block text-sm font-medium text-green-700 mb-2">Sort By</label>
                           <CustomSelect
                             value={filters.sortBy}
                             onChange={(value) => setFilters({ ...filters, sortBy: value })}
                             options={sortOptions}
                             placeholder="Select Sorting"
-                            className="bg-green-50"
-                          />
+                          className="bg-white"
+                        />
+                        
+                        <div className="mt-3">
+                          <label className="block text-sm font-medium text-green-700 mb-2">Sort Direction</label>
+                          <div className="flex">
+                            <button
+                              onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'asc' }))}
+                              className={`flex-1 px-3 py-2 border border-r-0 rounded-l-lg text-sm font-medium 
+                                ${filters.sortOrder === 'asc' 
+                                  ? 'bg-green-500 text-white' 
+                                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                            >
+                              Ascending
+                            </button>
+                            <button
+                              onClick={() => setFilters(prev => ({ ...prev, sortOrder: 'desc' }))}
+                              className={`flex-1 px-3 py-2 border rounded-r-lg text-sm font-medium 
+                                ${filters.sortOrder === 'desc' 
+                                  ? 'bg-green-500 text-white' 
+                                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                            >
+                              Descending
+                            </button>
                         </div>
                       </div>
-                    )}
                   </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

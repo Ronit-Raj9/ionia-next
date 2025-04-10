@@ -20,7 +20,7 @@ const PreviousYearPapers = () => {
   useEffect(() => {
     const fetchPapers = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/previous-year-papers/get`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests`);
         if (!res.ok) {
           throw new Error("Failed to fetch papers");
         }

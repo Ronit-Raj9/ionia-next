@@ -49,22 +49,31 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * verifyRole(...roles)
- *  - Checks if req.user has any of the allowed roles
+ * verifyRole(rolesArray)
+ *  - Checks if req.user has any of the allowed roles provided in the array
  *  - If not, throws 403 Forbidden
  */
-export const verifyRole = (...allowedRoles) => {
+export const verifyRole = (allowedRoles) => {
+  // Ensure allowedRoles is always an array, even if a single role string is passed accidentally
+  const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  
   return asyncHandler((req, res, next) => {
+    console.log(`🛂 Verifying role for path: ${req.originalUrl}`);
     if (!req.user) {
+      console.error("❌ Role verification failed: No user attached to request.");
       throw new ApiError(401, "Unauthorized: No user attached to request.");
     }
 
-    // user.role must exist on the user model
     const userRole = req.user.role;
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    console.log(`🧑 User role found: '${userRole}'`);
+    console.log(`🔑 Allowed roles: ${rolesArray.join(', ')}`);
+    
+    if (!userRole || !rolesArray.includes(userRole)) {
+      console.error(`🚫 Role verification failed: User role '${userRole}' is not in allowed roles [${rolesArray.join(', ')}].`);
       throw new ApiError(403, "Forbidden: You do not have the required permissions.");
     }
 
+    console.log("✅ Role verification successful.");
     next();
   });
 };

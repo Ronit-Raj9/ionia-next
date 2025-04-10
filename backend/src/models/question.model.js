@@ -77,6 +77,7 @@ const questionSchema = new mongoose.Schema(
                 message: '{VALUE} is not a valid question type'
             }
         },
+
         options: {
             type: [{
                 text: { 

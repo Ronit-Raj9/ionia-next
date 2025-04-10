@@ -4,6 +4,20 @@
 const apiCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+// Get the API base URL with proper environment detection
+const getApiBaseUrl = (): string => {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  }
+  
+  return process.env.NEXT_PUBLIC_API_URL || 
+    (window.location.hostname === 'localhost' 
+      ? 'http://localhost:8000/api/v1' 
+      : `${window.location.origin}/api/v1`);
+};
+
+const API_BASE = getApiBaseUrl();
+
 // Preload queue for managing preloaded API calls
 const preloadQueue: Array<{ url: string; options?: RequestInit }> = [];
 let isProcessingQueue = false;
@@ -21,13 +35,40 @@ const onTokenRefreshed = (token: string) => {
   refreshSubscribers = [];
 };
 
+// Determine if credentials should be included based on URL and environment
+const shouldIncludeCredentials = (url: string): boolean => {
+  if (process.env.NODE_ENV === 'development') {
+    return true;
+  }
+  
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  
+  // Check if URL domain matches the current origin
+  try {
+    const urlObj = new URL(url);
+    return urlObj.origin === window.location.origin;
+  } catch {
+    // For relative URLs, assume same origin
+    return true;
+  }
+};
+
 const refreshToken = async () => {
   try {
     if (!isRefreshing) {
       isRefreshing = true;
+      
+      const useCredentials = shouldIncludeCredentials(`${API_BASE}/users/refresh-token`);
+      
       const response = await fetch(`${API_BASE}/users/refresh-token`, {
         method: 'POST',
-        credentials: 'include',
+        credentials: useCredentials ? 'include' : 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -181,14 +222,18 @@ export const fetchWithCache = async <T>(
   const accessToken = localStorage.getItem('accessToken');
   const headers = {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...(options?.headers || {}),
   };
 
+  // Determine if we should include credentials
+  const useCredentials = shouldIncludeCredentials(url);
+
   try {
     const response = await fetch(url, {
       ...options,
-      credentials: 'include',
+      credentials: useCredentials ? 'include' : 'same-origin',
       headers,
     });
 
@@ -199,7 +244,7 @@ export const fetchWithCache = async <T>(
         if (newToken) {
           const newResponse = await fetch(url, {
             ...options,
-            credentials: 'include',
+            credentials: useCredentials ? 'include' : 'same-origin',
             headers: {
               ...headers,
               Authorization: `Bearer ${newToken}`,
@@ -249,9 +294,17 @@ export const fetchWithCache = async <T>(
         timestamp: Date.now(),
       });
     }
+    
     return data as T;
   } catch (error) {
-    console.error('API request failed:', error);
+    console.error('API request error:', error);
+    
+    // Add more detailed error logging
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    
     throw error;
   }
 };
@@ -303,9 +356,6 @@ interface LoginResponse {
   accessToken: string;
   refreshToken: string;
 }
-
-// Base API URL
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
 /**
  * API endpoints
@@ -391,25 +441,29 @@ export const API = {
   },
   tests: {
     getAll: () => 
-      fetchWithCache<APIResponse<Test[]>>(`${API_BASE}/previous-year-papers/get`),
+      fetchWithCache<APIResponse<Test[]>>(`${API_BASE}/tests`),
     getById: (id: string) => 
-      fetchWithCache<APIResponse<Test>>(`${API_BASE}/previous-year-papers/get/${id}`),
+      fetchWithCache<APIResponse<Test>>(`${API_BASE}/tests/${id}`),
+    getTestForAttempt: (id: string) => 
+      fetchWithCache<APIResponse<Test>>(`${API_BASE}/tests/${id}/attempt`, {
+        credentials: 'include', // Ensure cookies are sent for authentication
+      }),
     create: (testData: any) => 
-      fetchWithCache<APIResponse<Test>>(`${API_BASE}/previous-year-papers/add`, {
+      fetchWithCache<APIResponse<Test>>(`${API_BASE}/tests`, {
         method: 'POST',
         body: JSON.stringify(testData),
       }),
-    submitResults: (paperId: string, results: any) =>
+    submitResults: (testId: string, results: any) =>
       fetchWithCache<APIResponse<TestResults>>(`${API_BASE}/test-results/submit`, {
         method: 'POST',
-        body: JSON.stringify({ paperId, ...results }),
+        body: JSON.stringify({ testId, ...results }),
       }, true), // Skip cache for submissions
     getUserResults: (userId?: string) => {
       const query = userId ? `?userId=${userId}` : '';
       return fetchWithCache<APIResponse<TestResults[]>>(`${API_BASE}/test-results/user${query}`);
     },
-    getAnalysis: (paperId: string) =>
-      fetchWithCache<APIResponse<any>>(`${API_BASE}/test-results/analysis/${paperId}`),
+    getAnalysis: (testId: string) =>
+      fetchWithCache<APIResponse<any>>(`${API_BASE}/test-results/analysis/${testId}`),
     submitAttemptedTest: (payload: any) =>
       fetchWithCache<APIResponse<any>>(`${API_BASE}/attempted-tests/submit`, {
         method: 'POST',
@@ -433,5 +487,5 @@ if (typeof window !== 'undefined') {
 
   
   // Preload common test data
-  preloadData(`${API_BASE}/previous-year-papers/get`);
+  preloadData(`${API_BASE}/tests`);
 } 
