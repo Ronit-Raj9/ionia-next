@@ -8,8 +8,7 @@ import { AnalysisProvider } from '@/context/AnalysisContext';
 
 interface AnalysisPageProps {
   params: {
-    paperId: string;
-    examType: string;
+    attemptId: string;
   };
 }
 
@@ -18,8 +17,8 @@ const AnalysisPage: React.FC<AnalysisPageProps> = ({ params }) => {
     <Provider store={store}>
       <AnalysisProvider>
         <AnalysisWindow 
-          paperId={params.paperId} 
-          examType={params.examType}
+          paperId={params.attemptId} 
+          examType="cuet" // Default exam type
         />
       </AnalysisProvider>
     </Provider>

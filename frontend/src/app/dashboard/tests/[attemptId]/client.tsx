@@ -6,14 +6,13 @@ import { store } from '@/redux/store';
 import AnalysisWindow from '@/components/analysis/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
 import { useRouter } from 'next/navigation';
-import { AnalysisProvider } from '@/context/AnalysisContext';
 
+// Props interface
 interface ClientProps {
-  examType: string;
-  paperId: string;
+  attemptId: string;
 }
 
-export default function Client({ examType, paperId }: ClientProps) {
+const Client: React.FC<ClientProps> = ({ attemptId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -54,9 +53,9 @@ export default function Client({ examType, paperId }: ClientProps) {
   
   return (
     <Provider store={store}>
-      <AnalysisProvider>
-        <AnalysisWindow examType={examType} paperId={paperId} />
-      </AnalysisProvider>
+      <AnalysisWindow examType="cuet" paperId={attemptId} />
     </Provider>
   );
-} 
+};
+
+export default Client; 

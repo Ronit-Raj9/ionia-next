@@ -141,7 +141,20 @@ const getTests = asyncHandler(async (req, res) => {
     // Match stage based on filters
     const matchStage = {};
     if (testCategory) matchStage.testCategory = testCategory;
-    if (status) matchStage.status = status;
+    
+    // For non-admin users, only show published tests
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    
+    // If status is explicitly provided in the query and user is admin, use it
+    if (status && isAdmin) {
+        matchStage.status = status;
+    } else if (isAdmin && !status) {
+        // Admin can see all statuses if not specified
+    } else {
+        // Non-admin users or users without roles can only see published tests
+        matchStage.status = 'published';
+    }
+    
     if (subject) matchStage.subject = subject;
     if (examType) matchStage.examType = examType;
     if (className) matchStage.class = className;
@@ -151,8 +164,6 @@ const getTests = asyncHandler(async (req, res) => {
     if (isPremium !== undefined && testCategory === 'Platform') matchStage.isPremium = (isPremium === 'true');
     if (createdBy) matchStage.createdBy = new mongoose.Types.ObjectId(createdBy);
     if (tag) matchStage.tags = { $in: [tag] }; // Simple tag filter
-    // Add visibility filter: only show 'published' tests to non-admins? (Consider access control)
-    // Example: if (!isAdmin) matchStage.status = 'published';
 
     if (Object.keys(matchStage).length > 0) {
         pipeline.push({ $match: matchStage });
@@ -220,9 +231,10 @@ const getTestById = asyncHandler(async (req, res) => {
     }
 
     // Add access control check here if needed (e.g., only published tests for users)
-    // if (req.user.role !== 'admin' && req.user.role !== 'superadmin' && test.status !== 'published') {
-    //     throw new ApiError(403, "You do not have permission to view this test");
-    // }
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    if (!isAdmin && test.status !== 'published') {
+        throw new ApiError(403, "You do not have permission to view this test");
+    }
 
     console.log(`Found test: ${test.title}`);
     return res.status(200).json(
@@ -384,6 +396,13 @@ const getTestForAttempt = asyncHandler(async (req, res) => {
     }
 
     console.log(`Found test: "${test.title}" with ${test.questions?.length || 0} question IDs`);
+    
+    // Check if test is published
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    if (!isAdmin && test.status !== 'published') {
+        console.log(`Attempt rejected: Test status is ${test.status}, not published`);
+        throw new ApiError(403, "This test is not available for attempt");
+    }
     
     // Check if we have questions
     if (!test.questions || !Array.isArray(test.questions) || test.questions.length === 0) {

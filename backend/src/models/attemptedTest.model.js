@@ -1,16 +1,85 @@
 import mongoose, { Schema } from "mongoose";
 
+// Schema for individual answers
+const AnswerSchema = new Schema({
+  questionId: {
+    type: Schema.Types.ObjectId,
+    ref: "Question",
+    required: true
+  },
+  answerOptionIndex: {
+    type: Number,
+    default: null
+  },
+  timeSpent: {
+    type: Number,
+    default: 0
+  },
+  // To avoid recalculating
+  isCorrect: {
+    type: Boolean,
+    default: false
+  }
+}, { _id: false });
+
+// Navigation event schema
+const NavigationEventSchema = new Schema({
+  timestamp: {
+    type: Date,
+    required: true
+  },
+  questionId: {
+    type: Schema.Types.ObjectId,
+    ref: "Question"
+  },
+  action: {
+    type: String,
+    enum: ["visit", "leave", "mark", "unmark", "answer", "clear"]
+  },
+  timeSpent: Number
+}, { _id: false });
+
+// Environment schema
+const EnvironmentSchema = new Schema({
+  device: {
+    userAgent: String,
+    screenResolution: String,
+    deviceType: {
+      type: String,
+      enum: ["desktop", "tablet", "mobile"],
+      default: "desktop"
+    }
+  },
+  session: {
+    tabSwitches: {
+      type: Number,
+      default: 0
+    },
+    disconnections: [{
+      startTime: Date,
+      endTime: Date,
+      duration: Number
+    }],
+    browserRefreshes: {
+      type: Number,
+      default: 0
+    }
+  }
+}, { _id: false });
+
 const attemptedTestSchema = new Schema({
   // Core Test Information
   userId: {  
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
+    index: true,
   },
   testId: {  
     type: Schema.Types.ObjectId,
     ref: 'PreviousTest',
     required: true,
+    index: true,
   },
   attemptNumber: {
     type: Number,
@@ -22,33 +91,36 @@ const attemptedTestSchema = new Schema({
     required: true,
   },
   startTime: {
-    type: Number,
+    type: Date,
     required: true,
   },
   endTime: {
-    type: Number,
+    type: Date,
     required: true,
   },
 
   // Metadata to store additional test information
   metadata: {
-    type: Object,
-    default: {}
+    totalQuestions: Number,
+    answeredQuestions: [Schema.Types.ObjectId],
+    visitedQuestions: [Schema.Types.ObjectId],
+    markedForReview: [Schema.Types.ObjectId],
+    selectedLanguage: String
   },
 
   // Answers array to store user answers
   answers: {
-    type: Array,
-    required: true,
+    type: [AnswerSchema],
+    default: []
   },
 
   // Question States
   questionStates: {
-    notVisited: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
-    notAnswered: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
-    answered: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
-    markedForReview: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
-    markedAndAnswered: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
+    notVisited: [Schema.Types.ObjectId],
+    notAnswered: [Schema.Types.ObjectId],
+    answered: [Schema.Types.ObjectId],
+    markedForReview: [Schema.Types.ObjectId],
+    markedAndAnswered: [Schema.Types.ObjectId]
   },
 
   // Responses
@@ -108,14 +180,14 @@ const attemptedTestSchema = new Schema({
       moreThan2Min: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
     },
     peakPerformancePeriods: [{
-      startTime: Number,
-      endTime: Number,
+      startTime: Date,
+      endTime: Date,
       questionsAnswered: Number,
       correctAnswers: Number,
     }],
     fatiguePeriods: [{
-      startTime: Number,
-      endTime: Number,
+      startTime: Date,
+      endTime: Date,
       increasedTimePerQuestion: Number,
       wrongAnswers: Number,
     }],
@@ -124,36 +196,27 @@ const attemptedTestSchema = new Schema({
   // Error Analytics
   errorAnalytics: {
     commonMistakes: [{
-      questionId: { type: Schema.Types.ObjectId, ref: 'Question' },
-      selectedOption: Number,
-      correctOption: Number,
-      conceptTested: String,
-      timeSpentBeforeError: Number,
+      pattern: String,
+      count: Number,
+      questionIds: [Schema.Types.ObjectId]
     }],
     errorPatterns: {
-      conceptualErrors: [String],
-      calculationErrors: [String],
-      timeManagementErrors: [String],
-      carelessMistakes: [String],
+      type: Map,
+      of: Number
     },
   },
 
   // Behavioral Analytics
   behavioralAnalytics: {
-    revisitPatterns: [{
-      questionId: { type: Schema.Types.ObjectId, ref: 'Question' },
-      visitCount: Number,
-      timeBetweenVisits: [Number],
-      finalOutcome: {
-        type: String,
-        enum: ['correct', 'incorrect', 'unattempted'],
-      },
-    }],
     sectionTransitions: [{
-      fromSubject: String,
-      toSubject: String,
-      timestamp: Number,
-      timeSpentInPrevSection: Number,
+      from: String,
+      to: String,
+      count: Number
+    }],
+    revisitPatterns: [{
+      questionId: Schema.Types.ObjectId,
+      visitCount: Number,
+      changesMade: Number
     }],
     confidenceMetrics: {
       quickAnswers: [{ type: Schema.Types.ObjectId, ref: 'Question' }],
@@ -163,34 +226,15 @@ const attemptedTestSchema = new Schema({
   },
 
   // Navigation History
-  navigationHistory: [{
-    timestamp: Number,
-    fromQuestion: { type: Schema.Types.ObjectId, ref: 'Question' },
-    toQuestion: { type: Schema.Types.ObjectId, ref: 'Question' },
-    action: {
-      type: String,
-      enum: ['click', 'next', 'prev', 'mark', 'unmark', 'answer'],
-    },
-  }],
+  navigationHistory: {
+    type: [NavigationEventSchema],
+    default: []
+  },
 
   // Environment Data
   environment: {
-    device: {
-      userAgent: String,
-      screenResolution: String,
-      deviceType: {
-        type: String,
-        enum: ['mobile', 'tablet', 'desktop'],
-      },
-    },
-    session: {
-      tabSwitches: Number,
-      disconnections: [{
-        startTime: Number,
-        endTime: Number,
-      }],
-      browserRefreshes: Number,
-    },
+    type: EnvironmentSchema,
+    default: () => ({})
   },
 
   totalCorrectAnswers: {  
@@ -201,7 +245,15 @@ const attemptedTestSchema = new Schema({
     type: Number,
     default: 0,
   },
+  totalUnattempted: {  
+    type: Number,
+    default: 0,
+  },
   totalVisitedQuestions: {  
+    type: Number,
+    default: 0,
+  },
+  score: {  
     type: Number,
     default: 0,
   },
@@ -293,5 +345,15 @@ attemptedTestSchema.post('save', async function () {
     console.error("Error in post-save hook for AttemptedTest:", err);
   }
 });
+
+// Indexes for performance
+attemptedTestSchema.index({ userId: 1, testId: 1 });
+attemptedTestSchema.index({ startTime: -1 });
+
+// Methods
+attemptedTestSchema.methods.calculateResults = function() {
+  // Calculate scores and other metrics
+  // This would be called before saving or automatically in a pre-save hook
+};
 
 export const AttemptedTest = mongoose.model('AttemptedTest', attemptedTestSchema);

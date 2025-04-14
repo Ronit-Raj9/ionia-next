@@ -49,12 +49,12 @@ const PreviousYearPapers = () => {
       <h1 className="text-3xl font-bold mb-6">Previous Year Papers</h1>
       <ul className="space-y-4">
         {papers.map((paper) => {
-          console.log(`/exam/${examType}/previous-year-paper/${paper._id}`);
+          console.log(`/exam/${examType}/paper/${paper._id}`);
           return (
             <li
               key={paper._id}
               className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-100"
-              onClick={() => router.push(`/exam/${examType}/previous-year-paper/${paper._id}`)}
+              onClick={() => router.push(`/exam/${examType}/mock-test/${paper._id}`)}
             >
               <h2 className="text-xl font-semibold">{paper.title}</h2>
               <p>{paper.description}</p>

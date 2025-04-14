@@ -9,8 +9,8 @@ import {
   getInteractionMetrics,
   getPerformanceTrends,
   getSubjectAnalysis,
-  getBehavioralInsights,
-  deleteTestAttempt
+  deleteTestAttempt,
+  getSolutions
 } from "../controllers/attemptedTest.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -43,10 +43,10 @@ router.route("/performance-trends").get(verifyJWT, getPerformanceTrends);
 // Get subject-wise analysis
 router.route("/subject-analysis").get(verifyJWT, getSubjectAnalysis);
 
-// Get behavioral insights
-router.route("/behavioral-insights").get(verifyJWT, getBehavioralInsights);
-
 // Delete test attempt
 router.route("/delete/:testId").delete(verifyJWT, deleteTestAttempt);
+
+// Get solutions for a specific test attempt
+router.route("/solutions/:attemptId").get(verifyJWT, getSolutions);
 
 export default router;

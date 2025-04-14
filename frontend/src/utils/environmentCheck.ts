@@ -1,15 +1,18 @@
 "use client";
 
-export function checkEnvironment(): { isValid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  
-  // Check for required environment variables
-  if (!process.env.NEXT_PUBLIC_API_URL) {
-    errors.push('NEXT_PUBLIC_API_URL is not defined');
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
+export function checkEnvironment(): Promise<{ supported: boolean; message?: string }> {
+  return new Promise((resolve) => {
+    // Basic browser feature checks
+    const supported = typeof window !== 'undefined' && 
+                      typeof localStorage !== 'undefined' && 
+                      typeof fetch !== 'undefined';
+    
+    // Add more checks as needed
+    
+    // Return result
+    resolve({
+      supported,
+      message: supported ? undefined : 'Your browser does not support required features'
+    });
+  });
 } 

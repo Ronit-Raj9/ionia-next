@@ -1,4 +1,4 @@
-import { configureStore, combineReducers, getDefaultMiddleware } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import { FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
@@ -24,6 +24,7 @@ const rootReducer = combineReducers({
 // Configuration for redux-persist
 const persistConfig = {
   key: 'root',
+  version: 1,
   storage,
   // Whitelist reducers you wish to persist (adjust as needed)
   whitelist: ['auth', 'test'],
@@ -45,27 +46,20 @@ const apiErrorLoggerMiddleware = (store: any) => (next: any) => (action: any) =>
 };
 
 // Create the store using the persisted reducer
-export const makeStore = () => {
-  const store = configureStore({
-    reducer: persistedReducer,
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({
-        serializableCheck: {
-          ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-        },
-      }).concat(apiErrorLoggerMiddleware),
-  });
+export const store = configureStore({
+  reducer: persistedReducer,
+  middleware: (getDefaultMiddleware) => 
+    getDefaultMiddleware({
+      serializableCheck: {
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+      },
+    }),
+});
 
-  const persistor = persistStore(store);
-  return { store, persistor };
-};
+export const persistor = persistStore(store);
 
 // Define RootState and AppDispatch types
-export type RootState = ReturnType<typeof rootReducer>;
-export type AppDispatch = ReturnType<typeof makeStore>['store']['dispatch'];
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
 
-// Create store instance
-const { store, persistor } = makeStore();
-// Export both store and persistor
-export { persistor };
 export default store;

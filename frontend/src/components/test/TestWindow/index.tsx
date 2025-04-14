@@ -24,7 +24,7 @@ import ActionButtons from './Controls/ActionButtons';
 import LanguageSelector from './Controls/LanguageSelector';
 import { ClipLoader } from 'react-spinners';
 import { startQuestionTimer, pauseQuestionTimer, resetTimeTracking, updateQuestionTime } from '@/redux/slices/timeTrackingSlice';
-import { setAnalysisData } from '@/redux/slices/analysisSlice';
+import { setAnalysisData, setLoading as setAnalysisLoading } from '@/redux/slices/analysisSlice';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from '@/redux/slices/authSlice';
 import type { Test } from '@/redux/slices/testSlice';
@@ -64,6 +64,43 @@ interface Question {
   isVisited: boolean;
   userAnswer?: number;
 }
+
+// Function to fetch analysis data - add this after imports and before component definition
+export const fetchTestAnalysis = async (attemptId: string) => {
+  try {
+    // The controller expects attemptId as a query parameter
+    const queryParams = new URLSearchParams();
+    if (attemptId) {
+      queryParams.append('attemptId', attemptId);
+    }
+    
+    // Get paperId from localStorage if available (as a fallback)
+    const paperId = localStorage.getItem('lastSubmittedPaperId');
+    if (paperId) {
+      queryParams.append('paperId', paperId);
+    }
+    
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || ''}/attempted-tests/analysis?${queryParams.toString()}`;
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch analysis: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    console.error('Error fetching test analysis:', error);
+    throw error;
+  }
+};
 
 const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) => {
   const router = useRouter();
@@ -328,20 +365,75 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           answerOptionIndex: q.userAnswer,
           timeSpent: timeTrackingState.questionTimes[index]?.totalTime || 0
         }))
-        .filter(answer => answer.answerOptionIndex !== undefined) || [];
+        .filter(answer => answer.questionId) || [];
 
-      const payload = {
-        testId: paperId,
-        paperId: paperId,
-        userId: getUserId(),
-        answers: formattedAnswers,
-        language: language
+      // Create metadata about question states
+      const questionStates = {
+        notVisited: currentTest?.questions.filter(q => !q.isVisited).map(q => q._id) || [],
+        notAnswered: currentTest?.questions.filter(q => q.isVisited && q.userAnswer === undefined).map(q => q._id) || [],
+        answered: currentTest?.questions.filter(q => q.userAnswer !== undefined).map(q => q._id) || [],
+        markedForReview: currentTest?.questions.filter(q => q.isMarked).map(q => q._id) || [],
+        markedAndAnswered: currentTest?.questions.filter(q => q.isMarked && q.userAnswer !== undefined).map(q => q._id) || []
       };
 
-      console.log("Submitting test...");
+      // Create navigation history from tracked events
+      const formattedNavigationHistory = navigationEvents.map(event => {
+        // Map custom actions to valid enum values from the schema
+        let validAction = "visit";
+        if (event.action === "click") validAction = "visit";
+        // You can add more mappings if needed
+        
+        return {
+          timestamp: event.timestamp,
+          questionId: currentTest?.questions[event.toQuestion]?._id || null,
+          action: validAction,
+          timeSpent: timeTrackingState.questionTimes[event.fromQuestion]?.totalTime || 0
+        };
+      });
+
+      // Create environment data
+      const environmentData = {
+        device: {
+          userAgent: navigator.userAgent,
+          screenResolution: `${window.screen.width}x${window.screen.height}`,
+          deviceType: window.innerWidth <= 768 ? 'mobile' : window.innerWidth <= 1024 ? 'tablet' : 'desktop'
+        },
+        session: {
+          tabSwitches: tabSwitchCount,
+          disconnections: networkDisconnections.map(d => ({
+            startTime: d.startTime,
+            endTime: d.endTime || Date.now(),
+            duration: (d.endTime || Date.now()) - d.startTime
+          })),
+          browserRefreshes: pageReloads
+        }
+      };
+
+      const testCompleteTime = Date.now();
+      
+      const payload = {
+        testId: paperId,
+        language: language,
+        startTime: testStartTime,
+        endTime: testCompleteTime,
+        totalTimeTaken: testCompleteTime - testStartTime,
+        answers: formattedAnswers,
+        metadata: {
+          totalQuestions: currentTest?.questions.length || 0,
+          answeredQuestions: questionStates.answered,
+          visitedQuestions: currentTest?.questions.filter(q => q.isVisited).map(q => q._id) || [],
+          markedForReview: questionStates.markedForReview,
+          selectedLanguage: language
+        },
+        questionStates,
+        navigationHistory: formattedNavigationHistory,
+        environment: environmentData
+      };
+
+      console.log("Submitting test with payload:", payload);
       
       // Submit test
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attempted-tests/submit`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/attempted-tests/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -350,24 +442,52 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         body: JSON.stringify(payload),
       });
 
-      if (response.ok) {
-        toast?.success("Test submitted successfully!");
-        router.push(`/exam/${examType || "general"}/previous-year-paper/${paperId}/analysis/`);
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        toast?.error(`Submission failed: ${errorData.message || "Unknown error"}`);
+        throw new Error(errorData.message || "Failed to submit test");
+      }
+
+      const responseData = await response.json();
+      toast?.success("Test submitted successfully!");
+      
+      // Store both attempt ID and test ID for analysis page
+      if (responseData.data && responseData.data.attemptId) {
+        localStorage.setItem('currentAttemptId', responseData.data.attemptId);
+        localStorage.setItem('lastSubmittedPaperId', paperId);
+        
+        try {
+          // Fetch the analysis data using the attemptId
+          dispatch(setAnalysisLoading(true));
+          const analysisData = await fetchTestAnalysis(responseData.data.attemptId);
+          
+          if (analysisData) {
+            // Store in Redux for the analysis page to use
+            dispatch(setAnalysisData(analysisData));
+          }
+        } catch (analysisError) {
+          console.error("Error fetching analysis data:", analysisError);
+          // Continue with redirection even if analysis fetch fails
+        }
+        
+        // Redirect to analysis page without attempt ID
+        router.push(`/exam/${examType || "general"}/mock-test/${paperId}/analysis`);
+      } else {
+        // Still store paperId even if no attemptId is returned
+        localStorage.setItem('lastSubmittedPaperId', paperId);
+        router.push(`/exam/${examType || "general"}/mock-test/${paperId}/analysis`);
       }
     } catch (err) {
       console.error("Error submitting test:", err);
-      toast?.error("An error occurred while submitting the test. Please try again.");
+      toast?.error(`An error occurred while submitting the test: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setIsLoading(false);
+      setConfirmSubmit(false);
     }
   };
   
   const handleTimeEnd = useCallback(() => {
     dispatch(submitTest());
-    router.push(`/exam/${examType}/previous-year-paper/${paperId}/analysis`);
+    router.push(`/exam/${examType}/mock-test/${paperId}/analysis`);
   }, [dispatch, router, examType, paperId]);
   
   // Get test statistics

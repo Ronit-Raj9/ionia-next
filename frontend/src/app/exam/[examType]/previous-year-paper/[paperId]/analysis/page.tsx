@@ -2,6 +2,9 @@
 
 import React from 'react';
 import AnalysisWindow from '@/components/analysis/AnalysisWindow';
+import { Provider } from 'react-redux';
+import { store } from '@/redux/store';
+import { AnalysisProvider } from '@/context/AnalysisContext';
 
 interface AnalysisPageProps {
   params: {
@@ -12,10 +15,14 @@ interface AnalysisPageProps {
 
 const AnalysisPage: React.FC<AnalysisPageProps> = ({ params }) => {
   return (
-    <AnalysisWindow 
-      paperId={params.paperId} 
-      examType={params.examType}
-    />
+    <Provider store={store}>
+      <AnalysisProvider>
+        <AnalysisWindow 
+          paperId={params.paperId} 
+          examType={params.examType}
+        />
+      </AnalysisProvider>
+    </Provider>
   );
 };
 

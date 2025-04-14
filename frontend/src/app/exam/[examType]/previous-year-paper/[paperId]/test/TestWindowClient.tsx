@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import TestWindow from '@/components/test/TestWindow';
 import { ClipLoader } from 'react-spinners';
 import { Provider } from 'react-redux';
-import { makeStore } from '@/redux/store';
+import { store } from '@/redux/store';
 
 interface TestWindowClientProps {
   examType: string;
@@ -16,22 +17,23 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  
-  // Create Redux store instance
-  const [{ store }] = useState(() => makeStore());
 
   useEffect(() => {
-    // Simple initialization logic
-    try {
-      // Simulate initialization
-      setTimeout(() => {
+    // Initialize test
+    const initializeTest = async () => {
+      try {
+        // Simulate loading time
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 500);
+      } catch (err) {
+        console.error('Failed to initialize test:', err);
+        setError('Failed to load test data. Please try again.');
         setIsLoading(false);
-      }, 500);
-    } catch (err) {
-      console.error('Failed to initialize test:', err);
-      setError('Failed to load test data. Please try again.');
-      setIsLoading(false);
-    }
+      }
+    };
+
+    initializeTest();
   }, [paperId]);
 
   if (isLoading) {
@@ -58,12 +60,12 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
             >
               Try again
             </button>
-            <button 
-              onClick={() => router.push('/')}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            <Link
+              href="/dashboard"
+              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-center"
             >
-              Return to Home
-            </button>
+              Return to Dashboard
+            </Link>
           </div>
         </div>
       </div>

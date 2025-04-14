@@ -62,10 +62,7 @@ export default function TestPage() {
   
   return (
     <div id="test-window-container" className="min-h-screen bg-white">
-      <TestWindowClientWrapper 
-        examType={examType} 
-        paperId={paperId} 
-      />
+      <TestWindowClientWrapper />
     </div>
   );
 }

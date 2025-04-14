@@ -42,6 +42,30 @@ export interface AnalysisData {
   progressionMetrics: ProgressionMetrics;
   historicalComparison: HistoricalComparison;
   subjectWise: Record<string, SubjectMetrics>;
+  performance: {
+    totalCorrectAnswers: number;
+    totalWrongAnswers: number;
+    totalUnattempted?: number;
+    unattempted?: number;
+    totalQuestions: number;
+    score?: number;
+    totalTimeTaken?: number;
+  };
+  timeAnalytics?: {
+    totalTimeSpent: number;
+    averageTimePerQuestion: number;
+  };
+  answers?: Array<{
+    isCorrect: boolean;
+    selectedOption?: any;
+  }>;
+  testInfo?: {
+    markingScheme?: {
+      correct: number;
+      incorrect: number;
+      unattempted: number;
+    };
+  };
 }
 
 export interface QuestionAnalysisType {

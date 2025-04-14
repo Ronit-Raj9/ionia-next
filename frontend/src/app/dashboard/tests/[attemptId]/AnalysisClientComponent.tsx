@@ -2,46 +2,46 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import TestWindow from '@/components/test/TestWindow';
+import AnalysisWindow from '@/components/analysis/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
 import { Provider } from 'react-redux';
 import { store } from '@/redux/store';
+import { setAnalysisData, setLoading } from '@/redux/slices/analysisSlice';
+import { AnalysisProvider } from '@/context/AnalysisContext';
 
-interface TestWindowClientProps {
-  examType: string;
-  paperId: string;
+interface AnalysisClientComponentProps {
+  attemptId: string;
 }
 
-export default function TestWindowClient({ examType, paperId }: TestWindowClientProps) {
+export default function AnalysisClientComponent({ attemptId }: AnalysisClientComponentProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  
+
   useEffect(() => {
-    // Initialize test
-    const initializeTest = async () => {
+    // Initialize analysis data
+    const initializeAnalysis = async () => {
       try {
-        // Simulate loading time
+        // Simulate loading time to allow Redux to initialize
         setTimeout(() => {
           setIsLoading(false);
         }, 500);
       } catch (err) {
-        console.error('Failed to initialize test:', err);
-        setError('Failed to load test data. Please try again.');
+        console.error('Failed to initialize analysis:', err);
+        setError('Failed to load analysis data. Please try again.');
         setIsLoading(false);
       }
     };
 
-    initializeTest();
-  }, [paperId]);
+    initializeAnalysis();
+  }, [attemptId]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center">
           <ClipLoader size={50} color="#3B82F6" />
-          <p className="mt-4 text-gray-700">Loading test...</p>
+          <p className="mt-4 text-gray-700">Loading analysis...</p>
         </div>
       </div>
     );
@@ -60,12 +60,12 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
             >
               Try again
             </button>
-            <Link
-              href="/dashboard"
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-center"
+            <button 
+              onClick={() => router.push('/dashboard/tests')}
+              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
             >
-              Return to Dashboard
-            </Link>
+              Return to My Tests
+            </button>
           </div>
         </div>
       </div>
@@ -74,7 +74,9 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
 
   return (
     <Provider store={store}>
-      <TestWindow examType={examType} paperId={paperId} />
+      <AnalysisProvider>
+        <AnalysisWindow examType="cuet" paperId={attemptId} />
+      </AnalysisProvider>
     </Provider>
   );
 } 

@@ -19,7 +19,7 @@ const Instructions = () => {
 
   const handleProceed = () => {
     if (paperId && examType) {
-      router.push(`/exam/${examType}/previous-year-paper/${paperId}/test`);
+      router.push(`/exam/${examType}/mock-test/${paperId}/test`);
     } else {
       console.error("Invalid paperId or examType");
     }

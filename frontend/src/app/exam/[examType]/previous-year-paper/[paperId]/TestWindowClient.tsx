@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import TestWindow from '@/components/test/TestWindow';
 import { ClipLoader } from 'react-spinners';
 import { Provider } from 'react-redux';
-import { makeStore } from '@/redux/store';
+import { store } from '@/redux/store';
 
 interface TestWindowClientProps {
   examType: string;
@@ -16,15 +17,12 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  
-  // Create Redux store instance
-  const [storeInstance] = useState(() => makeStore().store);
 
   useEffect(() => {
-    // Simulate checking if the test data is available or any other initialization
+    // Initialize test
     const initializeTest = async () => {
       try {
-        // You can add actual data fetching here if needed
+        // Simulate loading time
         setTimeout(() => {
           setIsLoading(false);
         }, 500);
@@ -62,12 +60,12 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
             >
               Try again
             </button>
-            <button 
-              onClick={() => router.push('/')}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            <Link
+              href="/dashboard"
+              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors text-center"
             >
-              Return to Home
-            </button>
+              Return to Dashboard
+            </Link>
           </div>
         </div>
       </div>
@@ -75,7 +73,7 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
   }
 
   return (
-    <Provider store={storeInstance}>
+    <Provider store={store}>
       <TestWindow examType={examType} paperId={paperId} />
     </Provider>
   );

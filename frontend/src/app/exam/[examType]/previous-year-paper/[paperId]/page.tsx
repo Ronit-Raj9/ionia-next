@@ -55,7 +55,7 @@ const TestDetails = () => {
         <p><strong>No. of Questions:</strong> {testDetails?.numberOfQuestions}</p>
       </div>
       <button
-        onClick={() => router.push(`/exam/${examType}/previous-year-paper/${paperId}/instructions`)}
+        onClick={() => router.push(`/exam/${examType}/mock-test/${paperId}/instructions`)}
         className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
       >
         Start Test

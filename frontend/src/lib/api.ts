@@ -483,6 +483,13 @@ export const API = {
         method: 'POST',
         body: JSON.stringify(payload),
       }, true), // Skip cache for submissions
+    getSolutions: (attemptId: string) =>
+      fetchWithCache<APIResponse<any>>(`${API_BASE}/attempted-tests/solutions/${attemptId}`, {
+        credentials: 'include', // Ensure cookies are sent for authentication
+        headers: {
+          'Accept': 'application/json',
+        }
+      }),
   },
   practice: {
     getSubjects: () =>

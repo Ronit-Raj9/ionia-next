@@ -4,6 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AnalysisWindow from '@/components/analysis/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
+import { Provider } from 'react-redux';
+import { store } from '@/redux/store';
+import { setAnalysisData, setLoading } from '@/redux/slices/analysisSlice';
+import { AnalysisProvider } from '@/context/AnalysisContext';
 
 interface AnalysisClientComponentProps {
   examType: string;
@@ -16,10 +20,10 @@ export default function AnalysisClientComponent({ examType, paperId }: AnalysisC
   const router = useRouter();
 
   useEffect(() => {
-    // Simulate checking if the analysis data is available or any other initialization
+    // Initialize analysis data
     const initializeAnalysis = async () => {
       try {
-        // You can add actual data fetching here if needed
+        // Simulate loading time to allow Redux to initialize
         setTimeout(() => {
           setIsLoading(false);
         }, 500);
@@ -31,7 +35,7 @@ export default function AnalysisClientComponent({ examType, paperId }: AnalysisC
     };
 
     initializeAnalysis();
-  }, [paperId]);
+  }, [examType, paperId]);
 
   if (isLoading) {
     return (
@@ -58,10 +62,10 @@ export default function AnalysisClientComponent({ examType, paperId }: AnalysisC
               Try again
             </button>
             <button 
-              onClick={() => router.push(`/exam/${examType}/previous-year-paper/${paperId}`)}
+              onClick={() => router.push('/dashboard/tests')}
               className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
             >
-              Return to Test
+              Return to My Tests
             </button>
           </div>
         </div>
@@ -69,5 +73,11 @@ export default function AnalysisClientComponent({ examType, paperId }: AnalysisC
     );
   }
 
-  return <AnalysisWindow examType={examType} paperId={paperId} />;
+  return (
+    <Provider store={store}>
+      <AnalysisProvider>
+        <AnalysisWindow examType={examType} paperId={paperId} />
+      </AnalysisProvider>
+    </Provider>
+  );
 } 
