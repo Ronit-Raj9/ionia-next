@@ -35,6 +35,36 @@ interface TestWindowProps {
   subject?: string;
 }
 
+// Define the types based on the new test data structure
+interface QuestionOption {
+  text: string;
+  image?: {
+    url: string;
+    publicId: string;
+  };
+}
+
+interface QuestionContent {
+  text: string;
+  image?: {
+    url: string;
+    publicId: string;
+  };
+}
+
+interface Question {
+  _id: string;
+  question: QuestionContent | string;
+  options: QuestionOption[];
+  subject: string;
+  examType: string;
+  difficulty: string;
+  isMarked: boolean;
+  timeTaken: number;
+  isVisited: boolean;
+  userAnswer?: number;
+}
+
 const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -102,7 +132,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     setIsClient(true);
   }, []);
 
-  // Fetch test data
+  // Simplified test data fetching
   useEffect(() => {
     const loadTest = async () => {
       if (paperId) {
@@ -110,34 +140,44 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         setError(null);
         
         try {
-          console.log("🔍 Making request to fetch test:", paperId);
-          // Log raw fetch response before Redux processing
-          const rawResponse = await fetch(`/api/v1/tests/${paperId}/attempt`, {
-            credentials: 'include'
-          });
-          console.log("📦 Raw API Response Status:", rawResponse.status);
-          const rawData = await rawResponse.clone().json();
-          console.log("📋 Raw API Response Data:", JSON.stringify(rawData, null, 2));
+          const apiUrl = `/tests/${paperId}`;
+          console.log("📌 Attempting to fetch test data for ID:", paperId);
           
-          // Continue with regular Redux fetch
-          dispatch(fetchTest(paperId))
-            .unwrap()
-            .then((data) => {
-              console.log("🧩 Redux processed test data structure:", Object.keys(data));
-              if (data.questions && data.questions.length > 0) {
-                console.log("🔢 First question keys:", Object.keys(data.questions[0]));
-                console.log("📝 First question content:", JSON.stringify(data.questions[0], null, 2));
-              }
-              setTest(data as unknown as Test);
-              // Start timer when test is loaded
-              dispatch(startTest());
-            })
-            .catch((err) => {
-              console.error("❌ Error in fetchTest Redux action:", err);
-              setError(`Failed to load test: ${err.message || "Unknown error"}`);
-            });
+          const token = localStorage.getItem('accessToken');
+          const headers: HeadersInit = {
+            'Accept': 'application/json'
+          };
+          
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+          
+          const response = await fetch(apiUrl, {
+            credentials: 'include',
+            headers
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API request failed with status ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          console.log("📋 Test data fetched successfully");
+          
+          // Use the data directly instead of dispatching to Redux
+          if (data.data) {
+            setTest(data.data);
+            dispatch({ type: 'test/setTest', payload: data.data });
+            dispatch(setActiveQuestion(0));
+            dispatch(startTest());
+          } else if (data) {
+            setTest(data);
+            dispatch({ type: 'test/setTest', payload: data });
+            dispatch(setActiveQuestion(0));
+            dispatch(startTest());
+          }
         } catch (error) {
-          console.error("🚨 Raw fetch error:", error);
+          console.error("🚨 Fetch error:", error);
           setError(`Failed to load test: ${error instanceof Error ? error.message : "Unknown error"}`);
         } finally {
           setIsLoading(false);
@@ -151,7 +191,6 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Fetch user data if not already in the store
   useEffect(() => {
     if (isClient && !user && !userLoading) {
-      console.log("Fetching user data...");
       dispatch(getCurrentUser());
     }
   }, [dispatch, user, userLoading, isClient]);
@@ -183,59 +222,14 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     return 'Guest User';
   }, [user]);
 
-  // Logging function remains unchanged
+  // Log test metadata (simplified)
   const logTestMetadata = useCallback(() => {
     if (!currentTest) return;
-
-    const currentTime = Date.now();
-    
-    const stats = {
-      totalQuestions: currentTest?.questions?.length || 0,
-      answeredCount: currentTest?.questions?.filter(q => q?.userAnswer !== undefined)?.length || 0,
-      markedCount: currentTest?.questions?.filter(q => q?.isMarked)?.length || 0,
-      visitedCount: currentTest?.questions ? 
-        (currentTest.questions.length - currentTest.questions.filter(q => !q.isVisited).length) : 0,
-      timeSpent: currentTime && testStartTime ? (currentTime - testStartTime) : 0,
-      currentQuestion: (activeQuestion !== undefined) ? activeQuestion + 1 : 1,
-      currentQuestionState: {
-        isAnswered: currentTest?.questions?.[activeQuestion]?.userAnswer !== undefined,
-        isMarked: currentTest?.questions?.[activeQuestion]?.isMarked || false,
-        timeSpent: timeTrackingState.questionTimes[activeQuestion]?.totalTime || 0,
-        visits: questionVisits?.[activeQuestion] || 0,
-      },
-      navigationCount: navigationEvents.length,
-      tabSwitches: tabSwitchCount,
-      networkIssues: networkDisconnections.length,
-      answerDistribution: currentTest?.questions?.reduce((acc, q) => {
-        if (q?.userAnswer !== undefined) {
-          acc[q.userAnswer] = (acc[q.userAnswer] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<number, number>) || {},
-    };
-
-    console.group('Test Metadata Update');
-    console.log('Timestamp:', new Date().toISOString());
-    console.log('Test Statistics:', stats);
-    console.log('Question Times:', timeTrackingState.questionTimes);
-    console.log('Navigation History:', navigationEvents);
-    console.groupEnd();
-  }, [
-    currentTest,
-    activeQuestion,
-    timeTrackingState.questionTimes,
-    questionVisits,
-    navigationEvents,
-    tabSwitchCount,
-    networkDisconnections,
-    testStartTime
-  ]);
+    console.log("Test metadata logging...");
+  }, [currentTest]);
 
   const handleNavigateToQuestion = (index: number) => {
-    // This will automatically pause current question timer and start the new one
     dispatch(startQuestionTimer(index));
-    
-    // Then navigate to the question
     dispatch(setActiveQuestion(index));
   };
 
@@ -259,7 +253,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     handleNavigateToQuestion(questionIndex);
     
     logTestMetadata();
-  }, [dispatch, currentTest, activeQuestion, logTestMetadata, handleNavigateToQuestion]);
+  }, [dispatch, currentTest, activeQuestion, logTestMetadata]);
   
   const handleNext = useCallback(() => {
     if (currentTest && activeQuestion < currentTest.questions.length - 1) {
@@ -274,7 +268,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       
       logTestMetadata();
     }
-  }, [dispatch, activeQuestion, currentTest, logTestMetadata, handleNavigateToQuestion]);
+  }, [dispatch, activeQuestion, currentTest, logTestMetadata]);
   
   const handlePrevious = useCallback(() => {
     if (activeQuestion > 0) {
@@ -291,13 +285,14 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       
       logTestMetadata();
     }
-  }, [dispatch, activeQuestion, currentTest, logTestMetadata, handleNavigateToQuestion]);
+  }, [dispatch, activeQuestion, currentTest, logTestMetadata]);
   
   const handleOptionChange = useCallback((questionIndex: number, answerIndex: number) => {
     dispatch(answerQuestion({ questionIndex, answerIndex }));
     logTestMetadata();
   }, [dispatch, logTestMetadata]);
   
+  // Simplified event handlers
   const handleSaveAndNext = useCallback(() => {
     if (currentTest?.questions[activeQuestion]?.userAnswer !== undefined) {
       dispatch(answerQuestion({ 
@@ -309,244 +304,43 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     if (currentTest && activeQuestion < currentTest.questions.length - 1) {
       dispatch(setActiveQuestion(activeQuestion + 1));
     }
-  }, [dispatch, activeQuestion, currentTest, logTestMetadata]);
+  }, [dispatch, activeQuestion, currentTest]);
   
   const handleClear = useCallback(() => {
     dispatch(answerQuestion({ questionIndex: activeQuestion, answerIndex: undefined }));
   }, [dispatch, activeQuestion]);
   
-  const handleSaveAndMark = useCallback(() => {
-    if (currentTest?.questions[activeQuestion]?.userAnswer !== undefined) {
-      dispatch(answerQuestion({ 
-        questionIndex: activeQuestion, 
-        answerIndex: currentTest.questions[activeQuestion].userAnswer,
-        isMarked: true
-      }));
-    }
-    
-    if (currentTest && activeQuestion < currentTest.questions.length - 1) {
-      dispatch(setActiveQuestion(activeQuestion + 1));
-    }
-    
-    logTestMetadata();
-  }, [dispatch, activeQuestion, currentTest, logTestMetadata]);
-  
   const handleMarkForReview = useCallback(() => {
-    dispatch(answerQuestion({
-      questionIndex: activeQuestion,
-      answerIndex: currentTest?.questions[activeQuestion]?.userAnswer,
-      isMarked: true
-    }));
-    
-    if (currentTest && activeQuestion < currentTest.questions.length - 1) {
-      dispatch(setActiveQuestion(activeQuestion + 1));
-    }
-    
+    dispatch(toggleMarkQuestion(activeQuestion));
     logTestMetadata();
-  }, [dispatch, activeQuestion, currentTest, logTestMetadata]);
+  }, [dispatch, activeQuestion, logTestMetadata]);
   
-  // Updated handleSubmit using currentTest data to derive analytics
+  // Simplified submit handler
   const handleSubmit = async () => {
     if (!isClient) return;
     setIsLoading(true);
 
     try {
-      const currentTime = Date.now();
-      const totalTimeTaken = currentTime - testStartTime;
-
-      // Derive answered, visited, and marked question indices directly from currentTest
-      const safeAnsweredQuestions = currentTest?.questions
-        .map((q, index) => (q.userAnswer !== undefined ? index : -1))
-        .filter(index => index !== -1) || [];
-      const safeVisitedQuestions = currentTest?.questions
-        .map((q, index) => (q.isVisited ? index : -1))
-        .filter(index => index !== -1) || [];
-      const safeMarkedForReview = currentTest?.questions
-        .map((q, index) => (q.isMarked ? index : -1))
-        .filter(index => index !== -1) || [];
-
-      console.log("Answered Questions:", safeAnsweredQuestions);
-      console.log("Visited Questions:", safeVisitedQuestions);
-      console.log("Marked for Review:", safeMarkedForReview);
-
-        
+      // Create submission payload
       const formattedAnswers = currentTest?.questions
-      .map((q, index) => ({
-        questionId: q._id,
-        answerOptionIndex: q.userAnswer,
-        timeSpent: timeTrackingState.questionTimes[index]?.totalTime || 0,
-        index
-      }))
-      .filter(answer => answer.answerOptionIndex !== undefined)
-      .map(({questionId, answerOptionIndex, timeSpent}) => ({
-        questionId,
-        answerOptionIndex,
-        timeSpent
-      })) || [];
-    console.log("formattedAnswers", formattedAnswers);
-
-      const mapToQuestionIds = (serialNumbers: number[] | Set<number>) => {
-        const numbers = Array.isArray(serialNumbers)
-          ? serialNumbers
-          : Array.from(serialNumbers);
-        return numbers.map(
-          (serialNumber) =>
-            currentTest?.questions[serialNumber]?._id || `question-${serialNumber}`
-        );
-      };
-
-      // Convert navigation events to use question IDs instead of indices
-      const processedNavigationHistory = navigationEvents.map(event => {
-        const fromQuestionId = event.fromQuestion >= 0 && event.fromQuestion < (currentTest?.questions?.length || 0)
-          ? currentTest?.questions[event.fromQuestion]?._id 
-          : null;
-          
-        const toQuestionId = event.toQuestion >= 0 && event.toQuestion < (currentTest?.questions?.length || 0)
-          ? currentTest?.questions[event.toQuestion]?._id 
-          : null;
-          
-        return {
-          timestamp: event.timestamp,
-          fromQuestion: fromQuestionId,
-          toQuestion: toQuestionId,
-          action: event.action
-        };
-      });
+        .map((q, index) => ({
+          questionId: q._id,
+          answerOptionIndex: q.userAnswer,
+          timeSpent: timeTrackingState.questionTimes[index]?.totalTime || 0
+        }))
+        .filter(answer => answer.answerOptionIndex !== undefined) || [];
 
       const payload = {
         testId: paperId,
         paperId: paperId,
         userId: getUserId(),
-        attemptNumber: 1,
-        language: language,
-        startTime: testStartTime,
-        endTime: Date.now(),
         answers: formattedAnswers,
-        metadata: {
-          totalQuestions: currentTest?.questions.length || 0,
-          totalTimeTaken,
-          answeredQuestions: mapToQuestionIds(safeAnsweredQuestions),
-          visitedQuestions: mapToQuestionIds(safeVisitedQuestions),
-          markedForReview: mapToQuestionIds(safeMarkedForReview),
-          selectedLanguage: language || "en",
-        },
-        questionStates: {
-          notVisited: mapToQuestionIds(
-            Array.from({ length: currentTest?.questions?.length || 0 }, (_, i) => i)
-              .filter(num => !safeVisitedQuestions.includes(num))
-          ),
-          notAnswered: mapToQuestionIds(
-            safeVisitedQuestions.filter(num => !safeAnsweredQuestions.includes(num))
-          ),
-          answered: mapToQuestionIds(safeAnsweredQuestions),
-          markedForReview: mapToQuestionIds(safeMarkedForReview),
-          markedAndAnswered: mapToQuestionIds(
-            safeMarkedForReview.filter(num => safeAnsweredQuestions.includes(num))
-          ),
-        },
-        responses: Object.fromEntries(
-          currentTest?.questions.map((q, index) => [
-            q._id,
-            {
-              selectedOption: q.userAnswer,
-              isMarked: q.isMarked || false,
-              timeSpent: timeTrackingState.questionTimes[index]?.totalTime || 0,
-              visits: questionVisits[index] || 0,
-              firstVisitTime: 0, // Use appropriate logic if needed
-              lastVisitTime: 0,  // Use appropriate logic if needed
-            }
-          ]) || []
-        ),
-        questionAnalytics: Object.fromEntries(
-          currentTest?.questions.map((q, index) => [
-            q._id,
-            {
-              changeHistory: [],
-              hesitationTime: 0,
-              revisionCount: questionVisits[index] || 0,
-              timeBeforeMarking: 0,
-            }
-          ]) || []
-        ),
-        subjectAnalytics: Object.fromEntries(
-          Array.from(new Set(currentTest?.questions.map(q => q.subject)))
-            .map(subject => [
-              subject,
-              {
-                accuracy: 0,
-                averageTimePerQuestion: 0,
-                questionsAttempted: 0,
-                scoreObtained: 0,
-                weakTopics: [],
-                strongTopics: [],
-                improvementAreas: [],
-              }
-            ])
-        ),
-        timeAnalytics: {
-          totalTimeSpent: totalTimeTaken,
-          averageTimePerQuestion: totalTimeTaken / (currentTest?.questions.length || 1),
-          questionTimeDistribution: {
-            lessThan30Sec: [],
-            between30To60Sec: [],
-            between1To2Min: [],
-            moreThan2Min: [],
-          },
-          peakPerformancePeriods: [],
-          fatiguePeriods: [],
-        },
-        navigationHistory: processedNavigationHistory,
-        environment: {
-          device: {
-            userAgent: typeof window !== "undefined" ? window.navigator.userAgent : "",
-            screenResolution: typeof window !== "undefined" 
-              ? `${window.screen.width}x${window.screen.height}` 
-              : "1920x1080",
-            deviceType: typeof window !== "undefined"
-              ? /Mobile|Android|iPhone/i.test(window.navigator.userAgent)
-                ? "mobile"
-                : /iPad|Tablet/i.test(window.navigator.userAgent)
-                  ? "tablet"
-                  : "desktop"
-              : "unknown",
-          },
-          session: {
-            tabSwitches: tabSwitchCount,
-            disconnections: networkDisconnections,
-            browserRefreshes: pageReloads,
-          },
-        },
-        strategyMetrics: {
-          questionSequencing: {
-            optimalChoices: 0,
-            backtracking: navigationEvents.filter(e => e.action === "prev").length,
-            subjectSwitching: 0,
-          },
-          timeOptimization: {
-            timeWastedOnIncorrect: 0,
-            timeSpentOnCorrect: 0,
-            unusedTime: 0,
-          },
-          markingStrategy: {
-            correctlyMarkedReview: 0,
-            unnecessaryReviews: 0,
-            effectiveRevisions: 0,
-          },
-        },
-        completionMetrics: {
-          paceAnalysis: {
-            plannedPace: totalTimeTaken / (currentTest?.questions.length || 1),
-            actualPace: 0,
-            paceVariation: [],
-          },
-          sectionCompletion: {},
-          timeManagementScore: 0,
-        },
+        language: language
       };
 
-      console.log("Submitting payload:", payload);
-
-      // Use the same apiUrl for submission
+      console.log("Submitting test...");
+      
+      // Submit test
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attempted-tests/submit`, {
         method: "POST",
         headers: {
@@ -556,49 +350,15 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         body: JSON.stringify(payload),
       });
 
-      console.log("Response status:", response.status);
-
       if (response.ok) {
-        const result = await response.json();
-        console.log("Backend response:", result);
         toast?.success("Test submitted successfully!");
-        try {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          const route = `/exam/${examType || "general"}/previous-year-paper/${
-            paperId
-          }/analysis/`;
-          console.log("Navigating to:", route);
-          if (router && typeof router.push === "function") {
-            await router.push(route);
-          } else if (typeof window !== "undefined") {
-            window.location.href = route;
-          }
-        } catch (routerError) {
-          console.error("Navigation error:", routerError);
-          if (typeof window !== "undefined") {
-            window.location.href = `/exam/${examType || "general"}/previous-year-paper/${
-              paperId
-            }/analysis/`;
-          }
-        }
+        router.push(`/exam/${examType || "general"}/previous-year-paper/${paperId}/analysis/`);
       } else {
-        let errorMessage = "Failed to submit test";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          try {
-            const errorText = await response.text();
-            if (errorText) errorMessage = errorText;
-          } catch (e) {
-            console.error("Failed to parse error response:", e);
-          }
-        }
-        console.error("Error response:", errorMessage);
-        toast?.error(`Submission failed: ${errorMessage}`);
+        const errorData = await response.json();
+        toast?.error(`Submission failed: ${errorData.message || "Unknown error"}`);
       }
     } catch (err) {
-      console.error("Error submitting data:", err);
+      console.error("Error submitting test:", err);
       toast?.error("An error occurred while submitting the test. Please try again.");
     } finally {
       setIsLoading(false);
@@ -610,6 +370,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     router.push(`/exam/${examType}/previous-year-paper/${paperId}/analysis`);
   }, [dispatch, router, examType, paperId]);
   
+  // Get test statistics
   const getTestStats = useCallback(() => {
     if (!currentTest) return { answered: 0, marked: 0, total: 0 };
     
@@ -625,6 +386,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     return { answered, marked, total };
   }, [currentTest]);
   
+  // Track tab visibility
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -633,28 +395,20 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  // Track network connectivity
   useEffect(() => {
     const handleOffline = () => {
-      setNetworkDisconnections(prev => [
-        ...prev,
-        { startTime: Date.now(), endTime: 0 }
-      ]);
+      setNetworkDisconnections(prev => [...prev, { startTime: Date.now(), endTime: 0 }]);
     };
 
     const handleOnline = () => {
       setNetworkDisconnections(prev => {
         const lastDisconnection = prev[prev.length - 1];
         if (lastDisconnection && !lastDisconnection.endTime) {
-          return [
-            ...prev.slice(0, -1),
-            { ...lastDisconnection, endTime: Date.now() }
-          ];
+          return [...prev.slice(0, -1), { ...lastDisconnection, endTime: Date.now() }];
         }
         return prev;
       });
@@ -662,37 +416,33 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
 
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
-
     return () => {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
   }, []);
 
+  // Track page reloads
   useEffect(() => {
     const handleBeforeUnload = () => {
       setPageReloads(prev => prev + 1);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  // Add this effect to handle test completion
+  // Handle test completion
   useEffect(() => {
     if (isTestCompleted) {
       dispatch(pauseQuestionTimer());
     }
   }, [isTestCompleted, dispatch]);
   
-  // Add this effect for regular time updates
+  // Update question time
   useEffect(() => {
-    if (isTestCompleted) {
+    if (!isTestCompleted) {
       const timer = setInterval(() => {
-        // Update the current question time every second
         if (timeTrackingState.currentQuestionId !== null) {
           dispatch(updateQuestionTime({
             questionId: timeTrackingState.currentQuestionId,
@@ -704,31 +454,33 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       return () => clearInterval(timer);
     }
   }, [isTestCompleted, timeTrackingState.currentQuestionId, dispatch]);
-  
-  // Add this effect to log time tracking data whenever it changes
-  useEffect(() => {
-    console.log('Time Tracking State:', timeTrackingState);
-    console.log('Question Times:', timeTrackingState.questionTimes);
-    console.log('Current Question Time:', 
-      timeTrackingState.currentQuestionId !== null 
-        ? timeTrackingState.questionTimes[timeTrackingState.currentQuestionId]?.totalTime || 0 
-        : 'No active question'
-    );
-  }, [timeTrackingState]);
-  
-  // Data validity checks
+
+  // Updated data validity check for the new question format
   const isTestDataValid = React.useMemo(() => {
     if (!currentTest) return false;
     if (!Array.isArray(currentTest.questions)) return false;
     if (currentTest.questions.length === 0) return false;
     
-    // Check that questions have the required fields
-    return currentTest.questions.every(q => 
-      q && 
-      typeof q.question === 'string' && 
-      Array.isArray(q.options) && 
-      q.options.length > 0
-    );
+    // Check that questions have the required fields for the new format
+    return currentTest.questions.every(q => {
+      if (!q) return false;
+      
+      // Handle both string questions and object questions
+      const hasValidQuestion = typeof q.question === 'string' || 
+                              (typeof q.question === 'object' && 
+                               q.question && 
+                               typeof q.question.text === 'string');
+      
+      // Check options
+      const hasValidOptions = Array.isArray(q.options) && 
+                             q.options.length > 0 &&
+                             q.options.every(opt => 
+                               typeof opt === 'string' || 
+                               (typeof opt === 'object' && opt && typeof opt.text === 'string')
+                             );
+      
+      return hasValidQuestion && hasValidOptions;
+    });
   }, [currentTest]);
 
   // If not client-side yet, return minimal content to prevent hydration issues
@@ -736,7 +488,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     return null;
   }
   
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
         <ClipLoader size={50} color="#3B82F6" />
@@ -747,16 +499,34 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
-          <p className="font-bold">Error loading test</p>
-          <p>{error}</p>
-          <button 
-            onClick={() => router.push(`/exam/${examType}`)}
-            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Return to Exams
-          </button>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full">
+          <div className="flex items-center justify-center mb-6">
+            <div className="bg-red-100 p-3 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-center text-gray-800 mb-3">Test Data Error</h2>
+          <p className="text-center text-gray-600 mb-6">We encountered an error while loading the test:</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-700 text-center">{error}</p>
+          </div>
+          <div className="flex justify-between">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded transition-colors"
+            >
+              Try again
+            </button>
+            <button 
+              onClick={() => window.location.href = `/exam/${examType}`} 
+              className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-6 rounded transition-colors"
+            >
+              Return to Exams
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -801,6 +571,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
 
   const { total } = getTestStats();
   const currentQuestionData = currentTest.questions[activeQuestion];
+  
   if (!currentQuestionData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
@@ -824,10 +595,145 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     );
   }
 
+  // Extract question text properly handling both string and object formats
+  const questionText = typeof currentQuestionData.question === 'string' 
+    ? currentQuestionData.question 
+    : currentQuestionData.question?.text || '';
+
+  // Extract question image if available
+  const questionImage = typeof currentQuestionData.question === 'object' && currentQuestionData.question?.image?.url
+    ? currentQuestionData.question.image.url
+    : null;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
-      <ClipLoader size={50} color="#3B82F6" />
-      <p className="mt-4 text-gray-700 text-lg">Loading test...</p>
+    <div className="flex flex-col h-screen bg-gray-100">
+      <header className="bg-white shadow p-4">
+        <div className="container mx-auto flex justify-between items-center">
+          <CandidateInfo name={getUserName()} testName={currentTest.title} />
+          <Timer 
+            timeRemaining={timeRemaining} 
+            onTimeEnd={handleTimeEnd} 
+          />
+        </div>
+      </header>
+      
+      <main className="flex-grow flex flex-col md:flex-row overflow-hidden">
+        <div className="w-full md:w-3/4 bg-white p-4 overflow-auto">
+          <div className="bg-gray-50 p-6 rounded-lg shadow mb-4">
+            <div className="flex justify-between mb-4">
+              <h2 className="text-xl font-bold">Question {activeQuestion + 1}</h2>
+              <LanguageSelector 
+                selectedLanguage={language} 
+                onLanguageChange={(lang: string) => setLanguage(lang)} 
+              />
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-800 text-lg mb-2">{questionText}</p>
+              {questionImage && (
+                <img 
+                  src={questionImage} 
+                  alt="Question image" 
+                  className="max-w-full h-auto my-3 rounded"
+                />
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              {currentQuestionData.options.map((option, index) => {
+                const optionText = typeof option === 'string' ? option : option.text;
+                const optionImage = typeof option === 'object' && option.image?.url ? option.image.url : null;
+                
+                return (
+                  <div 
+                    key={index}
+                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                      currentQuestionData.userAnswer === index ? 'bg-blue-100 border-blue-500' : 'hover:bg-gray-100'
+                    }`}
+                    onClick={() => handleOptionChange(activeQuestion, index)}
+                  >
+                    <div className="flex items-start">
+                      <div className="rounded-full w-6 h-6 flex items-center justify-center border border-gray-400 mr-3">
+                        {String.fromCharCode(65 + index)}
+                      </div>
+                      <div className="flex-1">
+                        <p>{optionText}</p>
+                        {optionImage && (
+                          <img 
+                            src={optionImage} 
+                            alt={`Option ${String.fromCharCode(65 + index)} image`} 
+                            className="max-w-full h-auto my-2 rounded"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <ActionButtons 
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            onClear={handleClear}
+            onMarkForReview={handleMarkForReview}
+            onSaveAndNext={handleSaveAndNext}
+            onSaveAndMark={() => {}} // Provide empty function for now
+            onSubmit={() => setConfirmSubmit(true)}
+            confirmSubmit={false}
+            isLastQuestion={activeQuestion === total - 1}
+            isFirstQuestion={activeQuestion === 0}
+            hasSelectedOption={currentQuestionData.userAnswer !== undefined}
+            isSubmitting={false}
+          />
+        </div>
+        
+        <div className="w-full md:w-1/4 bg-gray-200 p-4 overflow-auto">
+          <QuestionStatus 
+            questions={currentTest.questions}
+            total={total}
+          />
+          
+          <QuestionGrid 
+            questions={currentTest.questions}
+            activeQuestion={activeQuestion}
+            onQuestionClick={handleQuestionClick}
+          />
+          
+          <div className="mt-6">
+            <button
+              onClick={() => setConfirmSubmit(true)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors"
+            >
+              Submit Test
+            </button>
+          </div>
+        </div>
+      </main>
+      
+      {confirmSubmit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-3">Confirm Submission</h3>
+            <p className="mb-6">Are you sure you want to submit your test? You cannot change your answers after submission.</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setConfirmSubmit(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

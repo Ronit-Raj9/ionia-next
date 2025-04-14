@@ -375,29 +375,34 @@ const getTestForAttempt = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid Test ID format");
     }
 
-    // Find test
+    // Find test with detailed logging
     const test = await Test.findById(id);
     
     if (!test) {
+        console.log(`Test not found with ID: ${id}`);
         throw new ApiError(404, "Test not found");
     }
 
-    console.log("Found test:", test.title);
+    console.log(`Found test: "${test.title}" with ${test.questions?.length || 0} question IDs`);
     
     // Check if we have questions
     if (!test.questions || !Array.isArray(test.questions) || test.questions.length === 0) {
+        console.log(`Test has no questions. Questions array:`, test.questions);
         throw new ApiError(500, "Test has no questions");
     }
 
     try {
+        console.log("Looking up questions with the following IDs:", test.questions);
+        
         // Fetch questions from the Question model with all required fields
         const questions = await Question.find({ 
-            '_id': { $in: test.questions.map(qId => mongoose.Types.ObjectId(qId.toString())) } 
+            '_id': { $in: test.questions.map(qId => new mongoose.Types.ObjectId(qId.toString())) } 
         }).select('_id question options subject difficulty examType');
         
-        console.log(`Found ${questions.length} questions from Question model`);
+        console.log(`Found ${questions.length} questions from Question model out of ${test.questions.length} IDs`);
         
         if (questions.length === 0) {
+            console.log("No questions found in the database matching the IDs in the test");
             throw new ApiError(500, "Failed to load test questions");
         }
 

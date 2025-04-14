@@ -7,13 +7,27 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 // Get the API base URL with proper environment detection
 const getApiBaseUrl = (): string => {
   if (typeof window === 'undefined') {
+    // Server-side rendering
     return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
   }
   
-  return process.env.NEXT_PUBLIC_API_URL || 
-    (window.location.hostname === 'localhost' 
-      ? 'http://localhost:8000/api/v1' 
-      : `${window.location.origin}/api/v1`);
+  // Client-side rendering
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  
+  // Check if we're running in development
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    // In development mode, check for specific API port configuration
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    
+    // Default to port 3000 (Next.js) with the Next.js API routes
+    return '/api/v1';
+  }
+  
+  // In production, use relative path for API routes
+  return '/api/v1';
 };
 
 const API_BASE = getApiBaseUrl();
@@ -445,7 +459,7 @@ export const API = {
     getById: (id: string) => 
       fetchWithCache<APIResponse<Test>>(`${API_BASE}/tests/${id}`),
     getTestForAttempt: (id: string) => 
-      fetchWithCache<APIResponse<Test>>(`${API_BASE}/tests/${id}/attempt`, {
+      fetchWithCache<APIResponse<Test>>(`/api/proxy/tests/${id}/attempt`, {
         credentials: 'include', // Ensure cookies are sent for authentication
       }),
     create: (testData: any) => 

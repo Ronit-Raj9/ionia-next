@@ -13,14 +13,17 @@ export interface TestQuestion {
       url: string;
       publicId?: string;
     } | null;
-  };
-  options: {
-    text: string;
-    image?: {
-      url: string;
-      publicId?: string;
-    } | null;
-  }[];
+  } | string;  // Allow both object and string formats
+  options: (
+    | {
+        text: string;
+        image?: {
+          url: string;
+          publicId?: string;
+        } | null;
+      }
+    | string  // Allow both object and string formats
+  )[];
   correctOption?: number;
   subject: string;
   examType: string;
@@ -93,68 +96,33 @@ const initialState: TestState = {
 // Async thunks for test management
 export const fetchTest = createAsyncThunk(
   "test/fetchTest",
-  async (paperId: string, { rejectWithValue, dispatch }) => {
+  async (paperId: string, { rejectWithValue }) => {
     try {
-      console.log(`🚀 Fetching test with ID: ${paperId}`);
+      // Direct API call with minimal code
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const apiUrl = `${API_BASE_URL}/tests/${paperId}/attempt`;
       
-      // Make direct fetch to see raw response
-      try {
-        const rawResponse = await fetch(`/api/v1/tests/${paperId}/attempt`, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-        const rawData = await rawResponse.clone().json();
-        console.log("🔴 RAW API Response:", JSON.stringify(rawData, null, 2));
-      } catch (rawError) {
-        console.error("Error fetching raw data:", rawError);
+      const accessToken = localStorage.getItem('accessToken');
+      const headers: HeadersInit = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      };
+      
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
       }
       
-      // Continue with regular API call
-      const response = await API.tests.getTestForAttempt(paperId);
+      const response = await fetch(apiUrl, { credentials: 'include', headers });
       
-      console.log("🟢 API Response Object Structure:", {
-        dataType: typeof response.data,
-        hasData: !!response.data,
-        keys: response.data ? Object.keys(response.data) : []
-      });
-      
-      if (response.data?.questions) {
-        console.log("🟡 Questions array type:", Array.isArray(response.data.questions));
-        console.log("🟡 Questions count:", response.data.questions.length);
-        
-        if (response.data.questions.length > 0) {
-          const firstQuestion = response.data.questions[0];
-          console.log("🟡 First question type:", typeof firstQuestion);
-          console.log("🟡 First question keys:", Object.keys(firstQuestion));
-          
-          if (firstQuestion.question) {
-            console.log("🟠 Question property type:", typeof firstQuestion.question);
-            console.log("🟠 Question property value:", JSON.stringify(firstQuestion.question));
-          }
-          
-          if (firstQuestion.options) {
-            console.log("🟠 Options property type:", typeof firstQuestion.options);
-            console.log("🟠 Options array length:", firstQuestion.options.length);
-            if (firstQuestion.options.length > 0) {
-              console.log("🟠 First option:", JSON.stringify(firstQuestion.options[0]));
-            }
-          }
-        }
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
       
-      return response.data;
+      // Return raw data with absolutely no processing
+      const data = await response.json();
+      return data.data || data;
     } catch (error: any) {
-      console.error("Error fetching test:", error);
-      let errorMessage = "Failed to fetch test";
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      toast.error(errorMessage);
-      return rejectWithValue(errorMessage);
+      return rejectWithValue(error.message || "Error fetching test");
     }
   }
 );
@@ -341,6 +309,11 @@ const testSlice = createSlice({
         state.currentTest.questions[action.payload].isVisited = true;
       }
     },
+    setRawTestData: (state, action) => {
+      state.currentTest = action.payload;
+      state.loading = false;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -357,40 +330,17 @@ const testSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchTest.fulfilled, (state, action) => {
-        // Process the payload first before assigning to state
-        const testData = action.payload as Test;
-        
-        // Process questions
-        let processedQuestions = [];
-        
-        if (testData.questions && Array.isArray(testData.questions)) {
-          processedQuestions = testData.questions.map((q: any) => ({
-            ...q,
-            userAnswer: undefined,
-            isMarked: false,
-            timeTaken: 0,
-            isVisited: false,
-          }));
-        }
-        
-        const processedTest = {
-          ...testData,
-          questions: processedQuestions
-        };
-        
-        // Now assign the processed data to state
-        state.currentTest = processedTest;
+        // Direct assignment without any validation or transformation
+        state.currentTest = action.payload;
         state.loading = false;
-        
-        // Cache the processed test
-        state.cachedTests[processedTest._id] = processedTest;
-        
-        // Set time remaining
-        state.timeRemaining = testData.time * 60 || 7200; // Convert minutes to seconds or use default
+        state.activeQuestion = 0;
+        state.timeRemaining = action.payload.time * 60 || 7200;
+        state.isTestStarted = true;
+        state.error = null;
       })
       .addCase(fetchTest.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload as string || "Failed to fetch test";
       })
       // Submit test cases
       .addCase(submitTest.pending, (state) => {

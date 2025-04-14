@@ -10,7 +10,7 @@ interface OptionProps {
       url: string;
       publicId?: string;
     } | null;
-  };
+  } | string;  // Support string option format
   optionIndex: number;
   questionNumber: number;
   selectedAnswer: number | undefined;
@@ -23,51 +23,59 @@ const QuestionOptions: React.FC<OptionProps> = ({
   questionNumber,
   selectedAnswer,
   handleOptionChange,
-}) => (
-  <div 
-    onClick={() => handleOptionChange(questionNumber, optionIndex)}
-    className={`
-      group relative p-4 rounded-lg border-2 transition-all duration-300 cursor-pointer
-      ${selectedAnswer === optionIndex 
-        ? 'border-blue-500 bg-blue-50 shadow-sm transform scale-[1.01]' 
-        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 hover:scale-[1.005]'}
-    `}
-  >
-    <div className="flex items-center gap-4">
-      <div className={`
-        w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-300
-        ${selectedAnswer === optionIndex 
-          ? 'border-blue-500 bg-blue-500 text-white transform scale-110' 
-          : 'border-gray-300 group-hover:border-blue-300'}
-      `}>
-        {String.fromCharCode(65 + optionIndex)}
-      </div>
-      <div className="flex-1">
-        {option.text && (
-          <p className={`text-base transition-colors duration-300 ${selectedAnswer === optionIndex ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
-            {option.text}
-          </p>
-        )}
-        {option.image && option.image.url && (
-          <div className="mt-2">
-            <img 
-              src={option.image.url} 
-              alt={`Option ${String.fromCharCode(65 + optionIndex)}`}
-              className="max-h-40 object-contain rounded-md"
-            />
+}) => {
+  // Handle option as either string or object
+  const optionText = typeof option === 'string' ? option : option.text;
+  const optionImage = typeof option === 'string' ? null : option.image;
+
+  return (
+    <div
+      className={`p-4 rounded-lg border-2 ${
+        selectedAnswer === optionIndex
+          ? 'border-blue-500 bg-blue-50'
+          : 'border-gray-300 hover:border-gray-400 bg-white'
+      }`}
+      onClick={() => handleOptionChange(questionNumber, optionIndex)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleOptionChange(questionNumber, optionIndex);
+        }
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex-shrink-0 w-6 h-6 rounded-full border-2 ${
+            selectedAnswer === optionIndex
+              ? 'border-blue-500 bg-blue-500'
+              : 'border-gray-300'
+          } flex items-center justify-center`}
+        >
+          {selectedAnswer === optionIndex && (
+            <div className="w-2 h-2 rounded-full bg-white"></div>
+          )}
+        </div>
+        <div className="flex-grow">
+          <div className="text-gray-800">
+            {optionText}
           </div>
-        )}
+          
+          {optionImage && optionImage.url && (
+            <div className="mt-2">
+              <img
+                src={optionImage.url}
+                alt={`Option ${optionIndex + 1} image`}
+                className="max-h-40 object-contain rounded"
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
-    {selectedAnswer === optionIndex && (
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 animate-fadeIn">
-        <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-        </svg>
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 interface QuestionPanelProps {
   currentQuestion: number;
@@ -82,41 +90,63 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
   question,
   handleOptionChange,
 }) => {
-  if (!question) {
+  // Helper function to render question text and image
+  const renderQuestion = () => {
+    if (typeof question.question === 'string') {
+      // Handle string question
+      return (
+        <p className="text-lg text-gray-700 leading-relaxed">
+          {question.question}
+        </p>
+      );
+    } else {
+      // Handle object question
+      return (
+        <>
+          {question.question.text && (
+            <p className="text-lg text-gray-700 leading-relaxed">
+              {question.question.text}
+            </p>
+          )}
+          {question.question.image && question.question.image.url && (
+            <div className="mt-4">
+              <img 
+                src={question.question.image.url} 
+                alt="Question image"
+                className="max-h-96 object-contain rounded-md"
+              />
+            </div>
+          )}
+        </>
+      );
+    }
+  };
+
+  // Validate if the question is empty
+  const isQuestionEmpty = 
+    typeof question.question === 'string'
+      ? !question.question
+      : (!question.question.text && (!question.question.image || !question.question.image.url));
+
+  if (isQuestionEmpty || !question.options) {
     return (
-      <div className="p-4 text-center border border-yellow-300 bg-yellow-50 rounded-lg">
-        <p className="text-yellow-800 font-medium">Question not found</p>
-      </div>
-    );
-  }
-  
-  // Check if essential question data is missing or malformed
-  const isQuestionMalformed = 
-    !question.question || 
-    (!question.question.text && (!question.question.image || !question.question.image.url)) ||
-    !Array.isArray(question.options) ||
-    question.options.length === 0;
-    
-  if (isQuestionMalformed) {
-    console.error('Malformed question data:', question);
-    return (
-      <div className="p-4 text-center border border-red-300 bg-red-50 rounded-lg">
-        <p className="text-red-800 font-medium">Question data is malformed</p>
-        <p className="text-red-600 text-sm mt-2">The question appears to be in an incorrect format. Please contact support.</p>
+      <div className="p-8 bg-white rounded-lg shadow-lg">
+        <div className="text-center py-10">
+          <div className="text-red-500 text-xl">
+            Question data is invalid or missing
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-800">
+    <div className="p-8 bg-white rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <div className="text-lg font-semibold text-blue-900">
           Question {currentQuestion + 1}
-        </h2>
+        </div>
         <div className="flex gap-2">
-          <div className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-medium">
-            {question.subject}
-          </div>
           <div className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-medium">
             {question.difficulty}
           </div>
@@ -129,20 +159,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
       </div>
       
       <div className="prose prose-blue max-w-none">
-        {question.question.text && (
-          <p className="text-lg text-gray-700 leading-relaxed">
-            {question.question.text}
-          </p>
-        )}
-        {question.question.image && question.question.image.url && (
-          <div className="mt-4">
-            <img 
-              src={question.question.image.url} 
-              alt="Question image"
-              className="max-h-96 object-contain rounded-md"
-            />
-          </div>
-        )}
+        {renderQuestion()}
       </div>
 
       <div className="space-y-4 mt-8">

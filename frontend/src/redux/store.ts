@@ -1,6 +1,7 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, combineReducers, getDefaultMiddleware } from '@reduxjs/toolkit';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
+import { FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 
 // Import your slice reducers
 import testReducer from './slices/testSlice';
@@ -31,14 +32,28 @@ const persistConfig = {
 // Create a persisted reducer
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
+// Add error handling middleware
+const apiErrorLoggerMiddleware = (store: any) => (next: any) => (action: any) => {
+  // Log rejected actions (API errors)
+  if (action.type.endsWith('/rejected')) {
+    console.group(`🚨 API Error: ${action.type}`);
+    console.error('Error payload:', action.payload);
+    console.error('Error details:', action.error);
+    console.groupEnd();
+  }
+  return next(action);
+};
+
 // Create the store using the persisted reducer
 export const makeStore = () => {
   const store = configureStore({
     reducer: persistedReducer,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
-        serializableCheck: false, // Disable serializable check for redux-persist
-      }),
+        serializableCheck: {
+          ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        },
+      }).concat(apiErrorLoggerMiddleware),
   });
 
   const persistor = persistStore(store);
