@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://3.7.73.172/api/v1";
 
 // Create axios instance with proper configuration
 const api = axios.create({
@@ -10,6 +10,16 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   }
+});
+
+// Configure axios defaults for CORS
+axios.defaults.withCredentials = true;
+
+// Add request interceptor for CORS headers
+api.interceptors.request.use((config) => {
+  config.headers['Access-Control-Allow-Credentials'] = true;
+  config.headers['Access-Control-Allow-Origin'] = '*';
+  return config;
 });
 
 // Define Auth Response type
@@ -62,17 +72,6 @@ const getBaseUrl = (): string => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL || API_URL;
   return envUrl;
 };
-
-// Add request interceptor to handle credentials conditionally
-api.interceptors.request.use((config) => {
-  // Only include credentials when domains match or in development
-  if (typeof window !== 'undefined') {
-    const baseUrl = config.baseURL || '';
-    config.withCredentials = process.env.NODE_ENV === 'development' || 
-      baseUrl.includes(window.location.hostname);
-  }
-  return config;
-});
 
 // Login User
 export const loginUser = async (email: string, password: string): Promise<AuthResponse> => {

@@ -6,9 +6,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 // Get the API base URL with proper environment detection
 const getApiBaseUrl = (): string => {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-
-    return envUrl;
+    return process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1';
 };
 
 const API_BASE = getApiBaseUrl();
@@ -17,12 +15,22 @@ const API_BASE = getApiBaseUrl();
 const getCookieSettings = () => {
   const isProduction = process.env.NODE_ENV === 'production';
   return {
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: true,
+    sameSite: 'none' as const,
     path: '/',
-    domain: isProduction ? process.env.NEXT_PUBLIC_COOKIE_DOMAIN : undefined
+    domain: isProduction ? '3.7.73.172' : undefined
   };
 };
+
+// Configure fetch options for CORS
+const getDefaultFetchOptions = (): RequestInit => ({
+  credentials: 'include',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  mode: 'cors'
+});
 
 // Preload queue for managing preloaded API calls
 const preloadQueue: Array<{ url: string; options?: RequestInit }> = [];
@@ -229,17 +237,15 @@ export const fetchWithCache = async <T>(
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Access-Control-Allow-Credentials': 'true',
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...(options?.headers || {}),
   };
 
-  // Always include credentials for both environments
-  const credentials: RequestCredentials = 'include';
-
   try {
     const response = await fetch(url, {
+      ...getDefaultFetchOptions(),
       ...options,
-      credentials,
       headers,
     });
 
@@ -249,8 +255,8 @@ export const fetchWithCache = async <T>(
         const newToken = await refreshToken();
         if (newToken) {
           const newResponse = await fetch(url, {
+            ...getDefaultFetchOptions(),
             ...options,
-            credentials: credentials,
             headers: {
               ...headers,
               Authorization: `Bearer ${newToken}`,
