@@ -46,7 +46,7 @@ const nextConfig = {
     ],
   },
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1',
   },
   async headers() {
     return [
@@ -59,7 +59,7 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Origin',
-            value: '*' // In production, this would be restricted to your domains
+            value: process.env.NODE_ENV === 'production' ? 'https://ionia.sbs' : 'http://localhost:3000'
           },
           {
             key: 'Access-Control-Allow-Methods',
@@ -71,11 +71,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; connect-src 'self' http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* https://ionia-next-production.up.railway.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https: http: https://res.cloudinary.com;"
-          },
-          {
-            key: 'Set-Cookie',
-            value: 'SameSite=Strict; Secure'
+            value: "default-src 'self'; connect-src 'self' http://3.7.73.172 https://ionia.sbs http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https: http: https://res.cloudinary.com;"
           }
         ]
       }

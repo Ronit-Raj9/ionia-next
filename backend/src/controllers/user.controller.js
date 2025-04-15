@@ -130,8 +130,6 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User does not exist");
   }
 
-  console.log("Login password is: ", password);
-
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid user credentials");
@@ -143,13 +141,14 @@ const loginUser = asyncHandler(async (req, res) => {
   // Retrieve user object without password & refreshToken
   const loggedInUser = await User.findById(user._id).select("-password -refreshtoken");
 
-  // Cookie options
+  // Cookie options for cross-origin requests
   const options = {
-    path: "/",
-    httpOnly: false, // Allow frontend JavaScript to access it for token management
-    secure: true,    // Require HTTPS
-    sameSite: "None", // Allow cross-site requests
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    domain: process.env.NODE_ENV === 'production' ? '.ionia.sbs' : undefined,
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   };
 
   return res
