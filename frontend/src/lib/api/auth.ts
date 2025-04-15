@@ -15,10 +15,13 @@ const api = axios.create({
 // Configure axios defaults for CORS
 axios.defaults.withCredentials = true;
 
-// Add request interceptor for CORS headers
+// Add request interceptor for authentication
 api.interceptors.request.use((config) => {
-  config.headers['Access-Control-Allow-Credentials'] = true;
-  config.headers['Access-Control-Allow-Origin'] = '*';
+  // Add authentication token if available
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
   return config;
 });
 

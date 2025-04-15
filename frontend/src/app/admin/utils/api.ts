@@ -1,14 +1,18 @@
 // api.ts
 
+// Common fetch configuration
+const fetchConfig = {
+  credentials: 'include' as RequestCredentials,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+};
+
 // Fetch all questions
 export const fetchQuestions = async () => {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions/get`, {
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions/get`, fetchConfig);
     if (!res.ok) {
       throw new Error("Failed to fetch questions");
     }
@@ -48,12 +52,7 @@ export const createTestSeries = async (testData: Record<string, unknown>) => {
 // Fetch all tests
 export async function fetchTests() {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests`, {
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests`, fetchConfig);
 
     if (!response.ok) {
       throw new Error("Failed to fetch tests");
@@ -70,12 +69,7 @@ export async function fetchTests() {
 // Fetch details for a single test by ID
 export const fetchTestDetails = async (id: string) => {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${id}`, {
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${id}`, fetchConfig);
 
     if (!response.ok) {
       throw new Error("Failed to fetch test details");
@@ -116,18 +110,8 @@ export const deleteTest = async (id: string) => {
 export const fetchAnalytics = async () => {
   try {
     const [questionsResponse, testsResponse] = await Promise.all([
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions/get`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests`, {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions/get`, fetchConfig),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests`, fetchConfig)
     ]);
 
     if (!questionsResponse.ok || !testsResponse.ok) {

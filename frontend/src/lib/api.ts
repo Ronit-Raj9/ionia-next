@@ -237,17 +237,20 @@ export const fetchWithCache = async <T>(
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'Access-Control-Allow-Credentials': 'true',
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...(options?.headers || {}),
   };
 
+  // Always include credentials for cross-origin requests
+  const fetchOptions: RequestInit = {
+    ...getDefaultFetchOptions(),
+    ...options,
+    credentials: 'include',
+    headers,
+  };
+
   try {
-    const response = await fetch(url, {
-      ...getDefaultFetchOptions(),
-      ...options,
-      headers,
-    });
+    const response = await fetch(url, fetchOptions);
 
     // Handle token expiration
     if (response.status === 401 && !url.includes('/refresh-token')) {
@@ -255,8 +258,7 @@ export const fetchWithCache = async <T>(
         const newToken = await refreshToken();
         if (newToken) {
           const newResponse = await fetch(url, {
-            ...getDefaultFetchOptions(),
-            ...options,
+            ...fetchOptions,
             headers: {
               ...headers,
               Authorization: `Bearer ${newToken}`,

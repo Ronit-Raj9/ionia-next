@@ -8,27 +8,47 @@ const app = express();
 // ✅ Use Cookie Parser Middleware
 app.use(cookieParser());
 
-// ✅ Define Allowed Origins
-const allowedOrigins = [
-  "https://ionia.sbs",
-  "https://www.ionia.sbs",
-  "https://api.ionia.sbs",
-  "http://localhost:3000",
-  "http://3.110.43.68/"
-];
+// Add a pre-flight handler that responds to all OPTIONS requests
+app.options('*', (req, res) => {
+  // Accept any origin that sends a request
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, access-control-allow-credentials, Access-Control-Allow-Credentials');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
 
-// ✅ Setup CORS Middleware
+// ✅ Define Allowed Origins - using function instead of array for more flexibility
+const isOriginAllowed = (origin) => {
+  // Allow requests with no origin (like mobile apps or curl requests)
+  if (!origin) return true;
+  
+  // Allow any subdomain of ionia.sbs
+  if (origin.endsWith('.ionia.sbs') || origin === 'https://ionia.sbs') return true;
+  
+  // Allow all localhost origins
+  if (origin.match(/https?:\/\/localhost(:\d+)?$/)) return true;
+  
+  // Allow specific IP addresses
+  const allowedIPs = [
+    'http://3.110.43.68',
+    'http://3.110.43.68/',
+    'https://3.110.43.68',
+    'https://3.110.43.68/'
+  ];
+  if (allowedIPs.includes(origin)) return true;
+  
+  // Reject all other origins
+  return false;
+};
+
+// ✅ Setup CORS Middleware with maximum flexibility
 app.use(
   cors({
     origin: function (origin, callback) {
       console.log("Request Origin:", origin);
       
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
         console.log(`Origin ${origin} not allowed by CORS`);
@@ -37,24 +57,26 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "Accept"],
-    exposedHeaders: ["Set-Cookie"]
+    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Cookie", "access-control-allow-credentials", "Access-Control-Allow-Credentials"],
+    exposedHeaders: ["Set-Cookie", "Authorization"]
   })
 );
 
-// ✅ Additional Security Headers
+// ✅ Additional Security and CORS Headers for all responses
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
-  
-  // Add CSP header consistent with frontend
-  res.header('Content-Security-Policy', "default-src 'self'; connect-src 'self' http://3.110.43.68/ https://ionia.sbs https://www.ionia.sbs https://api.ionia.sbs http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https: http: https://res.cloudinary.com;");
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  // Set the origin based on the request's origin header
+  const origin = req.headers.origin;
+  if (origin && isOriginAllowed(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
   }
+  
+  // Always set these headers for every response
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, access-control-allow-credentials, Access-Control-Allow-Credentials');
+  
+  // Add CSP header 
+  res.header('Content-Security-Policy', "default-src 'self'; connect-src 'self' http://3.110.43.68/ https://ionia.sbs https://www.ionia.sbs https://api.ionia.sbs http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https: http: https://res.cloudinary.com;");
   
   next();
 });

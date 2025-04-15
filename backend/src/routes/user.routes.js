@@ -32,6 +32,7 @@ router.route("/register").post(
   registerUser
 );
 
+// Login route
 router.route("/login").post(loginUser);
 
 // Add new route for checking username availability
