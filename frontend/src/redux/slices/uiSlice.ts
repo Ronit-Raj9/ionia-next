@@ -19,6 +19,8 @@ const initialState: UIState = {
   notifications: [],
 };
 
+// 
+
 // Create the UI slice
 const uiSlice = createSlice({
   name: 'ui',
