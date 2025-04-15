@@ -2,6 +2,16 @@ import axios from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
+// Create axios instance with proper configuration
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true, // Always include credentials
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+});
+
 // Define Auth Response type
 export interface AuthResponse {
   user: {
@@ -12,7 +22,7 @@ export interface AuthResponse {
     role: string;
   };
   accessToken: string;
-  refreshToken?: string; // Make refreshToken optional
+  refreshToken?: string;
 }
 
 // User profile type
@@ -53,16 +63,6 @@ const getBaseUrl = (): string => {
   return envUrl;
 };
 
-// Create axios instance with credentials
-const api = axios.create({
-  baseURL: getBaseUrl(),
-  withCredentials: process.env.NODE_ENV === 'development',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  }
-});
-
 // Add request interceptor to handle credentials conditionally
 api.interceptors.request.use((config) => {
   // Only include credentials when domains match or in development
@@ -76,45 +76,39 @@ api.interceptors.request.use((config) => {
 
 // Login User
 export const loginUser = async (email: string, password: string): Promise<AuthResponse> => {
-  // Check if cookies are enabled
-  if (!checkCookieConsent()) {
-    throw new Error("Please accept cookies to enable login functionality");
-  }
-  
   try {
-  const response = await api.post<AuthResponse>(`/users/login`, { email, password });
-  
-  // Store token in localStorage as backup for mobile browsers that limit cookies
-  if (response.data.accessToken) {
-    localStorage.setItem('accessToken', response.data.accessToken);
-  }
-  
-  return response.data;
+    const response = await api.post<AuthResponse>(`/users/login`, { 
+      email, 
+      password 
+    });
+    
+    return response.data;
   } catch (error) {
     console.error("Login error:", error);
     if (axios.isAxiosError(error) && error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
+      throw new Error(error.response.data.message || "Login failed");
     }
     throw error;
   }
 };
 
 // Register User
-export const registerUser = async (userData: { fullName: string; email: string; username: string; password: string }): Promise<AuthResponse> => {
-  // Check if cookies are enabled
-  if (!checkCookieConsent()) {
-    throw new Error("Please accept cookies to enable registration functionality");
+export const registerUser = async (userData: { 
+  fullName: string; 
+  email: string; 
+  username: string; 
+  password: string 
+}): Promise<AuthResponse> => {
+  try {
+    const response = await api.post<AuthResponse>(`/users/register`, userData);
+    return response.data;
+  } catch (error) {
+    console.error("Registration error:", error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.message || "Registration failed");
+    }
+    throw error;
   }
-  
-  const response = await api.post<AuthResponse>(`/users/register`, userData);
-  
-  // Store token in localStorage as backup for mobile browsers that limit cookies
-  if (response.data.accessToken) {
-    localStorage.setItem('accessToken', response.data.accessToken);
-  }
-  
-  return response.data;
 };
 
 // Get User Profile

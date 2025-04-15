@@ -41,12 +41,12 @@ export default function LoginForm() {
       // Use the enhanced loginUser function from auth.ts
       const response = await loginUser(email, password);
       
-      // Store tokens in localStorage as a backup for mobile browsers
       if (response.accessToken) {
+        // Store token in localStorage only as a fallback
         localStorage.setItem('accessToken', response.accessToken);
         
-        // Set additional client-side cookies as a fallback
-        document.cookie = `accessToken=${response.accessToken}; path=/; SameSite=None; Secure; max-age=604800`;
+        // Let the server set the cookies via Set-Cookie header
+        // The API response will handle setting the cookies properly
         
         // Navigate to dashboard
         router.push('/dashboard');
@@ -57,10 +57,12 @@ export default function LoginForm() {
       console.error('Login error:', err);
       
       if (err instanceof Error) {
-        // Check for common cookie-related errors
+        // Check for specific error types
         if (err.message.includes('cookies')) {
           setShowCookieWarning(true);
           setError("Please enable cookies in your browser and accept our cookie policy to login.");
+        } else if (err.message.includes('network')) {
+          setError("Network error. Please check your connection and try again.");
         } else {
           setError(err.message || "Login failed. Please check your credentials.");
         }

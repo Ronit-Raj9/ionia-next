@@ -13,6 +13,17 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE = getApiBaseUrl();
 
+// Helper function to determine cookie settings based on environment
+const getCookieSettings = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  return {
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+    domain: isProduction ? process.env.NEXT_PUBLIC_COOKIE_DOMAIN : undefined
+  };
+};
+
 // Preload queue for managing preloaded API calls
 const preloadQueue: Array<{ url: string; options?: RequestInit }> = [];
 let isProcessingQueue = false;
@@ -222,13 +233,13 @@ export const fetchWithCache = async <T>(
     ...(options?.headers || {}),
   };
 
-  // Determine if we should include credentials
-  const useCredentials = shouldIncludeCredentials(url);
+  // Always include credentials for both environments
+  const credentials: RequestCredentials = 'include';
 
   try {
     const response = await fetch(url, {
       ...options,
-      credentials: useCredentials ? 'include' : 'same-origin',
+      credentials,
       headers,
     });
 
@@ -239,7 +250,7 @@ export const fetchWithCache = async <T>(
         if (newToken) {
           const newResponse = await fetch(url, {
             ...options,
-            credentials: useCredentials ? 'include' : 'same-origin',
+            credentials: credentials,
             headers: {
               ...headers,
               Authorization: `Bearer ${newToken}`,
