@@ -49,8 +49,8 @@ const checkCookieConsent = (): boolean => {
 const getBaseUrl = (): string => {
   if (typeof window === 'undefined') return API_URL;
   
-  return process.env.NEXT_PUBLIC_API_URL || 
-    (window.location.hostname === 'localhost' ? API_URL : window.location.origin + '/api/v1');
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || API_URL;
+  return envUrl;
 };
 
 // Create axios instance with credentials
