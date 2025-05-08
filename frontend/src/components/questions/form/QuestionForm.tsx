@@ -266,14 +266,12 @@ const QuestionForm: React.FC = () => {
       formDataToSend.append("languageLevel", transformedData.languageLevel);
       
       // IMPORTANT: Handle year field properly for PYQs
-      // If the question is a previous year question, year is mandatory
       if (transformedData.questionSource === 'pyq') {
         if (!transformedData.year || transformedData.year === 'not applicable') {
           throw new Error('Year must be specified for previous year questions');
         }
         formDataToSend.append("year", transformedData.year);
       } else {
-        // For other question sources, year is optional but we still send it
         formDataToSend.append("year", transformedData.year || 'not applicable');
       }
       
@@ -304,22 +302,30 @@ const QuestionForm: React.FC = () => {
       // Add solution
       formDataToSend.append("solutionText", transformedData.solution.text || "");
       
-      // Add images if present - first check if image object exists and has URL
-      if (transformedData.question.image && transformedData.question.image.url) {
-        console.log("Adding question image URL:", transformedData.question.image.url);
-        formDataToSend.append("questionImageUrl", transformedData.question.image.url);
-        if (transformedData.question.image.publicId) {
-          formDataToSend.append("questionImagePublicId", transformedData.question.image.publicId);
-        }
+      // --- IMAGE FILES ---
+      // Question image
+      if (formData.question.image instanceof File) {
+        formDataToSend.append("questionImage", formData.question.image);
       }
-      
-      if (transformedData.solution.image && transformedData.solution.image.url) {
-        console.log("Adding solution image URL:", transformedData.solution.image.url);
-        formDataToSend.append("solutionImageUrl", transformedData.solution.image.url);
-        if (transformedData.solution.image.publicId) {
-          formDataToSend.append("solutionImagePublicId", transformedData.solution.image.publicId);
-        }
+      // Solution image
+      if (formData.solution.image instanceof File) {
+        formDataToSend.append("solutionImage", formData.solution.image);
       }
+      // Option images
+      transformedData.options.forEach((option, index) => {
+        if (option.image instanceof File) {
+          formDataToSend.append("optionImages", option.image);
+          formDataToSend.append("optionImageIndexes", index.toString());
+        }
+      });
+      // Hint images
+      transformedData.hints.forEach((hint, index) => {
+        if (hint.image instanceof File) {
+          formDataToSend.append("hintImages", hint.image);
+          formDataToSend.append("hintImageIndexes", index.toString());
+        }
+      });
+      // --- END IMAGE FILES ---
 
       // Process hints - max 4 hints supported by the backend
       const maxHints = Math.min(transformedData.hints.length, 4);
@@ -353,17 +359,6 @@ const QuestionForm: React.FC = () => {
         // For MCQ questions
         formDataToSend.append("options", JSON.stringify(transformedData.options.map(opt => opt.text)));
         formDataToSend.append("correctOptions", JSON.stringify(transformedData.correctOptions));
-        
-        // Add option images if present
-        transformedData.options.forEach((option, index) => {
-          if (option.image && option.image.url) {
-            console.log(`Adding option${index}Image URL:`, option.image.url);
-            formDataToSend.append(`option${index}ImageUrl`, option.image.url);
-            if (option.image.publicId) {
-              formDataToSend.append(`option${index}ImagePublicId`, option.image.publicId);
-            }
-          }
-        });
       }
 
       // Log the API URL being used
@@ -379,6 +374,7 @@ const QuestionForm: React.FC = () => {
       });
 
       console.log("Response status:", response.status);
+      console.log("Response data:", response);
 
       // Handle non-200 responses
       if (!response.ok) {

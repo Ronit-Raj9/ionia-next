@@ -8,7 +8,7 @@ interface QuestionPreviewProps {
 
 const QuestionPreview: React.FC<QuestionPreviewProps> = ({ formData }) => {
   // Remove the console logs once fixed
-  console.log("Question test:", formData.question.text);
+  console.log("Question text:", formData.question.text);
   
   return (
     <div className="space-y-8 w-full">

@@ -172,6 +172,7 @@ const getCacheKey = (url: string, options?: RequestInit): string => {
 const CACHE_INVALIDATION_PATTERNS = {
   user: ['/users/current-user', '/users/profile'],
   auth: ['/users/login', '/users/register', '/users/logout'],
+  admin: ['/users/admin'],
   all: ['*']
 };
 
@@ -371,6 +372,31 @@ interface LoginResponse {
   refreshToken: string;
 }
 
+// User types for admin functions
+interface User {
+  _id: string;
+  username: string;
+  fullName: string;
+  email: string;
+  avatar?: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PaginatedResponse<T> {
+  docs: T[];
+  totalDocs: number;
+  limit: number;
+  totalPages: number;
+  page: number;
+  pagingCounter: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  prevPage: number | null;
+  nextPage: number | null;
+}
+
 /**
  * API endpoints
  */
@@ -428,6 +454,26 @@ export const API = {
         credentials: 'include',
       });
     },
+  },
+  admin: {
+    // Admin user management functions
+    getUsers: (queryParams: string) =>
+      fetchWithCache<APIResponse<PaginatedResponse<User>>>(`${API_BASE}/users/admin?${queryParams}`, {
+        method: 'GET',
+      }),
+    getUserAnalytics: () =>
+      fetchWithCache<APIResponse<any>>(`${API_BASE}/users/admin/analytics`, {
+        method: 'GET',
+      }),
+    getUserDetails: (userId: string) =>
+      fetchWithCache<APIResponse<User>>(`${API_BASE}/users/admin/${userId}`, {
+        method: 'GET',
+      }),
+    updateUserRole: (userId: string, role: string) =>
+      fetchWithCache<APIResponse<User>>(`${API_BASE}/users/admin/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      }, true), // Skip cache to ensure fresh data
   },
   questions: {
     getAll: (filters?: Record<string, string>) => {

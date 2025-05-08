@@ -648,6 +648,247 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * getAllUsers
+ * - Get all users with pagination, filtering and sorting options
+ * - Admin/Superadmin only
+ */
+const getAllUsers = asyncHandler(async (req, res) => {
+  const { 
+    page = 1, 
+    limit = 10, 
+    search = "", 
+    role = "", 
+    sortBy = "createdAt", 
+    sortOrder = "desc" 
+  } = req.query;
+
+  // Build query
+  const query = {};
+  
+  // Add role filter if provided
+  if (role) {
+    query.role = role;
+  }
+  
+  // Add search functionality
+  if (search) {
+    query.$or = [
+      { username: { $regex: search, $options: "i" } },
+      { fullName: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } }
+    ];
+  }
+  
+  // Determine sort order
+  const sort = {};
+  sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+  
+  // Pagination setup
+  const options = {
+    page: parseInt(page),
+    limit: parseInt(limit),
+    sort,
+    select: "-password -refreshToken -resetPasswordToken -resetPasswordExpires",
+    lean: true,
+  };
+  
+  try {
+    // Find users
+    const users = await User.paginate(query, options);
+    
+    return res.status(200).json(
+      new ApiResponse(200, users, "Users retrieved successfully")
+    );
+  } catch (error) {
+    throw new ApiError(500, "Error fetching users", error.message);
+  }
+});
+
+/**
+ * getUsersAnalytics
+ * - Get analytics data about users
+ * - Admin/Superadmin only
+ */
+const getUsersAnalytics = asyncHandler(async (req, res) => {
+  try {
+    // Total users
+    const totalUsers = await User.countDocuments();
+    
+    // Users by role
+    const usersByRole = await User.aggregate([
+      {
+        $group: {
+          _id: "$role",
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    // Format users by role for easier frontend consumption
+    const roleCountObj = {
+      user: 0,
+      admin: 0,
+      superadmin: 0
+    };
+    
+    usersByRole.forEach(role => {
+      if (role._id && roleCountObj.hasOwnProperty(role._id)) {
+        roleCountObj[role._id] = role.count;
+      }
+    });
+    
+    // New users this week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const newUsersThisWeek = await User.countDocuments({
+      createdAt: { $gte: oneWeekAgo }
+    });
+    
+    // New users this month
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const newUsersThisMonth = await User.countDocuments({
+      createdAt: { $gte: oneMonthAgo }
+    });
+    
+    // Recent signups (last 10)
+    const recentSignups = await User.find()
+      .select("fullName username email role createdAt")
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
+    
+    return res.status(200).json(
+      new ApiResponse(200, {
+        totalUsers,
+        usersByRole: roleCountObj,
+        newUsersThisWeek,
+        newUsersThisMonth,
+        recentSignups
+      }, "User analytics fetched successfully")
+    );
+  } catch (error) {
+    throw new ApiError(500, "Error fetching user analytics", error.message);
+  }
+});
+
+/**
+ * getUserDetails
+ * - Get detailed information about a specific user
+ * - Admin/Superadmin only
+ */
+const getUserDetails = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+  
+  try {
+    // Fetch basic user info
+    const user = await User.findById(userId)
+      .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires")
+      .lean();
+    
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+    
+    // Fetch test statistics
+    const testStats = await AttemptedTest.aggregate([
+      { $match: { userId } },
+      { $group: {
+        _id: null,
+        totalTests: { $sum: 1 },
+        totalCorrect: { $sum: "$totalCorrectAnswers" },
+        totalWrong: { $sum: "$totalWrongAnswers" },
+      }}
+    ]);
+    
+    // Calculate test statistics
+    const userStats = testStats.length > 0 ? testStats[0] : {
+      totalTests: 0,
+      totalCorrect: 0,
+      totalWrong: 0
+    };
+    
+    // Calculate accuracy
+    const totalAnswered = userStats.totalCorrect + userStats.totalWrong;
+    const accuracy = totalAnswered > 0 
+      ? (userStats.totalCorrect / totalAnswered) * 100 
+      : 0;
+    
+    // Format and return combined data
+    const userData = {
+      ...user,
+      stats: {
+        testsCompleted: userStats.totalTests,
+        accuracy: accuracy.toFixed(2),
+        totalCorrect: userStats.totalCorrect,
+        totalWrong: userStats.totalWrong,
+      }
+    };
+    
+    return res.status(200).json(
+      new ApiResponse(200, userData, "User details fetched successfully")
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "Error fetching user details", error.message);
+  }
+});
+
+/**
+ * updateUserRole
+ * - Update a user's role (promote to admin or demote to user)
+ * - Superadmin only
+ */
+const updateUserRole = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+  
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+  
+  if (!role || !['user', 'admin'].includes(role)) {
+    throw new ApiError(400, "Invalid role. Role must be 'user' or 'admin'");
+  }
+  
+  try {
+    // Prevent updating superadmin role
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+    
+    if (user.role === 'superadmin') {
+      throw new ApiError(403, "Superadmin role cannot be changed");
+    }
+    
+    // Update the role
+    user.role = role;
+    await user.save();
+    
+    // Return updated user without sensitive fields
+    const updatedUser = await User.findById(userId)
+      .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires");
+    
+    return res.status(200).json(
+      new ApiResponse(200, updatedUser, `User role updated to ${role} successfully`)
+    );
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, "Error updating user role", error.message);
+  }
+});
+
 export {
   registerUser,
   loginUser,
@@ -661,5 +902,10 @@ export {
   getUserStatistics,
   checkUsername,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  // Admin controllers
+  getAllUsers,
+  getUsersAnalytics,
+  getUserDetails,
+  updateUserRole
 };

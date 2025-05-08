@@ -115,7 +115,7 @@ const getTests = asyncHandler(async (req, res) => {
     console.log("Fetching tests with query:", req.query);
     const {
         page = 1,
-        limit = 10,
+        limit = 30,
         sortBy = 'createdAt',
         sortOrder = 'desc',
         testCategory,
@@ -132,8 +132,8 @@ const getTests = asyncHandler(async (req, res) => {
         // Add more filters as needed
     } = req.query;
 
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = parseInt(page, 30);
+    const limitNum = parseInt(limit, 30);
 
     // Build the aggregation pipeline
     const pipeline = [];
@@ -185,6 +185,7 @@ const getTests = asyncHandler(async (req, res) => {
     };
 
     const result = await Test.aggregatePaginate(aggregate, options);
+    console.log("result", result);
 
     if (!result) {
         throw new ApiError(500, "Failed to retrieve tests");

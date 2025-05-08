@@ -12,7 +12,12 @@ import {
   getUserStatistics,
   checkUsername,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  // Admin routes
+  getAllUsers,
+  getUserDetails,
+  updateUserRole,
+  getUsersAnalytics
 } from "../controllers/user.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
@@ -87,5 +92,37 @@ router
   );
 
 router.route("/statistics").get(verifyJWT, getUserStatistics);
+
+/**
+ * Admin Routes
+ * - Only accessible by admin or superadmin
+ */
+// Get all users with pagination and filtering
+router.route("/admin").get(
+  verifyJWT, 
+  verifyRole(["admin", "superadmin"]), 
+  getAllUsers
+);
+
+// Get user analytics
+router.route("/admin/analytics").get(
+  verifyJWT, 
+  verifyRole(["admin", "superadmin"]), 
+  getUsersAnalytics
+);
+
+// Get detailed user information
+router.route("/admin/:userId").get(
+  verifyJWT, 
+  verifyRole(["admin", "superadmin"]), 
+  getUserDetails
+);
+
+// Update user role (only superadmin can do this)
+router.route("/admin/:userId/role").patch(
+  verifyJWT, 
+  verifyRole(["superadmin"]), 
+  updateUserRole
+);
 
 export default router;

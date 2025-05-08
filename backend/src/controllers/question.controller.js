@@ -112,14 +112,20 @@ const uploadQuestion = asyncHandler(async (req, res) => {
         if (req.files?.questionImage) {
             const uploadedImage = await handleImageUpload(req.files.questionImage[0]);
             if (uploadedImage) {
-                questionImage = uploadedImage;
+                questionImage = {
+                    url: uploadedImage.url,
+                    publicId: uploadedImage.publicId
+                };
             }
         }
 
         if (req.files?.solutionImage) {
             const uploadedImage = await handleImageUpload(req.files.solutionImage[0]);
             if (uploadedImage) {
-                solutionImage = uploadedImage;
+                solutionImage = {
+                    url: uploadedImage.url,
+                    publicId: uploadedImage.publicId
+                };
             }
         }
 
@@ -227,7 +233,10 @@ const uploadQuestion = asyncHandler(async (req, res) => {
                 if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
                     const uploadedImage = await handleImageUpload(req.files[fieldName][0]);
                     if (uploadedImage) {
-                        optionImagesObj[i] = uploadedImage;
+                        optionImagesObj[i] = {
+                            url: uploadedImage.url,
+                            publicId: uploadedImage.publicId
+                        };
                     }
                 }
             }
@@ -252,7 +261,10 @@ const uploadQuestion = asyncHandler(async (req, res) => {
             if (req.files && req.files[imageFieldName] && req.files[imageFieldName][0]) {
                 const uploadedImage = await handleImageUpload(req.files[imageFieldName][0]);
                 if (uploadedImage) {
-                    hintImage = uploadedImage;
+                    hintImage = {
+                        url: uploadedImage.url,
+                        publicId: uploadedImage.publicId
+                    };
                 }
             }
             
@@ -286,7 +298,11 @@ const uploadQuestion = asyncHandler(async (req, res) => {
             }
         }
 
+        console.log("Question data:", questionData);
+
+
         const newQuestion = await Question.create(questionData);
+        console.log("New question: ", newQuestion)
         return res.status(201).json(
             new ApiResponse(201, newQuestion, "Question created successfully")
         );
@@ -342,7 +358,7 @@ const uploadQuestion = asyncHandler(async (req, res) => {
         if (cleanupErrors.length > 0) {
             console.error("Cleanup errors during question upload:", cleanupErrors);
         }
-        
+        console.log("Question data:", questionData);
         if (error instanceof ApiError) {
             throw error;
         }
@@ -491,7 +507,7 @@ const updateQuestion = asyncHandler(async (req, res) => {
                 }
                 questionData.question.image = {
                     url: newImage.url,
-                    publicId: newImage.publicId
+                    publicId: newImage.public_id
                 };
                 imageChanges = true;
             }
@@ -501,8 +517,14 @@ const updateQuestion = asyncHandler(async (req, res) => {
         if (req.files?.solutionImage) {
             const newImage = await handleImageUpload(req.files.solutionImage[0]);
             if (newImage) {
-                await cleanupOldImages(question.solution.image);
-                questionData.solution.image = newImage;
+                // Clean up old image if it exists
+                if (question.solution.image?.publicId) {
+                    await cleanupOldImages(question.solution.image);
+                }
+                questionData.solution.image = {
+                    url: newImage.url,
+                    publicId: newImage.public_id
+                };
                 imageChanges = true;
             }
         }
@@ -528,7 +550,10 @@ const updateQuestion = asyncHandler(async (req, res) => {
                     if (question.options[index]?.image?.publicId) {
                         await cleanupOldImages(question.options[index].image);
                     }
-                    questionData.options[index].image = newImage;
+                    questionData.options[index].image = {
+                        url: newImage.url,
+                        publicId: newImage.public_id
+                    };
                     imageChanges = true;
                 }
             }
@@ -555,7 +580,10 @@ const updateQuestion = asyncHandler(async (req, res) => {
                     if (question.hints[index]?.image?.publicId) {
                         await cleanupOldImages(question.hints[index].image);
                     }
-                    questionData.hints[index].image = newImage;
+                    questionData.hints[index].image = {
+                        url: newImage.url,
+                        publicId: newImage.public_id
+                    };
                     imageChanges = true;
                 }
             }

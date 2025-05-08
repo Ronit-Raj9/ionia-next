@@ -306,31 +306,46 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
     try {
       // Create FormData with transformed values
       const formDataToSend = new FormData();
-      formDataToSend.append("data", JSON.stringify(previewData));
       
-      // Add files if they exist
+      // Create a copy of previewData to modify
+      const dataToSend = { ...previewData };
+      
+      // Handle question image
       if (formData.question.image instanceof File) {
         formDataToSend.append("questionImage", formData.question.image);
+        // Remove the blob URL from the data
+        dataToSend.question.image = { url: '', publicId: '' };
       }
+      
+      // Handle solution image
       if (formData.solution.image instanceof File) {
         formDataToSend.append("solutionImage", formData.solution.image);
+        // Remove the blob URL from the data
+        dataToSend.solution.image = { url: '', publicId: '' };
       }
       
-      // Add option images
-      formData.options.forEach((option, index) => {
-        if (option.image instanceof File) {
-          formDataToSend.append("optionImages", option.image);
+      // Handle option images
+      dataToSend.options = dataToSend.options.map((option, index) => {
+        if (formData.options[index].image instanceof File) {
+          formDataToSend.append("optionImages", formData.options[index].image);
           formDataToSend.append("optionImageIndexes", index.toString());
+          return { ...option, image: { url: '', publicId: '' } };
         }
+        return option;
       });
       
-      // Add hint images
-      formData.hints.forEach((hint, index) => {
-        if (hint.image instanceof File) {
-          formDataToSend.append("hintImages", hint.image);
+      // Handle hint images
+      dataToSend.hints = dataToSend.hints.map((hint, index) => {
+        if (formData.hints[index]?.image instanceof File) {
+          formDataToSend.append("hintImages", formData.hints[index].image);
           formDataToSend.append("hintImageIndexes", index.toString());
+          return { ...hint, image: { url: '', publicId: '' } };
         }
+        return hint;
       });
+
+      // Append the modified data
+      formDataToSend.append("data", JSON.stringify(dataToSend));
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions/${question._id}`, {
         method: 'PATCH',
