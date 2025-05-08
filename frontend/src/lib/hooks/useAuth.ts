@@ -4,27 +4,36 @@ import { loginUser, registerUser, getUserProfile } from "../api/auth";
 // Define the expected structure of the authentication response
 interface AuthResponse {
   user: {
-    id: string;
+    _id: string;
     fullName: string;
     email: string;
     username: string;
-    role: string;
-    name?: string; // Make name optional
-    // Add more fields as necessary
+    role: 'user' | 'admin' | 'superadmin';
+    avatar?: string;
+    createdAt: string;
+    updatedAt: string;
   };
   accessToken: string;
-  refreshToken?: string; // Make refreshToken optional
+  refreshToken?: string;
 }
 
 // Define User type
 interface User {
-  id: string;
+  _id: string;
   fullName: string;
   email: string;
   username: string;
-  role: string;
+  role: 'user' | 'admin' | 'superadmin';
+  avatar?: string;
+  createdAt: string;
+  updatedAt: string;
   accessToken: string;
-  name?: string; // Make name optional
+  analytics?: {
+    totalTests: number;
+    testsThisWeek: number;
+    averageScore: number;
+    accuracy: number;
+  };
 }
 
 export const useAuth = () => {
@@ -39,7 +48,8 @@ export const useAuth = () => {
       // Create a user object that includes the accessToken
       setUser({
         ...data.user,
-        accessToken: data.accessToken
+        accessToken: data.accessToken,
+        analytics: undefined // Initialize analytics as undefined
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -59,7 +69,8 @@ export const useAuth = () => {
       // Create a user object that includes the accessToken
       setUser({
         ...data.user,
-        accessToken: data.accessToken
+        accessToken: data.accessToken,
+        analytics: undefined // Initialize analytics as undefined
       });
     } catch (err) {
       if (err instanceof Error) {

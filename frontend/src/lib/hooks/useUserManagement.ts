@@ -11,6 +11,12 @@ interface User {
   role: 'user' | 'admin' | 'superadmin';
   createdAt: string;
   updatedAt: string;
+  analytics?: {
+    totalTests: number;
+    testsThisWeek: number;
+    averageScore: number;
+    accuracy: number;
+  };
 }
 
 interface UserAnalytics {

@@ -379,9 +379,15 @@ interface User {
   fullName: string;
   email: string;
   avatar?: string;
-  role: string;
+  role: 'user' | 'admin' | 'superadmin';
   createdAt: string;
   updatedAt: string;
+  analytics?: {
+    totalTests: number;
+    testsThisWeek: number;
+    averageScore: number;
+    accuracy: number;
+  };
 }
 
 interface PaginatedResponse<T> {

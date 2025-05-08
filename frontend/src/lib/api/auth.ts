@@ -28,11 +28,14 @@ api.interceptors.request.use((config) => {
 // Define Auth Response type
 export interface AuthResponse {
   user: {
-    id: string;
+    _id: string;
     fullName: string;
     email: string;
     username: string;
-    role: string;
+    role: 'user' | 'admin' | 'superadmin';
+    avatar?: string;
+    createdAt: string;
+    updatedAt: string;
   };
   accessToken: string;
   refreshToken?: string;
@@ -40,12 +43,21 @@ export interface AuthResponse {
 
 // User profile type
 export interface User {
-  id: string;
+  _id: string;
   fullName: string;
   email: string;
   username: string;
-  role: string;
+  role: 'user' | 'admin' | 'superadmin';
+  avatar?: string;
+  createdAt: string;
+  updatedAt: string;
   accessToken: string;
+  analytics?: {
+    totalTests: number;
+    testsThisWeek: number;
+    averageScore: number;
+    accuracy: number;
+  };
 }
 
 // Check if cookies are enabled/accepted
