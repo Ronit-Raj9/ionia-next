@@ -133,6 +133,7 @@ export default function AdminTestsPage() {
         }
 
         const data = await response.json();
+        console.log(data);
         
         if (data.success && data.data) {
           const result = data.data as ApiResponse;
