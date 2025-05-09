@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Filter, X, Edit, Trash2, Eye, ChevronLeft, ChevronRight, CheckCircle2, Tag, Loader2 } from 'lucide-react';
+import { Plus, Filter, X, Edit, Trash2, Eye, ChevronLeft, ChevronRight, CheckCircle2, Tag, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 // Assume shadcn/ui components are imported or use placeholders
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"; // For actions
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Define the Test interface based on backend model (simplified)
 interface Test {
@@ -80,59 +81,83 @@ export default function AdminTestsPage() {
   // New state for status updates
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
 
+  // Add this near your other state variables
+  const [isFetchingAll, setIsFetchingAll] = useState(false);
+
   // Fetch tests function
-  const fetchTests = useCallback(async () => {
+  const fetchTests = useCallback(async (fetchAllTests = false) => {
     setLoading(true);
     setError(null);
-    try {
-      const queryParams = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: limit.toString(),
-        sortBy: sortBy,
-        sortOrder: sortOrder,
-      });
+    
+    // Return a Promise so we can chain .finally()
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        let endpoint = `${API_BASE_URL}/tests`;
+        
+        // If we need to fetch all tests, use the dedicated endpoint
+        if (fetchAllTests) {
+          endpoint = `${API_BASE_URL}/tests/all`;
+        }
+        
+        const queryParams = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: limit.toString(),
+          sortBy: sortBy,
+          sortOrder: sortOrder,
+        });
 
-      // Add filters to query params if they exist
-      if (filters.testCategory) queryParams.append('testCategory', filters.testCategory);
-      if (filters.status) queryParams.append('status', filters.status);
-      if (filters.subject) queryParams.append('subject', filters.subject);
-      if (filters.examType) queryParams.append('examType', filters.examType);
-      // Add searchTerm if needed (backend must support it)
-      // if (searchTerm) queryParams.append('search', searchTerm); 
+        // Add fetchAll parameter if needed
+        if (fetchAllTests) {
+          queryParams.append('fetchAll', 'true');
+        }
 
-      const accessToken = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/tests?${queryParams}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken || ''}`,
-        },
-      });
+        // Add filters to query params if they exist
+        if (filters.testCategory) queryParams.append('testCategory', filters.testCategory);
+        if (filters.status) queryParams.append('status', filters.status);
+        if (filters.subject) queryParams.append('subject', filters.subject);
+        if (filters.examType) queryParams.append('examType', filters.examType);
+        // Add searchTerm if needed (backend must support it)
+        // if (searchTerm) queryParams.append('search', searchTerm); 
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch tests: ${response.statusText}`);
+        const accessToken = localStorage.getItem('accessToken');
+        const response = await fetch(`${endpoint}?${queryParams}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken || ''}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch tests: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          const result = data.data as ApiResponse;
+          setTests(result.docs || []);
+          setTotalTests(result.totalDocs || 0);
+          setTotalPages(result.totalPages || 1);
+          setCurrentPage(result.page || 1);
+          
+          // Log success message
+          console.log(`Successfully fetched ${result.docs?.length} out of ${result.totalDocs} tests`);
+          resolve(); // Resolve the promise on success
+        } else {
+          throw new Error(data.message || 'Failed to parse test data');
+        }
+      } catch (err: any) {
+        console.error("Fetch Tests Error:", err);
+        setError(err.message || 'Could not load tests.');
+        setTests([]); // Clear tests on error
+        setTotalTests(0);
+        setTotalPages(1);
+        reject(err); // Reject the promise on error
+      } finally {
+        setLoading(false);
       }
-
-      const data = await response.json();
-      
-      if (data.success && data.data) {
-        const result = data.data as ApiResponse;
-        setTests(result.docs || []);
-        setTotalTests(result.totalDocs || 0);
-        setTotalPages(result.totalPages || 1);
-        setCurrentPage(result.page || 1);
-      } else {
-        throw new Error(data.message || 'Failed to parse test data');
-      }
-    } catch (err: any) {
-      console.error("Fetch Tests Error:", err);
-      setError(err.message || 'Could not load tests.');
-      setTests([]); // Clear tests on error
-      setTotalTests(0);
-      setTotalPages(1);
-    } finally {
-      setLoading(false);
-    }
+    });
   }, [currentPage, limit, sortBy, sortOrder, filters, searchTerm]); // Dependencies
 
   // Fetch tests on initial load and when dependencies change
@@ -259,6 +284,19 @@ export default function AdminTestsPage() {
     }
   };
 
+  // Update the handleFetchAllTests function
+  const handleFetchAllTests = () => {
+    // When fetching all tests, we reset pagination to simplify things
+    setCurrentPage(1);
+    setIsFetchingAll(true);
+    
+    // Call fetchTests with fetchAll=true
+    fetchTests(true)
+      .finally(() => {
+        setIsFetchingAll(false);
+      });
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -325,7 +363,27 @@ export default function AdminTestsPage() {
                 <X className="mr-2 h-4 w-4" /> Reset Filters
               </Button>
             )}
-                </div>
+
+            {/* Update the Fetch All Tests button to show loading state */}
+            <Button 
+              variant="outline" 
+              onClick={handleFetchAllTests} 
+              className="flex items-center justify-center"
+              disabled={isFetchingAll}
+            >
+              {isFetchingAll ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Fetching...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Fetch All Tests
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
       

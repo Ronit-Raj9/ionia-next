@@ -4,7 +4,7 @@ export interface Option {
   image?: {
     url: string;
     publicId: string;
-    file?: File;
+    file?: File | null;
   };
 }
 
@@ -13,7 +13,7 @@ export interface Hint {
   image?: {
     url: string;
     publicId: string;
-    file?: File;
+    file?: File | null;
   };
 }
 
@@ -64,7 +64,7 @@ export interface QuestionFormData {
     image?: {
       url: string;
       publicId: string;
-      file?: File;
+      file?: File | null;
     }
   };
   questionType: 'single' | 'multiple' | 'numerical';
@@ -93,7 +93,7 @@ export interface QuestionFormData {
     image?: {
       url: string;
       publicId: string;
-      file?: File;
+      file?: File | null;
     }
   };
   
@@ -103,7 +103,7 @@ export interface QuestionFormData {
     image?: {
       url: string;
       publicId: string;
-      file?: File;
+      file?: File | null;
     }
   }>;
   correctOptions: number[];
@@ -124,7 +124,7 @@ export interface QuestionFormData {
     image?: {
       url: string;
       publicId: string;
-      file?: File;
+      file?: File | null;
     }
   }>;
   

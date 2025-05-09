@@ -4,13 +4,13 @@ import { QuestionFormData, ValidationErrors } from './types';
 const defaultFormData: QuestionFormData = {
   question: {
     text: "",
-    image: { url: "", publicId: "" }
+    image: { url: "", publicId: "", file: null }
   },
   options: [
-    { text: "", image: { url: "", publicId: "" } },
-    { text: "", image: { url: "", publicId: "" } },
-    { text: "", image: { url: "", publicId: "" } }, 
-    { text: "", image: { url: "", publicId: "" } }
+    { text: "", image: { url: "", publicId: "", file: null } },
+    { text: "", image: { url: "", publicId: "", file: null } },
+    { text: "", image: { url: "", publicId: "", file: null } }, 
+    { text: "", image: { url: "", publicId: "", file: null } }
   ],
   correctOptions: [],
   questionType: "single",
@@ -27,7 +27,7 @@ const defaultFormData: QuestionFormData = {
   language: "english",
   solution: {
     text: "",
-    image: { url: "", publicId: "" }
+    image: { url: "", publicId: "", file: null }
   },
   hints: [],
   tags: [],
@@ -73,22 +73,22 @@ export const useQuestionForm = () => {
           // Ensure proper structure for question image
           question: {
             text: parsedDraft.question?.text || '',
-            image: parsedDraft.question?.image || { url: '', publicId: '' }
+            image: parsedDraft.question?.image || { url: '', publicId: '', file: null }
           },
           // Ensure proper structure for solution image
           solution: {
             text: parsedDraft.solution?.text || '',
-            image: parsedDraft.solution?.image || { url: '', publicId: '' }
+            image: parsedDraft.solution?.image || { url: '', publicId: '', file: null }
           },
           // Fix options structure
           options: parsedDraft.options?.map((opt: any) => ({
             text: opt.text || '',
-            image: opt.image || { url: '', publicId: '' }
+            image: opt.image || { url: '', publicId: '', file: null }
           })) || prevData.options,
           // Fix hints structure
           hints: parsedDraft.hints?.map((hint: any) => ({
             text: hint.text || '',
-            image: hint.image || { url: '', publicId: '' }
+            image: hint.image || { url: '', publicId: '', file: null }
           })) || prevData.hints
         }));
       } catch (e) {
@@ -105,24 +105,24 @@ export const useQuestionForm = () => {
       
       // Reset image URLs to empty to avoid bloating localStorage
       if (dataToSave.question && dataToSave.question.image) {
-        dataToSave.question.image = { url: '', publicId: '' };
+        dataToSave.question.image = { url: '', publicId: '', file: null };
       }
       
       if (dataToSave.solution && dataToSave.solution.image) {
-        dataToSave.solution.image = { url: '', publicId: '' };
+        dataToSave.solution.image = { url: '', publicId: '', file: null };
       }
       
       if (dataToSave.options) {
         dataToSave.options = dataToSave.options.map((opt: any) => ({
           ...opt,
-          image: { url: '', publicId: '' }
+          image: { url: '', publicId: '', file: null }
         }));
       }
       
       if (dataToSave.hints) {
         dataToSave.hints = dataToSave.hints.map((hint: any) => ({
           ...hint,
-          image: { url: '', publicId: '' }
+          image: { url: '', publicId: '', file: null }
         }));
       }
       
@@ -228,7 +228,7 @@ export const useQuestionForm = () => {
             image: { 
               url, // URL for preview only
               publicId: '',
-              file // Store the actual file for upload
+              file // Store the actual file for upload (File | null)
             }
           }
         };
@@ -241,7 +241,7 @@ export const useQuestionForm = () => {
             image: { 
               url, // URL for preview only
               publicId: '',
-              file // Store the actual file for upload
+              file // Store the actual file for upload (File | null)
             }
           }
         };
@@ -254,7 +254,7 @@ export const useQuestionForm = () => {
           image: {
             url, // URL for preview only
             publicId: '',
-            file // Store the actual file for upload
+            file // Store the actual file for upload (File | null)
           }
         };
         
@@ -268,7 +268,7 @@ export const useQuestionForm = () => {
           image: {
             url, // URL for preview only
             publicId: '',
-            file // Store the actual file for upload
+            file // Store the actual file for upload (File | null)
           }
         };
         
@@ -345,7 +345,7 @@ export const useQuestionForm = () => {
   const addOption = () => {
     setFormData(prev => ({
       ...prev,
-      options: [...prev.options, { text: '', image: { url: '', publicId: '' } }]
+      options: [...prev.options, { text: '', image: { url: '', publicId: '', file: null } }]
     }));
     
     setIsSaved(false);
@@ -375,7 +375,7 @@ export const useQuestionForm = () => {
   const addHint = () => {
     setFormData(prev => ({
       ...prev,
-      hints: [...prev.hints, { text: '', image: { url: '', publicId: '' } }]
+      hints: [...prev.hints, { text: '', image: { url: '', publicId: '', file: null } }]
     }));
     
     setIsSaved(false);
@@ -418,24 +418,24 @@ export const useQuestionForm = () => {
     
     // Reset image URLs to empty to avoid bloating localStorage
     if (dataToSave.question && dataToSave.question.image) {
-      dataToSave.question.image = { url: '', publicId: '' };
+      dataToSave.question.image = { url: '', publicId: '', file: null };
     }
     
     if (dataToSave.solution && dataToSave.solution.image) {
-      dataToSave.solution.image = { url: '', publicId: '' };
+      dataToSave.solution.image = { url: '', publicId: '', file: null };
     }
     
     if (dataToSave.options) {
       dataToSave.options = dataToSave.options.map((opt: any) => ({
         ...opt,
-        image: { url: '', publicId: '' }
+        image: { url: '', publicId: '', file: null }
       }));
     }
     
     if (dataToSave.hints) {
       dataToSave.hints = dataToSave.hints.map((hint: any) => ({
         ...hint,
-        image: { url: '', publicId: '' }
+        image: { url: '', publicId: '', file: null }
       }));
     }
     
