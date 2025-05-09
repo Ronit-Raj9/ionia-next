@@ -115,7 +115,7 @@ const getTests = asyncHandler(async (req, res) => {
     console.log("Fetching tests with query:", req.query);
     const {
         page = 1,
-        limit = 30,
+        limit = 100, // Increased from 30 to 100 to fetch more tests
         sortBy = 'createdAt',
         sortOrder = 'desc',
         testCategory,
@@ -128,12 +128,10 @@ const getTests = asyncHandler(async (req, res) => {
         year, // For PYQ
         isPremium, // For Platform
         createdBy, // User ID
-        tag // Filter by a single tag
+        tag, // Filter by a single tag
+        fetchAll = "false" // New parameter to fetch all tests without pagination
         // Add more filters as needed
     } = req.query;
-
-    const pageNum = parseInt(page, 30);
-    const limitNum = parseInt(limit, 30);
 
     // Build the aggregation pipeline
     const pipeline = [];
@@ -155,6 +153,7 @@ const getTests = asyncHandler(async (req, res) => {
         matchStage.status = 'published';
     }
     
+    // Apply other filters only if they're provided
     if (subject) matchStage.subject = subject;
     if (examType) matchStage.examType = examType;
     if (className) matchStage.class = className;
@@ -165,6 +164,7 @@ const getTests = asyncHandler(async (req, res) => {
     if (createdBy) matchStage.createdBy = new mongoose.Types.ObjectId(createdBy);
     if (tag) matchStage.tags = { $in: [tag] }; // Simple tag filter
 
+    // Only add match stage if there are actual filters
     if (Object.keys(matchStage).length > 0) {
         pipeline.push({ $match: matchStage });
     }
@@ -177,24 +177,61 @@ const getTests = asyncHandler(async (req, res) => {
     // Create aggregate object
     const aggregate = Test.aggregate(pipeline);
 
-    // Execute pagination
-    const options = {
-        page: pageNum,
-        limit: limitNum,
-        // Optionally add lean: true for performance if not modifying docs
-    };
-
-    const result = await Test.aggregatePaginate(aggregate, options);
-    console.log("result", result);
-
-    if (!result) {
-        throw new ApiError(500, "Failed to retrieve tests");
+    // Check if we should fetch all tests without pagination
+    if (fetchAll === "true") {
+        // Execute the aggregate without pagination
+        const allTests = await aggregate.exec();
+        
+        console.log(`Retrieved ${allTests.length} tests (no pagination)`);
+        return res.status(200).json(
+            new ApiResponse(200, {
+                docs: allTests,
+                totalDocs: allTests.length,
+                limit: allTests.length,
+                page: 1,
+                totalPages: 1,
+                pagingCounter: 1,
+                hasPrevPage: false,
+                hasNextPage: false,
+                prevPage: null,
+                nextPage: null
+            }, "All tests retrieved successfully")
+        );
     }
 
-    console.log(`Retrieved ${result.docs.length} tests out of ${result.totalDocs} total.`);
-    return res.status(200).json(
-        new ApiResponse(200, result, "Tests retrieved successfully")
-    );
+    // Execute pagination with a higher limit
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    
+    // Ensure we're using a large enough limit to get all tests
+    const options = {
+        page: pageNum,
+        limit: limitNum, // Using the larger limit value
+        allowDiskUse: true // Add this to handle large datasets
+    };
+
+    try {
+        const result = await Test.aggregatePaginate(aggregate, options);
+        // console.log("Pagination result:", result);
+
+        if (!result) {
+            throw new ApiError(500, "Failed to retrieve tests");
+        }
+
+        console.log(`Retrieved ${result.docs.length} tests out of ${result.totalDocs} total.`);
+        
+        // If we're missing tests, log a warning
+        if (result.totalDocs < 31) {
+            console.warn(`WARNING: Database has 31 tests but only ${result.totalDocs} counted. Check database consistency or aggregation pipeline.`);
+        }
+        
+        return res.status(200).json(
+            new ApiResponse(200, result, "Tests retrieved successfully")
+        );
+    } catch (error) {
+        console.error("Error during test retrieval:", error);
+        throw new ApiError(500, `Failed to retrieve tests: ${error.message}`);
+    }
 });
 
 // --- Get Single Test By ID --- 
@@ -231,13 +268,17 @@ const getTestById = asyncHandler(async (req, res) => {
         }
     }
 
-    // Add access control check here if needed (e.g., only published tests for users)
+    // Check user role for access control
     const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    console.log(`User role check: isAdmin=${isAdmin}, user role=${req.user?.role}, test status=${test.status}`);
+    
+    // Only apply status check for non-admin users
     if (!isAdmin && test.status !== 'published') {
+        console.log(`Access denied: non-admin user trying to access ${test.status} test`);
         throw new ApiError(403, "You do not have permission to view this test");
     }
 
-    console.log(`Found test: ${test.title}`);
+    console.log(`Found test: ${test.title} - Access granted`);
     return res.status(200).json(
         new ApiResponse(200, test, "Test retrieved successfully")
     );

@@ -42,7 +42,12 @@ const TestDetailsPage = () => {
   useEffect(() => {
     const fetchTestDetails = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${paperId}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${paperId}`, {
+          credentials: 'include',
+          headers: { 
+           'Content-Type': 'application/json',
+          }
+        });
         if (!res.ok) {
           throw new Error("Failed to fetch test details");
         }

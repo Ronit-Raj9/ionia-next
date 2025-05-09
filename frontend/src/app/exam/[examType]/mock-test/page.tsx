@@ -56,8 +56,13 @@ const MockTests = () => {
       const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/tests?testCategory=Platform&platformTestType=Mock&examType=${apiExamType}&page=${page}&limit=${testsPerPage}`;
         console.log('Fetching from URL:', apiUrl);
         
-        const res = await fetch(apiUrl);
-        
+        const res = await fetch(apiUrl, {
+          credentials: 'include',
+          headers: {
+            'Content-Type' : 'application/json'
+          }
+        });
+        console.log('Response:', res);
         if (!res.ok) {
           throw new Error(`Failed to fetch ${examType} mock tests`);
         }

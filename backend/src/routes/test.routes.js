@@ -15,18 +15,28 @@ const router = Router();
 // Maybe allow fetching published tests publicly, or apply verifyJWT later
 // GET /api/v1/tests - Get list of tests (filtered)
 router.route("/").get(
-    // Optional: Apply verifyJWT if only logged-in users can see tests
-    // verifyJWT, 
-    getTests 
-    // TODO: Add more refined permission checks if needed (e.g., premium access)
+    // Make JWT verification required, not optional
+    verifyJWT, 
+    getTests
+);
+
+// GET /api/v1/tests/all - Get all tests without pagination (admin only)
+router.route("/all").get(
+    verifyJWT,
+    verifyRole(["admin", "superadmin"]),
+    (req, res, next) => {
+        req.query.fetchAll = "true"; // Force fetchAll parameter
+        req.query.limit = "1000"; // Set a high limit as fallback
+        next();
+    },
+    getTests
 );
 
 // GET /api/v1/tests/:id - Get a single test by ID
 router.route("/:id").get(
-    // Optional: Apply verifyJWT if only logged-in users can see tests
-    // verifyJWT, 
+    // Make JWT verification required, not optional
+    verifyJWT, 
     getTestById
-    // TODO: Add more refined permission checks if needed 
 );
 
 // GET /api/v1/tests/:id/attempt - Get a test prepared for attempting (without answers)
