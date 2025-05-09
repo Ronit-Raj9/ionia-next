@@ -5,6 +5,8 @@ import { Question } from "../models/question.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { v2 as cloudinary } from 'cloudinary';
 import { ApiResponse } from "../utils/ApiResponse.js";
+import fs from "fs";
+import path from "path";
 
 // Helper function to delete image from cloudinary
 const deleteFromCloudinary = async (publicId) => {
@@ -19,11 +21,40 @@ const deleteFromCloudinary = async (publicId) => {
 // Helper function to handle image upload
 const handleImageUpload = async (file) => {
     if (!file) return null;
-    const result = await uploadOnCloudinary(file.path);
-    return result ? {
-        url: result.url,
-        publicId: result.public_id
-    } : null;
+    
+    try {
+        // Get file path from multer
+        const filePath = file.path;
+        
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+            console.error("File does not exist at path:", filePath);
+            return null;
+        }
+        
+        // Upload file to cloudinary
+        const result = await uploadOnCloudinary(filePath);
+        
+        // Note: The uploaded file is deleted by uploadOnCloudinary function
+        // so we don't need to delete it here again
+        
+        // Return cloudinary result
+        return result ? {
+            url: result.url,
+            publicId: result.public_id
+        } : null;
+    } catch (error) {
+        console.error("Error in handleImageUpload:", error);
+        // Try to clean up the file if it exists
+        try {
+            if (file.path && fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+        } catch (cleanupError) {
+            console.error("Error cleaning up file:", cleanupError);
+        }
+        return null;
+    }
 };
 
 // Helper function to clean up old images
@@ -112,20 +143,14 @@ const uploadQuestion = asyncHandler(async (req, res) => {
         if (req.files?.questionImage) {
             const uploadedImage = await handleImageUpload(req.files.questionImage[0]);
             if (uploadedImage) {
-                questionImage = {
-                    url: uploadedImage.url,
-                    publicId: uploadedImage.publicId
-                };
+                questionImage = uploadedImage;
             }
         }
 
         if (req.files?.solutionImage) {
             const uploadedImage = await handleImageUpload(req.files.solutionImage[0]);
             if (uploadedImage) {
-                solutionImage = {
-                    url: uploadedImage.url,
-                    publicId: uploadedImage.publicId
-                };
+                solutionImage = uploadedImage;
             }
         }
 
@@ -233,10 +258,7 @@ const uploadQuestion = asyncHandler(async (req, res) => {
                 if (req.files && req.files[fieldName] && req.files[fieldName][0]) {
                     const uploadedImage = await handleImageUpload(req.files[fieldName][0]);
                     if (uploadedImage) {
-                        optionImagesObj[i] = {
-                            url: uploadedImage.url,
-                            publicId: uploadedImage.publicId
-                        };
+                        optionImagesObj[i] = uploadedImage;
                     }
                 }
             }
@@ -261,10 +283,7 @@ const uploadQuestion = asyncHandler(async (req, res) => {
             if (req.files && req.files[imageFieldName] && req.files[imageFieldName][0]) {
                 const uploadedImage = await handleImageUpload(req.files[imageFieldName][0]);
                 if (uploadedImage) {
-                    hintImage = {
-                        url: uploadedImage.url,
-                        publicId: uploadedImage.publicId
-                    };
+                    hintImage = uploadedImage;
                 }
             }
             
@@ -298,11 +317,7 @@ const uploadQuestion = asyncHandler(async (req, res) => {
             }
         }
 
-        console.log("Question data:", questionData);
-
-
         const newQuestion = await Question.create(questionData);
-        console.log("New question: ", newQuestion)
         return res.status(201).json(
             new ApiResponse(201, newQuestion, "Question created successfully")
         );
@@ -507,7 +522,7 @@ const updateQuestion = asyncHandler(async (req, res) => {
                 }
                 questionData.question.image = {
                     url: newImage.url,
-                    publicId: newImage.public_id
+                    publicId: newImage.publicId
                 };
                 imageChanges = true;
             }
@@ -517,14 +532,8 @@ const updateQuestion = asyncHandler(async (req, res) => {
         if (req.files?.solutionImage) {
             const newImage = await handleImageUpload(req.files.solutionImage[0]);
             if (newImage) {
-                // Clean up old image if it exists
-                if (question.solution.image?.publicId) {
-                    await cleanupOldImages(question.solution.image);
-                }
-                questionData.solution.image = {
-                    url: newImage.url,
-                    publicId: newImage.public_id
-                };
+                await cleanupOldImages(question.solution.image);
+                questionData.solution.image = newImage;
                 imageChanges = true;
             }
         }
@@ -550,10 +559,7 @@ const updateQuestion = asyncHandler(async (req, res) => {
                     if (question.options[index]?.image?.publicId) {
                         await cleanupOldImages(question.options[index].image);
                     }
-                    questionData.options[index].image = {
-                        url: newImage.url,
-                        publicId: newImage.public_id
-                    };
+                    questionData.options[index].image = newImage;
                     imageChanges = true;
                 }
             }
@@ -580,10 +586,7 @@ const updateQuestion = asyncHandler(async (req, res) => {
                     if (question.hints[index]?.image?.publicId) {
                         await cleanupOldImages(question.hints[index].image);
                     }
-                    questionData.hints[index].image = {
-                        url: newImage.url,
-                        publicId: newImage.public_id
-                    };
+                    questionData.hints[index].image = newImage;
                     imageChanges = true;
                 }
             }
@@ -614,7 +617,7 @@ const updateQuestion = asyncHandler(async (req, res) => {
                 timestamp: new Date()
             });
         }
-
+        console.log("Question data after update:", questionData);
         const updatedQuestion = await question.save();
         return res.status(200).json(
             new ApiResponse(200, updatedQuestion, "Question updated successfully")

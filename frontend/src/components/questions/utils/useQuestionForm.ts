@@ -219,15 +219,16 @@ export const useQuestionForm = () => {
   const handleFileUpload = (file: File | null, field: string, index?: number) => {
     setFormData(prev => {
       if (field === 'questionImage') {
-        // Create a URL for the file
+        // Store both URL for preview and the actual file object
         const url = file ? URL.createObjectURL(file) : '';
         return { 
           ...prev, 
           question: {
             ...prev.question,
             image: { 
-              url,
-              publicId: ''
+              url, // URL for preview only
+              publicId: '',
+              file // Store the actual file for upload
             }
           }
         };
@@ -238,8 +239,9 @@ export const useQuestionForm = () => {
           solution: {
             ...prev.solution,
             image: { 
-              url,
-              publicId: ''
+              url, // URL for preview only
+              publicId: '',
+              file // Store the actual file for upload
             }
           }
         };
@@ -248,10 +250,11 @@ export const useQuestionForm = () => {
         const url = file ? URL.createObjectURL(file) : '';
         
         newOptions[index] = { 
-          ...newOptions[index], 
-          image: { 
-            url,
-            publicId: ''
+          ...newOptions[index],
+          image: {
+            url, // URL for preview only
+            publicId: '',
+            file // Store the actual file for upload
           }
         };
         
@@ -261,15 +264,17 @@ export const useQuestionForm = () => {
         const url = file ? URL.createObjectURL(file) : '';
         
         newHints[index] = { 
-          ...newHints[index], 
-          image: { 
-            url,
-            publicId: ''
+          ...newHints[index],
+          image: {
+            url, // URL for preview only
+            publicId: '',
+            file // Store the actual file for upload
           }
         };
         
         return { ...prev, hints: newHints };
       }
+      
       return prev;
     });
     
