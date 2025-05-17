@@ -172,7 +172,9 @@ export const PHYSICS_CURRICULUM = {
     "thermodynamics": [
       "Thermal Properties of Matter",
       "Laws of Thermodynamics",
-      "Heat Transfer (Conduction, Convection, Radiation)"
+      "Heat and Temperature",
+      "Kinetic Theory of Gases"
+
     ],
     "optics": [
       "Reflection and Refraction of Light",
