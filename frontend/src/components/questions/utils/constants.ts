@@ -219,7 +219,8 @@ export const CHEMISTRY_CURRICULUM = {
       "Chemical Bonding and Molecular Structure",
       "States of Matter (Gases and Liquids)",
       "Thermodynamics",
-      "Equilibrium (Chemical and Ionic)",
+      "Equilibrium Chemical",
+      "Equilibrium Ionic",
       "Redox Reactions"
     ],
     "inorganic": [
@@ -676,6 +677,8 @@ const getMathChapters = (classValue: string, section: string): Array<{value: str
   const mathChapters: Record<string, Record<string, string[]>> = {
     'class_11': {
       'algebra': [
+        'Relation',
+        'Function', 
         'Sets, Relations and Functions',
         'Complex Numbers',
         'Sequences and Series',
