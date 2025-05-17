@@ -658,7 +658,7 @@ export default function QuestionsPage() {
                   onChange={() => toggleOption(option.value)} 
                   className="h-4 w-4 rounded border-green-300 text-green-600 focus:ring-green-500"
                 />
-                <span className="ml-2 text-sm text-gray-700">{option.label}</span>
+                <span className="ml-2 text-sm text-gray-700 whitespace-pre-wrap">{option.label}</span>
               </label>
             ))}
           </div>
@@ -995,7 +995,7 @@ export default function QuestionsPage() {
                           </div>
                           <div className="flex items-center justify-between">
                             {!expandedQuestions[question._id] && (
-                              <h3 className="text-base font-medium text-gray-900 line-clamp-2">
+                              <h3 className="text-base font-medium text-gray-900 line-clamp-2 whitespace-pre-wrap">
                                 {question.question.text}
                               </h3>
                             )}
@@ -1083,7 +1083,7 @@ export default function QuestionsPage() {
                           <div className="col-span-8">
                             {/* Question Text/Image */}
                             <div className="mb-6">
-                              <h3 className="text-lg font-medium text-gray-900 mb-3">
+                              <h3 className="text-lg font-medium text-gray-900 mb-3 whitespace-pre-wrap">
                                 {question.question.text}
                               </h3>
                               {question.question.image?.url && (
@@ -1154,7 +1154,7 @@ export default function QuestionsPage() {
                                           {String.fromCharCode(65 + index)}
                                         </span>
                                         <div className="flex-grow space-y-2">
-                                          <p className="text-sm text-gray-700">{option.text}</p>
+                                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{option.text}</p>
                                           {option.image?.url && (
                                             <div className="rounded-lg overflow-hidden border border-gray-200">
                                               <div className="relative aspect-[16/9] w-full max-w-md">

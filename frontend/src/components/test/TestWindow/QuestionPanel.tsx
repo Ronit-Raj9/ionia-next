@@ -58,7 +58,7 @@ const QuestionOptions: React.FC<OptionProps> = ({
           )}
         </div>
         <div className="flex-grow">
-          <div className="text-gray-800">
+          <div className="text-gray-800 whitespace-pre-wrap">
             {optionText}
           </div>
           
@@ -95,7 +95,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
     if (typeof question.question === 'string') {
       // Handle string question
       return (
-        <p className="text-lg text-gray-700 leading-relaxed">
+        <p className="text-lg text-gray-700 leading-relaxed whitespace-pre-wrap">
           {question.question}
         </p>
       );
@@ -104,7 +104,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
       return (
         <>
           {question.question.text && (
-            <p className="text-lg text-gray-700 leading-relaxed">
+            <p className="text-lg text-gray-700 leading-relaxed whitespace-pre-wrap">
               {question.question.text}
             </p>
           )}

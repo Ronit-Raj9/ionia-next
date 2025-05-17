@@ -66,7 +66,7 @@ export function QuestionCard({
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-medium text-gray-900 line-clamp-2">
+              <h3 className="text-base font-medium text-gray-900 line-clamp-2 whitespace-pre-wrap">
                 {question.question.text}
               </h3>
             </div>
@@ -139,7 +139,7 @@ export function QuestionCard({
                             {String.fromCharCode(65 + index)}
                           </span>
                           <div className="flex-grow space-y-2">
-                            <p className="text-sm text-gray-700">{option.text || `Option ${index+1}`}</p>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{option.text || `Option ${index+1}`}</p>
                             {option.image?.url && (
                               <div className="rounded-lg overflow-hidden border border-gray-200">
                                 <div className="relative aspect-[16/9] w-full">
