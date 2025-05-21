@@ -145,7 +145,28 @@ export default function CreateTestPage() {
       filtered = filtered.filter(q => q.year && filters.year.includes(q.year)); // Check if year exists
     }
     if (filters.subject.length > 0) {
-      filtered = filtered.filter(q => filters.subject.includes(q.subject));
+      // Log for debugging
+      console.log("Filtering by subjects:", filters.subject);
+      console.log("Sample question subjects:", filtered.slice(0, 5).map(q => q.subject));
+      
+      // Use case-insensitive matching for subject filtering
+      filtered = filtered.filter(q => {
+        if (!q.subject) return false;
+        
+        return filters.subject.some(selectedSubject => {
+          // Convert both to lowercase for case-insensitive comparison
+          const qSubjectLower = q.subject.toLowerCase().trim();
+          const selectedSubjectLower = selectedSubject.toLowerCase().trim();
+          
+          // Match on exact match or partial match
+          return qSubjectLower === selectedSubjectLower || 
+                 qSubjectLower.includes(selectedSubjectLower) || 
+                 selectedSubjectLower.includes(qSubjectLower);
+        });
+      });
+
+      // Log filtered count for debugging
+      console.log(`After subject filtering: ${filtered.length} questions match`);
     }
     if (filters.chapter.length > 0) { // Filter by chapter
       filtered = filtered.filter(q => filters.chapter.includes(q.chapter));
@@ -235,18 +256,11 @@ export default function CreateTestPage() {
         hasMoreQuestions
       };
     } else {
-      // With the new approach, we still paginate when no filters are active
-      const indexOfLastQuestion = currentPage * questionsPerPage;
-      const indexOfFirstQuestion = indexOfLastQuestion - questionsPerPage;
-      const currentQuestions = filtered.slice(indexOfFirstQuestion, indexOfLastQuestion);
-      
-      // Check if we need to show the "Show More" button
-      const hasMoreQuestions = filtered.length > indexOfLastQuestion;
-      
+      // When no filters are active, show all questions without pagination
       return { 
-        filteredData: currentQuestions, 
+        filteredData: filtered, 
         totalFilteredCount: filtered.length,
-        hasMoreQuestions
+        hasMoreQuestions: false
       };
     }
   }, [filters, questions, currentPage, questionsPerPage]);
@@ -271,7 +285,7 @@ export default function CreateTestPage() {
         }
         
         // Adding a large limit parameter to fetch all questions at once
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions?limit=1000`, { 
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions?limit=10000`, { 
           headers: { 
             "Content-Type": "application/json",
             "Authorization": `Bearer ${accessToken}`
@@ -293,13 +307,35 @@ export default function CreateTestPage() {
         const totalQuestions = data.data.totalQuestions || 0;
         console.log(`Loaded ${allQuestions.length} questions out of ${totalQuestions} total`);
 
+        // Log subject distribution to help debug
+        const subjectCounts: Record<string, number> = {};
+        allQuestions.forEach(q => {
+          if (q.subject) {
+            // Normalize to lowercase for counting
+            const subjectKey = q.subject.toLowerCase();
+            subjectCounts[subjectKey] = (subjectCounts[subjectKey] || 0) + 1;
+          }
+        });
+        console.log("Questions by subject:", subjectCounts);
+        
+        // Specifically check for English questions
+        const englishQuestions = allQuestions.filter(q => 
+          q.subject && q.subject.toLowerCase().includes('english')
+        );
+        console.log(`Found ${englishQuestions.length} English questions with various capitalizations`);
+
         if (allQuestions.length === 0) {
           toast.error("No questions available. You may need to add questions first.");
         }
 
-        // Extract unique values for filters
+        // Extract unique values for filters - normalize subject case for consistency
         const options = {
-          subjects: new Set(allQuestions.map(q => q.subject).filter(Boolean)) as Set<string>,
+          subjects: new Set(
+            allQuestions
+              .map(q => q.subject?.toLowerCase())
+              .filter(Boolean)
+              .map(subject => subject?.trim())
+          ) as Set<string>,
           examTypes: new Set(allQuestions.map(q => q.examType).filter(Boolean)) as Set<string>,
           years: new Set(allQuestions.map(q => q.year).filter(Boolean).sort()) as Set<string>,
           chapters: new Set(allQuestions.map(q => q.chapter).filter(Boolean)) as Set<string>,
@@ -351,7 +387,7 @@ export default function CreateTestPage() {
     setLoading(true);
     setError("");
     
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions?limit=1000`, { 
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions?limit=10000`, { 
       headers: { 
         "Content-Type": "application/json",
         "Authorization": `Bearer ${accessToken}`
@@ -601,6 +637,16 @@ export default function CreateTestPage() {
       class: [],
       searchTerm: "" 
     });
+    
+    // Log information to console to help debug
+    console.log("Filters reset. Available questions:", questions.length);
+    console.log("Available subjects:", Array.from(availableOptions.subjects));
+    
+    // Check for English questions specifically
+    const englishQuestions = questions.filter(q => 
+      q.subject && q.subject.toLowerCase().includes('english')
+    );
+    console.log(`After reset: Found ${englishQuestions.length} English questions`);
   };
 
   // Handle showing more questions

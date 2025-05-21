@@ -117,6 +117,30 @@ export function QuestionSelection({
         </CardHeader>
       </Card>
 
+      {/* Debug Information */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+        <div className="font-medium text-blue-800">Debug Info:</div>
+        <div className="mt-1">
+          <div>Total questions in database: {questions.length}</div>
+          <div>Currently displaying: {filteredQuestions.length} questions</div>
+          <div>Total filtered questions: {totalFilteredCount}</div>
+          {filters.subject.length > 0 ? (
+            <div>
+              Selected subjects: {filters.subject.join(', ')}
+            </div>
+          ) : (
+            <div>No subject filter applied</div>
+          )}
+          <div>
+            English questions available: {
+              questions.filter(q => 
+                q.subject && q.subject.toLowerCase().includes('english')
+              ).length
+            }
+          </div>
+        </div>
+      </div>
+
       {/* Action Bar */}
       <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
         {/* Search and Filter Controls */}
