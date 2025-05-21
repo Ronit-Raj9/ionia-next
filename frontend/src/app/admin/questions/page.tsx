@@ -173,7 +173,7 @@ export default function QuestionsPage() {
 
   // Filter options
   const filterOptions = {
-    subjects: ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'English', 'General Knowledge', 'Computer Science', 'Information Practice'],
+    subjects: ['physics', 'chemistry', 'mathematics', 'biology', 'english', 'general knowledge', 'computer science', 'information practice'],
     examTypes: ['jee_main', 'jee_adv', 'cuet', 'neet', 'cbse_11', 'cbse_12', 'none'],
     difficulties: ['easy', 'medium', 'hard'],
     languages: ['english', 'hindi'],
@@ -183,14 +183,14 @@ export default function QuestionsPage() {
     questionCategories: ['theoretical', 'numerical'],
     questionSources: ['custom', 'india_book', 'foreign_book', 'pyq'],
     sections: {
-      Physics: ['mechanics', 'electromagnetism', 'thermodynamics', 'optics', 'modern_physics', 'none'],
-      Chemistry: ['organic', 'inorganic', 'physical', 'analytical', 'none'],
-      Mathematics: ['algebra', 'calculus', 'geometry', 'statistics', 'trigonometry', 'none'],
-      Biology: ['botany', 'zoology', 'human_physiology', 'ecology', 'genetics', 'none'],
-      English: ['reading_comprehension', 'vocabulary', 'grammar', 'writing', 'none'],
-      General_Knowledge: ['gk', 'current_affairs', 'general_science', 'mathematical_reasoning', 'logical_reasoning', 'none'],
-      Computer_Science: ['programming', 'data_structures', 'algorithms', 'databases', 'none'],
-      Information_Practice: ['programming', 'databases', 'web_development', 'none']
+      physics: ['mechanics', 'electromagnetism', 'thermodynamics', 'optics', 'modern_physics', 'none'],
+      chemistry: ['organic', 'inorganic', 'physical', 'analytical', 'none'],
+      mathematics: ['algebra', 'calculus', 'geometry', 'statistics', 'trigonometry', 'none'],
+      biology: ['botany', 'zoology', 'human_physiology', 'ecology', 'genetics', 'none'],
+      english: ['reading_comprehension', 'vocabulary', 'grammar', 'writing', 'none'],
+      general_knowledge: ['gk', 'current_affairs', 'general_science', 'mathematical_reasoning', 'logical_reasoning', 'none'],
+      computer_science: ['programming', 'data_structures', 'algorithms', 'databases', 'none'],
+      information_practice: ['programming', 'databases', 'web_development', 'none']
     }
   };
 
@@ -239,9 +239,21 @@ export default function QuestionsPage() {
       );
     }
 
+    // For debugging - log question values to compare with filter values
+    if (filters.subject.length > 0) {
+      console.log("Applied Subject Filters:", filters.subject);
+      console.log("Sample Question Subjects:", filtered.slice(0, 3).map(q => q.subject));
+    }
+
     // Apply filters
     filtered = filtered.filter(q => {
-      const matchesSubject = filters.subject.length === 0 || filters.subject.some(s => s.toLowerCase() === q.subject.toLowerCase());
+      const matchesSubject = filters.subject.length === 0 || 
+                             filters.subject.some(s => 
+                               q.subject.toLowerCase() === s.toLowerCase() ||
+                               q.subject.toLowerCase().includes(s.toLowerCase()) ||
+                               s.toLowerCase().includes(q.subject.toLowerCase())
+                             );
+
       const matchesExamType = filters.examType.length === 0 || filters.examType.includes(q.examType);
       const matchesDifficulty = filters.difficulty.length === 0 || filters.difficulty.includes(q.difficulty);
       const matchesYear = filters.year.length === 0 || filters.year.includes(q.year);
@@ -320,7 +332,10 @@ export default function QuestionsPage() {
       // Add multi-select filters
       const addArrayParams = (key: string, values: string[]) => {
         if (values.length > 0) {
-          values.forEach(value => queryParams.append(`${key}[]`, value));
+          // Normalize filter values (convert to lowercase) to match database format
+          const normalizedValues = values.map(value => value.toLowerCase());
+          console.log(`Adding ${key} filters:`, normalizedValues);
+          normalizedValues.forEach(value => queryParams.append(`${key}[]`, value));
         }
       };
 
@@ -345,6 +360,9 @@ export default function QuestionsPage() {
       if (filters.isVerified !== null) queryParams.append('isVerified', filters.isVerified.toString());
       if (filters.isActive !== null) queryParams.append('isActive', filters.isActive.toString());
       if (filters.solutionMode) queryParams.append('solutionMode', filters.solutionMode);
+
+      // Log the full query URL for debugging
+      console.log("API Query URL:", `${API_URL}/questions?${queryParams}`);
 
       // Retrieve the access token
       const accessToken = localStorage.getItem('accessToken');
@@ -535,19 +553,38 @@ export default function QuestionsPage() {
     }));
   };
 
+  // Helper function to get available sections based on selected subjects
+  const getAvailableSections = () => {
+    if (filters.subject.length === 0) return [];
+    
+    return filters.subject.flatMap(subj => {
+      // Convert "General Knowledge" to "general_knowledge" to match object keys
+      const subjectKey = subj.toLowerCase().replace(/\s+/g, '_');
+      const sections = filterOptions.sections[subjectKey as keyof typeof filterOptions.sections] || [];
+      
+      // Format sections for display
+      return sections.map(section => ({
+        value: section,
+        label: section.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+      }));
+    });
+  };
+
   // Custom multi-select dropdown with checkboxes - Update parent state immediately
   const CheckboxMultiSelect = ({ 
     values, 
     onChange,
     options, 
     placeholder,
-    className = ""
+    className = "",
+    isLoading = false
   }: { 
     values: string[], 
     onChange: (values: string[]) => void, 
     options: string[] | { value: string, label: string }[],
     placeholder: string,
-    className?: string
+    className?: string,
+    isLoading?: boolean
   }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null); // Ref for the main button container
@@ -615,20 +652,29 @@ export default function QuestionsPage() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
+          disabled={isLoading}
           className={`w-full rounded-lg border-green-200 focus:ring-green-500 focus:border-green-500 bg-white 
             transition-all duration-200 cursor-pointer hover:border-green-400 text-left
             pl-4 pr-10 py-2.5 text-sm text-gray-700 border shadow-sm
+            ${isLoading ? 'opacity-75 cursor-wait' : ''}
             ${className}`}
         >
           <div className="flex items-center justify-between">
             <span className={values.length === 0 ? "text-gray-500" : "text-gray-800"}>
-              {displayText}
+              {isLoading ? "Loading..." : displayText}
             </span>
-            <ChevronDownIcon className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isOpen ? "transform rotate-180" : ""}`} />
+            {isLoading ? (
+              <svg className="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <ChevronDownIcon className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isOpen ? "transform rotate-180" : ""}`} />
+            )}
           </div>
         </button>
         
-        {isOpen && (
+        {isOpen && !isLoading && (
           <div 
             ref={panelRef} // Add ref to the panel
             className="absolute z-10 mt-1 w-full bg-white border border-green-200 rounded-lg shadow-lg py-1 max-h-60 overflow-y-auto custom-scrollbar"
@@ -929,24 +975,53 @@ export default function QuestionsPage() {
               </div>
             )}
 
+            {/* Debug Filter Information (for admin users) */}
+            {activeFiltersCount > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                <div className="flex justify-between">
+                  <span className="font-semibold">Active Filters:</span>
+                  <span className="text-blue-700">{filteredQuestions.length} results</span>
+                </div>
+                {filters.subject.length > 0 && (
+                  <div className="mt-1">
+                    <span className="font-medium">Subject:</span> {filters.subject.join(', ')}
+                  </div>
+                )}
+                {filters.difficulty.length > 0 && (
+                  <div className="mt-1">
+                    <span className="font-medium">Difficulty:</span> {filters.difficulty.join(', ')}
+                  </div>
+                )}
+                {filters.section.length > 0 && (
+                  <div className="mt-1">
+                    <span className="font-medium">Section:</span> {filters.section.join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Questions List */}
             <div className="space-y-6">
+              {/* No results message */}
               {loading ? (
                 <div className="text-center py-8">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-green-500 border-t-transparent"></div>
                   <p className="text-green-600 mt-2">Loading questions...</p>
                 </div>
               ) : filteredQuestions.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-green-600">No questions found matching your criteria.</p>
-                  {(activeFiltersCount > 0 || searchQuery) && (
-                    <button
-                      onClick={resetFilters}
-                      className="mt-2 text-green-700 hover:text-green-800 underline"
-                    >
-                      Clear all filters
-                    </button>
-                  )}
+                <div className="text-center py-8 border border-yellow-200 rounded-lg bg-yellow-50 p-6">
+                  <ExclamationTriangleIcon className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-yellow-800 mb-2">No questions found</h3>
+                  <p className="text-yellow-700 mb-4">
+                    No questions match your current filter criteria. Try removing some filters or search with different terms.
+                  </p>
+                  <button
+                    onClick={resetFilters}
+                    className="px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-md transition-colors duration-200 flex items-center mx-auto"
+                  >
+                    <TrashIcon className="h-4 w-4 mr-2" />
+                    Clear all filters
+                  </button>
                 </div>
               ) : (
                 filteredQuestions.map((question) => (
@@ -1365,7 +1440,10 @@ export default function QuestionsPage() {
                         <CheckboxMultiSelect
                           values={filters.subject}
                           onChange={(values) => setFilters({ ...filters, subject: values })}
-                            options={filterOptions.subjects}
+                            options={filterOptions.subjects.map(subject => ({
+                              value: subject,
+                              label: subject.charAt(0).toUpperCase() + subject.slice(1)
+                            }))}
                             placeholder="All Subjects"
                           />
                         </div>
@@ -1382,19 +1460,16 @@ export default function QuestionsPage() {
                         </div>
 
                         {/* Section Filter */}
-                      <div className="filter-group">
-                            <label className="block text-sm font-medium text-green-700 mb-2">Section</label>
-                        <CheckboxMultiSelect
-                          values={filters.section}
+                        <div className="filter-group">
+                          <label className="block text-sm font-medium text-green-700 mb-2">Section</label>
+                          <CheckboxMultiSelect
+                            values={filters.section}
                             onChange={handleSectionChange}
-                          options={filters.subject.length > 0 
-                            ? filters.subject.flatMap(subj => 
-                                filterOptions.sections[subj as keyof typeof filterOptions.sections] || []
-                              )
-                            : []}
-                              placeholder="All Sections"
-                            />
-                          </div>
+                            options={getAvailableSections()}
+                            placeholder="All Sections"
+                            isLoading={loading && filters.subject.length > 0}
+                          />
+                        </div>
 
                         {/* Difficulty Filter with Pills */}
                         <div className="filter-group">
