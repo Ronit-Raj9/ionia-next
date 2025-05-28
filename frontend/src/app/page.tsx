@@ -99,12 +99,6 @@ const features = [
     gradient: 'from-orange-500 to-red-500'
   },
   {
-    title: 'Expert Guidance',
-    description: '24/7 access to expert mentors and detailed solution explanations for every question',
-    icon: <Users2 className="w-8 h-8 text-cyan-600 group-hover:text-white transition-colors duration-300" />,
-    gradient: 'from-cyan-500 to-blue-500'
-  },
-  {
     title: 'Achievement System',
     description: 'Gamified learning with badges, streaks, and leaderboards to keep you motivated',
     icon: <Award className="w-8 h-8 text-yellow-600 group-hover:text-white transition-colors duration-300" />,
@@ -115,22 +109,16 @@ const features = [
 const testimonials = [
   {
     name: 'Priya Sharma',
-    exam: 'JEE Advanced',
-    rank: 'AIR 127',
     quote: 'The AI-powered analytics helped me identify my weak areas and improve my rank significantly!',
     avatar: '👩‍🎓'
   },
   {
     name: 'Rahul Kumar',
-    exam: 'NEET',
-    rank: 'AIR 89',
     quote: 'Amazing platform! The mock tests were exactly like the real exam. Highly recommended!',
     avatar: '👨‍⚕️'
   },
   {
     name: 'Ananya Gupta',
-    exam: 'CUET',
-    rank: 'Top 1%',
     quote: 'The chapter-wise practice and detailed explanations made all the difference in my preparation.',
     avatar: '👩‍💼'
   }
@@ -202,7 +190,7 @@ export default function Home() {
               transition={{ delay: 0.2, duration: 0.6 }}
             >
               <Sparkles className="w-5 h-5 text-emerald-300" />
-              <span className="text-sm font-medium">Trusted by 50,000+ students across India</span>
+              <span className="text-sm font-medium">Trusted by 50+ students across India</span>
             </motion.div>
             
             <motion.h1 
@@ -261,20 +249,12 @@ export default function Home() {
               transition={{ delay: 1, duration: 0.8 }}
             >
               <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-300">50K+</div>
+                <div className="text-3xl font-bold text-emerald-300">50+</div>
                 <div className="text-emerald-100 text-sm">Students</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-300">25K+</div>
+                <div className="text-3xl font-bold text-emerald-300">2K+</div>
                 <div className="text-emerald-100 text-sm">Questions</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-300">95%</div>
-                <div className="text-emerald-100 text-sm">Success Rate</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-emerald-300">24/7</div>
-                <div className="text-emerald-100 text-sm">Support</div>
               </div>
             </motion.div>
           </motion.div>
@@ -455,7 +435,6 @@ export default function Home() {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                    <p className="text-sm text-emerald-600 font-medium">{testimonial.exam} • {testimonial.rank}</p>
                   </div>
                 </div>
                 <p className="text-gray-600 leading-relaxed italic">"{testimonial.quote}"</p>
@@ -476,7 +455,7 @@ export default function Home() {
         
         <div className="container mx-auto px-6 relative z-10">
           <motion.div 
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center"
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center max-w-2xl mx-auto"
             variants={staggerContainer}
             initial="initial"
             whileInView="animate"
@@ -487,7 +466,7 @@ export default function Home() {
                 className="text-5xl font-bold mb-2 bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent"
                 whileHover={{ scale: 1.1 }}
               >
-                50K+
+                50+
               </motion.div>
               <div className="text-emerald-200 group-hover:text-white transition-colors">Active Students</div>
             </motion.div>
@@ -496,27 +475,9 @@ export default function Home() {
                 className="text-5xl font-bold mb-2 bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent"
                 whileHover={{ scale: 1.1 }}
               >
-                25K+
+                2K+
               </motion.div>
               <div className="text-emerald-200 group-hover:text-white transition-colors">Practice Questions</div>
-            </motion.div>
-            <motion.div variants={scaleIn} className="group">
-              <motion.div 
-                className="text-5xl font-bold mb-2 bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent"
-                whileHover={{ scale: 1.1 }}
-              >
-                95%
-              </motion.div>
-              <div className="text-emerald-200 group-hover:text-white transition-colors">Success Rate</div>
-            </motion.div>
-            <motion.div variants={scaleIn} className="group">
-              <motion.div 
-                className="text-5xl font-bold mb-2 bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent"
-                whileHover={{ scale: 1.1 }}
-              >
-                1000+
-              </motion.div>
-              <div className="text-emerald-200 group-hover:text-white transition-colors">Top Rankers</div>
             </motion.div>
           </motion.div>
         </div>
