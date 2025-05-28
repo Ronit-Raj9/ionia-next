@@ -54,7 +54,7 @@ export default function Footer({ className = "" }: FooterProps) {
             <ul className="space-y-4">
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <Mail className="w-5 h-5 text-emerald-400" />
-                <span>contact@testseries.edu</span>
+                <span>chitarthkumargupta@gmail.com</span>
               </li>
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <Phone className="w-5 h-5 text-emerald-400" />
@@ -62,7 +62,7 @@ export default function Footer({ className = "" }: FooterProps) {
               </li>
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <MapPin className="w-5 h-5 text-emerald-400" />
-                <span>New Delhi, India</span>
+                <span>India</span>
               </li>
             </ul>
           </motion.div>
