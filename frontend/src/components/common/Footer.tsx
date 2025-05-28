@@ -22,7 +22,7 @@ export default function Footer({ className = "" }: FooterProps) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]"></div>
       
       <div className="container mx-auto px-4 py-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <motion.div 
             className="space-y-4"
             {...fadeInUp}
@@ -44,87 +44,6 @@ export default function Footer({ className = "" }: FooterProps) {
                 <Instagram className="w-5 h-5 text-emerald-300 hover:text-emerald-200" />
               </a>
             </div>
-          </motion.div>
-
-          <motion.div {...fadeInUp}>
-            <h4 className="text-lg font-semibold mb-6 relative inline-block">
-              Quick Links
-              <span className="absolute bottom-0 left-0 w-1/2 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></span>
-            </h4>
-            <ul className="space-y-3">
-              <li>
-                <Link 
-                  href="/about" 
-                  className="text-emerald-200 hover:text-white transition-colors duration-300 flex items-center space-x-2 group"
-                >
-                  <span className="w-0 group-hover:w-2 h-0.5 bg-emerald-400 transition-all duration-300"></span>
-                  <span>About Us</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/contact" 
-                  className="text-emerald-200 hover:text-white transition-colors duration-300 flex items-center space-x-2 group"
-                >
-                  <span className="w-0 group-hover:w-2 h-0.5 bg-emerald-400 transition-all duration-300"></span>
-                  <span>Contact</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/practice" 
-                  className="text-emerald-200 hover:text-white transition-colors duration-300 flex items-center space-x-2 group"
-                >
-                  <span className="w-0 group-hover:w-2 h-0.5 bg-emerald-400 transition-all duration-300"></span>
-                  <span>Practice Tests</span>
-                </Link>
-              </li>
-            </ul>
-          </motion.div>
-
-          <motion.div {...fadeInUp}>
-            <h4 className="text-lg font-semibold mb-6 relative inline-block">
-              Exams
-              <span className="absolute bottom-0 left-0 w-1/2 h-0.5 bg-gradient-to-r from-emerald-400 to-emerald-200"></span>
-            </h4>
-            <ul className="space-y-3">
-              <li>
-                <Link 
-                  href="/jee-mains" 
-                  className="text-emerald-200 hover:text-white transition-colors duration-300 flex items-center space-x-2 group"
-                >
-                  <span className="w-0 group-hover:w-2 h-0.5 bg-emerald-400 transition-all duration-300"></span>
-                  <span>JEE Mains</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/jee-advanced" 
-                  className="text-emerald-200 hover:text-white transition-colors duration-300 flex items-center space-x-2 group"
-                >
-                  <span className="w-0 group-hover:w-2 h-0.5 bg-emerald-400 transition-all duration-300"></span>
-                  <span>JEE Advanced</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/cuet" 
-                  className="text-emerald-200 hover:text-white transition-colors duration-300 flex items-center space-x-2 group"
-                >
-                  <span className="w-0 group-hover:w-2 h-0.5 bg-emerald-400 transition-all duration-300"></span>
-                  <span>CUET</span>
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/cbse" 
-                  className="text-emerald-200 hover:text-white transition-colors duration-300 flex items-center space-x-2 group"
-                >
-                  <span className="w-0 group-hover:w-2 h-0.5 bg-emerald-400 transition-all duration-300"></span>
-                  <span>CBSE</span>
-                </Link>
-              </li>
-            </ul>
           </motion.div>
 
           <motion.div {...fadeInUp}>
