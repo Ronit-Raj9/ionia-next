@@ -13,6 +13,7 @@ import {
   checkUsername,
   forgotPassword,
   resetPassword,
+  logoutFromAllDevices,
   // Admin routes
   getAllUsers,
   getUserDetails,
@@ -21,15 +22,21 @@ import {
 } from "../controllers/user.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
-import { verifyJWT, verifyRole } from "../middlewares/auth.middleware.js";
+import { verifyJWT, verifyRole, logAuthEvent } from "../middlewares/auth.middleware.js";
+import { createRateLimitMiddleware } from "../utils/rateLimiter.js";
 
 const router = Router();
 
 /**
- * Public Routes
- *  - Everyone can access without being authenticated
+ * Public Routes with Rate Limiting
+ * - Everyone can access without being authenticated
+ * - Rate limiting applied to prevent abuse
  */
+
+// Registration with rate limiting and logging
 router.route("/register").post(
+  createRateLimitMiddleware('register'),
+  logAuthEvent('REGISTER_ATTEMPT'),
   upload.fields([
     { name: "avatar", maxCount: 1 },
     { name: "coverImage", maxCount: 1 },
@@ -37,70 +44,112 @@ router.route("/register").post(
   registerUser
 );
 
-// Login route
-router.route("/login").post(loginUser);
+// Login with rate limiting and logging
+router.route("/login").post(
+  createRateLimitMiddleware('login'),
+  logAuthEvent('LOGIN_ATTEMPT'),
+  loginUser
+);
 
-// Add new route for checking username availability
-router.route("/check-username").post(checkUsername);
+// Username availability check (light rate limiting)
+router.route("/check-username").post(
+  createRateLimitMiddleware('register'), // Reuse register limits
+  checkUsername
+);
 
-// Password reset routes (public)
-router.route("/forgot-password").post(forgotPassword);
-router.route("/reset-password").post(resetPassword);
+// Password reset routes with rate limiting
+router.route("/forgot-password").post(
+  createRateLimitMiddleware('forgot-password'),
+  logAuthEvent('FORGOT_PASSWORD_ATTEMPT'),
+  forgotPassword
+);
+
+router.route("/reset-password").post(
+  createRateLimitMiddleware('forgot-password'), // Reuse forgot-password limits
+  logAuthEvent('RESET_PASSWORD_ATTEMPT'),
+  resetPassword
+);
 
 /**
  * Protected Routes (Must be Authenticated)
- *  - Requires verifyJWT to ensure the user is logged in
+ * - Requires verifyJWT to ensure the user is logged in
+ * - Some routes have additional rate limiting for security
  */
-router.route("/logout").post(verifyJWT, logoutUser);
 
-router.route("/refresh-token").post(verifyJWT, refreshAccessToken);
+// Logout with logging
+router.route("/logout").post(
+  verifyJWT, 
+  logAuthEvent('LOGOUT'),
+  logoutUser
+);
 
-router.route("/change-password").post(verifyJWT, changeCurrentPassword);
+// Logout from all devices
+router.route("/logout-all").post(
+  verifyJWT,
+  logAuthEvent('LOGOUT_ALL_DEVICES'),
+  logoutFromAllDevices
+);
 
+// Token refresh with rate limiting
+router.route("/refresh-token").post(
+  createRateLimitMiddleware('refresh-token'),
+  refreshAccessToken
+);
+
+// Password change with rate limiting
+router.route("/change-password").post(
+  verifyJWT,
+  createRateLimitMiddleware('login'), // Use login limits for password changes
+  logAuthEvent('PASSWORD_CHANGE'),
+  changeCurrentPassword
+);
+
+// Get current user info
 router.route("/current-user").get(verifyJWT, getCurrrentUser);
 
 /**
- * Role-Based Routes
- *  - In many cases, normal users should be able to update their own profiles,
- *    but you might want to allow ONLY admin to update other users' profiles.
- *  - Below are examples of how to apply role checks with verifyRole.
+ * User Profile Management Routes
+ * - Authenticated users can manage their own profiles
+ * - Rate limiting applied to prevent abuse
  */
 
-// Example: Any authenticated user or admin can update their own account
-router
-  .route("/update-account")
-  .patch(verifyJWT, verifyRole("user", "admin", "superadmin"), updateAccountDetails);
+// Update account details
+router.route("/update-account").patch(
+  verifyJWT, 
+  verifyRole(["user", "admin", "superadmin"]), 
+  updateAccountDetails
+);
 
-// Example: Only authenticated user or admin can update avatar
-router
-  .route("/avatar")
-  .patch(
+// Update avatar
+router.route("/avatar").patch(
     verifyJWT,
-    verifyRole("user", "admin", "superadmin"),
+  verifyRole(["user", "admin", "superadmin"]),
     upload.single("avatar"),
     updateUserAvatar
   );
 
-// Example: Only authenticated user or admin can update cover image
-router
-  .route("/cover-image")
-  .patch(
+// Update cover image
+router.route("/cover-image").patch(
     verifyJWT,
-    verifyRole("user", "admin", "superadmin"),
+  verifyRole(["user", "admin", "superadmin"]),
     upload.single("coverImage"),
     updateUserCoverImage
   );
 
+// Get user statistics
 router.route("/statistics").get(verifyJWT, getUserStatistics);
 
 /**
  * Admin Routes
  * - Only accessible by admin or superadmin
+ * - Enhanced logging for administrative actions
  */
+
 // Get all users with pagination and filtering
 router.route("/admin").get(
   verifyJWT, 
   verifyRole(["admin", "superadmin"]), 
+  logAuthEvent('ADMIN_VIEW_USERS'),
   getAllUsers
 );
 
@@ -108,6 +157,7 @@ router.route("/admin").get(
 router.route("/admin/analytics").get(
   verifyJWT, 
   verifyRole(["admin", "superadmin"]), 
+  logAuthEvent('ADMIN_VIEW_ANALYTICS'),
   getUsersAnalytics
 );
 
@@ -115,6 +165,7 @@ router.route("/admin/analytics").get(
 router.route("/admin/:userId").get(
   verifyJWT, 
   verifyRole(["admin", "superadmin"]), 
+  logAuthEvent('ADMIN_VIEW_USER_DETAILS'),
   getUserDetails
 );
 
@@ -122,7 +173,34 @@ router.route("/admin/:userId").get(
 router.route("/admin/:userId/role").patch(
   verifyJWT, 
   verifyRole(["superadmin"]), 
+  logAuthEvent('ADMIN_UPDATE_USER_ROLE'),
   updateUserRole
+);
+
+/**
+ * Security and Monitoring Routes
+ * - For debugging and monitoring authentication system
+ */
+
+// Get authentication system status (admin only)
+router.route("/auth/status").get(
+  verifyJWT,
+  verifyRole(["admin", "superadmin"]),
+  (req, res) => {
+    // Import here to avoid circular dependencies
+    const { tokenBlacklist } = require("../utils/tokenBlacklist.js");
+    const { rateLimiter } = require("../utils/rateLimiter.js");
+    
+    res.json({
+      success: true,
+      data: {
+        tokenBlacklist: tokenBlacklist.getStats(),
+        rateLimiter: rateLimiter.getStats(),
+        timestamp: new Date().toISOString(),
+      },
+      message: "Authentication system status"
+    });
+  }
 );
 
 export default router;
