@@ -2,48 +2,48 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAppSelector, useAppDispatch } from "@/redux/hooks/hooks";
-import { RootState } from "@/redux/store";
+import { useAuthStore } from "@/stores/authStore";
+import { useTestStore } from "@/stores/testStore";
+import { useUIStore } from "@/stores/uiStore";
 import AnalysisWindow from "@/components/analysis/AnalysisWindow";
-import { addNotification } from "@/redux/slices/uiSlice";
-import { checkAuth, setRedirectTo } from "@/redux/slices/authSlice";
 
 export default function ResultsPage() {
   const params = useParams();
   const { examType, subject, testId: paperId } = params || {};
   const router = useRouter();
-  const dispatch = useAppDispatch();
   
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { results, isTestCompleted } = useAppSelector((state: RootState) => state.test);
+  const { isAuthenticated, isLoading: authLoading, getCurrentUser } = useAuthStore();
+  const { results, isTestCompleted } = useTestStore();
+  const { addNotification } = useUIStore();
 
   // Check authentication
   useEffect(() => {
-    dispatch(checkAuth());
-  }, [dispatch]);
+    getCurrentUser();
+  }, [getCurrentUser]);
 
   // Handle authentication redirect
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      dispatch(setRedirectTo(`/exam/${examType}/${subject}/${paperId}/results`));
-      dispatch(addNotification({
+      addNotification({
+        title: "Authentication Required",
         message: "Please login to view test results",
         type: "warning"
-      }));
+      });
       router.push("/login");
     }
-  }, [isAuthenticated, authLoading, router, dispatch, examType, subject, paperId]);
+  }, [isAuthenticated, authLoading, router, addNotification, examType, subject, paperId]);
 
   // Redirect to test page if no results
   useEffect(() => {
     if (!authLoading && isAuthenticated && !isTestCompleted && !results) {
-      dispatch(addNotification({
+      addNotification({
+        title: "Test Not Complete",
         message: "No test results found. Please complete the test first.",
         type: "warning"
-      }));
+      });
       router.push(`/exam/${examType}/${subject}/${paperId}`);
     }
-  }, [isTestCompleted, results, router, authLoading, isAuthenticated, examType, subject, paperId, dispatch]);
+  }, [isTestCompleted, results, router, authLoading, isAuthenticated, examType, subject, paperId, addNotification]);
 
   if (authLoading) {
     return (

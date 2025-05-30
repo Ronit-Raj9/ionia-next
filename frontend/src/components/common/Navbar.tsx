@@ -4,10 +4,8 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, User } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
-import { getCurrentUser } from "@/redux/slices/authSlice";
-import { toggleNavbar, setNavbarOpen } from "@/redux/slices/uiSlice";
-import { RootState } from "@/redux/store";
+import { useAuthStore } from "@/stores/authStore";
+import { useUIStore } from "@/stores/uiStore";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface NavbarProps {
@@ -16,15 +14,15 @@ interface NavbarProps {
 
 export default function Navbar({ className = "" }: NavbarProps) {
   const pathname = usePathname();
-  const dispatch = useAppDispatch();
-  const { isAuthenticated, user } = useAppSelector((state: RootState) => state.auth);
-  const { isNavbarOpen } = useAppSelector((state: RootState) => state.ui);
+  
+  const { isAuthenticated, user, getCurrentUser } = useAuthStore();
+  const { isNavbarOpen, toggleNavbar, setNavbarOpen } = useUIStore();
 
   useEffect(() => {
     if (localStorage.getItem('token')) {
-      dispatch(getCurrentUser());
+      getCurrentUser();
     }
-  }, [dispatch]);
+  }, [getCurrentUser]);
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -122,7 +120,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
 
           <button
             className="md:hidden p-2 rounded-lg text-gray-600 hover:text-emerald-600 hover:bg-gray-100 transition-colors"
-            onClick={() => dispatch(toggleNavbar())}
+            onClick={() => toggleNavbar()}
           >
             {isNavbarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -146,7 +144,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
                     className={`text-sm font-medium transition-colors hover:text-emerald-600 ${
                       pathname === item.href ? "text-emerald-600" : "text-gray-600"
                     }`}
-                    onClick={() => dispatch(setNavbarOpen(false))}
+                    onClick={() => setNavbarOpen(false)}
                   >
                     {item.name}
                   </Link>
@@ -157,7 +155,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
                       <Link
                         href="/admin"
                         className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
-                        onClick={() => dispatch(setNavbarOpen(false))}
+                        onClick={() => setNavbarOpen(false)}
                       >
                         {isSuperAdmin ? 'Super Admin Panel' : 'Admin Panel'}
                       </Link>
@@ -165,7 +163,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
                     <Link
                       href="/dashboard"
                       className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
-                      onClick={() => dispatch(setNavbarOpen(false))}
+                      onClick={() => setNavbarOpen(false)}
                     >
                       {displayName}
                     </Link>
@@ -175,14 +173,14 @@ export default function Navbar({ className = "" }: NavbarProps) {
                     <Link
                       href="/auth/login"
                       className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
-                      onClick={() => dispatch(setNavbarOpen(false))}
+                      onClick={() => setNavbarOpen(false)}
                     >
                       Sign In
                     </Link>
                     <Link
                       href="/auth/register"
                       className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
-                      onClick={() => dispatch(setNavbarOpen(false))}
+                      onClick={() => setNavbarOpen(false)}
                     >
                       Sign Up
                     </Link>

@@ -2,19 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppDispatch, useAppSelector } from '@/redux/hooks/hooks';
-import { 
-  fetchTest, 
-  setActiveQuestion, 
-  answerQuestion,
-  submitTest,
-  markQuestionVisited,
-  startTest,
-  toggleMarkQuestion,
-  completeTest,
-  updateTimeRemaining
-} from '@/redux/slices/testSlice';
-import { RootState } from '@/redux/store';
+import { useTestStore } from '@/stores/testStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useTimeTrackingStore } from '@/stores/timeTrackingStore';
+import { useAnalysisStore } from '@/stores/analysisStore';
+import { useUIStore } from '@/stores/uiStore';
+
 import QuestionPanel from './QuestionPanel';
 import QuestionGrid from './Navigation/QuestionGrid';
 import QuestionStatus from './StatusPanel/QuestionStatus';
@@ -23,11 +16,8 @@ import CandidateInfo from './Header/CandidateInfo';
 import ActionButtons from './Controls/ActionButtons';
 import LanguageSelector from './Controls/LanguageSelector';
 import { ClipLoader } from 'react-spinners';
-import { startQuestionTimer, pauseQuestionTimer, resetTimeTracking, updateQuestionTime } from '@/redux/slices/timeTrackingSlice';
-import { setAnalysisData, setLoading as setAnalysisLoading } from '@/redux/slices/analysisSlice';
 import { toast } from 'react-hot-toast';
-import { getCurrentUser } from '@/redux/slices/authSlice';
-import type { Test } from '@/redux/slices/testSlice';
+import type { Test } from '@/stores/testStore';
 
 interface TestWindowProps {
   examType: string;
@@ -104,23 +94,33 @@ export const fetchTestAnalysis = async (attemptId: string) => {
 
 const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) => {
   const router = useRouter();
-  const dispatch = useAppDispatch();
   
-  // Get test state from Redux
+  // Get state from Zustand stores
   const { 
     currentTest, 
     activeQuestion, 
     timeRemaining, 
     loading, 
-    error: reduxError,
-    isTestCompleted
-  } = useAppSelector((state: RootState) => state.test);
+    error: testError,
+    isTestCompleted,
+    fetchTest,
+    setActiveQuestion,
+    answerQuestion,
+    toggleMarkQuestion,
+    startTest,
+    submitTest
+  } = useTestStore();
 
-  // Get user state from Redux
-  const { user, loading: userLoading } = useAppSelector((state: RootState) => state.auth);
-  
-  // Get time tracking state
-  const timeTrackingState = useAppSelector((state: RootState) => state.timeTracking);
+  const { user, loading: userLoading, getCurrentUser } = useAuthStore();
+  const { 
+    startQuestionTimer, 
+    pauseQuestionTimer, 
+    resetTimeTracking, 
+    updateQuestionTime,
+    questionTimes,
+    currentQuestionId
+  } = useTimeTrackingStore();
+  const { setAnalysisData, setAnalysisLoading } = useAnalysisStore();
   
   // Local state
   const [language, setLanguage] = useState('English');
@@ -148,21 +148,21 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Start tracking time when the test starts
   useEffect(() => {
     if (currentTest && activeQuestion >= 0) {
-      dispatch(startQuestionTimer(activeQuestion));
+      startQuestionTimer(activeQuestion);
     }
     
     return () => {
       // Pause the timer when component unmounts
-      dispatch(pauseQuestionTimer());
+      pauseQuestionTimer();
     };
-  }, [dispatch, currentTest, activeQuestion]);
+  }, [startQuestionTimer, pauseQuestionTimer, currentTest, activeQuestion]);
 
   // Reset time tracking when test starts
   useEffect(() => {
     if (currentTest) {
-      dispatch(resetTimeTracking());
+      resetTimeTracking();
     }
-  }, [dispatch, currentTest]);
+  }, [resetTimeTracking, currentTest]);
 
   // Ensure we're running on the client side to prevent hydration mismatches
   useEffect(() => {
@@ -201,17 +201,17 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           const data = await response.json();
           console.log("📋 Test data fetched successfully");
           
-          // Use the data directly instead of dispatching to Redux
+          // Use the data directly and store in Zustand
           if (data.data) {
             setTest(data.data);
-            dispatch({ type: 'test/setTest', payload: data.data });
-            dispatch(setActiveQuestion(0));
-            dispatch(startTest());
+            await fetchTest(paperId);
+            setActiveQuestion(0);
+            startTest();
           } else if (data) {
             setTest(data);
-            dispatch({ type: 'test/setTest', payload: data });
-            dispatch(setActiveQuestion(0));
-            dispatch(startTest());
+            await fetchTest(paperId);
+            setActiveQuestion(0);
+            startTest();
           }
         } catch (error) {
           console.error("🚨 Fetch error:", error);
@@ -223,14 +223,14 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     };
 
     loadTest();
-  }, [dispatch, paperId]);
+  }, [fetchTest, setActiveQuestion, startTest, paperId]);
   
   // Fetch user data if not already in the store
   useEffect(() => {
     if (isClient && !user && !userLoading) {
-      dispatch(getCurrentUser());
+      getCurrentUser();
     }
-  }, [dispatch, user, userLoading, isClient]);
+  }, [getCurrentUser, user, userLoading, isClient]);
 
   // Helper function to safely get user ID from potentially different user object structures
   const getUserId = useCallback(() => {
@@ -266,8 +266,8 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   }, [currentTest]);
 
   const handleNavigateToQuestion = (index: number) => {
-    dispatch(startQuestionTimer(index));
-    dispatch(setActiveQuestion(index));
+    startQuestionTimer(index);
+    setActiveQuestion(index);
   };
 
   const handleQuestionClick = useCallback((questionIndex: number) => {
@@ -279,78 +279,78 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     }]);
     
     if (currentTest && activeQuestion >= 0 && activeQuestion < currentTest.questions.length) {
-      dispatch(answerQuestion({
+      answerQuestion({
         questionIndex: activeQuestion,
         answerIndex: currentTest.questions[activeQuestion].userAnswer,
         isVisited: true
-      }));
+      });
     }
     
-    dispatch(startQuestionTimer(questionIndex));
+    startQuestionTimer(questionIndex);
     handleNavigateToQuestion(questionIndex);
     
     logTestMetadata();
-  }, [dispatch, currentTest, activeQuestion, logTestMetadata]);
+  }, [answerQuestion, currentTest, activeQuestion, logTestMetadata, startQuestionTimer]);
   
   const handleNext = useCallback(() => {
     if (currentTest && activeQuestion < currentTest.questions.length - 1) {
-      dispatch(answerQuestion({
+      answerQuestion({
         questionIndex: activeQuestion,
         answerIndex: currentTest.questions[activeQuestion].userAnswer,
         isVisited: true
-      }));
+      });
       
-      dispatch(startQuestionTimer(activeQuestion + 1));
+      startQuestionTimer(activeQuestion + 1);
       handleNavigateToQuestion(activeQuestion + 1);
       
       logTestMetadata();
     }
-  }, [dispatch, activeQuestion, currentTest, logTestMetadata]);
+  }, [answerQuestion, activeQuestion, currentTest, logTestMetadata, startQuestionTimer]);
   
   const handlePrevious = useCallback(() => {
     if (activeQuestion > 0) {
       if (currentTest) {
-        dispatch(answerQuestion({
+        answerQuestion({
           questionIndex: activeQuestion,
           answerIndex: currentTest.questions[activeQuestion].userAnswer,
           isVisited: true
-        }));
+        });
       }
       
-      dispatch(startQuestionTimer(activeQuestion - 1));
+      startQuestionTimer(activeQuestion - 1);
       handleNavigateToQuestion(activeQuestion - 1);
       
       logTestMetadata();
     }
-  }, [dispatch, activeQuestion, currentTest, logTestMetadata]);
+  }, [answerQuestion, activeQuestion, currentTest, logTestMetadata, startQuestionTimer]);
   
   const handleOptionChange = useCallback((questionIndex: number, answerIndex: number) => {
-    dispatch(answerQuestion({ questionIndex, answerIndex }));
+    answerQuestion({ questionIndex, answerIndex });
     logTestMetadata();
-  }, [dispatch, logTestMetadata]);
+  }, [answerQuestion, logTestMetadata]);
   
   // Simplified event handlers
   const handleSaveAndNext = useCallback(() => {
     if (currentTest?.questions[activeQuestion]?.userAnswer !== undefined) {
-      dispatch(answerQuestion({ 
+      answerQuestion({ 
         questionIndex: activeQuestion, 
         answerIndex: currentTest.questions[activeQuestion].userAnswer,
-      }));
+      });
     }
     
     if (currentTest && activeQuestion < currentTest.questions.length - 1) {
-      dispatch(setActiveQuestion(activeQuestion + 1));
+      setActiveQuestion(activeQuestion + 1);
     }
-  }, [dispatch, activeQuestion, currentTest]);
+  }, [answerQuestion, activeQuestion, currentTest, setActiveQuestion]);
   
   const handleClear = useCallback(() => {
-    dispatch(answerQuestion({ questionIndex: activeQuestion, answerIndex: undefined }));
-  }, [dispatch, activeQuestion]);
+    answerQuestion({ questionIndex: activeQuestion, answerIndex: undefined });
+  }, [answerQuestion, activeQuestion]);
   
   const handleMarkForReview = useCallback(() => {
-    dispatch(toggleMarkQuestion(activeQuestion));
+    toggleMarkQuestion(activeQuestion);
     logTestMetadata();
-  }, [dispatch, activeQuestion, logTestMetadata]);
+  }, [toggleMarkQuestion, activeQuestion, logTestMetadata]);
   
   // Simplified submit handler
   const handleSubmit = async () => {
@@ -363,7 +363,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         .map((q, index) => ({
           questionId: q._id,
           answerOptionIndex: q.userAnswer,
-          timeSpent: timeTrackingState.questionTimes[index]?.totalTime || 0
+          timeSpent: questionTimes[index]?.totalTime || 0
         }))
         .filter(answer => answer.questionId) || [];
 
@@ -387,7 +387,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           timestamp: event.timestamp,
           questionId: currentTest?.questions[event.toQuestion]?._id || null,
           action: validAction,
-          timeSpent: timeTrackingState.questionTimes[event.fromQuestion]?.totalTime || 0
+          timeSpent: questionTimes[event.fromQuestion]?.totalTime || 0
         };
       });
 
@@ -457,12 +457,12 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         
         try {
           // Fetch the analysis data using the attemptId
-          dispatch(setAnalysisLoading(true));
+          setAnalysisLoading(true);
           const analysisData = await fetchTestAnalysis(responseData.data.attemptId);
           
           if (analysisData) {
-            // Store in Redux for the analysis page to use
-            dispatch(setAnalysisData(analysisData));
+            // Store in Zustand for the analysis page to use
+            setAnalysisData(analysisData);
           }
         } catch (analysisError) {
           console.error("Error fetching analysis data:", analysisError);
@@ -486,9 +486,9 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   };
   
   const handleTimeEnd = useCallback(() => {
-    dispatch(submitTest());
+    submitTest();
     router.push(`/exam/${examType}/mock-test/${paperId}/analysis`);
-  }, [dispatch, router, examType, paperId]);
+  }, [submitTest, router, examType, paperId]);
   
   // Get test statistics
   const getTestStats = useCallback(() => {
@@ -555,25 +555,25 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Handle test completion
   useEffect(() => {
     if (isTestCompleted) {
-      dispatch(pauseQuestionTimer());
+      pauseQuestionTimer();
     }
-  }, [isTestCompleted, dispatch]);
+  }, [isTestCompleted, pauseQuestionTimer]);
   
   // Update question time
   useEffect(() => {
     if (!isTestCompleted) {
       const timer = setInterval(() => {
-        if (timeTrackingState.currentQuestionId !== null) {
-          dispatch(updateQuestionTime({
-            questionId: timeTrackingState.currentQuestionId,
+        if (currentQuestionId !== null) {
+          updateQuestionTime({
+            questionId: currentQuestionId,
             timeSpent: 1000 // 1 second in milliseconds
-          }));
+          });
         }
       }, 1000);
       
       return () => clearInterval(timer);
     }
-  }, [isTestCompleted, timeTrackingState.currentQuestionId, dispatch]);
+  }, [isTestCompleted, currentQuestionId, updateQuestionTime]);
 
   // Updated data validity check for the new question format
   const isTestDataValid = React.useMemo(() => {
@@ -699,7 +699,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           <p className="font-bold">Question not found</p>
           <p>The requested question (#{activeQuestion + 1}) could not be loaded.</p>
           <button
-            onClick={() => dispatch(setActiveQuestion(0))}
+            onClick={() => setActiveQuestion(0)}
             className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
           >
             Go to First Question

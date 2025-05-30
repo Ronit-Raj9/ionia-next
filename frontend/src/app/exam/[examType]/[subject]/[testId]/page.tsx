@@ -1,46 +1,40 @@
 "use client";
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
-import { fetchTest, resetTest, startTest } from "@/redux/slices/testSlice";
-import { RootState } from "@/redux/store";
+import { useAuthStore } from "@/stores/authStore";
+import { useTestStore } from "@/stores/testStore";
+import { useUIStore } from "@/stores/uiStore";
 import TestWindow from "@/components/test/TestWindow";
-import { addNotification } from "@/redux/slices/uiSlice";
-import { checkAuth, setRedirectTo } from "@/redux/slices/authSlice";
 
 export default function TestPage() {
   const params = useParams();
   const { examType, subject, testId: paperId } = params || {};
-  const dispatch = useAppDispatch();
+  
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { currentTest, loading, error } = useAppSelector((state: RootState) => state.test);
+  const { isAuthenticated, isLoading: authLoading, getCurrentUser } = useAuthStore();
+  const { currentTest, loading, error, fetchTest, resetTest } = useTestStore();
+  const { addNotification } = useUIStore();
 
   // Check authentication and fetch test data
   useEffect(() => {
-    dispatch(checkAuth());
+    getCurrentUser();
     
     if (paperId && typeof paperId === 'string') {
-      dispatch(fetchTest(paperId));
+      fetchTest(paperId);
     }
     
     // Cleanup on unmount
     return () => {
-      dispatch(resetTest());
+      resetTest();
     };
-  }, [dispatch, paperId]);
+  }, [getCurrentUser, fetchTest, resetTest, paperId]);
 
   // Handle authentication redirect
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      dispatch(setRedirectTo(`/exam/${examType}/${subject}/${paperId}`));
-      dispatch(addNotification({
-        message: "Please login to access the test",
-        type: "warning"
-      }));
       router.push("/login");
     }
-  }, [isAuthenticated, authLoading, router, dispatch, examType, subject, paperId]);
+  }, [isAuthenticated, authLoading, router]);
 
   if (authLoading || loading) {
     return (

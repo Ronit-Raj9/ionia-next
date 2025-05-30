@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
-import { RootState } from "@/redux/store";
-import { fetchTestHistory } from "@/redux/slices/testSlice";
+import { useAuthStore } from "@/stores/authStore";
+import { useTestStore } from "@/stores/testStore";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { FiBarChart2, FiClock, FiCalendar, FiChevronRight } from "react-icons/fi";
 import { ClipLoader } from "react-spinners";
@@ -39,10 +38,9 @@ const mockTestData = {
 };
 
 export default function MyTests() {
-  const dispatch = useAppDispatch();
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { testHistory, loading: testHistoryLoading } = useAppSelector((state: RootState) => state.test);
+  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const { testHistory, loading: testHistoryLoading, fetchTestHistory } = useTestStore();
   const [isLoaded, setIsLoaded] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
 
@@ -53,7 +51,7 @@ export default function MyTests() {
     }
 
     if (isAuthenticated) {
-      dispatch(fetchTestHistory())
+      fetchTestHistory()
         .then(() => {
           setIsLoaded(true);
           // If no test history is found, use mock data for development
@@ -68,7 +66,7 @@ export default function MyTests() {
           setUseMockData(true);
         });
     }
-  }, [isAuthenticated, authLoading, dispatch, router, testHistory]);
+  }, [isAuthenticated, authLoading, fetchTestHistory, router, testHistory]);
 
   // Calculate and format time
   const formatTime = (seconds: number) => {

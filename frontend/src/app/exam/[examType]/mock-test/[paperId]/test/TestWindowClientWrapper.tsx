@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useAppSelector, useAppDispatch } from '@/redux/hooks/hooks';
+
 import TestWindow from '@/components/test/TestWindow';
-import { fetchTest } from '@/redux/slices/testSlice';
+import { useTestStore } from '@/stores/testStore';
 import { useParams } from 'next/navigation';
 
 const TestWindowClientWrapper = () => {
   const params = useParams();
-  const dispatch = useAppDispatch();
-  const { currentTest, loading, error } = useAppSelector(state => state.test);
+  
+  const { currentTest, loading, error, fetchTest } = useTestStore();
   const [clientError, setClientError] = useState<string | null>(null);
   
   // Use a ref to track if we've already fetched the test
@@ -22,7 +22,7 @@ const TestWindowClientWrapper = () => {
         try {
           console.log("Initializing test - first fetch attempt");
           testFetchedRef.current = true; // Mark as fetched before the async call
-          await dispatch(fetchTest(params.paperId as string));
+          await fetchTest(params.paperId as string);
         } catch (err) {
           console.error("Failed to initialize test:", err);
           setClientError("Failed to load test data");
@@ -31,7 +31,7 @@ const TestWindowClientWrapper = () => {
 
       initializeTest();
     }
-  }, [dispatch, params.paperId]); // Keep dependencies minimal
+  }, [fetchTest, params.paperId]); // Keep dependencies minimal
 
   // REMOVE ALL VALIDATION LOGIC
   // Just pass data directly to the TestWindow component

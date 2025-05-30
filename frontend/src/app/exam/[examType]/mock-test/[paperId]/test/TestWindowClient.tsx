@@ -4,10 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TestWindow from '@/components/test/TestWindow';
 import { ClipLoader } from 'react-spinners';
-import { Provider } from 'react-redux';
-import store, { persistor } from '@/redux/store';
-import { PersistGate } from 'redux-persist/integration/react';
-import { fetchTest } from '@/redux/slices/testSlice';
+import { useTestStore } from '@/stores/testStore';
 
 interface TestWindowClientProps {
   examType: string;
@@ -18,13 +15,14 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { fetchTest } = useTestStore();
   
   useEffect(() => {
     const initializeTest = async () => {
       try {
         if (paperId) {
-          // Dispatch action to load test data
-          await store.dispatch(fetchTest(paperId));
+          // Fetch test data using Zustand store
+          await fetchTest(paperId);
           setError(null);
         } else {
           throw new Error("No paper ID provided");
@@ -39,7 +37,7 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
     };
     
     initializeTest();
-  }, [paperId]);
+  }, [paperId, fetchTest]);
 
   if (isLoading) {
     return (
@@ -78,20 +76,9 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
   }
 
   return (
-    <Provider store={store}>
-      <PersistGate 
-        loading={
-          <div className="flex items-center justify-center min-h-screen">
-            <ClipLoader size={50} color="#3B82F6" />
-          </div>
-        } 
-        persistor={persistor}
-      >
-        <ErrorBoundary fallbackExamType={examType}>
-          <TestWindow examType={examType} paperId={paperId} />
-        </ErrorBoundary>
-      </PersistGate>
-    </Provider>
+    <ErrorBoundary fallbackExamType={examType}>
+      <TestWindow examType={examType} paperId={paperId} />
+    </ErrorBoundary>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { NotVisitedIcon, NotAnsweredIcon, AnsweredIcon, MarkedForReviewIcon, AnsweredAndMarkedIcon } from '@/components/QuestionPaletteIcons';
-import { TestQuestion } from "@/redux/slices/testSlice";
+import { TestQuestion } from "@/stores/testStore";
 
 interface QuestionStatusProps {
   questions: TestQuestion[];

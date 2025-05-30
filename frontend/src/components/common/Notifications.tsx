@@ -1,24 +1,21 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useAppSelector, useAppDispatch } from '@/redux/hooks/hooks';
-import { removeNotification } from '@/redux/slices/uiSlice';
-import { RootState } from '@/redux/store';
+import { useUIStore } from '@/stores/uiStore';
 
 export default function Notifications() {
-  const dispatch = useAppDispatch();
-  const { notifications } = useAppSelector((state: RootState) => state.ui);
+  const { notifications, removeNotification } = useUIStore();
 
   // Auto-dismiss notifications after 5 seconds
   useEffect(() => {
     if (notifications.length > 0) {
       const timer = setTimeout(() => {
-        dispatch(removeNotification(notifications[0].id));
+        removeNotification(notifications[0].id);
       }, 5000);
 
       return () => clearTimeout(timer);
     }
-  }, [notifications, dispatch]);
+  }, [notifications, removeNotification]);
 
   if (notifications.length === 0) return null;
 
@@ -39,7 +36,7 @@ export default function Notifications() {
             <div className="flex justify-between items-start">
               <p>{notification.message}</p>
               <button
-                onClick={() => dispatch(removeNotification(notification.id))}
+                onClick={() => removeNotification(notification.id)}
                 className="ml-4 text-white hover:text-gray-200"
               >
                 &times;

@@ -12,8 +12,7 @@ import {
   YEARS,
   SUBJECT_VALUES
 } from '../../utils/constants';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
+import { useQuestionStore } from '@/stores/questionStore';
 
 const DetailsClassification: React.FC<StepProps> = ({
   formData,
@@ -26,8 +25,8 @@ const DetailsClassification: React.FC<StepProps> = ({
   const [chapterOptions, setChapterOptions] = useState<Array<{value: string, label: string}>>([]);
   const [sectionOptions, setSectionOptions] = useState<Array<{value: string, label: string}>>([]);
   
-  // Get sections and chapters from Redux store
-  const { sections, chapters } = useSelector((state: RootState) => state.question);
+  // Get sections and chapters from Zustand store
+  const { sections, chapters } = useQuestionStore();
 
   // Get available subjects based on exam type and class
   const getAvailableSubjects = () => {

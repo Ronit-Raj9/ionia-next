@@ -1,6 +1,6 @@
 "use client";
 import React from 'react';
-import { TestQuestion } from "@/redux/slices/testSlice";
+import { TestQuestion } from "@/stores/testStore";
 import { NotVisitedIcon, NotAnsweredIcon, AnsweredIcon, MarkedForReviewIcon, AnsweredAndMarkedIcon } from '@/components/QuestionPaletteIcons';
 
 interface QuestionGridProps {

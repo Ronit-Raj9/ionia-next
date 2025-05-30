@@ -1,0 +1,238 @@
+erDiagram
+    %% ===========================
+    %% USER MODEL
+    %% ===========================
+    User {
+        ObjectId _id PK
+        String email UK "unique, required"
+        String fullName "required"
+        String username UK "unique, required"
+        String avatar "cloudinary URL"
+        String coverImage "cloudinary URL"
+        String password "required, hashed"
+        String refreshToken
+        String resetPasswordToken
+        Date resetPasswordExpires
+        String role "enum: admin, user, superadmin"
+        Date lastLoginAt
+        String lastLoginIP
+        Date lastActivity
+        Boolean isActive "default: true"
+        Boolean isEmailVerified "default: false"
+        String emailVerificationToken
+        Date emailVerificationExpires
+        Object emailVerificationAttempts
+        Array activeTokens "embedded array"
+        Date createdAt
+        Date updatedAt
+    }
+
+    %% ===========================
+    %% TEST MODEL
+    %% ===========================
+    Test {
+        ObjectId _id PK
+        String title "required"
+        String description
+        Array tags "string array"
+        String testCategory "enum: PYQ, Platform, UserCustom"
+        String status "enum: draft, published, archived"
+        String instructions
+        String solutionsVisibility "enum: immediate, after_submission, after_deadline, manual"
+        Number attemptsAllowed "null means unlimited"
+        Array questions FK "ObjectId array to Question"
+        Number questionCount "persisted count"
+        Number duration "minutes, required"
+        Number totalMarks "calculated"
+        Object markingScheme "correct, incorrect, unattempted"
+        String subject "enum with subjects + Mixed, Full Syllabus"
+        String examType "enum: jee_main, jee_adv, cuet, neet, cbse_11, cbse_12, none"
+        String class "enum: class_9, class_10, class_11, class_12, none"
+        String difficulty "enum: easy, medium, hard, mixed"
+        ObjectId createdBy FK "to User"
+        ObjectId lastModifiedBy FK "to User"
+        Array revisionHistory "embedded array"
+        Number year "required for PYQ"
+        Number month "for PYQ"
+        Number day "for PYQ"
+        String session "for PYQ"
+        String platformTestType "enum: Mock, Practice, Chapter, etc."
+        Boolean isPremium "default: false"
+        String syllabus
+        Boolean isPublic "default: false for UserCustom"
+        Mixed generationCriteria "for UserCustom"
+        Object analytics "aggregated stats"
+        Date createdAt
+        Date updatedAt
+    }
+
+    %% ===========================
+    %% QUESTION MODEL
+    %% ===========================
+    Question {
+        ObjectId _id PK
+        ObjectId author FK "to User, required"
+        ObjectId lastModifiedBy FK "to User"
+        Array revisionHistory "embedded array"
+        Array tags "string array"
+        Boolean isVerified "default: false"
+        ObjectId verifiedBy FK "to User"
+        Object question "text and image object"
+        String questionType "enum: single, multiple, numerical"
+        Array options "4 options with text/image"
+        Array correctOptions "number array"
+        Object numericalAnswer "exactValue, range, unit"
+        Array commonMistakes "embedded array"
+        Object statistics "timesAttempted, successRate, averageTimeTaken"
+        String examType "enum: jee_main, jee_adv, cuet, neet, cbse_11, cbse_12, none"
+        String class "enum: class_9, class_10, class_11, class_12, none"
+        String subject "enum with all subjects"
+        String chapter "required"
+        String questionCategory "enum: theoretical, numerical"
+        String questionSource "enum: custom, india_book, foreign_book, pyq"
+        String section "subject-specific sections"
+        String difficulty "enum: easy, medium, hard"
+        Array prerequisites "string array"
+        Number conceptualDifficulty "1-10, default: 5"
+        String year "4-digit year for PYQ"
+        String languageLevel "enum: basic, intermediate, advanced"
+        String language "enum: english, hindi"
+        Object solution "text and image object"
+        Array hints "embedded array with text/image"
+        Array relatedTopics "string array"
+        Number marks "required, default: 1"
+        Number negativeMarks "default: 0"
+        Number expectedTime "seconds, default: 120"
+        Boolean isActive "default: true"
+        Object feedback "studentReports, teacherNotes"
+        Array usageHistory "embedded array"
+        Date createdAt
+        Date updatedAt
+    }
+
+    %% ===========================
+    %% ATTEMPTED TEST MODEL
+    %% ===========================
+    AttemptedTest {
+        ObjectId _id PK
+        ObjectId userId FK "to User, required"
+        ObjectId testId FK "to Test, required"
+        Number attemptNumber "auto-generated"
+        String language "required"
+        Date startTime "required"
+        Date endTime "required"
+        Object metadata "totalQuestions, answered, visited, marked"
+        Array answers "embedded Answer schema"
+        Object questionStates "categorized question arrays"
+        Map responses "question responses map"
+        Map questionAnalytics "per-question analytics"
+        Map subjectAnalytics "per-subject analytics"
+        Object timeAnalytics "comprehensive time tracking"
+        Object errorAnalytics "mistake patterns"
+        Object behavioralAnalytics "user behavior patterns"
+        Array navigationHistory "embedded navigation events"
+        Object environment "device and session info"
+        Number totalCorrectAnswers "calculated"
+        Number totalWrongAnswers "calculated"
+        Number totalUnattempted "calculated"
+        Number totalVisitedQuestions "calculated"
+        Number score "calculated"
+        Number totalTimeTaken "required"
+        Date createdAt
+        Date updatedAt
+    }
+
+    %% ===========================
+    %% TOPIC MODEL (Simple)
+    %% ===========================
+    Topic {
+        ObjectId _id PK
+        String content "required"
+        ObjectId owner FK "to User"
+        Date createdAt
+        Date updatedAt
+    }
+
+    %% ===========================
+    %% EMBEDDED SCHEMAS (Referenced in main models)
+    %% ===========================
+    Answer {
+        ObjectId questionId FK "to Question"
+        Number answerOptionIndex "null if unanswered"
+        Number timeSpent "default: 0"
+        Boolean isCorrect "calculated"
+    }
+
+    NavigationEvent {
+        Date timestamp
+        ObjectId questionId FK "to Question"
+        String action "enum: visit, leave, mark, unmark, answer, clear"
+        Number timeSpent
+    }
+
+    Environment {
+        Object device "userAgent, screenResolution, deviceType"
+        Object session "tabSwitches, disconnections, browserRefreshes"
+    }
+
+    ActiveToken {
+        String jti "unique token ID"
+        String type "enum: access, refresh"
+        Date createdAt
+        Date expiresAt
+        String ip
+        String userAgent
+    }
+
+    RevisionHistoryTest {
+        Number version
+        Date timestamp
+        ObjectId modifiedBy FK "to User"
+        String changesDescription
+    }
+
+    RevisionHistoryQuestion {
+        Number version
+        ObjectId modifiedBy FK "to User"
+        String changes
+        Date timestamp
+    }
+
+    %% ===========================
+    %% RELATIONSHIPS
+    %% ===========================
+    
+    %% User relationships
+    User ||--o{ Test : "creates (createdBy)"
+    User ||--o{ Test : "modifies (lastModifiedBy)"
+    User ||--o{ Question : "authors (author)"
+    User ||--o{ Question : "modifies (lastModifiedBy)"
+    User ||--o{ Question : "verifies (verifiedBy)"
+    User ||--o{ AttemptedTest : "attempts (userId)"
+    User ||--o{ Topic : "owns (owner)"
+    User ||--o{ ActiveToken : "has active tokens"
+    User ||--o{ RevisionHistoryTest : "modifies tests"
+    User ||--o{ RevisionHistoryQuestion : "modifies questions"
+
+    %% Test relationships
+    Test ||--o{ Question : "contains (questions array)"
+    Test ||--o{ AttemptedTest : "is attempted (testId)"
+    Test ||--o{ RevisionHistoryTest : "has revision history"
+
+    %% Question relationships
+    Question ||--o{ Answer : "answered in attempts"
+    Question ||--o{ NavigationEvent : "navigation events"
+    Question ||--o{ RevisionHistoryQuestion : "has revision history"
+
+    %% AttemptedTest relationships
+    AttemptedTest ||--o{ Answer : "contains answers"
+    AttemptedTest ||--o{ NavigationEvent : "tracks navigation"
+    AttemptedTest ||--|| Environment : "has environment data"
+
+    %% Additional Notes:
+    %% - Test.questions is an array of Question ObjectIds
+    %% - Test.analytics contains aggregated data from AttemptedTest records
+    %% - Question.statistics are updated from AttemptedTest.answers
+    %% - AttemptedTest uses Maps for responses and analytics for flexible data structure
+    %% - User.activeTokens is an embedded array for JWT session management
+    %% - Both Test and Question have revision history for audit trails 

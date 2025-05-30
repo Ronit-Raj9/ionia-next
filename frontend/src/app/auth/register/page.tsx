@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useAppDispatch, useAppSelector } from '@/redux/hooks/hooks';
-import { register, clearError } from '@/redux/slices/authSlice';
+import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'react-hot-toast';
 
 export default function RegisterPage() {
@@ -17,17 +16,16 @@ export default function RegisterPage() {
     confirmPassword: ''
   });
   const router = useRouter();
-  const dispatch = useAppDispatch();
   
-  const { loading, error } = useAppSelector((state) => state.auth);
+  const { isLoading, error, register, clearError } = useAuthStore();
   const [usernameError, setUsernameError] = useState('');
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(false);
 
   useEffect(() => {
     // Clear any existing errors when component mounts
-    dispatch(clearError());
-  }, [dispatch]);
+    clearError();
+  }, [clearError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -119,9 +117,9 @@ export default function RegisterPage() {
       }
       
       // Proceed with registration
-      const result = await dispatch(register({ ...formData }));
+      const result = await register({ ...formData });
       
-      if (!result.hasOwnProperty('error')) {
+      if (result.success) {
         toast.success("Registration successful! Please log in.");
         router.push('/auth/login');
       }
@@ -268,14 +266,14 @@ export default function RegisterPage() {
           <div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
-                loading
+                isLoading
                   ? 'bg-emerald-400 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500'
               }`}
             >
-              {loading ? (
+              {isLoading ? (
                 <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                   <svg
                     className="animate-spin h-5 w-5 text-emerald-300"
@@ -315,7 +313,7 @@ export default function RegisterPage() {
                   </svg>
                 </span>
               )}
-              {loading ? 'Creating account...' : 'Create account'}
+              {isLoading ? 'Creating account...' : 'Create account'}
             </button>
           </div>
         </motion.form>

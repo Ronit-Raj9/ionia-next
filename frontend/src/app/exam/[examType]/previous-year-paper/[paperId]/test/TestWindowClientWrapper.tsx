@@ -1,11 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
-import store, { persistor } from '@/redux/store';
 import TestWindow from '@/components/test/TestWindow';
-import { ClipLoader } from 'react-spinners';
 
 interface TestWindowClientWrapperProps {
   examType: string;
@@ -17,20 +13,9 @@ export default function TestWindowClientWrapper({
   paperId 
 }: TestWindowClientWrapperProps) {
   return (
-    <Provider store={store}>
-      <PersistGate 
-        loading={
-          <div className="flex items-center justify-center min-h-screen">
-            <ClipLoader size={50} color="#3B82F6" />
-          </div>
-        } 
-        persistor={persistor}
-      >
-        <ErrorBoundary>
-          <TestWindow examType={examType} paperId={paperId} />
-        </ErrorBoundary>
-      </PersistGate>
-    </Provider>
+    <ErrorBoundary>
+      <TestWindow examType={examType} paperId={paperId} />
+    </ErrorBoundary>
   );
 }
 

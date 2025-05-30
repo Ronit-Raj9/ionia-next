@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { QuestionAnalysisType } from '@/types/analysis';
 import { FiClock, FiCheck, FiX, FiMinus } from 'react-icons/fi';
-import { useAppSelector } from '@/redux/hooks/hooks';
+import { useAnalysisStore } from '@/stores/analysisStore';
 
 interface QuestionAnalysisProps {
   id: string;
@@ -21,7 +21,7 @@ interface QuestionMetadata {
 }
 
 const QuestionAnalysis: React.FC<QuestionAnalysisProps> = ({ id }) => {
-  const { answers, metadata } = useAppSelector((state) => state.analysis);
+  const { answers, metadata } = useAnalysisStore();
   const [sortField, setSortField] = useState<string>('questionNumber');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   

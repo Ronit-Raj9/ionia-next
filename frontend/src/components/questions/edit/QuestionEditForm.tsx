@@ -5,9 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import Image from 'next/image';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
-import { QuestionFormState } from '@/redux/slices/questionSlice';
+import { useQuestionStore } from '@/stores/questionStore';
 
 import FormStepper from "@/components/questions/form/FormStepper";
 import QuestionContent from "@/components/questions/form/steps/QuestionContent";
@@ -24,7 +22,7 @@ import { useQuestionCleanup } from '@/hooks/useQuestionCleanup';
 import { useQuestionDraft } from '@/hooks/useQuestionDraft';
 
 // Define the QuestionUpdateData type
-type QuestionUpdateData = QuestionFormState;
+type QuestionUpdateData = QuestionFormData;
 
 interface QuestionEditFormProps {
   question: any;
@@ -231,8 +229,8 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
   };
 
   // Transform form data before submission
-  const transformFormDataForBackend = (data: QuestionFormData): QuestionFormState => {
-    const transformedData: QuestionFormState = {
+  const transformFormDataForBackend = (data: QuestionFormData): QuestionFormData => {
+    const transformedData: QuestionFormData = {
       ...data,
       question: {
         text: data.question.text,

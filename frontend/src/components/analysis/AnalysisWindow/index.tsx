@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
-import { useAppDispatch, useAppSelector } from '@/redux/hooks/hooks';
-import { setAnalysisData, setLoading, setError } from '@/redux/slices/analysisSlice';
+
+import { useAnalysisStore } from '@/stores/analysisStore';
 import { useRouter } from 'next/navigation';
 import { ClipLoader } from 'react-spinners';
 import Header from './Header';
@@ -25,8 +25,7 @@ interface AnalysisWindowProps {
 }
 
 const AnalysisWindow: React.FC<AnalysisWindowProps> = ({ examType, paperId, subject }) => {
-  const dispatch = useAppDispatch();
-  const { loading, error, testInfo } = useAppSelector((state) => state.analysis);
+  const { loading, error, testInfo, setLoading, setError, setAnalysisData } = useAnalysisStore();
   const router = useRouter();
   const [analysisData, setLocalAnalysisData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('Overall');
@@ -200,11 +199,9 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({ examType, paperId, subj
           subjectData.averageTimePerQuestion = subjectData.attempted > 0 ? 
             subjectData.timeSpent / subjectData.attempted : 0;
             
-          console.log(`⏱️ Set time for subject ${subject}:`, {
-            timeSpent: subjectData.timeSpent,
-            averageTimePerQuestion: subjectData.averageTimePerQuestion,
-            questionRatio
-          });
+          // Calculate accuracy for subject
+          subjectData.accuracy = subjectData.attempted > 0 ? 
+              subjectData.correct / subjectData.attempted : 0;
         });
       }
     } else {
@@ -321,8 +318,8 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({ examType, paperId, subj
       fetchRef.current[fetchKey] = true;
 
       try {
-        dispatch(setLoading(true));
-        dispatch(setError(null));
+        setLoading(true);
+        setError(null);
 
         // Look for the attemptId in local storage in case it was redirected from test submission
         const storedAttemptId = localStorage.getItem('currentAttemptId');
@@ -368,14 +365,14 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({ examType, paperId, subj
         
         const processedData = processAnalysisData(data.data);
         
-        dispatch(setAnalysisData(processedData));
+        setAnalysisData(processedData);
         setLocalAnalysisData(processedData);
       } catch (err) {
         console.error("Error fetching analysis:", err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch analysis';
-        dispatch(setError(errorMessage));
+        setError(errorMessage);
       } finally {
-        dispatch(setLoading(false));
+        setLoading(false);
         isFetchingRef.current = false;
       }
     };
@@ -383,7 +380,7 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({ examType, paperId, subj
     if (paperId) {
       fetchAnalysis();
     }
-  }, [dispatch, paperId, currentAttemptId]);
+  }, [paperId, currentAttemptId, setLoading, setError, setAnalysisData]);
 
   if (loading) {
     return (

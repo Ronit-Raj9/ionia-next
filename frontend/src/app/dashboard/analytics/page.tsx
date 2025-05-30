@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppSelector, useAppDispatch } from '@/redux/hooks/hooks';
-import { RootState } from '@/redux/store';
-import { fetchTestHistory } from '@/redux/slices/testSlice';
+import { useAuthStore } from '@/stores/authStore';
+import { useTestStore } from '@/stores/testStore';
 import { Card } from '@/components/dashboard/card';
 import { ClipLoader } from 'react-spinners';
 import { 
@@ -35,9 +34,9 @@ import {
 export default function AnalyticsPage() {
   console.log('Analytics page rendering');
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { testHistory, loading: testLoading } = useAppSelector((state: RootState) => state.test);
+  
+  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
+  const { testHistory, loading: testLoading, fetchTestHistory } = useTestStore();
   
   const [timeData, setTimeData] = useState<any[]>([]);
   const [subjectData, setSubjectData] = useState<any[]>([]);
@@ -62,9 +61,9 @@ export default function AnalyticsPage() {
     
     const fetchData = async () => {
       if (isAuthenticated) {
-        console.log('Dispatching fetchTestHistory');
+        console.log('Fetching test history');
         try {
-          await dispatch(fetchTestHistory()).unwrap();
+          await fetchTestHistory();
         } catch (err) {
           console.error("Failed to fetch test history:", err);
           setError("Failed to load test data. Using sample data instead.");
@@ -74,7 +73,7 @@ export default function AnalyticsPage() {
     };
     
     fetchData();
-  }, [isAuthenticated, dispatch]);
+  }, [isAuthenticated, fetchTestHistory]);
 
   // Process data for charts
   useEffect(() => {
@@ -244,7 +243,7 @@ export default function AnalyticsPage() {
     setError(null);
     
     try {
-      await dispatch(fetchTestHistory()).unwrap();
+      await fetchTestHistory();
       console.log('Test history refreshed');
       processChartData();
       setIsRefreshing(false);

@@ -405,7 +405,7 @@ export const sendEmail = async (options) => {
                 html: options.html
             }
         );
-    } catch (error) {
-        throw new ApiError(500, "Error sending email");
-    }
+  } catch (error) {
+    throw new ApiError(500, "Error sending email");
+  }
 }; 

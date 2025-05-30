@@ -3,13 +3,11 @@
 import '@/styles/globals.css'; // Your global styles
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useAppSelector, useAppDispatch } from '@/redux/hooks/hooks';
-import { RootState } from '@/redux/store';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { FiMenu, FiX, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser } from '@/redux/slices/authSlice';
+import { useAuthStore } from '@/stores/authStore';
 import { ClipLoader } from 'react-spinners';
 import Link from 'next/link';
 
@@ -19,11 +17,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   console.log('Dashboard layout rendering');
-  const dispatch = useAppDispatch();
+  
   const router = useRouter();
   const pathname = usePathname();
   
-  const { user, isAuthenticated, loading: authLoading, error: authError } = useAppSelector((state: RootState) => state.auth);
+  const { user, isAuthenticated, isLoading: authLoading, error: authError, getCurrentUser } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
@@ -48,8 +46,8 @@ export default function DashboardLayout({
   }, [isAuthenticated, authLoading, router]);
 
   useEffect(() => {
-    dispatch(getCurrentUser());
-  }, [dispatch]);
+    getCurrentUser();
+  }, [getCurrentUser]);
 
   // Close sidebar on mobile by default
   useEffect(() => {
@@ -95,7 +93,7 @@ export default function DashboardLayout({
     try {
       setIsRetrying(true);
       setLayoutError(null);
-      await dispatch(getCurrentUser()).unwrap();
+      await getCurrentUser();
       console.log('Authentication retry successful');
     } catch (err) {
       console.error('Authentication retry failed:', err);
@@ -103,7 +101,7 @@ export default function DashboardLayout({
     } finally {
       setIsRetrying(false);
     }
-  }, [dispatch]);
+  }, [getCurrentUser]);
 
   // Memoize the username to prevent unnecessary re-renders
   const username = useMemo(() => {

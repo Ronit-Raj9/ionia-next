@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Provider } from 'react-redux';
-import { store } from '@/redux/store';
 import AnalysisWindow from '@/components/analysis/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
 import { useRouter } from 'next/navigation';
@@ -53,10 +51,10 @@ export default function Client({ examType, paperId }: ClientProps) {
   }
   
   return (
-    <Provider store={store}>
+    
       <AnalysisProvider>
         <AnalysisWindow examType={examType} paperId={paperId} />
       </AnalysisProvider>
-    </Provider>
+    
   );
 } 

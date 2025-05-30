@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { useAppSelector } from "@/redux/hooks/hooks";
+import { useAnalysisStore } from "@/stores/analysisStore";
 
 const AttemptsAnalysis: React.FC = () => {
-  const analysisData = useAppSelector((state) => state.analysis);
+  const analysisData = useAnalysisStore();
 
   if (!analysisData.testInfo) {
     return <div>No analysis data available.</div>;

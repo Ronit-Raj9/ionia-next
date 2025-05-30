@@ -15,8 +15,7 @@ import {
   FiChevronRight,
   FiLogOut
 } from 'react-icons/fi';
-import { useAppDispatch } from '@/redux/hooks/hooks';
-import { logout } from '@/redux/slices/authSlice';
+import { useAuthStore } from '@/stores/authStore';
 import { clearAllCachedData } from '@/lib/api';
 
 interface SidebarProps {
@@ -48,7 +47,7 @@ const itemVariants = {
 const Sidebar: React.FC<SidebarProps> = ({ username }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useAppDispatch();
+  const { logout } = useAuthStore();
   
   const navItems = [
     { icon: <FiHome size={20} />, label: 'Dashboard', href: '/dashboard', id: 'dashboard-link' },
@@ -73,8 +72,8 @@ const Sidebar: React.FC<SidebarProps> = ({ username }) => {
       // Clear all cached data first
       clearAllCachedData();
       
-      // Dispatch the logout action
-      await dispatch(logout()).unwrap();
+      // Call the logout action from the store
+      await logout();
       
       console.log('Logout successful, redirecting to login page');
       router.push('/auth/login');

@@ -14,9 +14,7 @@ import {
   User
 } from "lucide-react";
 import { fetchAnalytics } from "../utils/api";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
-import { IUser } from "@/redux/slices/authSlice";
+import { useAuthStore } from "@/stores/authStore";
 
 interface Question {
   _id: string;
@@ -46,12 +44,12 @@ export default function AnalyticsPage() {
     tests: []
   });
 
-  // Get user data from Redux store
-  const user = useSelector((state: RootState) => state.auth.user);
+  // Get user data from Zustand store
+  const { user } = useAuthStore();
 
   // Function to safely get user display values
   const getUserDisplayData = () => {
-    // Check if user is in the expected IUser format
+    // Check if user is in the expected format
     if (user && 'fullName' in user) {
       return {
         fullName: user.fullName,

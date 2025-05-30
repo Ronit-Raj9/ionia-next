@@ -1,15 +1,13 @@
 "use client";
 import React from "react";
-import { useAppDispatch, useAppSelector } from '@/redux/hooks/hooks';
-import { setActiveTab } from '@/redux/slices/analysisSlice';
+import { useAnalysisStore } from '@/stores/analysisStore';
 
 interface TabsProps {
   children: React.ReactNode;
 }
 
 const Tabs: React.FC<TabsProps> = ({ children }) => {
-  const dispatch = useAppDispatch();
-  const activeTab = useAppSelector((state) => state.analysis.activeTab);
+  const { activeTab, setActiveTab } = useAnalysisStore();
 
   const tabs = [
     { id: 'summary', label: 'Summary' },
@@ -24,7 +22,7 @@ const Tabs: React.FC<TabsProps> = ({ children }) => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => dispatch(setActiveTab(tab.id))}
+              onClick={() => setActiveTab(tab.id)}
               className={`
                 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
                 ${
