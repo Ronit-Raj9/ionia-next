@@ -27,7 +27,7 @@ const isOriginAllowed = (origin) => {
   if (origin.endsWith('.ionia.sbs') || origin === 'https://ionia.sbs') return true;
   
   // Allow all localhost origins
-  if (origin.match(/https?:\/\/localhost(:\d+)?$/)) return true;
+  if (origin.match(/http?:\/\/localhost(:\d+)?$/)) return true;
   
   // Allow specific IP addresses
   const allowedIPs = [
@@ -75,8 +75,17 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, access-control-allow-credentials, Access-Control-Allow-Credentials');
   
-  // Add CSP header 
-  res.header('Content-Security-Policy', "default-src 'self'; connect-src 'self' http://3.110.43.68/ https://ionia.sbs https://www.ionia.sbs https://api.ionia.sbs http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob: https: http: https://res.cloudinary.com;");
+  // Add CSP header with WebSocket support
+  const cspDirectives = [
+    "default-src 'self'",
+    "connect-src 'self' ws: wss: http://3.110.43.68/ http://3.7.73.172/ https://ionia.sbs https://www.ionia.sbs https://api.ionia.sbs http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* https://127.0.0.1:3000",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "img-src 'self' data: blob: https: http: https://res.cloudinary.com"
+  ].join('; ');
+  
+  res.header('Content-Security-Policy', cspDirectives);
   
   next();
 });
