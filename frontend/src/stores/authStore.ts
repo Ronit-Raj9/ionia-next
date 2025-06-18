@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
 import Cookies from 'js-cookie';
-import { API } from '@/lib/api';
 
 interface User {
   id: string;
@@ -21,32 +20,18 @@ interface AuthState {
   error: string | null;
   tokenExpiresAt: number | null;
   refreshTokenExpiresAt: number | null;
-  isRefreshing: boolean;
-  lastActivity: number;
   
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  clearError: () => void;
   setTokens: (accessToken: string, refreshToken?: string) => void;
   clearTokens: () => void;
   logout: () => void;
-  forceLogout: () => void;
   checkTokenExpiration: () => boolean;
   isTokenExpired: () => boolean;
   hasRole: (requiredRole: 'user' | 'admin' | 'superadmin') => boolean;
   hasAnyRole: (roles: string[]) => boolean;
-  refreshToken: () => Promise<boolean>;
-  updateActivity: () => void;
-  
-  // Authentication methods
-  login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
-  register: (userData: { username: string; email: string; fullName: string; password: string }) => Promise<{ success: boolean; error?: string }>;
-  getCurrentUser: () => Promise<void>;
-  
-  // Tab synchronization
-  syncState: (data: Partial<AuthState>) => void;
 }
 
 // Role hierarchy for permission checking
@@ -90,10 +75,6 @@ const COOKIE_OPTIONS = {
   expires: 7, // 7 days for refresh token
 };
 
-// Storage keys for tab synchronization
-const AUTH_SYNC_KEY = 'auth_sync';
-const LOGOUT_SYNC_KEY = 'logout_sync';
-
 export const useAuthStore = create<AuthState>()(
   persist(
     immer((set, get) => ({
@@ -104,8 +85,6 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       tokenExpiresAt: null,
       refreshTokenExpiresAt: null,
-      isRefreshing: false,
-      lastActivity: Date.now(),
 
       // Actions
       setUser: (user) =>
@@ -113,16 +92,6 @@ export const useAuthStore = create<AuthState>()(
           state.user = user;
           state.isAuthenticated = !!user;
           state.error = null;
-          state.lastActivity = Date.now();
-          
-          // Sync across tabs
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(AUTH_SYNC_KEY, JSON.stringify({
-              user,
-              isAuthenticated: !!user,
-              timestamp: Date.now()
-            }));
-          }
         }),
 
       setLoading: (loading) =>
@@ -138,11 +107,6 @@ export const useAuthStore = create<AuthState>()(
           }
         }),
 
-      clearError: () =>
-        set((state) => {
-          state.error = null;
-        }),
-
       setTokens: (accessToken, refreshToken) =>
         set((state) => {
           // Parse token expiration
@@ -153,6 +117,7 @@ export const useAuthStore = create<AuthState>()(
 
           // Store access token in memory only (more secure)
           if (typeof window !== 'undefined') {
+            // Store in a more secure way - as a closure variable
             (window as any).__accessToken = accessToken;
           }
 
@@ -166,12 +131,11 @@ export const useAuthStore = create<AuthState>()(
             // Store refresh token in secure cookie
             Cookies.set('refreshToken', refreshToken, {
               ...COOKIE_OPTIONS,
-              expires: 7,
+              expires: 7, // 7 days
             });
           }
 
           state.error = null;
-          state.lastActivity = Date.now();
         }),
 
       clearTokens: () =>
@@ -197,37 +161,20 @@ export const useAuthStore = create<AuthState>()(
           state.tokenExpiresAt = null;
           state.refreshTokenExpiresAt = null;
           state.error = null;
-          state.isRefreshing = false;
           
           // Clear all tokens
           if (typeof window !== 'undefined') {
             delete (window as any).__accessToken;
           }
           Cookies.remove('refreshToken');
-          
-          // Sync logout across tabs
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(LOGOUT_SYNC_KEY, Date.now().toString());
-            localStorage.removeItem(AUTH_SYNC_KEY);
-          }
         }),
-
-      forceLogout: () => {
-        const { logout } = get();
-        logout();
-        
-        // Force redirect to login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login';
-        }
-      },
 
       checkTokenExpiration: () => {
         const state = get();
         if (!state.tokenExpiresAt) return false;
         
-        // Check if token expires in the next 5 minutes
-        return Date.now() >= (state.tokenExpiresAt - 300000);
+        // Check if token expires in the next 2 minutes
+        return Date.now() >= (state.tokenExpiresAt - 120000);
       },
 
       isTokenExpired: () => {
@@ -249,143 +196,12 @@ export const useAuthStore = create<AuthState>()(
         
         return roles.includes(state.user.role);
       },
-
-      refreshToken: async () => {
-        const state = get();
-        
-        // Prevent multiple simultaneous refresh attempts
-        if (state.isRefreshing) {
-          return false;
-        }
-
-        set((draft) => {
-          draft.isRefreshing = true;
-          draft.error = null;
-        });
-
-        try {
-          const refreshToken = getRefreshToken();
-          if (!refreshToken) {
-            throw new Error('No refresh token available');
-          }
-
-          const response = await API.auth.refreshToken();
-          
-          if (response.data?.accessToken) {
-            set((draft) => {
-              draft.isRefreshing = false;
-            });
-            
-            // Update tokens
-            get().setTokens(response.data.accessToken, response.data.refreshToken);
-            return true;
-          } else {
-            throw new Error('Invalid refresh response');
-          }
-        } catch (error) {
-          console.error('Token refresh failed:', error);
-          
-          set((draft) => {
-            draft.isRefreshing = false;
-            draft.error = 'Session expired. Please log in again.';
-          });
-          
-          // Force logout on refresh failure
-          get().forceLogout();
-          return false;
-        }
-      },
-
-      updateActivity: () =>
-        set((state) => {
-          state.lastActivity = Date.now();
-        }),
-
-      syncState: (data) =>
-        set((state) => {
-          if (data.user !== undefined) state.user = data.user;
-          if (data.isAuthenticated !== undefined) state.isAuthenticated = data.isAuthenticated;
-        }),
-
-      // Authentication methods
-      login: async (credentials) => {
-        const { setLoading, setError, setUser, setTokens } = get();
-        
-        try {
-          setLoading(true);
-          setError(null);
-          
-          const response = await API.auth.login(credentials);
-          
-          if (response.data) {
-            setUser({
-              ...response.data.user,
-              role: response.data.user.role as 'user' | 'admin' | 'superadmin'
-            });
-            setTokens(response.data.accessToken, response.data.refreshToken);
-            setLoading(false);
-            return { success: true };
-          } else {
-            throw new Error('Login failed');
-          }
-        } catch (error: any) {
-          setError(error.message || 'Login failed');
-          setLoading(false);
-          return { success: false, error: error.message || 'Login failed' };
-        }
-      },
-
-      register: async (userData) => {
-        const { setLoading, setError } = get();
-        
-        try {
-          setLoading(true);
-          setError(null);
-          
-          const response = await API.auth.register(userData);
-          
-          setLoading(false);
-          return { success: true };
-        } catch (error: any) {
-          setError(error.message || 'Registration failed');
-          setLoading(false);
-          return { success: false, error: error.message || 'Registration failed' };
-        }
-      },
-
-      getCurrentUser: async () => {
-        const { setLoading, setError, setUser } = get();
-        
-        try {
-          setLoading(true);
-          setError(null);
-          
-          const response = await API.auth.getCurrentUser();
-          
-          if (response.data) {
-            // Map API User interface to authStore User interface
-            setUser({
-              id: response.data._id,
-              username: response.data.username,
-              fullName: response.data.fullName,
-              email: response.data.email,
-              role: response.data.role,
-              avatar: response.data.avatar
-            });
-          }
-          setLoading(false);
-        } catch (error: any) {
-          setError(error.message || 'Failed to get user');
-          setLoading(false);
-        }
-      },
     })),
     {
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        lastActivity: state.lastActivity,
         // Don't persist tokens in localStorage for security
       }),
     }
@@ -403,108 +219,35 @@ export const getRefreshToken = (): string | null => {
   return Cookies.get('refreshToken') || null;
 };
 
-// Auto-refresh and monitoring intervals
+// Auto-logout on token expiration
 let tokenCheckInterval: NodeJS.Timeout;
-let activityCheckInterval: NodeJS.Timeout;
 
 export const startTokenMonitoring = () => {
   if (typeof window === 'undefined') return;
   
-  // Clear existing intervals
-  if (tokenCheckInterval) clearInterval(tokenCheckInterval);
-  if (activityCheckInterval) clearInterval(activityCheckInterval);
+  // Clear existing interval
+  if (tokenCheckInterval) {
+    clearInterval(tokenCheckInterval);
+  }
   
-  // Check for token refresh need every 30 seconds
-  tokenCheckInterval = setInterval(async () => {
-    const { isAuthenticated, checkTokenExpiration, refreshToken, isTokenExpired } = useAuthStore.getState();
+  // Check token expiration every minute
+  tokenCheckInterval = setInterval(() => {
+    const { isTokenExpired, logout, isAuthenticated } = useAuthStore.getState();
     
-    if (isAuthenticated) {
-      if (isTokenExpired()) {
-        console.log('Token expired, attempting refresh...');
-        const refreshed = await refreshToken();
-        if (!refreshed) {
-          console.log('Refresh failed, logging out user');
-        }
-      } else if (checkTokenExpiration()) {
-        console.log('Token expiring soon, refreshing...');
-        await refreshToken();
-      }
-    }
-  }, 30000); // Check every 30 seconds
-
-  // Check for user activity and session timeout
-  activityCheckInterval = setInterval(() => {
-    const { isAuthenticated, lastActivity, forceLogout } = useAuthStore.getState();
-    
-    if (isAuthenticated) {
-      const inactiveTime = Date.now() - lastActivity;
-      // Auto-logout after 24 hours of inactivity
-      if (inactiveTime > 24 * 60 * 60 * 1000) {
-        console.log('Session timeout due to inactivity');
-        forceLogout();
+    if (isAuthenticated && isTokenExpired()) {
+      console.log('Token expired, logging out user');
+      logout();
+      
+      // Redirect to login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
       }
     }
   }, 60000); // Check every minute
 };
 
 export const stopTokenMonitoring = () => {
-  if (tokenCheckInterval) clearInterval(tokenCheckInterval);
-  if (activityCheckInterval) clearInterval(activityCheckInterval);
-};
-
-// Tab synchronization setup
-export const startTabSynchronization = () => {
-  if (typeof window === 'undefined') return;
-
-  const handleStorageChange = (e: StorageEvent) => {
-    const { syncState, forceLogout } = useAuthStore.getState();
-
-    if (e.key === AUTH_SYNC_KEY && e.newValue) {
-      try {
-        const data = JSON.parse(e.newValue);
-        syncState({
-          user: data.user,
-          isAuthenticated: data.isAuthenticated,
-        });
-      } catch (error) {
-        console.error('Failed to sync auth state:', error);
-      }
-    }
-
-    if (e.key === LOGOUT_SYNC_KEY && e.newValue) {
-      // Another tab logged out, force logout in this tab too
-      forceLogout();
-    }
-  };
-
-  window.addEventListener('storage', handleStorageChange);
-  
-  return () => {
-    window.removeEventListener('storage', handleStorageChange);
-  };
-};
-
-// Activity tracking for auto-logout
-export const trackUserActivity = () => {
-  if (typeof window === 'undefined') return;
-
-  const { updateActivity, isAuthenticated } = useAuthStore.getState();
-  
-  const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-  
-  const activityHandler = () => {
-    if (isAuthenticated) {
-      updateActivity();
-    }
-  };
-
-  activities.forEach(activity => {
-    document.addEventListener(activity, activityHandler, true);
-  });
-
-  return () => {
-    activities.forEach(activity => {
-      document.removeEventListener(activity, activityHandler, true);
-    });
-  };
+  if (tokenCheckInterval) {
+    clearInterval(tokenCheckInterval);
+  }
 }; 

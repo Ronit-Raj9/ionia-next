@@ -54,12 +54,12 @@ export default function Footer({ className = "" }: FooterProps) {
             <ul className="space-y-4">
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <Mail className="w-5 h-5 text-emerald-400" />
-                <span>ionia.edu@gmail.com</span>
+                <span>chitarthkumargupta@gmail.com</span>
               </li>
-              {/* <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
+              <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <Phone className="w-5 h-5 text-emerald-400" />
                 <span>+91 123 456 7890</span>
-              </li> */}
+              </li>
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <MapPin className="w-5 h-5 text-emerald-400" />
                 <span>India</span>

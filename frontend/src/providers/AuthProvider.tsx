@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAuthStore, startTokenMonitoring, stopTokenMonitoring, startTabSynchronization, trackUserActivity } from '@/stores/authStore';
+import { useAuthStore, startTokenMonitoring, stopTokenMonitoring } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { API } from '@/lib/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import SessionSync from '@/components/auth/SessionSync';
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -19,9 +18,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser, 
     setLoading, 
     setError, 
-    logout,
-    refreshToken,
-    isRefreshing 
+    logout 
   } = useAuthStore();
   const { setGlobalLoading, addNotification } = useUIStore();
 
@@ -31,53 +28,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setGlobalLoading(true);
         setLoading(true);
 
-        // Start all monitoring services
+        // Start token monitoring
         startTokenMonitoring();
-        
-        // Start tab synchronization
-        const tabSyncCleanup = startTabSynchronization();
-        
-        // Start activity tracking
-        const activityCleanup = trackUserActivity();
 
         // If user is marked as authenticated, verify with the server
         if (isAuthenticated && !user) {
           try {
             const response = await API.auth.getCurrentUser();
             if (response.data) {
-              // Map API User interface to authStore User interface
-              setUser({
-                id: response.data._id,
-                username: response.data.username,
-                fullName: response.data.fullName,
-                email: response.data.email,
-                role: response.data.role,
-                avatar: response.data.avatar
-              });
+              setUser(response.data);
             }
           } catch (error) {
-            console.warn('Failed to get current user, attempting token refresh:', error);
-            // Try to refresh token before giving up
-            const refreshed = await refreshToken();
-            if (refreshed) {
-              try {
-                const response = await API.auth.getCurrentUser();
-                if (response.data) {
-                  // Map API User interface to authStore User interface
-                  setUser({
-                    id: response.data._id,
-                    username: response.data.username,
-                    fullName: response.data.fullName,
-                    email: response.data.email,
-                    role: response.data.role,
-                    avatar: response.data.avatar
-                  });
-                }
-              } catch (retryError) {
-                console.error('Auth verification failed after refresh:', retryError);
-                logout();
-              }
-            }
+            console.warn('Failed to get current user:', error);
+            // Don't logout here, let the token monitoring handle expired tokens
           }
         }
 
@@ -86,43 +49,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' || 'system';
         setTheme(savedTheme);
 
-        // Check for expired session on app load
-        if (isAuthenticated) {
-          const lastActivity = localStorage.getItem('lastActivity');
-          if (lastActivity) {
-            const inactiveTime = Date.now() - parseInt(lastActivity);
-            // If inactive for more than 24 hours, force logout
-            if (inactiveTime > 24 * 60 * 60 * 1000) {
-              console.log('Session expired due to prolonged inactivity');
-              logout();
-              addNotification({
-                type: 'warning',
-                title: 'Session Expired',
-                message: 'You have been logged out due to inactivity.',
-                duration: 5000,
-              });
-            }
-          }
-        }
-
-        // Store cleanup functions for later
-        if (typeof window !== 'undefined') {
-          (window as any).__authCleanup = () => {
-            stopTokenMonitoring();
-            if (tabSyncCleanup) tabSyncCleanup();
-            if (activityCleanup) activityCleanup();
-          };
-        }
-
       } catch (error) {
         console.error('Auth initialization failed:', error);
         setError('Failed to initialize authentication');
-        addNotification({
-          type: 'error',
-          title: 'Initialization Error',
-          message: 'Failed to initialize authentication. Please refresh the page.',
-          duration: 10000,
-        });
       } finally {
         setLoading(false);
         setGlobalLoading(false);
@@ -134,45 +63,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Cleanup on unmount
     return () => {
-      if (typeof window !== 'undefined' && (window as any).__authCleanup) {
-        (window as any).__authCleanup();
-      }
+      stopTokenMonitoring();
     };
-  }, []); // Remove dependencies to run only once
+  }, [isAuthenticated, user, setUser, setLoading, setError, setGlobalLoading]);
 
-  // Handle tab focus to check auth status and refresh if needed
+  // Handle tab focus to check auth status
   useEffect(() => {
     const handleFocus = async () => {
-      if (isAuthenticated && user && !isRefreshing) {
+      if (isAuthenticated && user) {
         try {
-          // Check if token needs refresh
-          const { checkTokenExpiration } = useAuthStore.getState();
-          if (checkTokenExpiration()) {
-            console.log('Token expiring soon, refreshing on focus...');
-            await refreshToken();
-          }
-          
-          // Silently verify user is still authenticated
+          // Silently check if user is still authenticated
           await API.auth.getCurrentUser();
         } catch (error) {
           console.warn('Auth check on focus failed:', error);
-          // Try to refresh token
-          const refreshed = await refreshToken();
-          if (!refreshed) {
-            addNotification({
-              type: 'warning',
-              title: 'Session Expired',
-              message: 'Your session has expired. Please log in again.',
-              duration: 5000,
-            });
-          }
+          // Token monitoring will handle logout if needed
         }
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [isAuthenticated, user, isRefreshing, refreshToken, addNotification]);
+  }, [isAuthenticated, user]);
 
   // Handle network status changes
   useEffect(() => {
@@ -183,11 +94,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         message: 'You are back online!',
         duration: 3000,
       });
-      
-      // Try to refresh auth state when back online
-      if (isAuthenticated) {
-        refreshToken().catch(console.warn);
-      }
     };
 
     const handleOffline = () => {
@@ -207,21 +113,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [addNotification, isAuthenticated, refreshToken]);
-
-  // Handle page visibility change for better security
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isAuthenticated) {
-        // Page became visible, update activity
-        const { updateActivity } = useAuthStore.getState();
-        updateActivity();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isAuthenticated]);
+  }, [addNotification]);
 
   // Show loading screen during initialization
   if (!isInitialized) {
@@ -237,13 +129,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return (
     <ErrorBoundary>
-      <SessionSync />
       {children}
     </ErrorBoundary>
   );
 }
 
-// Enhanced hook to get authentication status
+// Hook to get authentication status
 export function useAuth() {
   const authStore = useAuthStore();
   
@@ -259,7 +150,7 @@ export function useAuth() {
   };
 }
 
-// Enhanced hook to check if user has specific permissions
+// Hook to check if user has specific permissions
 export function usePermissions() {
   const { hasRole, hasAnyRole, user } = useAuthStore();
   
@@ -269,36 +160,7 @@ export function usePermissions() {
     canAccessAdmin: hasRole('admin'),
     canAccessSuperAdmin: hasRole('superadmin'),
     isOwner: (resourceUserId: string) => user?.id === resourceUserId,
-    canManageUsers: hasRole('admin'),
-    canManageTests: hasAnyRole(['admin', 'superadmin']),
-    canViewAnalytics: hasAnyRole(['admin', 'superadmin']),
   };
-}
-
-// Hook for route protection logic
-export function useRouteProtection() {
-  const { isAuthenticated, isLoading, hasRole } = useAuthStore();
-  
-  return {
-    isAuthenticated,
-    isLoading,
-    requireAuth: (redirectTo = '/auth/login') => {
-      if (!isLoading && !isAuthenticated) {
-        if (typeof window !== 'undefined') {
-          window.location.href = `${redirectTo}?returnUrl=${window.location.pathname}`;
-        }
-        return false;
-      }
-      return true;
-    },
-    requireRole: (role: 'user' | 'admin' | 'superadmin', redirectTo = '/dashboard') => {
-      if (!isLoading && (!isAuthenticated || !hasRole(role))) {
-        if (typeof window !== 'undefined') {
-          window.location.href = redirectTo;
-        }
-        return false;
-      }
-      return true;
-    },
-  };
-}
+} 
+ 
+ 

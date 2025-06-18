@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { TestQuestion } from "@/stores/testStore";
+import { TestQuestion } from "@/redux/slices/testSlice";
 import Image from "next/image";
 
 interface OptionProps {

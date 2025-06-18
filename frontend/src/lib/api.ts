@@ -73,10 +73,7 @@ const refreshTokens = async (): Promise<string | null> => {
       
       // Update user data if provided
       if (data.data.user) {
-        setUser({
-          ...data.data.user,
-          role: data.data.user.role as 'user' | 'admin' | 'superadmin'
-        });
+        setUser(data.data.user);
       }
       
       onTokenRefreshed();
@@ -311,7 +308,7 @@ interface PaginatedResponse<T> {
  */
 export const API = {
   auth: {
-    login: async (credentials: { email: string; password: string }): Promise<APIResponse<LoginResponse>> => {
+    login: async (email: string, password: string) => {
       const { setUser, setTokens, setError } = useAuthStore.getState();
       const { addNotification } = useUIStore.getState();
       
@@ -320,188 +317,110 @@ export const API = {
           `${API_BASE}/users/login`,
           {
             method: 'POST',
-            body: JSON.stringify(credentials),
+            body: JSON.stringify({ email, password }),
           },
           false // Don't cache login requests
         );
         
-        if (response.data) {
-          // Store user and tokens
-          setUser({
-            ...response.data.user,
-            role: response.data.user.role as 'user' | 'admin' | 'superadmin'
-          });
+        if (response.data.accessToken) {
           setTokens(response.data.accessToken, response.data.refreshToken);
+          setUser(response.data.user);
           
-          // Clear any previous errors
-          setError(null);
-          
-          // Show success notification
           addNotification({
             type: 'success',
             title: 'Welcome back!',
-            message: `Logged in successfully as ${response.data.user.fullName}`,
+            message: `Hello ${response.data.user.fullName}`,
             duration: 3000,
           });
         }
         
         return response;
-      } catch (error: any) {
-        setError(error.message || 'Login failed');
+      } catch (error) {
+        setError('Login failed. Please check your credentials.');
         throw error;
       }
     },
 
-    logout: async (): Promise<void> => {
-      const { logout, user } = useAuthStore.getState();
+    logout: async () => {
+      const { logout } = useAuthStore.getState();
       const { addNotification } = useUIStore.getState();
       
       try {
-        // Call logout endpoint to invalidate refresh token
-        await fetchWithAuth(`${API_BASE}/users/logout`, {
-          method: 'POST',
-        }, false);
+        await fetchWithAuth<APIResponse<void>>(
+          `${API_BASE}/users/logout`,
+          { method: 'POST' },
+          false
+        );
       } catch (error) {
-        console.warn('Logout endpoint failed:', error);
+        console.warn('Logout API call failed:', error);
       } finally {
-        // Always clear local state
         logout();
+        clearAllCachedData();
         
         addNotification({
           type: 'info',
-          title: 'Logged Out',
-          message: user ? `Goodbye, ${user.fullName}!` : 'You have been logged out.',
+          title: 'Logged out',
+          message: 'You have been successfully logged out.',
           duration: 3000,
         });
-        
-        // Redirect to login
-        if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login';
-        }
       }
     },
 
-    register: async (userData: {
-      username: string;
-      email: string;
-      fullName: string;
-      password: string;
-    }): Promise<APIResponse<{ message: string }>> => {
+    register: async (userData: { fullName: string; email: string; username: string; password: string }) => {
+      const { setUser, setTokens } = useAuthStore.getState();
       const { addNotification } = useUIStore.getState();
       
-      try {
-        const response = await fetchWithAuth<APIResponse<{ message: string }>>(
-          `${API_BASE}/users/register`,
-          {
-            method: 'POST',
-            body: JSON.stringify(userData),
-          },
-          false
-        );
+      const response = await fetchWithAuth<APIResponse<LoginResponse>>(
+        `${API_BASE}/users/register`,
+        {
+          method: 'POST',
+          body: JSON.stringify(userData),
+        },
+        false
+      );
+      
+      if (response.data.accessToken) {
+        setTokens(response.data.accessToken, response.data.refreshToken);
+        setUser(response.data.user);
         
         addNotification({
           type: 'success',
-          title: 'Account Created',
-          message: 'Registration successful! Please check your email to verify your account.',
+          title: 'Account Created!',
+          message: 'Welcome to the platform!',
           duration: 5000,
         });
-        
-        return response;
-      } catch (error: any) {
-        addNotification({
-          type: 'error',
-          title: 'Registration Failed',
-          message: error.message || 'Failed to create account',
-          duration: 5000,
-        });
-        throw error;
       }
-    },
-
-    getCurrentUser: async (): Promise<APIResponse<User>> => {
-      return fetchWithAuth<APIResponse<User>>(`${API_BASE}/users/profile`);
-    },
-
-    forgotPassword: async (email: string): Promise<APIResponse<{ message: string }>> => {
-      const { addNotification } = useUIStore.getState();
       
-      try {
-        const response = await fetchWithAuth<APIResponse<{ message: string }>>(
-          `${API_BASE}/users/forgot-password`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ email }),
-          },
-          false
-        );
-        
-        addNotification({
-          type: 'success',
-          title: 'Reset Email Sent',
-          message: 'Please check your email for password reset instructions.',
-          duration: 5000,
-        });
-        
-        return response;
-      } catch (error: any) {
-        addNotification({
-          type: 'error',
-          title: 'Reset Failed',
-          message: error.message || 'Failed to send reset email',
-          duration: 5000,
-        });
-        throw error;
-      }
+      return response;
     },
 
-    resetPassword: async (token: string, newPassword: string): Promise<APIResponse<{ message: string }>> => {
-      const { addNotification } = useUIStore.getState();
-      
-      try {
-        const response = await fetchWithAuth<APIResponse<{ message: string }>>(
-          `${API_BASE}/users/reset-password`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ token, newPassword }),
-          },
-          false
-        );
-        
-        addNotification({
-          type: 'success',
-          title: 'Password Reset',
-          message: 'Your password has been reset successfully.',
-          duration: 3000,
-        });
-        
-        return response;
-      } catch (error: any) {
-        addNotification({
-          type: 'error',
-          title: 'Reset Failed',
-          message: error.message || 'Failed to reset password',
-          duration: 5000,
-        });
-        throw error;
-      }
+    getCurrentUser: async () => {
+      return fetchWithAuth<APIResponse<User>>(
+        `${API_BASE}/users/current-user`,
+        { method: 'GET' },
+        false // Always fetch fresh user data
+      );
     },
 
-    refreshToken: async (): Promise<APIResponse<{ accessToken: string; refreshToken?: string; user?: any }>> => {
-      const response = await fetch(`${API_BASE}/users/refresh-token`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
+    forgotPassword: (email: string) =>
+      fetchWithAuth<APIResponse<void>>(
+        `${API_BASE}/users/forgot-password`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ email }),
+        },
+        false
+      ),
 
-      if (!response.ok) {
-        throw new Error(`Token refresh failed: ${response.status}`);
-      }
-
-      return response.json();
-    },
+    resetPassword: (token: string, password: string) =>
+      fetchWithAuth<APIResponse<void>>(
+        `${API_BASE}/users/reset-password`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ token, password }),
+        },
+        false
+      ),
   },
 
   admin: {
@@ -639,6 +558,7 @@ export const API = {
 
 // Legacy compatibility - keeping existing exports
 export { fetchWithAuth as fetchWithCache };
+export { clearAllCachedData };
 export const preloadData = (url: string, options?: RequestInit) => {
   // Preload data by making a request and caching it
   fetchWithAuth(url, options).catch(() => {

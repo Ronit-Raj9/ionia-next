@@ -1,0 +1,188 @@
+{
+  "name": "Test Series Platform - JEE & CUET Preparation",
+  "short_name": "Test Platform",
+  "description": "Comprehensive test preparation platform for JEE Mains, Advanced, and CUET with advanced analytics",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10B981",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Take Practice Test",
+      "short_name": "Practice",
+      "description": "Start a practice test session",
+      "url": "/practice",
+      "icons": [
+        {
+          "src": "/icons/practice-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Mock Test",
+      "short_name": "Mock Test",
+      "description": "Take a full-length mock test",
+      "url": "/exam/jee-mains",
+      "icons": [
+        {
+          "src": "/icons/exam-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "View Results",
+      "short_name": "Results",
+      "description": "Check your test results and analytics",
+      "url": "/results",
+      "icons": [
+        {
+          "src": "/icons/results-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Go to main dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/dashboard-icon.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Dashboard view on desktop"
+    },
+    {
+      "src": "/screenshots/mobile-test.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Test interface on mobile"
+    },
+    {
+      "src": "/screenshots/mobile-dashboard.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Dashboard on mobile device"
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+testplatform",
+      "url": "/exam/%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/upload",
+      "accept": {
+        "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"],
+        "application/pdf": [".pdf"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["image/*", ".pdf"]
+        }
+      ]
+    }
+  },
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "id": "test-platform-pwa"
+} 

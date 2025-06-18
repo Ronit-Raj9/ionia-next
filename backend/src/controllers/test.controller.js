@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Test } from "../models/test.model.js";
 import { Question } from "../models/question.model.js"; // Needed for calculating marks on update
+import { AttemptedTest } from "../models/attemptedTest.model.js"; // Needed for cleanup operations
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -409,14 +410,40 @@ const deleteTest = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Test not found or already deleted");
     }
 
-    // TODO: Consider cleanup tasks? 
-    // - Delete associated AttemptedTest records? (Or keep for history?)
-    // - Remove test reference from user profiles/schedules?
+    // Cleanup tasks
+    try {
+        // 1. Handle associated AttemptedTest records
+        // Keep for historical data but mark as orphaned
+        const attemptedTestsCount = await AttemptedTest.countDocuments({ testId: id });
+        if (attemptedTestsCount > 0) {
+            console.log(`Found ${attemptedTestsCount} attempted test records for deleted test`);
+            // Mark them as orphaned instead of deleting for historical purposes
+            await AttemptedTest.updateMany(
+                { testId: id },
+                { 
+                    $set: { 
+                        isOrphaned: true,
+                        orphanedAt: new Date(),
+                        orphanReason: 'Original test deleted'
+                    }
+                }
+            );
+            console.log(`Marked ${attemptedTestsCount} attempted test records as orphaned`);
+        }
+
+        // 2. Log cleanup summary
+        console.log(`Cleanup completed for test ID: ${id}`);
+        console.log(`- Attempted tests marked as orphaned: ${attemptedTestsCount}`);
+        
+    } catch (cleanupError) {
+        console.error(`Cleanup error for test ID ${id}:`, cleanupError);
+        // Don't throw error as the main deletion was successful
+        // Just log the cleanup issue
+    }
 
     console.log(`Test ID: ${id} deleted successfully.`);
     return res.status(200).json(
         new ApiResponse(200, { deletedId: id }, "Test deleted successfully")
-        // Or return 204 No Content: return res.status(204).send();
     );
 });
 
@@ -579,4 +606,4 @@ export {
     updateTest,
     deleteTest,
     getTestForAttempt
-}; 
+};

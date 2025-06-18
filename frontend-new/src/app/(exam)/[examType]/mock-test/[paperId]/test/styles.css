@@ -1,0 +1,54 @@
+/* Add this file to your test directory */
+.test-mode {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.test-layout {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background-color: #f9fafb;
+  overflow: auto;
+}
+
+/* Test page specific styles */
+body.test-page {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: white;
+}
+
+/* Question status colors */
+.question-status-visited {
+  background-color: #93c5fd; /* blue-300 */
+}
+
+.question-status-answered {
+  background-color: #10b981; /* green-500 */
+}
+
+.question-status-marked {
+  background-color: #f59e0b; /* amber-500 */
+}
+
+.question-status-active {
+  background-color: #ef4444; /* red-500 */
+  color: white;
+}
+
+/* Fix for layout issues */
+#test-window-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  overflow: auto;
+} 

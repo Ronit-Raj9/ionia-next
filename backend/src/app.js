@@ -206,36 +206,36 @@ app.get('/api/debug-analytics', async (req, res) => {
     res.json({
       success: true,
       data: {
-        totalTests: 5,
-        totalQuestions: 150,
-        activeUsers: 25,
-        totalStudents: 100,
-        testsBySubject: {
-          'Physics': 20,
-          'Chemistry': 15,
-          'Mathematics': 30
-        },
-        completionRates: {
-          'Physics Test 1': 75,
-          'Chemistry Basics': 60
-        },
-        recentTests: [
-          {
-            id: '1',
-            title: 'Physics Test 1', 
-            questions: 20,
-            attempts: 15,
-            createdAt: new Date().toISOString()
-          }
-        ],
-        recentQuestions: [
-          {
-            id: '1',
-            title: 'Newton\'s Laws Question', 
-            subject: 'Physics',
-            createdAt: new Date().toISOString()
-          }
-        ]
+      totalTests: 5,
+      totalQuestions: 150,
+      activeUsers: 25,
+      totalStudents: 100,
+      testsBySubject: {
+        'Physics': 20,
+        'Chemistry': 15,
+        'Mathematics': 30
+      },
+      completionRates: {
+        'Physics Test 1': 75,
+        'Chemistry Basics': 60
+      },
+      recentTests: [
+        {
+          id: '1',
+          title: 'Physics Test 1', 
+          questions: 20,
+          attempts: 15,
+          createdAt: new Date().toISOString()
+        }
+      ],
+      recentQuestions: [
+        {
+          id: '1',
+          title: 'Newton\'s Laws Question', 
+          subject: 'Physics',
+          createdAt: new Date().toISOString()
+        }
+      ]
       },
       meta: {
         requestId: req.requestId
