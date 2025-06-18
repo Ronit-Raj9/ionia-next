@@ -129,11 +129,11 @@ export const useUIStore = create<UIState>()(
         state.notifications.push(newNotification);
         
         // Auto-remove notification after duration
-        if (!notification.persistent && newNotification.duration > 0) {
+        if (!notification.persistent && (newNotification.duration ?? 0) > 0) {
           setTimeout(() => {
             const currentState = get();
             currentState.removeNotification(id);
-          }, newNotification.duration);
+          }, newNotification.duration ?? 0);
         }
       }),
 

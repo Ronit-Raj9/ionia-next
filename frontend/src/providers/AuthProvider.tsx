@@ -45,7 +45,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           try {
             const response = await API.auth.getCurrentUser();
             if (response.data) {
-              setUser(response.data);
+              // Map API User interface to authStore User interface
+              setUser({
+                id: response.data._id,
+                username: response.data.username,
+                fullName: response.data.fullName,
+                email: response.data.email,
+                role: response.data.role,
+                avatar: response.data.avatar
+              });
             }
           } catch (error) {
             console.warn('Failed to get current user, attempting token refresh:', error);
@@ -55,7 +63,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
               try {
                 const response = await API.auth.getCurrentUser();
                 if (response.data) {
-                  setUser(response.data);
+                  // Map API User interface to authStore User interface
+                  setUser({
+                    id: response.data._id,
+                    username: response.data.username,
+                    fullName: response.data.fullName,
+                    email: response.data.email,
+                    role: response.data.role,
+                    avatar: response.data.avatar
+                  });
                 }
               } catch (retryError) {
                 console.error('Auth verification failed after refresh:', retryError);
@@ -285,4 +301,4 @@ export function useRouteProtection() {
       return true;
     },
   };
-} 
+}

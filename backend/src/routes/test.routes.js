@@ -11,14 +11,47 @@ import { verifyJWT, verifyRole } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-// === Public Routes (Potentially) ===
-// Maybe allow fetching published tests publicly, or apply verifyJWT later
-// GET /api/v1/tests - Get list of tests (filtered)
-router.route("/").get(
-    // Make JWT verification required, not optional
-    verifyJWT, 
+// === PUBLIC MOCK TEST ROUTES (No auth required) ===
+
+// GET /api/v1/tests/mock/:examType - Get mock tests by exam type without authentication
+router.route("/mock/:examType").get(
+    (req, res, next) => {
+        // Set default query parameters for mock tests
+        req.query.testCategory = "Platform";
+        req.query.platformTestType = "mock";
+        req.query.examType = req.params.examType;
+        req.query.status = "published"; // Only published tests
+        req.query.limit = "100"; // Higher limit to get all mock tests
+        
+        // Create a fake user with user role so status filter works properly
+        req.user = { role: "user" };
+        
+        next();
+    },
     getTests
 );
+
+// GET /api/v1/tests/mock/:examType/:id - Get a specific mock test by ID without authentication
+router.route("/mock/:examType/:id").get(
+    (req, res, next) => {
+        // Create a fake user with user role so access control works properly
+        req.user = { role: "user" };
+        next();
+    },
+    getTestById
+);
+
+// GET /api/v1/tests/mock/:examType/:id/attempt - Get a mock test prepared for attempting without authentication
+router.route("/mock/:examType/:id/attempt").get(
+    (req, res, next) => {
+        // Create a fake user with user role so access control works properly
+        req.user = { role: "user" };
+        next();
+    },
+    getTestForAttempt
+);
+
+// === AUTHENTICATED ROUTES (JWT Required) ===
 
 // GET /api/v1/tests/all - Get all tests without pagination (admin only)
 router.route("/all").get(
@@ -32,6 +65,12 @@ router.route("/all").get(
     getTests
 );
 
+// GET /api/v1/tests/:id/attempt - Get a test prepared for attempting (without answers)
+router.route("/:id/attempt").get(
+    verifyJWT, // Require authentication for attempts
+    getTestForAttempt
+);
+
 // GET /api/v1/tests/:id - Get a single test by ID
 router.route("/:id").get(
     // Make JWT verification required, not optional
@@ -39,10 +78,11 @@ router.route("/:id").get(
     getTestById
 );
 
-// GET /api/v1/tests/:id/attempt - Get a test prepared for attempting (without answers)
-router.route("/:id/attempt").get(
-    verifyJWT, // Require authentication for attempts
-    getTestForAttempt
+// GET /api/v1/tests - Get list of tests (filtered)
+router.route("/").get(
+    // Make JWT verification required, not optional
+    verifyJWT, 
+    getTests
 );
 
 // === Admin/Superadmin Routes ===

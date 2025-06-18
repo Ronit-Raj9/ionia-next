@@ -73,7 +73,10 @@ const refreshTokens = async (): Promise<string | null> => {
       
       // Update user data if provided
       if (data.data.user) {
-        setUser(data.data.user);
+        setUser({
+          ...data.data.user,
+          role: data.data.user.role as 'user' | 'admin' | 'superadmin'
+        });
       }
       
       onTokenRefreshed();
@@ -324,7 +327,10 @@ export const API = {
         
         if (response.data) {
           // Store user and tokens
-          setUser(response.data.user);
+          setUser({
+            ...response.data.user,
+            role: response.data.user.role as 'user' | 'admin' | 'superadmin'
+          });
           setTokens(response.data.accessToken, response.data.refreshToken);
           
           // Clear any previous errors

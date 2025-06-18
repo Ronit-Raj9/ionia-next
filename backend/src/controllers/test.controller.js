@@ -212,7 +212,7 @@ const getTests = asyncHandler(async (req, res) => {
 
     try {
         const result = await Test.aggregatePaginate(aggregate, options);
-        // console.log("Pagination result:", result);
+        console.log("Pagination result:", result);
 
         if (!result) {
             throw new ApiError(500, "Failed to retrieve tests");

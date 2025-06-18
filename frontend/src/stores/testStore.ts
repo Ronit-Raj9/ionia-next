@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
 import { API } from '@/lib/api';
+import { useUIStore } from './uiStore';
 
 // Define test question interface
 export interface TestQuestion {
@@ -107,9 +108,21 @@ interface TestState {
     visited: number;
     notVisited: number;
   };
+
+  // Utility actions from testSlice
+  setPaperId: (paperId: string) => void;
+  startTest: () => void;
+  updateTimeRemaining: (time: number) => void;
+  answerQuestion: ({ questionIndex, answerIndex, isMarked, isVisited }: { questionIndex: number; answerIndex: number | undefined; isMarked?: boolean; isVisited?: boolean; }) => void;
+  toggleMarkQuestion: (questionIndex: number) => void;
+  completeTest: () => void;
+  clearError: () => void;
+  clearTestCache: () => void;
+  setRawTestData: (test: Test) => void;
+  setTestId: (paperId: string) => void;
 }
 
-const initialState = {
+const initialState: TestState = {
   currentTest: null,
   activeQuestion: 0,
   timeRemaining: 7200, // Default 2 hours in seconds
@@ -118,8 +131,45 @@ const initialState = {
   loading: false,
   error: null,
   results: null,
-  testHistory: {},
-  cachedTests: {},
+  testHistory: {}, // { [paperId: string]: TestResults }
+  cachedTests: {}, // { [paperId: string]: Test }
+  setCurrentTest: () => {},
+  setActiveQuestion: () => {},
+  setTimeRemaining: () => {},
+  setTestStarted: () => {},
+  setTestCompleted: () => {},
+  setLoading: () => {},
+  setError: () => {},
+  setResults: () => {},
+  updateTestHistory: () => {},
+  cacheTest: () => {},
+  updateQuestionAnswer: () => {},
+  toggleQuestionMark: () => {},
+  updateQuestionTime: () => {},
+  markQuestionVisited: () => {},
+  fetchTest: async () => {},
+  submitTest: async () => { return {
+    paperId: '',
+    score: 0,
+    correctAnswers: 0,
+    incorrectAnswers: 0,
+    unattempted: 0,
+    timeTaken: 0,
+  }; },
+  fetchTestHistory: async () => {},
+  resetTest: () => {},
+  resetState: () => {},
+  getCurrentQuestionStats: () => ({ answered: 0, marked: 0, visited: 0, notVisited: 0 }),
+  setPaperId: () => {},
+  startTest: () => {},
+  updateTimeRemaining: () => {},
+  answerQuestion: () => {},
+  toggleMarkQuestion: () => {},
+  completeTest: () => {},
+  clearError: () => {},
+  clearTestCache: () => {},
+  setRawTestData: () => {},
+  setTestId: () => {},
 };
 
 export const useTestStore = create<TestState>()(
@@ -228,7 +278,6 @@ export const useTestStore = create<TestState>()(
           state.loading = true;
           state.error = null;
         });
-
         try {
           // Check cache first
           const cachedTest = get().cachedTests[paperId];
@@ -243,27 +292,27 @@ export const useTestStore = create<TestState>()(
 
           // Direct API call
           const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-          const apiUrl = `${API_BASE_URL}/tests/${paperId}/attempt`;
-          
+          let apiUrl = `${API_BASE_URL}/tests/${paperId}/attempt`;
+          if (typeof window !== 'undefined' && window.location.pathname.includes('/mock-test/')) {
+            const urlParts = window.location.pathname.split('/');
+            const examTypeIndex = urlParts.findIndex(part => part === 'exam') + 1;
+            const examType = urlParts[examTypeIndex] || '';
+            apiUrl = `${API_BASE_URL}/tests/mock/${examType}/${paperId}/attempt`;
+          }
           const accessToken = typeof window !== 'undefined' ? (window as any).__accessToken : null;
           const headers: HeadersInit = {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
           };
-          
           if (accessToken) {
             headers['Authorization'] = `Bearer ${accessToken}`;
           }
-          
           const response = await fetch(apiUrl, { credentials: 'include', headers });
-          
           if (!response.ok) {
             throw new Error(`API error: ${response.status}`);
           }
-          
           const data = await response.json();
           const test = data.data || data;
-
           set((state) => {
             state.currentTest = test;
             state.timeRemaining = test.time * 60;
@@ -276,27 +325,28 @@ export const useTestStore = create<TestState>()(
             state.loading = false;
             state.error = error.message || 'Error fetching test';
           });
+          useUIStore.getState().addNotification({
+            type: 'error',
+            title: 'Test Fetch Error',
+            message: error.message || 'Error fetching test',
+            duration: 5000,
+          });
           throw error;
         }
       },
-
       submitTest: async () => {
         const state = get();
         const { currentTest, timeRemaining } = state;
-        
         if (!currentTest) {
           throw new Error('No active test to submit');
         }
-
         try {
           set((state) => {
             state.loading = true;
           });
-
           // Calculate results
           const answeredQuestions = currentTest.questions.filter(q => q.userAnswer !== undefined);
           const correctAnswers = answeredQuestions.filter(q => q.userAnswer === q.correctOption);
-          
           const results: TestResults = {
             paperId: currentTest._id,
             score: (correctAnswers.length / currentTest.totalQuestions) * 100,
@@ -305,52 +355,69 @@ export const useTestStore = create<TestState>()(
             unattempted: currentTest.totalQuestions - answeredQuestions.length,
             timeTaken: currentTest.time * 60 - timeRemaining,
           };
-
           // Send results to backend
           try {
             await API.tests.submitResults(currentTest._id, results);
+            useUIStore.getState().addNotification({
+              type: 'success',
+              title: 'Test Submitted',
+              message: 'Test submitted successfully',
+              duration: 5000,
+            });
           } catch (submitError) {
             console.error('Error submitting test results:', submitError);
+            useUIStore.getState().addNotification({
+              type: 'warning',
+              title: 'Test Submission Warning',
+              message: 'Test completed, but there was an error saving your results',
+              duration: 5000,
+            });
           }
-
           set((state) => {
             state.results = results;
             state.testHistory[currentTest._id] = results;
             state.isTestCompleted = true;
             state.loading = false;
           });
-
           return results;
-        } catch (error) {
+        } catch (error: any) {
           set((state) => {
             state.loading = false;
+          });
+          useUIStore.getState().addNotification({
+            type: 'error',
+            title: 'Test Submission Error',
+            message: error.message || 'Failed to submit test',
+            duration: 5000,
           });
           throw error;
         }
       },
-
       fetchTestHistory: async () => {
         try {
           set((state) => {
             state.loading = true;
           });
-
           const result = await API.tests.getUserResults();
           const history: TestResults[] = result.data || [];
-          
           const historyMap = history.reduce((acc, result) => {
             acc[result.paperId] = result;
             return acc;
           }, {} as { [paperId: string]: TestResults });
-
           set((state) => {
             state.testHistory = historyMap;
             state.loading = false;
           });
-        } catch (error) {
+        } catch (error: any) {
           set((state) => {
             state.loading = false;
             state.error = 'Failed to fetch test history';
+          });
+          useUIStore.getState().addNotification({
+            type: 'error',
+            title: 'Test History Error',
+            message: error.message || 'Failed to fetch test history',
+            duration: 5000,
           });
           throw error;
         }
@@ -384,6 +451,73 @@ export const useTestStore = create<TestState>()(
         const notVisited = questions.length - visited;
 
         return { answered, marked, visited, notVisited };
+      },
+
+      // Utility actions from testSlice
+      setPaperId: (paperId: string) => {
+        // No-op or store paperId if needed
+      },
+      startTest: () => {
+        const state = get();
+        if (state.currentTest) {
+          set((state) => {
+            state.isTestStarted = true;
+            state.timeRemaining = state.currentTest!.time * 60;
+          });
+        }
+      },
+      updateTimeRemaining: (time: number) => {
+        set((state) => {
+          state.timeRemaining = time;
+        });
+      },
+      answerQuestion: ({ questionIndex, answerIndex, isMarked, isVisited }: { questionIndex: number; answerIndex: number | undefined; isMarked?: boolean; isVisited?: boolean; }) => {
+        set((state) => {
+          if (state.currentTest && state.currentTest.questions[questionIndex]) {
+            state.currentTest.questions[questionIndex].userAnswer = answerIndex;
+            if (isMarked !== undefined) {
+              state.currentTest.questions[questionIndex].isMarked = isMarked;
+            }
+            if (isVisited !== undefined) {
+              state.currentTest.questions[questionIndex].isVisited = isVisited;
+            }
+          }
+        });
+      },
+      toggleMarkQuestion: (questionIndex: number) => {
+        set((state) => {
+          if (state.currentTest && state.currentTest.questions[questionIndex]) {
+            const question = state.currentTest.questions[questionIndex];
+            question.isMarked = !question.isMarked;
+          }
+        });
+      },
+      completeTest: () => {
+        set((state) => {
+          state.isTestCompleted = true;
+          state.isTestStarted = false;
+        });
+      },
+      clearError: () => {
+        set((state) => {
+          state.error = null;
+        });
+      },
+      clearTestCache: () => {
+        set((state) => {
+          state.cachedTests = {};
+        });
+        // Optionally clear API cache if needed
+      },
+      setRawTestData: (test: Test) => {
+        set((state) => {
+          state.currentTest = test;
+          state.loading = false;
+          state.error = null;
+        });
+      },
+      setTestId: (paperId: string) => {
+        // No-op or store paperId if needed
       },
     })),
     {

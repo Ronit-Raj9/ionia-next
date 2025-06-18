@@ -232,7 +232,7 @@ export const VALIDATION_SCHEMAS = {
     questionText: [
       { type: 'required', message: 'Question text is required' },
       { type: 'length', value: { min: 10, max: 2000 }, message: 'Question must be 10-2000 characters' },
-      { type: 'custom', message: 'Question contains potentially harmful content', customValidator: (value) => VALIDATORS.noScript(value) },
+      { type: 'custom', message: 'Question contains potentially harmful content', customValidator: (value: string) => VALIDATORS.noScript(value) },
       { type: 'sanitize', message: '', sanitizer: SANITIZERS.richText }
     ],
     subject: [
@@ -241,7 +241,7 @@ export const VALIDATION_SCHEMAS = {
     ],
     difficulty: [
       { type: 'required', message: 'Difficulty is required' },
-      { type: 'custom', message: 'Invalid difficulty level', customValidator: (value) => ['easy', 'medium', 'hard'].includes(value) }
+      { type: 'custom', message: 'Invalid difficulty level', customValidator: (value: string) => ['easy', 'medium', 'hard'].includes(value) }
     ],
     solution: [
       { type: 'length', value: { min: 0, max: 5000 }, message: 'Solution must be less than 5000 characters' },

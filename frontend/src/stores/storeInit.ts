@@ -3,24 +3,32 @@ import { useAuthStore } from './authStore';
 import { useUIStore } from './uiStore';
 import { useCacheStore } from './cacheStore';
 
+// Define types for store states
+interface AuthState {
+  isAuthenticated: boolean;
+}
+
+interface CacheState {
+  clear: () => void;
+}
+
 // Initialize stores on app startup
 export const initializeStores = () => {
   // Set up any cross-store subscriptions or initial state here
   
   // Subscribe to auth changes to clear sensitive data on logout
-  useAuthStore.subscribe(
-    (state) => state.isAuthenticated,
-    (isAuthenticated, prevIsAuthenticated) => {
-      if (prevIsAuthenticated && !isAuthenticated) {
+  const unsubscribe = useAuthStore.subscribe(
+    (state: AuthState) => {
+      if (!state.isAuthenticated) {
         // User logged out, clear sensitive caches
-        useCacheStore.getState().clearAll();
+        useCacheStore.getState().clear();
       }
     }
   );
 
   // Set up error handling
   const originalConsoleError = console.error;
-  console.error = (...args) => {
+  console.error = (...args: unknown[]) => {
     // Capture any uncaught errors and show notifications
     const error = args[0];
     if (typeof error === 'string' && error.includes('Error')) {
@@ -32,6 +40,11 @@ export const initializeStores = () => {
       });
     }
     originalConsoleError(...args);
+  };
+
+  // Return cleanup function
+  return () => {
+    unsubscribe();
   };
 };
 
