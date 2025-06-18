@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { useTestResults } from "@/stores/testStore";
@@ -14,6 +14,15 @@ export default function Dashboard() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuthStore();
   const { testHistory, fetchTestHistory } = useTestResults();
+
+  // Memoize the fetch function to prevent infinite loops
+  const loadTestHistory = useCallback(async () => {
+    try {
+      await fetchTestHistory();
+    } catch (error) {
+      console.error('Failed to fetch test history:', error);
+    }
+  }, [fetchTestHistory]);
 
   // Transform test history object into array for performance chart
   const performanceChartData = useMemo(() => {
@@ -45,9 +54,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchTestHistory();
+      loadTestHistory();
     }
-  }, [isAuthenticated, fetchTestHistory]);
+  }, [isAuthenticated, loadTestHistory]);
 
   if (authLoading) {
     return (

@@ -45,6 +45,7 @@ interface UIState {
   
   // Navigation
   sidebarOpen: boolean;
+  isNavbarOpen: boolean; // Added for navbar mobile menu
   
   // Error boundary
   hasError: boolean;
@@ -63,6 +64,8 @@ interface UIState {
   closeAllModals: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  setNavbarOpen: (open: boolean) => void; // Added for navbar
+  toggleNavbar: () => void; // Added for navbar
   setError: (error: string | null) => void;
   clearError: () => void;
 }
@@ -76,6 +79,7 @@ export const useUIStore = create<UIState>()(
     notifications: [],
     modals: [],
     sidebarOpen: true,
+    isNavbarOpen: false, // Added for navbar mobile menu
     hasError: false,
     errorInfo: null,
 
@@ -174,6 +178,17 @@ export const useUIStore = create<UIState>()(
         state.sidebarOpen = !state.sidebarOpen;
       }),
 
+    // Navbar actions
+    setNavbarOpen: (open) =>
+      set((state) => {
+        state.isNavbarOpen = open;
+      }),
+
+    toggleNavbar: () =>
+      set((state) => {
+        state.isNavbarOpen = !state.isNavbarOpen;
+      }),
+
     setError: (error) =>
       set((state) => {
         state.hasError = !!error;
@@ -215,4 +230,10 @@ export const useLoading = (key?: string) => {
     isLoading,
     setLoading,
   };
-}; 
+};
+
+// Navbar helper hook
+export const useNavbar = () => {
+  const { isNavbarOpen, setNavbarOpen, toggleNavbar } = useUIStore();
+  return { isNavbarOpen, setNavbarOpen, toggleNavbar };
+};

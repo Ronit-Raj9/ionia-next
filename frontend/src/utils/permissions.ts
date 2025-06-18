@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/stores/authStore';
+import React from 'react';
 
 // Define permission constants
 export const PERMISSIONS = {
@@ -23,34 +24,37 @@ export const PERMISSIONS = {
   SUPERADMIN_VIEW_LOGS: 'superadmin:view:logs',
 } as const;
 
+type PermissionType = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+
+// Define base permissions for each role
+const USER_PERMISSIONS: PermissionType[] = [
+  PERMISSIONS.USER_READ_OWN_PROFILE,
+  PERMISSIONS.USER_UPDATE_OWN_PROFILE,
+  PERMISSIONS.USER_TAKE_TESTS,
+  PERMISSIONS.USER_VIEW_OWN_RESULTS,
+];
+
+const ADMIN_PERMISSIONS: PermissionType[] = [
+  PERMISSIONS.ADMIN_READ_USERS,
+  PERMISSIONS.ADMIN_UPDATE_USERS,
+  PERMISSIONS.ADMIN_DELETE_USERS,
+  PERMISSIONS.ADMIN_CREATE_TESTS,
+  PERMISSIONS.ADMIN_UPDATE_TESTS,
+  PERMISSIONS.ADMIN_DELETE_TESTS,
+  PERMISSIONS.ADMIN_VIEW_ANALYTICS,
+];
+
+const SUPERADMIN_PERMISSIONS: PermissionType[] = [
+  PERMISSIONS.SUPERADMIN_MANAGE_ADMINS,
+  PERMISSIONS.SUPERADMIN_SYSTEM_CONFIG,
+  PERMISSIONS.SUPERADMIN_VIEW_LOGS,
+];
+
 // Role-based permission mapping
 export const ROLE_PERMISSIONS = {
-  user: [
-    PERMISSIONS.USER_READ_OWN_PROFILE,
-    PERMISSIONS.USER_UPDATE_OWN_PROFILE,
-    PERMISSIONS.USER_TAKE_TESTS,
-    PERMISSIONS.USER_VIEW_OWN_RESULTS,
-  ],
-  admin: [
-    // All user permissions
-    ...ROLE_PERMISSIONS.user,
-    // Admin-specific permissions
-    PERMISSIONS.ADMIN_READ_USERS,
-    PERMISSIONS.ADMIN_UPDATE_USERS,
-    PERMISSIONS.ADMIN_DELETE_USERS,
-    PERMISSIONS.ADMIN_CREATE_TESTS,
-    PERMISSIONS.ADMIN_UPDATE_TESTS,
-    PERMISSIONS.ADMIN_DELETE_TESTS,
-    PERMISSIONS.ADMIN_VIEW_ANALYTICS,
-  ],
-  superadmin: [
-    // All admin permissions
-    ...ROLE_PERMISSIONS.admin,
-    // Super admin-specific permissions
-    PERMISSIONS.SUPERADMIN_MANAGE_ADMINS,
-    PERMISSIONS.SUPERADMIN_SYSTEM_CONFIG,
-    PERMISSIONS.SUPERADMIN_VIEW_LOGS,
-  ],
+  user: USER_PERMISSIONS,
+  admin: [...USER_PERMISSIONS, ...ADMIN_PERMISSIONS],
+  superadmin: [...USER_PERMISSIONS, ...ADMIN_PERMISSIONS, ...SUPERADMIN_PERMISSIONS],
 } as const;
 
 // Check if user has specific permission
@@ -107,19 +111,17 @@ export function canAccessRoute(route: string): boolean {
 export function withPermission<T extends object>(
   WrappedComponent: React.ComponentType<T>,
   requiredPermission: string
-) {
+): React.FC<T> {
   return function PermissionWrapper(props: T) {
     const canAccess = hasPermission(requiredPermission);
     
     if (!canAccess) {
-      return (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-yellow-800">You don't have permission to access this feature.</p>
-        </div>
+      return React.createElement('div', { className: 'p-4 bg-yellow-50 border border-yellow-200 rounded-lg' },
+        React.createElement('p', { className: 'text-yellow-800' }, 'You don\'t have permission to access this feature.')
       );
     }
     
-    return <WrappedComponent {...props} />;
+    return React.createElement(WrappedComponent, props);
   };
 }
 
@@ -127,20 +129,18 @@ export function withPermission<T extends object>(
 export function withRole<T extends object>(
   WrappedComponent: React.ComponentType<T>,
   allowedRoles: string[]
-) {
+): React.FC<T> {
   return function RoleWrapper(props: T) {
     const { hasAnyRole } = useAuthStore.getState();
     const canAccess = hasAnyRole(allowedRoles);
     
     if (!canAccess) {
-      return (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-800">You don't have the required role to access this feature.</p>
-        </div>
+      return React.createElement('div', { className: 'p-4 bg-red-50 border border-red-200 rounded-lg' },
+        React.createElement('p', { className: 'text-red-800' }, 'You don\'t have the required role to access this feature.')
       );
     }
     
-    return <WrappedComponent {...props} />;
+    return React.createElement(WrappedComponent, props);
   };
 }
 

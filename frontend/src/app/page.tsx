@@ -44,7 +44,7 @@ const examTypes = [
     description: 'Comprehensive practice for JEE Main examination with 10,000+ questions',
     href: '/exam/jee-mains',
     icon: <GraduationCap className="w-8 h-8 mb-4 text-white" />,
-    gradient: 'from-blue-500 to-purple-600',
+    gradient: 'from-emerald-500 to-teal-600',
     stats: '10K+ Questions'
   },
   {
@@ -52,7 +52,7 @@ const examTypes = [
     description: 'Advanced level preparation for IIT entrance with expert solutions',
     href: '/exam/jee-advanced',
     icon: <Trophy className="w-8 h-8 mb-4 text-white" />,
-    gradient: 'from-purple-500 to-pink-600',
+    gradient: 'from-emerald-500 to-teal-600',
     stats: '5K+ Questions'
   },
   {
@@ -68,7 +68,7 @@ const examTypes = [
     description: 'Medical entrance exam preparation with detailed analysis',
     href: '/exam/neet',
     icon: <Target className="w-8 h-8 mb-4 text-white" />,
-    gradient: 'from-orange-500 to-red-600',
+    gradient: 'from-emerald-500 to-teal-600',
     stats: '12K+ Questions'
   },
 ];
@@ -84,25 +84,25 @@ const features = [
     title: 'Smart Mock Tests',
     description: 'Experience exam-like environment with adaptive difficulty and real-time performance tracking',
     icon: <Zap className="w-8 h-8 text-blue-600 group-hover:text-white transition-colors duration-300" />,
-    gradient: 'from-blue-500 to-indigo-500'
+    gradient: 'from-emerald-500 to-teal-500'
   },
   {
     title: 'Chapter-wise Mastery',
     description: 'Master every topic with structured learning paths and progress visualization',
     icon: <BookOpen className="w-8 h-8 text-purple-600 group-hover:text-white transition-colors duration-300" />,
-    gradient: 'from-purple-500 to-pink-500'
+    gradient: 'from-emerald-500 to-teal-500'
   },
   {
     title: 'Performance Insights',
     description: 'Detailed analytics with comparison charts, improvement graphs, and success predictions',
     icon: <BarChart className="w-8 h-8 text-orange-600 group-hover:text-white transition-colors duration-300" />,
-    gradient: 'from-orange-500 to-red-500'
+    gradient: 'from-emerald-500 to-teal-500'
   },
   {
     title: 'Achievement System',
     description: 'Gamified learning with badges, streaks, and leaderboards to keep you motivated',
     icon: <Award className="w-8 h-8 text-yellow-600 group-hover:text-white transition-colors duration-300" />,
-    gradient: 'from-yellow-500 to-orange-500'
+    gradient: 'from-emerald-500 to-teal-500'
   },
 ];
 
@@ -183,7 +183,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
           >
-            <motion.div
+            {/* <motion.div
               className="inline-flex items-center gap-2 mb-6 px-6 py-3 rounded-full bg-white/10 backdrop-blur-lg border border-white/20"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -192,7 +192,7 @@ export default function Home() {
               <Sparkles className="w-5 h-5 text-emerald-300" />
               <span className="text-sm font-medium">Trusted by 50+ students across India</span>
             </motion.div>
-            
+             */}
             <motion.h1 
               className="text-6xl md:text-8xl font-extrabold mb-8 leading-tight"
               initial={{ opacity: 0, y: 30 }}
@@ -200,11 +200,11 @@ export default function Home() {
               transition={{ delay: 0.4, duration: 0.8 }}
             >
               <span className="bg-gradient-to-r from-white via-emerald-100 to-white bg-clip-text text-transparent">
-                Ace Your
+                Enquire
               </span>
               <br />
               <span className="bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">
-                Dream Exam
+                Beyond Horizon
               </span>
             </motion.h1>
             
@@ -216,7 +216,7 @@ export default function Home() {
             >
               Transform your preparation with AI-powered analytics, smart mock tests, and personalized insights. 
               <br className="hidden md:block" />
-              Join thousands of successful students who achieved their dreams with us.
+              {/* Join thousands of successful students who achieved their dreams with us. */}
             </motion.p>
             
             <motion.div 
@@ -229,20 +229,20 @@ export default function Home() {
                 href="/auth/register"
                 className="group relative px-10 py-4 bg-white text-emerald-700 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-300 hover:bg-emerald-50 hover:scale-105 hover:shadow-2xl"
               >
-                <span>Start Free Trial</span>
+                <span>Start Free</span>
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" />
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
               </Link>
-              <Link 
+              {/* <Link 
                 href="/demo"
                 className="group px-10 py-4 bg-emerald-700/30 backdrop-blur-lg hover:bg-emerald-700/40 rounded-2xl font-bold text-lg transition-all duration-300 hover:scale-105 border border-emerald-400/30"
               >
                 <span>Watch Demo</span>
-              </Link>
+              </Link> */}
             </motion.div>
 
             {/* Stats Bar */}
-            <motion.div 
+            {/* <motion.div 
               className="flex flex-wrap justify-center gap-8 mt-16 pt-8 border-t border-emerald-400/30"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -256,7 +256,7 @@ export default function Home() {
                 <div className="text-3xl font-bold text-emerald-300">2K+</div>
                 <div className="text-emerald-100 text-sm">Questions</div>
               </div>
-            </motion.div>
+            </motion.div> */}
           </motion.div>
         </div>
       </section>
@@ -284,7 +284,7 @@ export default function Home() {
               Prepare for Your <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Future</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Choose from our comprehensive range of exam preparations, each tailored with cutting-edge technology and expert guidance
+              Choose from our comprehensive range of exam preparations, each tailored with cutting-edge technology
             </p>
           </motion.div>
           
@@ -299,9 +299,9 @@ export default function Home() {
                 <Link href={exam.href} className="block">
                   <div className={`bg-gradient-to-br ${exam.gradient} p-8 h-72 flex flex-col justify-between relative`}>
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300"></div>
-                    <div className="absolute top-4 right-4 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold text-white">
+                    {/* <div className="absolute top-4 right-4 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-semibold text-white">
                       {exam.stats}
-                    </div>
+                    </div> */}
                     
                     <div className="relative z-10">
                       <motion.div
@@ -339,7 +339,7 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <motion.div 
+            {/* <motion.div 
               className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-blue-100 text-blue-700"
               initial={{ opacity: 0, scale: 0.8 }}
               whileInView={{ opacity: 1, scale: 1 }}
@@ -347,10 +347,10 @@ export default function Home() {
               transition={{ delay: 0.2, duration: 0.6 }}
             >
               <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-semibold">Why Choose TestSeries?</span>
-            </motion.div>
+              <span className="text-sm font-semibold">Why Choose Us?</span>
+            </motion.div> */}
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Experience the <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Future</span> of Learning
+              Experience the <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Future</span> of Learning
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               Powered by advanced AI and designed by education experts, our platform offers personalized learning experiences that adapt to your unique needs
@@ -388,7 +388,7 @@ export default function Home() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-24 bg-gradient-to-br from-emerald-50 to-teal-50 relative">
+      {/* <section className="py-24 bg-gradient-to-br from-emerald-50 to-teal-50 relative">
         <div className="container mx-auto px-6">
           <motion.div 
             className="text-center mb-16"
@@ -447,10 +447,10 @@ export default function Home() {
             ))}
           </motion.div>
         </div>
-      </section>
+      </section> */}
 
       {/* Stats Section */}
-      <section className="py-20 bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 text-white relative overflow-hidden">
+      {/* <section className="py-20 bg-gradient-to-br from-emerald-900 via-emerald-800 to-teal-900 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:50px_50px] opacity-20"></div>
         
         <div className="container mx-auto px-6 relative z-10">
@@ -481,10 +481,10 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-white to-gray-50 relative">
+      {/* <section className="py-24 bg-gradient-to-br from-white to-gray-50 relative">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1)_0%,transparent_70%)]"></div>
         
         <motion.div 
@@ -566,7 +566,7 @@ export default function Home() {
             </motion.div>
           </motion.div>
         </motion.div>
-      </section>
+      </section> */}
     </main>
   );
-} 
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useTestStore } from '@/stores/testStore';
@@ -46,6 +46,17 @@ export default function AnalyticsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Memoize the fetch function to prevent infinite loops
+  const loadTestHistory = useCallback(async () => {
+    try {
+      await fetchTestHistory();
+    } catch (err) {
+      console.error("Failed to fetch test history:", err);
+      setError("Failed to load test data. Using sample data instead.");
+      createMockData();
+    }
+  }, [fetchTestHistory]);
+
   // Check authentication
   useEffect(() => {
     console.log('Auth check effect running', { isAuthenticated, authLoading });
@@ -59,21 +70,11 @@ export default function AnalyticsPage() {
   useEffect(() => {
     console.log('Fetch test history effect running', { isAuthenticated, testHistoryLength: Object.keys(testHistory).length });
     
-    const fetchData = async () => {
-      if (isAuthenticated) {
-        console.log('Fetching test history');
-        try {
-          await fetchTestHistory();
-        } catch (err) {
-          console.error("Failed to fetch test history:", err);
-          setError("Failed to load test data. Using sample data instead.");
-          createMockData();
-        }
-      }
-    };
-    
-    fetchData();
-  }, [isAuthenticated, fetchTestHistory]);
+    if (isAuthenticated) {
+      console.log('Fetching test history');
+      loadTestHistory();
+    }
+  }, [isAuthenticated, loadTestHistory]);
 
   // Process data for charts
   useEffect(() => {
@@ -91,7 +92,7 @@ export default function AnalyticsPage() {
         }
       }, 1000);
     }
-  }, [testHistory, testLoading, isAuthenticated]);
+  }, [testHistory, testLoading, isAuthenticated, isLoading]);
 
   const processChartData = () => {
     console.log('Processing chart data function called');
@@ -424,4 +425,4 @@ export default function AnalyticsPage() {
       </Card>
     </div>
   );
-} 
+}

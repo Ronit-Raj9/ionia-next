@@ -42,12 +42,17 @@ const TestDetailsPage = () => {
   useEffect(() => {
     const fetchTestDetails = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${paperId}`, {
+        // Get the correct examType value for the API
+        const apiExamType = formatExamType(examType).toLowerCase().replace(/\s+/g, '-');
+        
+        // Use the new mock test details endpoint that doesn't require authentication
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/mock/${apiExamType}/${paperId}`, {
           credentials: 'include',
           headers: { 
-           'Content-Type': 'application/json',
+            'Content-Type': 'application/json',
           }
         });
+        
         if (!res.ok) {
           throw new Error("Failed to fetch test details");
         }

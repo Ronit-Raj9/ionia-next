@@ -52,16 +52,18 @@ const MockTests = () => {
         // Get the correct examType value for the API
         const apiExamType = getExamTypeParam(examType);
         
-      // Fetch specifically mock tests for the current exam type with pagination
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/tests?testCategory=Platform&platformTestType=Mock&examType=${apiExamType}&page=${page}&limit=${testsPerPage}`;
+      // Use the new dedicated mock test endpoint
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/tests/mock/${apiExamType}?page=${page}&limit=${testsPerPage}`;
         console.log('Fetching from URL:', apiUrl);
         
+        // Include credentials to ensure authorization headers are sent
         const res = await fetch(apiUrl, {
           credentials: 'include',
           headers: {
-            'Content-Type' : 'application/json'
+            'Content-Type': 'application/json',
           }
         });
+        
         console.log('Response:', res);
         if (!res.ok) {
           throw new Error(`Failed to fetch ${examType} mock tests`);

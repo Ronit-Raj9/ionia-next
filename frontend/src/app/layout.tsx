@@ -5,9 +5,9 @@ import Footer from "@/components/common/Footer";
 import Notifications from "@/components/common/Notifications";
 import CookieConsent from "@/components/common/CookieConsent";
 import { AuthProvider } from "@/providers/AuthProvider";
-import PerformanceInitializer from "@/components/performance/PerformanceInitializer";
+// import PerformanceInitializer from "@/components/performance/PerformanceInitializer";
 import { initializeCacheSystem } from "@/stores/cacheStore";
-import { preloadComponentsByRole } from "@/components/performance/LazyComponents";
+// import { preloadComponentsByRole } from "@/components/performance/LazyComponents";
 import "@/styles/globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -36,12 +36,12 @@ if (typeof window !== 'undefined') {
   initializeCacheSystem();
   
   // Preload components based on initial route
-  const pathname = window.location.pathname;
-  if (pathname.startsWith('/admin')) {
-    preloadComponentsByRole('admin');
-  } else {
-    preloadComponentsByRole('user');
-  }
+  // const pathname = window.location.pathname;
+  // if (pathname.startsWith('/admin')) {
+  //   preloadComponentsByRole('admin');
+  // } else {
+  //   preloadComponentsByRole('user');
+  // }
 }
 
 export default function RootLayout({
@@ -100,7 +100,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-gray-50 flex flex-col">
         {/* Performance monitoring initialization */}
-        <PerformanceInitializer />
+        {/* <PerformanceInitializer /> */}
         
         {/* Main application */}
         <AuthProvider>
