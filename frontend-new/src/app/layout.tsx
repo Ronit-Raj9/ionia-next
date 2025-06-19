@@ -1,5 +1,6 @@
 // src/app/layout.tsx
 import { Inter } from "next/font/google";
+import type { Viewport } from "next";
 import Navbar from "@/shared/components/common/Navbar";
 import Footer from "@/shared/components/common/Footer";
 import Notifications from "@/shared/components/common/Notifications";
@@ -16,8 +17,6 @@ export const metadata = {
   title: "Test Series Platform - Prepare for JEE Mains, Advanced, and CUET",
   description: "Comprehensive test preparation platform with advanced analytics and role-based access control",
   keywords: "JEE Mains, JEE Advanced, CUET, test preparation, online tests, analytics",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
-  themeColor: "#10B981",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -28,6 +27,13 @@ export const metadata = {
       { url: "/icons/apple-touch-icon.png", sizes: "180x180" }
     ]
   }
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#10B981",
 };
 
 // Initialize systems on first load
