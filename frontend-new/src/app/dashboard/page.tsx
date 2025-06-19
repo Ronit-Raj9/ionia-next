@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore } from "@/features/auth/store/authStore";
 import { useTestResults } from "@/features/tests/store/testStore";
 import { Card } from "@/features/dashboard/components/card";
 import PerformanceChart, { PerformanceData } from "@/features/dashboard/components/PerformanceChart";

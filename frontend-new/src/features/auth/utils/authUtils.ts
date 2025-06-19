@@ -2,7 +2,7 @@
 // 🛠️ AUTH UTILITIES LAYER - TOKEN & ROLE UTILITIES
 // ==========================================
 
-import type { UserRole, Permission } from '../stores/authStore';
+import type { UserRole, Permission } from '../store/authStore';
 
 // ==========================================
 // 🏷️ UTILITY TYPES

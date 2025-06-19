@@ -25,7 +25,7 @@ import {
   ZAxis,
   ReferenceLine
 } from 'recharts';
-import { AnalysisData } from '@/types/analysis';
+import { AnalysisData } from '@/features/analysis/store/analysisStore';
 
 interface PerformanceAnalysisProps {
   data: AnalysisData;

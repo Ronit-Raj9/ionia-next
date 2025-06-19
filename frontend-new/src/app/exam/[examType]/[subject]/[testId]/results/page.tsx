@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore } from "@/features/auth/store/authStore";
 import { useTestStore } from "@/features/tests/store/testStore";
 import { useUIStore } from "@/stores/uiStore";
 import AnalysisWindow from "@/features/analysis/components/AnalysisWindow";

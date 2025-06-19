@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { useTestStore } from '@/features/tests/store/testStore';
 import { Card } from '@/features/dashboard/components/card';
 import { ClipLoader } from 'react-spinners';

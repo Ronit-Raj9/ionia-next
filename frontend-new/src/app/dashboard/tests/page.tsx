@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore } from "@/features/auth/store/authStore";
 import { useTestStore } from "@/features/tests/store/testStore";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { FiBarChart2, FiClock, FiCalendar, FiChevronRight } from "react-icons/fi";
 import { ClipLoader } from "react-spinners";
 import { motion } from "framer-motion";

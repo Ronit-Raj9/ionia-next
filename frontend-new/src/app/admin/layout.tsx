@@ -1,8 +1,8 @@
 "use client";
 
 // admin/layout.tsx
-import RoleGuard from '@/components/auth/RoleGuard';
-import { useAuthStore } from '@/stores/authStore';
+import RoleGuard from '@/features/auth/components/RoleGuard';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 export default function AdminLayout({
   children,

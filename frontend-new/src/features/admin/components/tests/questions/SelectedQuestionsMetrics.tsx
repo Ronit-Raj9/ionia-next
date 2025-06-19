@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/shared/components/ui/badge";
 import { SelectedQuestionsMetrics as SelectedQuestionsMetricsType } from "./types";
 
 interface SelectedQuestionsMetricsProps {

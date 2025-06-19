@@ -1,5 +1,5 @@
 import { Check, Settings, ListChecks } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/shared/components/ui/badge";
 import { TestDetails } from "./types";
 
 interface TestCreationStepperProps {

@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth, useSession, useTokenManager } from '../hooks/useAuth';
-import type { UserRole, User } from '../stores/authStore';
+import type { UserRole, User } from '../store/authStore';
 
 // ==========================================
 // 🔒 PROTECTED ROUTE COMPONENT

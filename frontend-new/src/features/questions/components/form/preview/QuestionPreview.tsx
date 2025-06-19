@@ -1,6 +1,6 @@
 import React from 'react';
 import { QuestionFormData } from '../../utils/types';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/shared/components/ui/badge';
 
 interface QuestionPreviewProps {
   formData: QuestionFormData;

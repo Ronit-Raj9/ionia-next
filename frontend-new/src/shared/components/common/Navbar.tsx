@@ -44,7 +44,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
   }
 
   return (
-    <nav className={`fixed w-full z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 ${className}`}>
+    <nav className={`fixed w-full z-50 bg-white border-b border-gray-200 ${className}`}>
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center space-x-2">
@@ -171,14 +171,14 @@ export default function Navbar({ className = "" }: NavbarProps) {
                 ) : (
                   <>
                     <Link
-                      href="/auth/login"
+                      href="/login"
                       className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors"
                       onClick={() => setNavbarOpen(false)}
                     >
                       Sign In
                     </Link>
                     <Link
-                      href="/auth/register"
+                      href="/register"
                       className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
                       onClick={() => setNavbarOpen(false)}
                     >

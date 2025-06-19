@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Filter, Search, ChevronDown, X, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Badge } from "@/shared/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { MultiSelect } from "../MultiSelect";
 import { FilterState, AvailableOptions } from "./types";
 import { examTypes, subjects } from "../types";

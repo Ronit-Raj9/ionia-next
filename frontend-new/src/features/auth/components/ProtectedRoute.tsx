@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore'; 
 import { ClipLoader } from 'react-spinners';
 
 interface ProtectedRouteProps {

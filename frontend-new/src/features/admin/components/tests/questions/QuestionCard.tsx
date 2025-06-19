@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Check, X } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/shared/components/ui/checkbox";
+import { Badge } from "@/shared/components/ui/badge";
 import { Question } from "./types";
 
 interface QuestionCardProps {

@@ -6,8 +6,8 @@ import {
   Plus, Loader2, AlertCircle, X, ChevronLeft, ChevronRight, Check, CheckCircle
 } from "lucide-react";
 import { toast } from 'react-hot-toast';
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/shared/components/ui/card";
 
 // Import our modular components
 import { TestDetailsForm } from "@/features/admin/components/tests/TestDetailsForm";

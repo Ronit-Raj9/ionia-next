@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { QuestionAnalysisType } from '@/types/analysis';
+import { QuestionAnalysisType } from '@/features/analysis/store/analysisStore';
 import { FiClock, FiCheck, FiX, FiMinus } from 'react-icons/fi';
 import { useAnalysisStore } from '@/features/analysis/store/analysisStore';
 

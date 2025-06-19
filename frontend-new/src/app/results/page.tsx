@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAnalysisStore } from '@/features/analysis/store/analysisStore';
-import { AnalysisWindow } from '@/components/analysis';
+import  AnalysisWindow from '@/features/analysis/components/AnalysisWindow';
 import Navbar from '@/shared/components/common/Navbar';
 import { ClipLoader } from 'react-spinners';
 

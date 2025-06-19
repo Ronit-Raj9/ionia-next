@@ -13,9 +13,9 @@ import {
   ExclamationCircleIcon,
   BookOpenIcon
 } from "@heroicons/react/24/outline";
-import { fetchTestAnalytics } from './utils/analytics';
+import { fetchTestAnalytics } from '../../features/tests/api/analytics';
 import Link from 'next/link';
-import { TestAnalytics } from './utils/analytics';
+import { TestAnalytics } from '../../features/tests/api/analytics';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 

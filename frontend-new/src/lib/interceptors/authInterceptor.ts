@@ -3,7 +3,7 @@
 // ==========================================
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { validateToken, shouldRefreshToken, isRefreshTokenValid } from '../../utils/authUtils';
 
 // ==========================================

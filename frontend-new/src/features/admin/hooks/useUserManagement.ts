@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API } from '../../../lib/api/api';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 interface User {
   _id: string;

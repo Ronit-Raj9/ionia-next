@@ -9,7 +9,7 @@ interface QuestionPreviewProps {
   onCancel: () => void;
   isSubmitting: boolean;
 }
-
+ 
 const QuestionPreview: React.FC<QuestionPreviewProps> = ({
   originalQuestion,
   updatedData,
@@ -24,8 +24,8 @@ const QuestionPreview: React.FC<QuestionPreviewProps> = ({
     }
     return original !== updated;
   };
-
-  // Get all changed fields
+  
+// Get all changed fields
   const getChangedFields = () => {
     const changes: Record<string, { old: any; new: any }> = {};
 

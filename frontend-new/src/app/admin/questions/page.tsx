@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuestionStore, useQuestionForm, useQuestionActions } from '@/stores/questionStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { useUIStore } from '@/stores/uiStore';
 
 export default function AdminQuestionsPage() {

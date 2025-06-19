@@ -1,5 +1,5 @@
 "use client";
-import { Card } from '@/components/dashboard/card';
+import { Card } from './card';
 import {
   Clipboard,
   BarChart,

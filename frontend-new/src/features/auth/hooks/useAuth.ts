@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { 
   validateToken, 
   shouldRefreshToken, 

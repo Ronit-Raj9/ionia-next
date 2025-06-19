@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import Button from "../common/Button";
-import { Input } from "../common/Input";
-import { registerUser } from "../../lib/api/auth";
+import Button from "@/shared/components/common/Button";
+import { Input } from "@/shared/components/common/Input";
+import { registerUser } from "../api/authApi"; // Adjust the import path as necessary
 import { useRouter } from "next/navigation";
 
 const RegisterForm: React.FC = () => {

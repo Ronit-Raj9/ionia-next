@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, Search, Loader2, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
 import { QuestionCard } from "./QuestionCard";
 import { QuestionFilter } from "./QuestionFilter";
 import { QuestionsPagination } from "./QuestionsPagination";

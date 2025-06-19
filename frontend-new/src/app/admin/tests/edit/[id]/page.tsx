@@ -7,13 +7,13 @@ import {
   User, RotateCcw, AlertCircle, CalendarClock, Eye, History
 } from "lucide-react";
 import { toast } from 'react-hot-toast';
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/shared/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/shared/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Badge } from "@/shared/components/ui/badge";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog";
 
 // Import our modular components
 import { TestDetailsForm } from "@/features/admin/components/tests/TestDetailsForm";

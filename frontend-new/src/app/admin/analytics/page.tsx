@@ -13,8 +13,8 @@ import {
   RefreshCcw,
   User
 } from "lucide-react";
-import { fetchAnalytics } from "../utils/api";
-import { useAuthStore } from "@/stores/authStore";
+import { fetchAnalytics } from "../../../features/tests/api/api";
+import { useAuthStore } from "@/features/auth/store/authStore";
 
 interface Question {
   _id: string;
