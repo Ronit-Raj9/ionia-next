@@ -1,4 +1,4 @@
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import React from 'react';
 
 // Define permission constants
@@ -211,4 +211,4 @@ export function getAuthHeaders(): Record<string, string> {
   }
   
   return headers;
-} 
+}

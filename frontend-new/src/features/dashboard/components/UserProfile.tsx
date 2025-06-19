@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useState } from 'react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { FiUser, FiMail, FiAward, FiTrendingUp, FiTarget, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
@@ -271,4 +271,4 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
   );
 };
 
-export default UserProfile; 
+export default UserProfile;

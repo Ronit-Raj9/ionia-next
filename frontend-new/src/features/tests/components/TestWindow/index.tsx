@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTestStore } from '@/features/tests/store/testStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { useTimeTrackingStore } from '@/stores/timeTrackingStore';
 import { useAnalysisStore } from '@/features/analysis/store/analysisStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -111,16 +111,15 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     submitTest
   } = useTestStore();
 
-  const { user, loading: userLoading, getCurrentUser } = useAuthStore();
+  const { user, isLoading: userLoading, validateAuth } = useAuthStore();
   const { 
-    startQuestionTimer, 
-    pauseQuestionTimer, 
-    resetTimeTracking, 
-    updateQuestionTime,
-    questionTimes,
+    startQuestionTracking, 
+    endQuestionTracking, 
+    resetSession, 
+    getQuestionTime,
     currentQuestionId
   } = useTimeTrackingStore();
-  const { setAnalysisData, setAnalysisLoading } = useAnalysisStore();
+  const { setAnalysisData, setLoading } = useAnalysisStore();
   
   // Local state
   const [language, setLanguage] = useState('English');
@@ -148,21 +147,21 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Start tracking time when the test starts
   useEffect(() => {
     if (currentTest && activeQuestion >= 0) {
-      startQuestionTimer(activeQuestion);
+      startQuestionTracking(activeQuestion);
     }
     
     return () => {
       // Pause the timer when component unmounts
-      pauseQuestionTimer();
+      endQuestionTracking();
     };
-  }, [startQuestionTimer, pauseQuestionTimer, currentTest, activeQuestion]);
+  }, [startQuestionTracking, endQuestionTracking, currentTest, activeQuestion]);
 
   // Reset time tracking when test starts
   useEffect(() => {
     if (currentTest) {
-      resetTimeTracking();
+      resetSession();
     }
-  }, [resetTimeTracking, currentTest]);
+  }, [resetSession, currentTest]);
 
   // Ensure we're running on the client side to prevent hydration mismatches
   useEffect(() => {
@@ -228,9 +227,9 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Fetch user data if not already in the store
   useEffect(() => {
     if (isClient && !user && !userLoading) {
-      getCurrentUser();
+      validateAuth();
     }
-  }, [getCurrentUser, user, userLoading, isClient]);
+  }, [validateAuth, user, userLoading, isClient]);
 
   // Helper function to safely get user ID from potentially different user object structures
   const getUserId = useCallback(() => {
@@ -266,7 +265,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   }, [currentTest]);
 
   const handleNavigateToQuestion = (index: number) => {
-    startQuestionTimer(index);
+    startQuestionTracking(index);
     setActiveQuestion(index);
   };
 
@@ -286,11 +285,11 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       });
     }
     
-    startQuestionTimer(questionIndex);
+    startQuestionTracking(questionIndex);
     handleNavigateToQuestion(questionIndex);
     
     logTestMetadata();
-  }, [answerQuestion, currentTest, activeQuestion, logTestMetadata, startQuestionTimer]);
+  }, [answerQuestion, currentTest, activeQuestion, logTestMetadata, startQuestionTracking]);
   
   const handleNext = useCallback(() => {
     if (currentTest && activeQuestion < currentTest.questions.length - 1) {
@@ -300,12 +299,12 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         isVisited: true
       });
       
-      startQuestionTimer(activeQuestion + 1);
+      startQuestionTracking(activeQuestion + 1);
       handleNavigateToQuestion(activeQuestion + 1);
       
       logTestMetadata();
     }
-  }, [answerQuestion, activeQuestion, currentTest, logTestMetadata, startQuestionTimer]);
+  }, [answerQuestion, activeQuestion, currentTest, logTestMetadata, startQuestionTracking]);
   
   const handlePrevious = useCallback(() => {
     if (activeQuestion > 0) {
@@ -317,12 +316,12 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         });
       }
       
-      startQuestionTimer(activeQuestion - 1);
+      startQuestionTracking(activeQuestion - 1);
       handleNavigateToQuestion(activeQuestion - 1);
       
       logTestMetadata();
     }
-  }, [answerQuestion, activeQuestion, currentTest, logTestMetadata, startQuestionTimer]);
+  }, [answerQuestion, activeQuestion, currentTest, logTestMetadata, startQuestionTracking]);
   
   const handleOptionChange = useCallback((questionIndex: number, answerIndex: number) => {
     answerQuestion({ questionIndex, answerIndex });
@@ -457,7 +456,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         
         try {
           // Fetch the analysis data using the attemptId
-          setAnalysisLoading(true);
+          setLoading(true);
           const analysisData = await fetchTestAnalysis(responseData.data.attemptId);
           
           if (analysisData) {
@@ -555,16 +554,16 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Handle test completion
   useEffect(() => {
     if (isTestCompleted) {
-      pauseQuestionTimer();
+      endQuestionTracking();
     }
-  }, [isTestCompleted, pauseQuestionTimer]);
+  }, [isTestCompleted, endQuestionTracking]);
   
   // Update question time
   useEffect(() => {
     if (!isTestCompleted) {
       const timer = setInterval(() => {
         if (currentQuestionId !== null) {
-          updateQuestionTime({
+          getQuestionTime({
             questionId: currentQuestionId,
             timeSpent: 1000 // 1 second in milliseconds
           });
@@ -573,7 +572,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       
       return () => clearInterval(timer);
     }
-  }, [isTestCompleted, currentQuestionId, updateQuestionTime]);
+  }, [isTestCompleted, currentQuestionId, getQuestionTime]);
 
   // Updated data validity check for the new question format
   const isTestDataValid = React.useMemo(() => {

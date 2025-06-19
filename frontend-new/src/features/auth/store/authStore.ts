@@ -3,60 +3,30 @@ import { immer } from 'zustand/middleware/immer';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
 
-// ==========================================
-// 🏷️ TYPES & INTERFACES
-// ==========================================
+// Import shared types
+import type {
+  User,
+  UserRole,
+  Permission,
+  AuthError,
+  TokenInfo,
+  SessionInfo,
+  LoginCredentials,
+  RegisterData,
+  AuthResult,
+  LogoutReason
+} from '../types';
 
-export interface User {
-  id: string;
-  email: string;
-  username: string;
-  fullName: string;
-  role: UserRole;
-  permissions: Permission[];
-  avatar?: string;
-  emailVerified: boolean;
-  lastLogin?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// Import helper functions
+import { 
+  parseJWT, 
+  generateDeviceId, 
+  getUserFromToken, 
+  isMinimumRoleLevel 
+} from '../utils/authUtils';
 
-export type UserRole = 'user' | 'admin' | 'superadmin';
-
-export type Permission = 
-  // User permissions
-  | 'user:profile:read' | 'user:profile:update' 
-  | 'user:tests:take' | 'user:results:view'
-  // Admin permissions
-  | 'admin:users:read' | 'admin:users:update' | 'admin:users:delete'
-  | 'admin:tests:create' | 'admin:tests:update' | 'admin:tests:delete'
-  | 'admin:analytics:view'
-  // Superadmin permissions
-  | 'superadmin:system:config' | 'superadmin:admins:manage' 
-  | 'superadmin:logs:view' | 'superadmin:security:manage';
-
-export interface AuthError {
-  type: 'auth' | 'network' | 'validation' | 'server' | 'permission';
-  message: string;
-  code?: string | number;
-  timestamp: number;
-  context?: Record<string, any>;
-}
-
-export interface TokenInfo {
-  token: string;
-  expiresAt: number;
-  issuedAt: number;
-}
-
-export interface SessionInfo {
-  id: string;
-  deviceId: string;
-  ipAddress?: string;
-  userAgent?: string;
-  startTime: number;
-  lastActivity: number;
-}
+// Import auth service (default export)
+import authService from '../services/authService';
 
 // ==========================================
 // 🧠 AUTH STORE STATE INTERFACE
@@ -908,25 +878,10 @@ export const useAuthStore = create<AuthState>()(
             loginTimestamp: state.loginTimestamp,
           }),
         }
-      ),
-      'AuthStore'
+      )
     )
-  );
-
-// ==========================================
-// 🔧 HELPER FUNCTIONS (IMPORT NEEDED)
-// ==========================================
-
-// Import helper functions
-import { 
-  parseJWT, 
-  generateDeviceId, 
-  getUserFromToken, 
-  isMinimumRoleLevel 
-} from '../utils/authUtils';
-
-// Import auth service
-import { authService } from '../services/authService';
+  )
+);
 
 // ==========================================
 // 🎯 STORE SELECTORS

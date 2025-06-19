@@ -15,7 +15,7 @@ import {
   FiChevronRight,
   FiLogOut
 } from 'react-icons/fi';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { clearAllCachedData } from '@/lib/api/api';
 
 interface SidebarProps {

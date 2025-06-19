@@ -1,3 +1,0 @@
-"use client";
-
-// Component code... 

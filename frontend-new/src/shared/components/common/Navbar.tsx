@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, User } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore } from "@/features/auth/store/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -15,14 +15,14 @@ interface NavbarProps {
 export default function Navbar({ className = "" }: NavbarProps) {
   const pathname = usePathname();
   
-  const { isAuthenticated, user, getCurrentUser } = useAuthStore();
+  const { isAuthenticated, user, validateAuth } = useAuthStore();
   const { isNavbarOpen, toggleNavbar, setNavbarOpen } = useUIStore();
 
   useEffect(() => {
     if (localStorage.getItem('token')) {
-      getCurrentUser();
+      validateAuth();
     }
-  }, [getCurrentUser]);
+  }, [validateAuth]);
 
   const navItems = [
     { name: "Home", href: "/" },

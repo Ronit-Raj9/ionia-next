@@ -7,7 +7,7 @@ import Sidebar from '@/features/dashboard/components/Sidebar';
 import { FiMenu, FiX, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { ClipLoader } from 'react-spinners';
 import Link from 'next/link';
 
@@ -21,7 +21,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   
-  const { user, isAuthenticated, isLoading: authLoading, error: authError, getCurrentUser } = useAuthStore();
+  const { user, isAuthenticated, isLoading: authLoading, error: authError, validateAuth } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
@@ -45,9 +45,10 @@ export default function DashboardLayout({
     }
   }, [isAuthenticated, authLoading, router]);
 
+  // Initialize auth on mount
   useEffect(() => {
-    getCurrentUser();
-  }, [getCurrentUser]);
+    validateAuth();
+  }, [validateAuth]);
 
   // Close sidebar on mobile by default
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function DashboardLayout({
     try {
       setIsRetrying(true);
       setLayoutError(null);
-      await getCurrentUser();
+      await validateAuth();
       console.log('Authentication retry successful');
     } catch (err) {
       console.error('Authentication retry failed:', err);
@@ -101,7 +102,7 @@ export default function DashboardLayout({
     } finally {
       setIsRetrying(false);
     }
-  }, [getCurrentUser]);
+  }, [validateAuth]);
 
   // Memoize the username to prevent unnecessary re-renders
   const username = useMemo(() => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { ClipLoader } from 'react-spinners';
 
 interface RoleGuardProps {
@@ -107,4 +107,4 @@ const RoleGuard: React.FC<RoleGuardProps> = ({
   return <>{children}</>;
 };
 
-export default RoleGuard; 
+export default RoleGuard;

@@ -408,4 +408,4 @@ const DetailsClassification: React.FC<StepProps> = ({
   );
 };
 
-export default DetailsClassification; 
+export default DetailsClassification;
