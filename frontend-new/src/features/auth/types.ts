@@ -83,3 +83,62 @@ export interface AuthResult {
 }
 
 export type LogoutReason = 'manual' | 'expired' | 'inactive' | 'security' | 'device_change';
+
+// ==========================================
+// 🎯 UTILITY TYPES
+// ==========================================
+
+export interface TokenValidation {
+  isValid: boolean;
+  isExpired: boolean;
+  isExpiring: boolean;
+  expiresIn: number;
+  expiresAt: Date | null;
+}
+
+export interface TokenExpiryInfo {
+  expiresAt: Date | null;
+  expiresIn: number;
+  formattedExpiry: string;
+  isExpired: boolean;
+  isExpiring: boolean;
+}
+
+export interface PermissionContext {
+  resource: string;
+  action: string;
+  conditions?: Record<string, any>;
+}
+
+// ==========================================
+// 🔧 API RESPONSE TYPES
+// ==========================================
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  code?: string | number;
+  timestamp?: number;
+}
+
+export interface LoginResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  sessionId: string;
+}
+
+export interface RefreshResponse {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn: number;
+}
+
+export interface RegisterResponse {
+  user: Partial<User>;
+  requiresVerification: boolean;
+  verificationMethod?: 'email' | 'sms';
+}

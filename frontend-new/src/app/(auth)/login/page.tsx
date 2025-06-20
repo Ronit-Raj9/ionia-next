@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiArrowRight } from 'react-icons/hi';
+import { AiOutlineGoogle } from 'react-icons/ai';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { API } from '@/lib/api/api';
 
@@ -11,6 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
   const { setLoading: setAuthLoading } = useAuthStore();
@@ -38,8 +41,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      {/* Decorative gradient blobs */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute left-[-100px] top-[-150px] w-[300px] h-[300px] bg-emerald-300 opacity-30 rounded-full blur-3xl"></div>
+        <div className="absolute right-[-120px] bottom-[-150px] w-[400px] h-[400px] bg-pink-300 opacity-20 rounded-full blur-3xl"></div>
+      </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="relative max-w-md w-full space-y-8 bg-white/70 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-gray-700 rounded-xl shadow-2xl p-10"
+      >
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -51,7 +64,7 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <Link
-              href="/auth/register"
+              href="/register"
               className="font-medium text-emerald-600 hover:text-emerald-500"
             >
               create a new account
@@ -86,11 +99,10 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
+          <div className="space-y-4">
+            {/* Email input */}
+            <div className="relative">
+              <HiOutlineMail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 id="email"
                 name="email"
@@ -197,8 +209,24 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
+              {/* divider */}
+          <div className="flex items-center space-x-2">
+            <span className="h-px flex-1 bg-gray-300"></span>
+            <span className="text-xs text-gray-500">or continue with</span>
+            <span className="h-px flex-1 bg-gray-300"></span>
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              type="button"
+              className="inline-flex items-center space-x-2 rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+            >
+              <AiOutlineGoogle className="h-5 w-5" />
+              <span>Google</span>
+            </button>
+          </div>
         </motion.form>
-      </div>
+      </motion.div>
     </div>
   );
 } 

@@ -15,9 +15,11 @@ import {
   getSessionRemainingTime,
   isSessionExpiring,
   formatRemainingTime,
-  type PermissionContext 
+  type PermissionContext,
+  type TokenValidation,
+  type TokenExpiryInfo 
 } from '../utils/authUtils';
-import type { UserRole, Permission, User, AuthError } from '../stores/authStore';
+import type { UserRole, Permission, User, AuthError, LogoutReason } from '../types';
 
 // ==========================================
 // 🏷️ HOOK TYPES & INTERFACES
@@ -46,7 +48,7 @@ interface AuthState {
 
 interface AuthActions {
   login: (email: string, password: string, options?: { rememberMe?: boolean }) => Promise<{ success: boolean; error?: AuthError }>;
-  logout: (reason?: string) => Promise<void>;
+  logout: (reason?: LogoutReason) => Promise<void>;
   register: (userData: any) => Promise<{ success: boolean; error?: AuthError }>;
   refreshAuth: () => Promise<boolean>;
   updateProfile: (updates: Partial<User>) => Promise<{ success: boolean; error?: AuthError }>;
@@ -107,8 +109,8 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
     isAuthenticated: authStore.isAuthenticated,
     isLoading: authStore.isLoading || isInitializing,
     error: authStore.error,
-    accessToken: authStore.accessToken,
-    refreshToken: authStore.refreshToken,
+    accessToken: authStore.accessToken?.token || null,
+    refreshToken: authStore.refreshToken?.token || null,
     permissions: authStore.user?.permissions || [],
     role: authStore.user?.role || null,
     lastActivity: authStore.lastActivity,
@@ -124,9 +126,9 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
           rememberMe: loginOptions.rememberMe || false,
           deviceInfo: {
             userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            type: 'web',
+            name: 'web-browser',
+            browser: navigator.userAgent.split(' ')[0] || 'unknown',
           }
         });
         
@@ -147,7 +149,7 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
       }
     },
 
-    logout: async (reason = 'manual') => {
+    logout: async (reason: LogoutReason = 'manual') => {
       await authStore.logout(reason);
       
       // Redirect after logout if specified
@@ -177,8 +179,8 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
 
     refreshAuth: async () => {
       try {
-        const result = await authStore.refreshTokens();
-        return result.success;
+        const result = await authStore.refreshAuth();
+        return result;
       } catch (error) {
         return false;
       }
@@ -194,7 +196,7 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
         return { success: true };
       } catch (error: any) {
         const authError: AuthError = {
-          type: 'api',
+          type: 'auth',
           message: error.message || 'Profile update failed',
           timestamp: Date.now(),
         };
@@ -204,11 +206,11 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
     },
 
     clearError: () => {
-      authStore.setError(null);
+      authStore.clearError();
     },
 
     updateLastActivity: () => {
-      authStore.updateLastActivity();
+      authStore.updateActivity();
     },
   }), [authStore, router, options]);
 
@@ -305,7 +307,9 @@ export const useTokenManager = (): TokenInfo & {
   isTokenValid: () => boolean;
   getTimeUntilExpiry: () => number;
 } => {
-  const { accessToken, refreshTokens } = useAuthStore();
+  const authStore = useAuthStore();
+  const accessTokenString = authStore.accessToken?.token || null;
+  
   const [tokenInfo, setTokenInfo] = useState<TokenInfo>({
     isValid: false,
     isExpired: true,
@@ -318,7 +322,7 @@ export const useTokenManager = (): TokenInfo & {
 
   // Update token info when token changes
   useEffect(() => {
-    if (!accessToken) {
+    if (!accessTokenString) {
       setTokenInfo({
         isValid: false,
         isExpired: true,
@@ -331,9 +335,9 @@ export const useTokenManager = (): TokenInfo & {
       return;
     }
 
-    const validation = validateToken(accessToken);
-    const expiryInfo = getTokenExpiryInfo(accessToken);
-    const shouldRefresh = shouldRefreshToken(accessToken);
+    const validation = validateToken(accessTokenString);
+    const expiryInfo = getTokenExpiryInfo(accessTokenString);
+    const shouldRefresh = shouldRefreshToken(accessTokenString);
 
     setTokenInfo({
       isValid: validation.isValid,
@@ -344,28 +348,28 @@ export const useTokenManager = (): TokenInfo & {
       formattedExpiry: expiryInfo.formattedExpiry,
       shouldRefresh,
     });
-  }, [accessToken]);
+  }, [accessTokenString]);
 
   const refreshToken = useCallback(async (): Promise<boolean> => {
     try {
-      const result = await refreshTokens();
-      return result.success;
+      const result = await authStore.refreshAuth();
+      return result;
     } catch (error) {
       return false;
     }
-  }, [refreshTokens]);
+  }, [authStore]);
 
   const isTokenValid = useCallback((): boolean => {
-    if (!accessToken) return false;
-    const validation = validateToken(accessToken);
+    if (!accessTokenString) return false;
+    const validation = validateToken(accessTokenString);
     return validation.isValid;
-  }, [accessToken]);
+  }, [accessTokenString]);
 
   const getTimeUntilExpiry = useCallback((): number => {
-    if (!accessToken) return 0;
-    const validation = validateToken(accessToken);
+    if (!accessTokenString) return 0;
+    const validation = validateToken(accessTokenString);
     return validation.expiresIn;
-  }, [accessToken]);
+  }, [accessTokenString]);
 
   return {
     ...tokenInfo,
@@ -458,7 +462,7 @@ export const useSession = (options: {
   extendSession: () => void;
   endSession: () => Promise<void>;
 } => {
-  const { lastActivity, updateLastActivity, logout, isAuthenticated } = useAuthStore();
+  const { lastActivity, updateActivity, logout, isAuthenticated } = useAuthStore();
   const { warningThreshold = 5 * 60 * 1000 } = options; // 5 minutes default
   
   const [sessionInfo, setSessionInfo] = useState<SessionInfo>({
@@ -512,8 +516,8 @@ export const useSession = (options: {
   }, [isAuthenticated, lastActivity, warningThreshold, options]);
 
   const extendSession = useCallback(() => {
-    updateLastActivity();
-  }, [updateLastActivity]);
+    updateActivity();
+  }, [updateActivity]);
 
   const endSession = useCallback(async () => {
     await logout('manual');
@@ -614,29 +618,27 @@ export const useAutoRefresh = (options: {
   onRefreshError?: (error: any) => void;
 } = {}) => {
   const { enabled = true, refreshThreshold = 10 * 60 * 1000 } = options; // 10 minutes default
-  const { accessToken, refreshTokens } = useAuthStore();
+  const { accessToken, refreshAuth } = useAuthStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
   useEffect(() => {
-    if (!enabled || !accessToken) return;
+    if (!enabled || !accessToken?.token) return;
 
     const checkAndRefresh = async () => {
       if (isRefreshing) return;
 
-      const validation = validateToken(accessToken);
+      const validation = validateToken(accessToken.token);
       if (validation.isValid && validation.expiresIn <= refreshThreshold) {
         setIsRefreshing(true);
         
         try {
-          const result = await refreshTokens();
-          if (result.success) {
+          const result = await refreshAuth();
+          if (result) {
             setLastRefresh(new Date());
             if (options.onRefreshSuccess) {
               options.onRefreshSuccess();
             }
-          } else {
-            throw new Error(result.error || 'Refresh failed');
           }
         } catch (error) {
           if (options.onRefreshError) {
@@ -650,19 +652,20 @@ export const useAutoRefresh = (options: {
 
     const interval = setInterval(checkAndRefresh, 60000); // Check every minute
     return () => clearInterval(interval);
-  }, [enabled, accessToken, refreshThreshold, isRefreshing, refreshTokens, options]);
+  }, [enabled, accessToken, refreshThreshold, isRefreshing, refreshAuth, options]);
 
   return {
     isRefreshing,
     lastRefresh,
+    manualRefresh: refreshAuth,
   };
 };
 
 // ==========================================
-// 📤 CONVENIENCE EXPORTS
+// 📤 EXPORTS
 // ==========================================
 
-// Re-export commonly used types
+// Export types
 export type {
   UseAuthOptions,
   AuthState,
@@ -671,6 +674,3 @@ export type {
   SessionInfo,
   PermissionHookReturn,
 };
-
-// Re-export for convenience
-export { useAuthStore };

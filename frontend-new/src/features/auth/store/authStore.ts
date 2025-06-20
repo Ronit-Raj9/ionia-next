@@ -1,32 +1,36 @@
+// ==========================================
+// 🧠 AUTH STORE LAYER - CENTRALIZED STATE MANAGEMENT
+// ==========================================
+
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { persist, subscribeWithSelector } from 'zustand/middleware';
-import { devtools } from 'zustand/middleware';
+import { devtools, subscribeWithSelector, persist } from 'zustand/middleware';
 
 // Import shared types
-import type {
-  User,
-  UserRole,
-  Permission,
-  AuthError,
-  TokenInfo,
-  SessionInfo,
-  LoginCredentials,
-  RegisterData,
-  AuthResult,
-  LogoutReason
+import type { 
+  User, 
+  UserRole, 
+  Permission, 
+  AuthError, 
+  TokenInfo, 
+  SessionInfo, 
+  LoginCredentials, 
+  RegisterData, 
+  AuthResult, 
+  LogoutReason 
 } from '../types';
 
 // Import helper functions
 import { 
   parseJWT, 
   generateDeviceId, 
-  getUserFromToken, 
-  isMinimumRoleLevel 
+  isMinimumRoleLevel,
+  getUserFromToken,
+  DEFAULT_PERMISSIONS 
 } from '../utils/authUtils';
 
-// Import auth service (default export)
-import authService from '../services/authService';
+// Import auth service (will be created)
+// import authService from '../services/authService';
 
 // ==========================================
 // 🧠 AUTH STORE STATE INTERFACE
@@ -142,39 +146,6 @@ interface AuthState {
 }
 
 // ==========================================
-// 🔧 SUPPORTING TYPES
-// ==========================================
-
-interface LoginCredentials {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
-  deviceInfo?: {
-    name: string;
-    type: string;
-    browser: string;
-  };
-}
-
-interface RegisterData {
-  email: string;
-  username: string;
-  fullName: string;
-  password: string;
-  confirmPassword: string;
-  acceptTerms: boolean;
-}
-
-interface AuthResult {
-  success: boolean;
-  error?: AuthError;
-  user?: User;
-  requiresVerification?: boolean;
-}
-
-type LogoutReason = 'manual' | 'expired' | 'inactive' | 'security' | 'device_change';
-
-// ==========================================
 // 🛠️ UTILITY CONSTANTS
 // ==========================================
 
@@ -182,44 +153,6 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   user: 1,
   admin: 2,
   superadmin: 3,
-};
-
-const DEFAULT_PERMISSIONS: Record<UserRole, Permission[]> = {
-  user: [
-    'user:profile:read',
-    'user:profile:update',
-    'user:tests:take',
-    'user:results:view'
-  ],
-  admin: [
-    'user:profile:read',
-    'user:profile:update',
-    'user:tests:take',
-    'user:results:view',
-    'admin:users:read',
-    'admin:users:update',
-    'admin:tests:create',
-    'admin:tests:update',
-    'admin:tests:delete',
-    'admin:analytics:view'
-  ],
-  superadmin: [
-    'user:profile:read',
-    'user:profile:update',
-    'user:tests:take',
-    'user:results:view',
-    'admin:users:read',
-    'admin:users:update',
-    'admin:users:delete',
-    'admin:tests:create',
-    'admin:tests:update',
-    'admin:tests:delete',
-    'admin:analytics:view',
-    'superadmin:system:config',
-    'superadmin:admins:manage',
-    'superadmin:logs:view',
-    'superadmin:security:manage'
-  ],
 };
 
 // Session timeouts
@@ -289,7 +222,6 @@ export const useAuthStore = create<AuthState>()(
                 Object.assign(state.user, updates);
                 if (updates.role) {
                   state.userRole = updates.role;
-                  state.userPermissions = DEFAULT_PERMISSIONS[updates.role];
                 }
                 if (updates.permissions) {
                   state.userPermissions = updates.permissions;
@@ -360,7 +292,7 @@ export const useAuthStore = create<AuthState>()(
                 const payload = parseJWT(refreshToken);
                 state.refreshToken = {
                   token: refreshToken,
-                  expiresAt: payload?.exp ? payload.exp * 1000 : now + 7 * 24 * 60 * 60 * 1000,
+                  expiresAt: payload?.exp ? payload.exp * 1000 : now + 7 * 24 * 60 * 60 * 1000, // 7 days default
                   issuedAt: payload?.iat ? payload.iat * 1000 : now,
                 };
               }
@@ -457,9 +389,6 @@ export const useAuthStore = create<AuthState>()(
             
             set((draft) => {
               draft.isSessionValid = isValid;
-              if (!isValid) {
-                draft.showSessionExpiredModal = true;
-              }
             });
             
             return isValid;
@@ -504,7 +433,7 @@ export const useAuthStore = create<AuthState>()(
             if (!state.userPermissions.length) return false;
             
             if (Array.isArray(permission)) {
-              return permission.some(p => state.userPermissions.includes(p));
+              return permission.every(p => state.userPermissions.includes(p));
             }
             return state.userPermissions.includes(permission);
           },
@@ -538,126 +467,87 @@ export const useAuthStore = create<AuthState>()(
           // ==========================================
 
           login: async (credentials) => {
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
+            set((state) => { state.isLoading = true; state.error = null; });
 
             try {
-              // Call auth service
-              const response = await authService.login(credentials);
+              // TODO: Replace with actual auth service call
+              // const result = await authService.login(credentials);
               
-              if (!response.success) {
-                throw new Error(response.error?.message || 'Login failed');
-              }
+              // Mock successful login for now
+              const mockUser: User = {
+                id: '1',
+                email: credentials.email,
+                username: credentials.email.split('@')[0],
+                fullName: 'Test User',
+                role: 'user',
+                permissions: DEFAULT_PERMISSIONS.user,
+                avatar: '',
+                emailVerified: true,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
 
-              const { user, accessToken, refreshToken } = response.data!;
-              
-              set((state) => {
-                // Set user and tokens
-                state.user = user;
-                state.isAuthenticated = true;
-                state.userRole = user.role;
-                state.userPermissions = user.permissions || DEFAULT_PERMISSIONS[user.role];
-                
-                // Set tokens
-                get().setTokens(accessToken, refreshToken);
-                
-                // Create session
-                get().createSession({
-                  userAgent: credentials.deviceInfo?.userAgent,
-                  ipAddress: credentials.deviceInfo?.ipAddress,
-                });
-                
-                state.loginTimestamp = Date.now();
-                state.lastActivity = Date.now();
-                state.isLoading = false;
-                state.error = null;
-              });
+              get().setUser(mockUser);
+              get().setTokens('mock-access-token', 'mock-refresh-token');
+              get().createSession(credentials.deviceInfo);
 
-              return { success: true, user };
+              return { success: true, user: mockUser };
             } catch (error: any) {
               const authError: AuthError = {
                 type: 'auth',
                 message: error.message || 'Login failed',
                 timestamp: Date.now(),
-                context: { email: credentials.email },
+                context: { email: credentials.email }
               };
-
-              set((state) => {
-                state.isLoading = false;
-                state.error = authError;
-              });
-
+              
+              get().setError(authError);
               return { success: false, error: authError };
+            } finally {
+              set((state) => { state.isLoading = false; });
             }
           },
 
           logout: async (reason = 'manual') => {
-            set((state) => {
-              state.isLoading = true;
-            });
+            set((state) => { state.isLoading = true; });
 
             try {
-              // Call auth service to logout
-              const refreshToken = get().getRefreshToken();
-              if (refreshToken) {
-                await authService.logout(refreshToken);
-              }
+              // TODO: Call logout API
+              // await authService.logout(reason);
             } catch (error) {
               console.warn('Logout API call failed:', error);
             } finally {
-              // Clear state regardless of API success
-              set((state) => {
-                state.user = null;
-                state.isAuthenticated = false;
-                state.userRole = null;
-                state.userPermissions = [];
-                state.loginTimestamp = null;
-                state.isLoading = false;
-                state.error = null;
-              });
-              
+              // Always clear local state
+              get().clearUser();
               get().clearTokens();
               get().clearSession();
+              set((state) => { state.isLoading = false; });
             }
           },
 
           register: async (userData) => {
-            set((state) => {
-              state.isLoading = true;
-              state.error = null;
-            });
+            set((state) => { state.isLoading = true; state.error = null; });
 
             try {
-              const response = await authService.register(userData);
+              // TODO: Replace with actual auth service call
+              // const result = await authService.register(userData);
               
-              if (!response.success) {
-                throw new Error(response.error?.message || 'Registration failed');
-              }
-
-              set((state) => {
-                state.isLoading = false;
-              });
-
+              // Mock successful registration
               return { 
                 success: true, 
-                requiresVerification: response.data?.requiresVerification 
+                requiresVerification: true 
               };
             } catch (error: any) {
               const authError: AuthError = {
                 type: 'auth',
                 message: error.message || 'Registration failed',
                 timestamp: Date.now(),
-                context: { email: userData.email },
+                context: { email: userData.email }
               };
-
-              set((state) => {
-                state.isLoading = false;
-                state.error = authError;
-              });
-
+              
+              get().setError(authError);
               return { success: false, error: authError };
+            } finally {
+              set((state) => { state.isLoading = false; });
             }
           },
 
@@ -676,40 +566,27 @@ export const useAuthStore = create<AuthState>()(
 
             const refreshPromise = (async () => {
               try {
-                set((state) => {
-                  state.isRefreshing = true;
-                });
-
-                const response = await authService.refreshToken(refreshToken);
+                // TODO: Call refresh API
+                // const result = await authService.refreshToken(refreshToken);
                 
-                if (!response.success) {
-                  throw new Error('Token refresh failed');
-                }
-
-                const { accessToken, refreshToken: newRefreshToken } = response.data!;
-                
-                set((state) => {
-                  get().setTokens(accessToken, newRefreshToken);
-                  state.lastActivity = Date.now();
-                  state.isRefreshing = false;
-                  state.refreshPromise = null;
-                });
-
+                // Mock successful refresh
+                get().updateAccessToken('new-mock-access-token');
                 return true;
               } catch (error) {
-                set((state) => {
-                  state.isRefreshing = false;
-                  state.refreshPromise = null;
-                });
-                
-                // Auto-logout on refresh failure
-                await get().logout('expired');
+                console.error('Token refresh failed:', error);
+                get().logout('expired');
                 return false;
+              } finally {
+                set((state) => { 
+                  state.isRefreshing = false; 
+                  state.refreshPromise = null; 
+                });
               }
             })();
 
-            set((state) => {
-              state.refreshPromise = refreshPromise;
+            set((state) => { 
+              state.isRefreshing = true; 
+              state.refreshPromise = refreshPromise; 
             });
 
             return refreshPromise;
@@ -724,7 +601,7 @@ export const useAuthStore = create<AuthState>()(
 
             // Check if session is expired
             if (state.isSessionExpired()) {
-              await get().logout('expired');
+              get().logout('inactive');
               return false;
             }
 
@@ -738,58 +615,23 @@ export const useAuthStore = create<AuthState>()(
 
           initializeAuth: async () => {
             try {
-              const state = get();
+              set((state) => { state.isLoading = true; });
               
-              // Check if we have stored tokens
-              const accessToken = state.getAccessToken();
-              const refreshToken = state.getRefreshToken();
-              
-              if (!accessToken && !refreshToken) {
-                set((state) => {
-                  state.isInitialized = true;
-                });
-                return;
-              }
-
-              // Validate current session
-              if (accessToken && !state.isTokenExpired()) {
-                // Token is valid, try to get user info
-                try {
-                  const userInfo = getUserFromToken(accessToken);
-                  if (userInfo) {
-                    set((state) => {
-                      state.user = {
-                        id: userInfo.id,
-                        email: userInfo.email,
-                        role: userInfo.role,
-                        permissions: userInfo.permissions,
-                      } as User;
-                      state.isAuthenticated = true;
-                      state.userRole = userInfo.role;
-                      state.userPermissions = userInfo.permissions || DEFAULT_PERMISSIONS[userInfo.role];
-                      state.lastActivity = Date.now();
-                    });
-                  }
-                } catch (error) {
-                  console.warn('Failed to parse user from token:', error);
-                }
-              } else if (refreshToken && !state.isTokenExpired(state.refreshToken)) {
-                // Access token expired but refresh token is valid
-                await state.refreshAuth();
-              } else {
-                // Both tokens are expired, clear everything
-                get().clearTokens();
-                get().clearUser();
-                get().clearSession();
+              // Check for existing tokens in storage
+              const accessToken = get().getAccessToken();
+              if (accessToken) {
+                // TODO: Validate token with backend
+                // const user = await authService.getCurrentUser();
+                // get().setUser(user);
               }
             } catch (error) {
               console.error('Auth initialization failed:', error);
               get().clearTokens();
               get().clearUser();
-              get().clearSession();
             } finally {
-              set((state) => {
-                state.isInitialized = true;
+              set((state) => { 
+                state.isLoading = false; 
+                state.isInitialized = true; 
               });
             }
           },
@@ -861,7 +703,7 @@ export const useAuthStore = create<AuthState>()(
             
             // Clear any pending promises
             if (state.refreshPromise) {
-              state.refreshPromise.catch(() => {});
+              // Cancel if possible
             }
             
             // Reset state
@@ -955,3 +797,11 @@ export const useAuthPermissions = () => {
     isMinimumRole: state.isMinimumRole,
   }));
 };
+
+// ==========================================
+// 📤 HELPER EXPORTS
+// ==========================================
+
+// Export helper functions for external use
+export const getAccessToken = () => useAuthStore.getState().getAccessToken();
+export const getRefreshToken = () => useAuthStore.getState().getRefreshToken();

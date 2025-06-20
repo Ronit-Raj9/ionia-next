@@ -28,7 +28,7 @@ router.route("/mock/:examType").get(
         
         next();
     },
-    getTests
+    getTests 
 );
 
 // GET /api/v1/tests/mock/:examType/:id - Get a specific mock test by ID without authentication

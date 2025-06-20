@@ -1,5 +1,14 @@
+// ==========================================
+// 🎨 UI STORE - GLOBAL UI STATE MANAGEMENT
+// ==========================================
+
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { devtools, subscribeWithSelector } from 'zustand/middleware';
+
+// ==========================================
+// 🏷️ UI TYPES & INTERFACES
+// ==========================================
 
 export interface Notification {
   id: string;
@@ -7,233 +16,367 @@ export interface Notification {
   title: string;
   message: string;
   duration?: number;
-  persistent?: boolean;
-  action?: {
+  timestamp: number;
+  actions?: Array<{
     label: string;
-    onClick: () => void;
-  };
+    action: () => void;
+    style?: 'primary' | 'secondary' | 'danger';
+  }>;
 }
 
 export interface Modal {
   id: string;
-  component: React.ComponentType<any>;
-  props?: any;
-  options?: {
-    size?: 'sm' | 'md' | 'lg' | 'xl';
-    closable?: boolean;
-    backdrop?: boolean;
-  };
+  type: 'confirm' | 'alert' | 'custom';
+  title: string;
+  content: string | React.ReactNode;
+  actions?: Array<{
+    label: string;
+    action: () => void;
+    style?: 'primary' | 'secondary' | 'danger';
+  }>;
+  closable?: boolean;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-interface LoadingState {
+export interface LoadingState {
   [key: string]: boolean;
 }
 
 interface UIState {
-  // Theme
-  theme: 'light' | 'dark' | 'system';
-  
-  // Loading states
+  // === LOADING STATE ===
   isGlobalLoading: boolean;
   loadingStates: LoadingState;
   
-  // Notifications
+  // === NOTIFICATIONS ===
   notifications: Notification[];
+  maxNotifications: number;
   
-  // Modals
+  // === MODALS ===
   modals: Modal[];
   
-  // Navigation
+  // === THEME ===
+  theme: 'light' | 'dark' | 'system';
+  
+  // === SIDEBAR ===
   sidebarOpen: boolean;
-  isNavbarOpen: boolean; // Added for navbar mobile menu
+  sidebarCollapsed: boolean;
   
-  // Error boundary
-  hasError: boolean;
-  errorInfo: string | null;
+  // === MOBILE ===
+  isMobile: boolean;
   
-  // Actions
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  // ==========================================
+  // 🎯 ACTIONS
+  // ==========================================
+  
+  // Loading Actions
   setGlobalLoading: (loading: boolean) => void;
   setLoading: (key: string, loading: boolean) => void;
   isLoading: (key: string) => boolean;
-  addNotification: (notification: Omit<Notification, 'id'>) => void;
+  clearAllLoading: () => void;
+  
+  // Notification Actions
+  addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void;
   removeNotification: (id: string) => void;
-  clearNotifications: () => void;
+  clearAllNotifications: () => void;
+  
+  // Modal Actions
   openModal: (modal: Omit<Modal, 'id'>) => void;
   closeModal: (id: string) => void;
   closeAllModals: () => void;
+  
+  // Theme Actions
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  toggleTheme: () => void;
+  
+  // Sidebar Actions
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
-  setNavbarOpen: (open: boolean) => void; // Added for navbar
-  toggleNavbar: () => void; // Added for navbar
-  setError: (error: string | null) => void;
-  clearError: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapse: () => void;
+  
+  // Mobile Actions
+  setIsMobile: (isMobile: boolean) => void;
 }
 
+// ==========================================
+// 🛠️ UTILITY FUNCTIONS
+// ==========================================
+
+const generateId = (): string => {
+  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
+// ==========================================
+// 🧠 UI STORE IMPLEMENTATION
+// ==========================================
+
 export const useUIStore = create<UIState>()(
-  immer((set, get) => ({
-    // Initial state
-    theme: 'system',
-    isGlobalLoading: false,
-    loadingStates: {},
-    notifications: [],
-    modals: [],
-    sidebarOpen: true,
-    isNavbarOpen: false, // Added for navbar mobile menu
-    hasError: false,
-    errorInfo: null,
+  devtools(
+    subscribeWithSelector(
+      immer((set, get) => ({
+        // === INITIAL STATE ===
+        isGlobalLoading: false,
+        loadingStates: {},
+        notifications: [],
+        maxNotifications: 5,
+        modals: [],
+        theme: 'system',
+        sidebarOpen: true,
+        sidebarCollapsed: false,
+        isMobile: false,
 
-    // Actions
-    setTheme: (theme) =>
-      set((state) => {
-        state.theme = theme;
-        
-        // Apply theme to document
-        if (typeof window !== 'undefined') {
-          const root = window.document.documentElement;
-          const isDark = theme === 'dark' || 
-            (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-          
-          root.classList.toggle('dark', isDark);
-        }
-      }),
+        // ==========================================
+        // 🎯 LOADING ACTIONS IMPLEMENTATION
+        // ==========================================
 
-    setGlobalLoading: (loading) =>
-      set((state) => {
-        state.isGlobalLoading = loading;
-      }),
+        setGlobalLoading: (loading) =>
+          set((state) => {
+            state.isGlobalLoading = loading;
+          }),
 
-    setLoading: (key, loading) =>
-      set((state) => {
-        if (loading) {
-          state.loadingStates[key] = true;
-        } else {
-          delete state.loadingStates[key];
-        }
-      }),
+        setLoading: (key, loading) =>
+          set((state) => {
+            if (loading) {
+              state.loadingStates[key] = true;
+            } else {
+              delete state.loadingStates[key];
+            }
+          }),
 
-    isLoading: (key) => {
-      const state = get();
-      return state.loadingStates[key] || false;
-    },
+        isLoading: (key) => {
+          const state = get();
+          return state.loadingStates[key] || false;
+        },
 
-    addNotification: (notification) =>
-      set((state) => {
-        const id = Math.random().toString(36).substr(2, 9);
-        const newNotification: Notification = {
-          ...notification,
-          id,
-          duration: notification.duration ?? 5000,
-        };
-        
-        state.notifications.push(newNotification);
-        
-        // Auto-remove notification after duration
-        if (!notification.persistent && (newNotification.duration ?? 0) > 0) {
-          setTimeout(() => {
-            const currentState = get();
-            currentState.removeNotification(id);
-          }, newNotification.duration ?? 0);
-        }
-      }),
+        clearAllLoading: () =>
+          set((state) => {
+            state.isGlobalLoading = false;
+            state.loadingStates = {};
+          }),
 
-    removeNotification: (id) =>
-      set((state) => {
-        state.notifications = state.notifications.filter(n => n.id !== id);
-      }),
+        // ==========================================
+        // 🔔 NOTIFICATION ACTIONS IMPLEMENTATION
+        // ==========================================
 
-    clearNotifications: () =>
-      set((state) => {
-        state.notifications = [];
-      }),
+        addNotification: (notification) =>
+          set((state) => {
+            const newNotification: Notification = {
+              ...notification,
+              id: generateId(),
+              timestamp: Date.now(),
+            };
 
-    openModal: (modal) =>
-      set((state) => {
-        const id = Math.random().toString(36).substr(2, 9);
-        const newModal: Modal = {
-          ...modal,
-          id,
-        };
-        
-        state.modals.push(newModal);
-      }),
+            state.notifications.unshift(newNotification);
 
-    closeModal: (id) =>
-      set((state) => {
-        state.modals = state.modals.filter(m => m.id !== id);
-      }),
+            // Limit number of notifications
+            if (state.notifications.length > state.maxNotifications) {
+              state.notifications = state.notifications.slice(0, state.maxNotifications);
+            }
 
-    closeAllModals: () =>
-      set((state) => {
-        state.modals = [];
-      }),
+            // Auto-remove notification after duration
+            if (notification.duration && notification.duration > 0) {
+              setTimeout(() => {
+                get().removeNotification(newNotification.id);
+              }, notification.duration);
+            }
+          }),
 
-    setSidebarOpen: (open) =>
-      set((state) => {
-        state.sidebarOpen = open;
-      }),
+        removeNotification: (id) =>
+          set((state) => {
+            state.notifications = state.notifications.filter(n => n.id !== id);
+          }),
 
-    toggleSidebar: () =>
-      set((state) => {
-        state.sidebarOpen = !state.sidebarOpen;
-      }),
+        clearAllNotifications: () =>
+          set((state) => {
+            state.notifications = [];
+          }),
 
-    // Navbar actions
-    setNavbarOpen: (open) =>
-      set((state) => {
-        state.isNavbarOpen = open;
-      }),
+        // ==========================================
+        // 🪟 MODAL ACTIONS IMPLEMENTATION
+        // ==========================================
 
-    toggleNavbar: () =>
-      set((state) => {
-        state.isNavbarOpen = !state.isNavbarOpen;
-      }),
+        openModal: (modal) =>
+          set((state) => {
+            const newModal: Modal = {
+              ...modal,
+              id: generateId(),
+            };
+            state.modals.push(newModal);
+          }),
 
-    setError: (error) =>
-      set((state) => {
-        state.hasError = !!error;
-        state.errorInfo = error;
-      }),
+        closeModal: (id) =>
+          set((state) => {
+            state.modals = state.modals.filter(m => m.id !== id);
+          }),
 
-    clearError: () =>
-      set((state) => {
-        state.hasError = false;
-        state.errorInfo = null;
-      }),
-  }))
+        closeAllModals: () =>
+          set((state) => {
+            state.modals = [];
+          }),
+
+        // ==========================================
+        // 🎨 THEME ACTIONS IMPLEMENTATION
+        // ==========================================
+
+        setTheme: (theme) =>
+          set((state) => {
+            state.theme = theme;
+            
+            // Apply theme to document
+            if (typeof window !== 'undefined') {
+              const root = window.document.documentElement;
+              
+              if (theme === 'dark') {
+                root.classList.add('dark');
+              } else if (theme === 'light') {
+                root.classList.remove('dark');
+              } else {
+                // System theme
+                const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (isDark) {
+                  root.classList.add('dark');
+                } else {
+                  root.classList.remove('dark');
+                }
+              }
+            }
+          }),
+
+        toggleTheme: () => {
+          const currentTheme = get().theme;
+          const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+          get().setTheme(newTheme);
+        },
+
+        // ==========================================
+        // 📱 SIDEBAR ACTIONS IMPLEMENTATION
+        // ==========================================
+
+        setSidebarOpen: (open) =>
+          set((state) => {
+            state.sidebarOpen = open;
+          }),
+
+        toggleSidebar: () =>
+          set((state) => {
+            state.sidebarOpen = !state.sidebarOpen;
+          }),
+
+        setSidebarCollapsed: (collapsed) =>
+          set((state) => {
+            state.sidebarCollapsed = collapsed;
+          }),
+
+        toggleSidebarCollapse: () =>
+          set((state) => {
+            state.sidebarCollapsed = !state.sidebarCollapsed;
+          }),
+
+        // ==========================================
+        // 📱 MOBILE ACTIONS IMPLEMENTATION
+        // ==========================================
+
+        setIsMobile: (isMobile) =>
+          set((state) => {
+            state.isMobile = isMobile;
+            
+            // Auto-close sidebar on mobile
+            if (isMobile) {
+              state.sidebarOpen = false;
+            }
+          }),
+      }))
+    ),
+    {
+      name: 'ui-store',
+    }
+  )
 );
 
-// Helper hooks for convenience
+// ==========================================
+// 🎯 STORE SELECTORS
+// ==========================================
+
+export const uiSelectors = {
+  // Loading selectors
+  isGlobalLoading: (state: any) => state.isGlobalLoading,
+  isLoading: (state: any) => (key: string) => state.isLoading(key),
+  hasAnyLoading: (state: any) => Object.keys(state.loadingStates).length > 0,
+  
+  // Notification selectors
+  getNotifications: (state: any) => state.notifications,
+  getLatestNotification: (state: any) => state.notifications[0] || null,
+  getNotificationCount: (state: any) => state.notifications.length,
+  
+  // Modal selectors
+  getModals: (state: any) => state.modals,
+  hasOpenModals: (state: any) => state.modals.length > 0,
+  getTopModal: (state: any) => state.modals[state.modals.length - 1] || null,
+  
+  // Theme selectors
+  getTheme: (state: any) => state.theme,
+  isDark: (state: any) => state.theme === 'dark',
+  
+  // Sidebar selectors
+  isSidebarOpen: (state: any) => state.sidebarOpen,
+  isSidebarCollapsed: (state: any) => state.sidebarCollapsed,
+  
+  // Mobile selectors
+  isMobile: (state: any) => state.isMobile,
+};
+
+// ==========================================
+// 📤 CONVENIENCE HOOKS
+// ==========================================
+
+// Hook for notifications
 export const useNotifications = () => {
-  const { notifications, addNotification, removeNotification, clearNotifications } = useUIStore();
-  return { notifications, addNotification, removeNotification, clearNotifications };
+  return useUIStore((state) => ({
+    notifications: state.notifications,
+    addNotification: state.addNotification,
+    removeNotification: state.removeNotification,
+    clearAllNotifications: state.clearAllNotifications,
+  }));
 };
 
+// Hook for loading states
+export const useLoadingStates = () => {
+  return useUIStore((state) => ({
+    isGlobalLoading: state.isGlobalLoading,
+    setGlobalLoading: state.setGlobalLoading,
+    setLoading: state.setLoading,
+    isLoading: state.isLoading,
+    clearAllLoading: state.clearAllLoading,
+  }));
+};
+
+// Hook for modals
 export const useModals = () => {
-  const { modals, openModal, closeModal, closeAllModals } = useUIStore();
-  return { modals, openModal, closeModal, closeAllModals };
+  return useUIStore((state) => ({
+    modals: state.modals,
+    openModal: state.openModal,
+    closeModal: state.closeModal,
+    closeAllModals: state.closeAllModals,
+  }));
 };
 
-export const useLoading = (key?: string) => {
-  const { isGlobalLoading, loadingStates, setGlobalLoading, setLoading, isLoading } = useUIStore();
-  
-  if (key) {
-    return {
-      isLoading: isLoading(key),
-      setLoading: (loading: boolean) => setLoading(key, loading),
-    };
-  }
-  
-  return {
-    isGlobalLoading,
-    setGlobalLoading,
-    isLoading,
-    setLoading,
-  };
+// Hook for theme
+export const useTheme = () => {
+  return useUIStore((state) => ({
+    theme: state.theme,
+    setTheme: state.setTheme,
+    toggleTheme: state.toggleTheme,
+  }));
 };
 
-// Navbar helper hook
-export const useNavbar = () => {
-  const { isNavbarOpen, setNavbarOpen, toggleNavbar } = useUIStore();
-  return { isNavbarOpen, setNavbarOpen, toggleNavbar };
+// Hook for sidebar
+export const useSidebar = () => {
+  return useUIStore((state) => ({
+    isOpen: state.sidebarOpen,
+    isCollapsed: state.sidebarCollapsed,
+    setSidebarOpen: state.setSidebarOpen,
+    toggleSidebar: state.toggleSidebar,
+    setSidebarCollapsed: state.setSidebarCollapsed,
+    toggleSidebarCollapse: state.toggleSidebarCollapse,
+  }));
 };

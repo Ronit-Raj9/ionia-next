@@ -2,7 +2,7 @@
 // 🛠️ AUTH UTILITIES LAYER - TOKEN & ROLE UTILITIES
 // ==========================================
 
-import type { UserRole, Permission } from '../store/authStore';
+import type { UserRole, Permission, User, AuthError } from '../types';
 
 // ==========================================
 // 🏷️ UTILITY TYPES
@@ -459,8 +459,9 @@ export const deepClone = <T>(obj: T): T => {
 // 📤 EXPORTS
 // ==========================================
 
-export type {
-  TokenValidation,
-  TokenExpiryInfo,
-  PermissionContext,
-};
+// Don't re-export types that are already declared in this file
+// export type {
+//   TokenValidation,
+//   TokenExpiryInfo,
+//   PermissionContext,
+// };

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineUser } from 'react-icons/hi';
+import { AiOutlineGoogle } from 'react-icons/ai';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'react-hot-toast';
 
@@ -13,7 +15,8 @@ export default function RegisterPage() {
     email: '',
     username: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    acceptTerms: false,
   });
   const router = useRouter();
   
@@ -21,6 +24,8 @@ export default function RegisterPage() {
   const [usernameError, setUsernameError] = useState('');
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     // Clear any existing errors when component mounts
@@ -28,10 +33,10 @@ export default function RegisterPage() {
   }, [clearError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
     
     // Reset username availability when user starts typing
@@ -130,8 +135,18 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      {/* Decorative gradient blobs */}
+      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute left-[-100px] top-[-150px] w-[300px] h-[300px] bg-emerald-300 opacity-30 rounded-full blur-3xl"></div>
+        <div className="absolute right-[-120px] bottom-[-150px] w-[400px] h-[400px] bg-pink-300 opacity-20 rounded-full blur-3xl"></div>
+      </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="relative max-w-md w-full space-y-8 bg-white/70 dark:bg-gray-800/60 backdrop-blur-md border border-white/30 dark:border-gray-700 rounded-xl shadow-2xl p-10"
+      >
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -164,40 +179,36 @@ export default function RegisterPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
             >
-              {error}
+              {typeof error === 'string' ? error : error?.message}
             </motion.div>
           )}
 
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="fullName" className="sr-only">
-                Full Name
-              </label>
+          <div className="space-y-4">
+            {/* Full Name */}
+            <div className="relative">
+              <HiOutlineUser className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 id="fullName"
                 name="fullName"
                 type="text"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 bg-white/60 backdrop-blur placeholder-gray-500 pl-10 pr-3 py-2 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                 placeholder="Full Name"
                 value={formData.fullName}
                 onChange={handleChange}
               />
             </div>
-            <div>
-              <label htmlFor="username" className="sr-only">
-                Username
-              </label>
+            {/* Username */}
+            <div className="relative">
+              <HiOutlineUser className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 id="username"
                 name="username"
                 type="text"
                 required
-                className={`appearance-none rounded-none relative block w-full px-3 py-2 border ${
-                  usernameError ? 'border-red-300' : 
-                  usernameAvailable ? 'border-green-300' : 
-                  'border-gray-300'
-                } placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm`}
+                className={`block w-full rounded-md border ${
+                  usernameError ? 'border-red-300' : usernameAvailable ? 'border-green-300' : 'border-gray-300'
+                } bg-white/60 backdrop-blur placeholder-gray-500 pl-10 pr-3 py-2 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm`}
                 placeholder="Username"
                 value={formData.username}
                 onChange={handleChange}
@@ -213,53 +224,56 @@ export default function RegisterPage() {
                 <p className="text-green-500 text-xs mt-1">Username is available!</p>
               )}
             </div>
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email address
-              </label>
+            {/* Email */}
+            <div className="relative">
+              <HiOutlineMail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 bg-white/60 backdrop-blur placeholder-gray-500 pl-10 pr-3 py-2 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                 placeholder="Email address"
                 value={formData.email}
                 onChange={handleChange}
               />
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
+            {/* Password */}
+            <div className="relative">
+              <HiOutlineLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 bg-white/60 backdrop-blur placeholder-gray-500 pl-10 pr-10 py-2 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleChange}
               />
+              <button type="button" onClick={() => setShowPassword(prev=>!prev)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
+              </button>
             </div>
-            <div>
-              <label htmlFor="confirm-password" className="sr-only">
-                Confirm Password
-              </label>
+            {/* Confirm Password */}
+            <div className="relative">
+              <HiOutlineLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 id="confirm-password"
                 name="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                className="block w-full rounded-md border border-gray-300 bg-white/60 backdrop-blur placeholder-gray-500 pl-10 pr-10 py-2 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                 placeholder="Confirm password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
               />
+              <button type="button" onClick={() => setShowConfirmPassword(prev=>!prev)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showConfirmPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
+              </button>
             </div>
           </div>
 
@@ -316,6 +330,38 @@ export default function RegisterPage() {
               {isLoading ? 'Creating account...' : 'Create account'}
             </button>
           </div>
+                      {/* divider */}
+          <div className="flex items-center space-x-2 mt-2">
+            <span className="h-px flex-1 bg-gray-300"></span>
+            <span className="text-xs text-gray-500">or continue with</span>
+            <span className="h-px flex-1 bg-gray-300"></span>
+          </div>
+
+          <div className="flex justify-center">
+            <button
+              type="button"
+              className="inline-flex items-center space-x-2 rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+            >
+              <AiOutlineGoogle className="h-5 w-5" />
+              <span>Google</span>
+            </button>
+          </div>
+
+          {/* Accept Terms Checkbox */}
+          <div className="flex items-center">
+            <input
+              id="acceptTerms"
+              name="acceptTerms"
+              type="checkbox"
+              checked={formData.acceptTerms}
+              onChange={handleChange}
+              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+              required
+            />
+            <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
+              I agree to the <Link href="/terms" className="text-emerald-600 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</Link>
+            </label>
+          </div>
         </motion.form>
 
         <div className="mt-6">
@@ -330,7 +376,7 @@ export default function RegisterPage() {
             </Link>
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 } 

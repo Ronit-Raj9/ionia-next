@@ -5,7 +5,7 @@ import { useCacheStore, generateCacheKey } from '@/stores/cacheStore';
 
 // Get the API base URL with proper environment detection
 const getApiBaseUrl = (): string => {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 };
 
 const API_BASE = getApiBaseUrl();
@@ -89,7 +89,14 @@ export const refreshTokens = async (): Promise<string | null> => {
     
     // Clear auth state and redirect to login
     logout();
-    setError('Session expired. Please login again.');
+    
+    // Create proper AuthError object instead of plain string
+    setError({
+      type: 'auth',
+      message: 'Session expired. Please login again.',
+      timestamp: Date.now(),
+      context: { reason: 'token_refresh_failed' }
+    });
     
     // Show notification
     addNotification({
@@ -277,26 +284,6 @@ export interface User {
   };
 }
 
-// Check if cookies are enabled/accepted
-export const checkCookieConsent = (): boolean => {
-  try {
-    // Check if user has accepted cookies
-    const hasConsent = localStorage.getItem('cookieConsent') !== null;
-    
-    // Check for mobile-specific consent cookie
-    const hasMobileConsent = document.cookie.includes('mobileConsent=');
-    
-    // Set test cookie
-    document.cookie = "testCookie=1; path=/; SameSite=None; Secure";
-    const cookiesEnabled = document.cookie.includes('testCookie=');
-    
-    return hasConsent && cookiesEnabled;
-  } catch (error) {
-    console.error("Error checking cookie consent:", error);
-    return false;
-  }
-};
-
 /**
  * Authentication API endpoints
  */
@@ -316,11 +303,22 @@ export const authAPI = {
       );
       
       if (response.data) {
-        // Store user and tokens
-        setUser({
-          ...response.data.user,
-          role: response.data.user.role as 'user' | 'admin' | 'superadmin'
-        });
+        // Store user and tokens - map the response structure to store structure
+        const userData = {
+          id: response.data.user.id,
+          _id: response.data.user.id, // Ensure both id and _id are set
+          email: response.data.user.email,
+          username: response.data.user.username,
+          fullName: response.data.user.fullName,
+          role: response.data.user.role as 'user' | 'admin' | 'superadmin',
+          permissions: [], // Will be populated from role-based permissions
+          avatar: response.data.user.avatar,
+          emailVerified: true, // Assume verified if login successful
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        
+        setUser(userData);
         setTokens(response.data.accessToken, response.data.refreshToken);
         
         // Clear any previous errors
@@ -337,7 +335,13 @@ export const authAPI = {
       
       return response;
     } catch (error: any) {
-      setError(error.message || 'Login failed');
+      // Create proper AuthError object instead of plain string
+      setError({
+        type: 'auth',
+        message: error.message || 'Login failed',
+        timestamp: Date.now(),
+        context: { email: credentials.email }
+      });
       throw error;
     }
   },
