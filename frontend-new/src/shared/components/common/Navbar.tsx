@@ -14,20 +14,20 @@ interface NavbarProps {
 
 export default function Navbar({ className = "" }: NavbarProps) {
   const pathname = usePathname();
-  const { isAuthenticated, user, validateAuth } = useAuthStore();
+  const {
+    isAuthenticated,
+    user,
+  } = useAuthStore();
   const { isNavbarOpen, toggleNavbar, setNavbarOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem('token')) {
-      validateAuth();
-    }
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [validateAuth]);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -187,14 +187,14 @@ export default function Navbar({ className = "" }: NavbarProps) {
                 ) : (
                   <>
                     <Link
-                      href="/auth/login"
+                      href="/login"
                       className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-gray-100 hover:bg-gray-200 text-black hover:text-gray-800 border border-gray-300"
                       onClick={() => setNavbarOpen(false)}
                     >
                       Sign In
                     </Link>
                     <Link
-                      href="/auth/register"
+                      href="/register"
                       className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-emerald-400 text-white border border-emerald-400 hover:bg-emerald-500 hover:scale-105 transition-all duration-200 animate-bounce hover:animate-none"
                       onClick={() => setNavbarOpen(false)}
                     >

@@ -1,93 +1,42 @@
 "use client";
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/features/auth/store/authStore";
-import { useTestResults } from "@/features/tests/store/testStore";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Card } from "@/features/dashboard/components/card";
-import PerformanceChart, { PerformanceData } from "@/features/dashboard/components/PerformanceChart";
-import SubjectPerformance, { SubjectData } from "@/features/dashboard/components/SubjectPerformance";
-import { FiRefreshCw, FiAlertTriangle, FiActivity, FiCalendar, FiCheckCircle, FiTarget } from "react-icons/fi";
-import { ClipLoader } from "react-spinners";
+import PerformanceChart, {
+  PerformanceData,
+} from "@/features/dashboard/components/PerformanceChart";
+import SubjectPerformance, {
+  SubjectData,
+} from "@/features/dashboard/components/SubjectPerformance";
+import {
+  FiActivity,
+  FiCalendar,
+  FiCheckCircle,
+  FiTarget,
+} from "react-icons/fi";
 
 export default function Dashboard() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const { testHistory, fetchTestHistory } = useTestResults();
+  const { user } = useAuth();
 
-  // Memoize the fetch function to prevent infinite loops
-  const loadTestHistory = useCallback(async () => {
-    try {
-      await fetchTestHistory();
-    } catch (error) {
-      console.error('Failed to fetch test history:', error);
-    }
-  }, [fetchTestHistory]);
+  // TODO: Fetch user's performance data and test history from the API
+  const performanceChartData: PerformanceData[] = [];
+  const subjectChartData: SubjectData[] = [];
 
-  // Transform test history object into array for performance chart
-  const performanceChartData = useMemo(() => {
-    return Object.entries(testHistory).map(([testId, result]) => ({
-      date: new Date(parseInt(testId)).toLocaleDateString(),
-      score: result.score,
-      accuracy: (result.correctAnswers / (result.correctAnswers + result.incorrectAnswers)) * 100
-    })) as PerformanceData[];
-  }, [testHistory]);
-
-  // Create data for subject performance chart with mock subjects
-  const subjectChartData = useMemo(() => {
-    // Create an array of sample subjects since our TestResults doesn't include subjects
-    const subjects = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
-    
-    // Convert test history to array with mock subjects for the SubjectPerformance chart
-    return Object.entries(testHistory).map(([testId, result], index) => ({
-      subject: subjects[index % subjects.length], // Assign mock subjects in a cycle
-      score: result.score,
-      accuracy: (result.correctAnswers / (result.correctAnswers + result.incorrectAnswers)) * 100
-    })) as SubjectData[];
-  }, [testHistory]);
-
-  useEffect(() => {
-    if (!isAuthenticated && !authLoading) {
-      router.push('/auth/login');
-    }
-  }, [isAuthenticated, authLoading, router]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadTestHistory();
-    }
-  }, [isAuthenticated, loadTestHistory]);
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <ClipLoader color="#10B981" size={40} />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Calculate statistics
-  const totalTests = Object.keys(testHistory).length;
-  const averageScore = totalTests > 0
-    ? Math.round(Object.values(testHistory).reduce((acc, test) => acc + test.score, 0) / totalTests)
-    : 0;
-  const bestScore = totalTests > 0
-    ? Math.max(...Object.values(testHistory).map(test => test.score))
-    : 0;
-  const lastTestDate = totalTests > 0
-    ? new Date(Math.max(...Object.keys(testHistory).map(id => parseInt(id)))).toLocaleDateString()
-    : 'Never';
+  // TODO: Replace with data from API
+  const totalTests = 0;
+  const averageScore = 0;
+  const bestScore = 0;
+  const lastTestDate = "N/A";
 
   return (
     <div className="p-6 max-w-full">
       {/* Welcome Section */}
       <div className="mb-8 animate-fade-in">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-          Dashboard Overview
+          Welcome back, {user?.fullName || user?.username}!
         </h1>
         <p className="text-base text-gray-600 mt-2">
           Track your test performance and progress
@@ -107,8 +56,12 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-emerald-600">Total Tests</p>
-                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{totalTests}</p>
+                  <p className="text-sm font-medium text-emerald-600">
+                    Total Tests
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">
+                    {totalTests}
+                  </p>
                 </div>
               </div>
             </div>
@@ -124,8 +77,12 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-emerald-600">Average Score</p>
-                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{averageScore}%</p>
+                  <p className="text-sm font-medium text-emerald-600">
+                    Average Score
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">
+                    {averageScore}%
+                  </p>
                 </div>
               </div>
             </div>
@@ -141,8 +98,12 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-emerald-600">Best Score</p>
-                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{bestScore}%</p>
+                  <p className="text-sm font-medium text-emerald-600">
+                    Best Score
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">
+                    {bestScore}%
+                  </p>
                 </div>
               </div>
             </div>
@@ -158,8 +119,12 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-emerald-600">Last Test</p>
-                  <p className="mt-1 text-2xl font-semibold text-emerald-700">{lastTestDate}</p>
+                  <p className="text-sm font-medium text-emerald-600">
+                    Last Test
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-emerald-700">
+                    {lastTestDate}
+                  </p>
                 </div>
               </div>
             </div>
@@ -173,13 +138,9 @@ export default function Dashboard() {
         <Card>
           <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div className="px-6 pt-6 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Performance Trend</h3>
-              <button
-                onClick={() => fetchTestHistory()}
-                className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
-              >
-                <FiRefreshCw className="w-5 h-5" />
-              </button>
+              <h3 className="text-lg font-medium text-gray-900">
+                Performance Trend
+              </h3>
             </div>
             <div className="h-[300px] sm:h-[400px]">
               {performanceChartData.length > 0 ? (
@@ -197,13 +158,9 @@ export default function Dashboard() {
         <Card>
           <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
             <div className="px-6 pt-6 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Subject Performance</h3>
-              <button
-                onClick={() => fetchTestHistory()}
-                className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors"
-              >
-                <FiRefreshCw className="w-5 h-5" />
-              </button>
+              <h3 className="text-lg font-medium text-gray-900">
+                Subject Performance
+              </h3>
             </div>
             <div className="h-[300px] sm:h-[400px]">
               {subjectChartData.length > 0 ? (
@@ -224,15 +181,19 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-lg font-medium text-blue-900">Take Practice Test</h4>
-                <p className="text-sm text-blue-600 mt-1">Start a new practice session</p>
+                <h4 className="text-lg font-medium text-blue-900">
+                  Take Practice Test
+                </h4>
+                <p className="text-sm text-blue-600 mt-1">
+                  Start a new practice session
+                </p>
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
                 <FiActivity className="w-6 h-6 text-blue-600" />
               </div>
             </div>
             <button
-              onClick={() => router.push('/exam')}
+              onClick={() => router.push("/exam")}
               className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Browse Tests
@@ -244,15 +205,19 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-lg font-medium text-purple-900">View Analytics</h4>
-                <p className="text-sm text-purple-600 mt-1">Detailed performance insights</p>
+                <h4 className="text-lg font-medium text-purple-900">
+                  View Analytics
+                </h4>
+                <p className="text-sm text-purple-600 mt-1">
+                  Detailed performance insights
+                </p>
               </div>
               <div className="p-3 bg-purple-100 rounded-full">
                 <FiTarget className="w-6 h-6 text-purple-600" />
               </div>
             </div>
             <button
-              onClick={() => router.push('/dashboard/analytics')}
+              onClick={() => router.push("/dashboard/analytics")}
               className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               View Analytics
@@ -264,15 +229,19 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-lg font-medium text-green-900">Test History</h4>
-                <p className="text-sm text-green-600 mt-1">Review past attempts</p>
+                <h4 className="text-lg font-medium text-green-900">
+                  Test History
+                </h4>
+                <p className="text-sm text-green-600 mt-1">
+                  Review past attempts
+                </p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
                 <FiCalendar className="w-6 h-6 text-green-600" />
               </div>
             </div>
             <button
-              onClick={() => router.push('/dashboard/tests')}
+              onClick={() => router.push("/dashboard/tests")}
               className="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               View History

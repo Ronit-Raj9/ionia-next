@@ -2,6 +2,7 @@
 import { useAuthStore, getAccessToken, getRefreshToken } from '@/features/auth/store/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useCacheStore, generateCacheKey } from '@/stores/cacheStore';
+import { User } from '../types';
 
 // Get the API base URL with proper environment detection
 const getApiBaseUrl = (): string => {
@@ -105,11 +106,6 @@ export const refreshTokens = async (): Promise<string | null> => {
       message: 'Please login again to continue.',
       duration: 5000,
     });
-    
-    // Redirect to login
-    if (typeof window !== 'undefined') {
-      window.location.href = '/auth/login';
-    }
     
     onTokenRefreshed(error as Error);
     return null;
@@ -268,28 +264,11 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
-export interface User {
-  _id: string;
-  username: string;
-  fullName: string;
-  email: string;
-  avatar?: string;
-  role: 'user' | 'admin' | 'superadmin';
-  createdAt: string;
-  updatedAt: string;
-  analytics?: {
-    totalTests: number;
-    testsThisWeek: number;
-    averageScore: number;
-    accuracy: number;
-  };
-}
-
 /**
  * Authentication API endpoints
  */
 export const authAPI = {
-  login: async (credentials: { email: string; password: string }): Promise<APIResponse<LoginResponse>> => {
+  login: async (credentials: { email: string; password: string; rememberMe?: boolean }): Promise<APIResponse<LoginResponse>> => {
     const { setUser, setTokens, setError } = useAuthStore.getState();
     const { addNotification } = useUIStore.getState();
     
@@ -319,7 +298,7 @@ export const authAPI = {
           updatedAt: new Date().toISOString(),
         };
         
-        setUser(userData);
+        setUser(userData, credentials.rememberMe);
         setTokens(response.data.accessToken, response.data.refreshToken);
         
         // Clear any previous errors
@@ -368,11 +347,6 @@ export const authAPI = {
         message: user ? `Goodbye, ${user.fullName}!` : 'You have been logged out.',
         duration: 3000,
       });
-      
-      // Redirect to login
-      if (typeof window !== 'undefined') {
-        window.location.href = '/auth/login';
-      }
     }
   },
 

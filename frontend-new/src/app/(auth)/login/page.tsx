@@ -12,6 +12,7 @@ import { authAPI } from '@/features/auth/api/authApi';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      await authAPI.login({ email, password });
+      await authAPI.login({ email, password, rememberMe });
       const returnUrl = searchParams.get('returnUrl') || '/dashboard';
       router.push(returnUrl);
     } catch (err: any) {
@@ -136,6 +137,8 @@ export default function LoginPage() {
                 id="remember-me"
                 name="remember-me"
                 type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
                 className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
               />
               <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
+import { shallow } from 'zustand/shallow';
 import { API } from '@/lib/api/api';
 import { useUIStore } from '../../../stores/uiStore';
 
@@ -532,36 +533,49 @@ export const useTestStore = create<TestState>()(
 
 // Convenience hooks
 export const useCurrentTest = () => {
-  return useTestStore((state) => ({
-    currentTest: state.currentTest,
-    activeQuestion: state.activeQuestion,
-    timeRemaining: state.timeRemaining,
-    isTestStarted: state.isTestStarted,
-    isTestCompleted: state.isTestCompleted,
-    loading: state.loading,
-    error: state.error,
-    setActiveQuestion: state.setActiveQuestion,
-    setTimeRemaining: state.setTimeRemaining,
-  }));
+  return useTestStore(
+    (state) => ({
+      currentTest: state.currentTest,
+      activeQuestion: state.activeQuestion,
+      timeRemaining: state.timeRemaining,
+    }),
+    shallow
+  );
 };
 
 export const useTestActions = () => {
-  return useTestStore((state) => ({
-    fetchTest: state.fetchTest,
-    submitTest: state.submitTest,
-    resetTest: state.resetTest,
-    updateQuestionAnswer: state.updateQuestionAnswer,
-    toggleQuestionMark: state.toggleQuestionMark,
-    updateQuestionTime: state.updateQuestionTime,
-    markQuestionVisited: state.markQuestionVisited,
-  }));
+  return useTestStore(
+    (state) => ({
+      setCurrentTest: state.setCurrentTest,
+      setActiveQuestion: state.setActiveQuestion,
+      setTimeRemaining: state.setTimeRemaining,
+      answerQuestion: state.answerQuestion,
+      toggleMarkQuestion: state.toggleMarkQuestion,
+      completeTest: state.completeTest,
+      resetTest: state.resetTest,
+      fetchTest: state.fetchTest,
+      submitTest: state.submitTest,
+    }),
+    shallow
+  );
 };
 
 export const useTestResults = () => {
-  return useTestStore((state) => ({
-    results: state.results,
-    testHistory: state.testHistory,
-    fetchTestHistory: state.fetchTestHistory,
-    getCurrentQuestionStats: state.getCurrentQuestionStats,
-  }));
+  return useTestStore(
+    (state) => ({
+      testHistory: state.testHistory,
+      fetchTestHistory: state.fetchTestHistory,
+      results: state.results,
+    }),
+    shallow
+  );
+};
+
+export const useCurrentQuestionStats = () => {
+  return useTestStore(
+    (state) => ({
+      getCurrentQuestionStats: state.getCurrentQuestionStats,
+    }),
+    shallow
+  );
 }; 

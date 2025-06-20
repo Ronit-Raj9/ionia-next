@@ -4,7 +4,8 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { devtools, subscribeWithSelector, persist } from 'zustand/middleware';
+import { devtools, subscribeWithSelector, persist, StateStorage, createJSONStorage } from 'zustand/middleware';
+import { authAPI } from "../api/authApi";
 
 // Import shared types
 import type { 
@@ -43,6 +44,7 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   error: AuthError | null;
+  rememberMe: boolean;
 
   // === TOKEN MANAGEMENT ===
   accessToken: TokenInfo | null;
@@ -70,7 +72,7 @@ interface AuthState {
   // ==========================================
   
   // User Management
-  setUser: (user: User | null) => void;
+  setUser: (user: User | null, rememberMe?: boolean) => void;
   updateUser: (updates: Partial<User>) => void;
   clearUser: () => void;
 
@@ -160,6 +162,28 @@ const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const INACTIVITY_WARNING_TIME = 25 * 60 * 1000; // 25 minutes
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes
 
+const customStorage: StateStorage = {
+  getItem: (name: string) => {
+    return localStorage.getItem(name) || sessionStorage.getItem(name);
+  },
+  setItem: (name: string, value: string) => {
+    // The value is a stringified object from persist middleware, like: `{"state":{...},"version":...}`
+    // We need to parse it to get the `rememberMe` flag.
+    const { state } = JSON.parse(value);
+    if (state.rememberMe) {
+      localStorage.setItem(name, value);
+      sessionStorage.removeItem(name); // Clean up in case it was stored in session before
+    } else {
+      sessionStorage.setItem(name, value);
+      localStorage.removeItem(name); // Clean up in case it was stored in local before
+    }
+  },
+  removeItem: (name: string) => {
+    localStorage.removeItem(name);
+    sessionStorage.removeItem(name);
+  },
+};
+
 // ==========================================
 // 🧠 MAIN ZUSTAND STORE IMPLEMENTATION
 // ==========================================
@@ -175,6 +199,7 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
           isInitialized: false,
           error: null,
+          rememberMe: false,
           
           accessToken: null,
           refreshToken: null,
@@ -197,13 +222,16 @@ export const useAuthStore = create<AuthState>()(
           // 🎯 CORE ACTIONS IMPLEMENTATION
           // ==========================================
 
-          setUser: (user) =>
+          setUser: (user, rememberMe) =>
             set((state) => {
               state.user = user;
               state.isAuthenticated = !!user;
               state.userRole = user?.role || null;
               state.userPermissions = user?.permissions || [];
               state.lastActivity = Date.now();
+              if (rememberMe !== undefined) {
+                state.rememberMe = rememberMe;
+              }
               
               if (user) {
                 state.loginTimestamp = Date.now();
@@ -614,24 +642,36 @@ export const useAuthStore = create<AuthState>()(
           },
 
           initializeAuth: async () => {
+            set((state) => {
+              state.isLoading = true;
+            });
             try {
-              set((state) => { state.isLoading = true; });
-              
-              // Check for existing tokens in storage
               const accessToken = get().getAccessToken();
-              if (accessToken) {
-                // TODO: Validate token with backend
-                // const user = await authService.getCurrentUser();
-                // get().setUser(user);
+              if (!accessToken) {
+                // No token, so ensure we are fully logged out locally.
+                get().clearUser();
+                get().clearTokens();
+                return;
+              }
+              // If a token exists, validate it by fetching the user profile.
+              const response = await authAPI.getCurrentUser();
+              if (response.data) {
+                // The User object from the API already has the correct shape.
+                get().setUser(response.data);
+              } else {
+                // The token is invalid, clear the session.
+                get().clearUser();
+                get().clearTokens();
               }
             } catch (error) {
-              console.error('Auth initialization failed:', error);
-              get().clearTokens();
+              console.error("Auth initialization failed:", error);
+              // The API call failed, likely due to an invalid token or network error.
               get().clearUser();
+              get().clearTokens();
             } finally {
-              set((state) => { 
-                state.isLoading = false; 
-                state.isInitialized = true; 
+              set((state) => {
+                state.isLoading = false;
+                state.isInitialized = true;
               });
             }
           },
@@ -712,12 +752,14 @@ export const useAuthStore = create<AuthState>()(
         })),
         {
           name: 'auth-storage',
+          storage: createJSONStorage(() => customStorage),
           partialize: (state) => ({
             accessToken: state.accessToken,
             refreshToken: state.refreshToken,
             user: state.user,
             lastActivity: state.lastActivity,
             loginTimestamp: state.loginTimestamp,
+            rememberMe: state.rememberMe,
           }),
         }
       )

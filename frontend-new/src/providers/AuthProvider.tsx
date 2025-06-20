@@ -4,7 +4,8 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode, useState } from 'react';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
 // ==========================================
 // 🎯 AUTH PROVIDER CONTEXT
@@ -60,7 +61,12 @@ interface AuthProviderProps {
 // 🚀 MAIN AUTH PROVIDER COMPONENT
 // ==========================================
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({
+/**
+ * This provider is responsible for initializing the authentication state when the application loads.
+ * It waits for the Zustand store to be rehydrated from storage before attempting to validate
+ * the user's session, thus preventing race conditions.
+ */
+const AuthProvider: React.FC<AuthProviderProps> = ({
   children,
   config = {},
 }) => {
@@ -70,59 +76,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     onAuthError,
   } = config;
 
-  // Local state for provider configuration
-  const [providerState, setProviderState] = React.useState({
-    sessionWarningEnabled,
-    isInitialized: true,
-    initializationError: null as string | null,
-  });
+  const [isHydrated, setHydrated] = useState(false);
+  const { isInitialized, initializeAuth } = useAuthStore();
 
   // ==========================================
   // 🔄 INITIALIZATION EFFECT
   // ==========================================
 
+  // This effect waits for the Zustand store to finish rehydrating from localStorage/sessionStorage.
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        if (enableDebugLogs) {
-          console.log('🔐 AuthProvider: Initializing authentication system...');
-        }
+    const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
+      setHydrated(true);
+    });
 
-        // Basic initialization - can be extended later
-        setProviderState(prev => ({ 
-          ...prev, 
-          isInitialized: true,
-          initializationError: null
-        }));
-
-        if (enableDebugLogs) {
-          console.log('✅ AuthProvider: Authentication system initialized successfully');
-        }
-      } catch (error) {
-        console.error('❌ AuthProvider: Failed to initialize authentication:', error);
-        setProviderState(prev => ({ 
-          ...prev, 
-          isInitialized: true,
-          initializationError: error instanceof Error ? error.message : 'Unknown error'
-        }));
-        onAuthError?.(error as Error);
-      }
+    // Also set hydrated if it's already done.
+    if (useAuthStore.persist.hasHydrated()) {
+      setHydrated(true);
+    }
+    
+    return () => {
+      unsubscribe();
     };
+  }, []);
 
-    initializeAuth();
-  }, [enableDebugLogs, onAuthError]);
+  // Once the store is hydrated, we can safely initialize our auth state.
+  useEffect(() => {
+    if (isHydrated && !isInitialized) {
+      initializeAuth();
+    }
+  }, [isHydrated, isInitialized, initializeAuth]);
 
   // ==========================================
   // 🛠️ PROVIDER CONTEXT VALUE
   // ==========================================
 
   const contextValue: AuthProviderContextType = {
-    isInitialized: providerState.isInitialized,
-    initializationError: providerState.initializationError,
-    sessionWarningEnabled: providerState.sessionWarningEnabled,
+    isInitialized: isInitialized,
+    initializationError: null,
+    sessionWarningEnabled: sessionWarningEnabled,
     
     toggleSessionWarning: (enabled: boolean) => {
-      setProviderState(prev => ({ ...prev, sessionWarningEnabled: enabled }));
+      // Implementation needed
     },
     
     refreshApp: () => {
@@ -140,41 +134,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   // 📱 RENDER PROVIDER
   // ==========================================
 
-  // Show loading state during initialization
-  if (!providerState.isInitialized && !providerState.initializationError) {
+  // While hydrating and initializing, we can show a global loader here
+  // to prevent layout shifts or components flashing.
+  if (!isInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Initializing authentication...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state if initialization failed
-  if (providerState.initializationError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="w-16 h-16 mx-auto mb-4 text-red-500">
-            <svg fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Authentication Error
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Failed to initialize authentication system: {providerState.initializationError}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Retry
-          </button>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f9fafb' }}>
+        {/* You can replace this with a more sophisticated loader component */}
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '4px solid #f3f4f6',
+          borderTop: '4px solid #10b981',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <style jsx global>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -262,9 +241,7 @@ export const DevProvider: React.FC<DevProviderProps> = ({
 // 📤 EXPORTS
 // ==========================================
 
-export {
-  AuthProvider as default,
-};
+export default AuthProvider;
 
 // ==========================================
 // 🎯 TYPE EXPORTS

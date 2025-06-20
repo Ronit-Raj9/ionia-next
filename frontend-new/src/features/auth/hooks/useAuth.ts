@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { authAPI } from '@/features/auth/api/authApi';
 import { 
   validateToken, 
   shouldRefreshToken, 
@@ -120,19 +121,12 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
   const authActions = useMemo((): AuthActions => ({
     login: async (email: string, password: string, loginOptions = {}) => {
       try {
-        const result = await authStore.login({
+        await authAPI.login({
           email,
           password,
           rememberMe: loginOptions.rememberMe || false,
-          deviceInfo: {
-            userAgent: navigator.userAgent,
-            type: 'web',
-            name: 'web-browser',
-            browser: navigator.userAgent.split(' ')[0] || 'unknown',
-          }
         });
-        
-        return result;
+        return { success: true };
       } catch (error: any) {
         const authError: AuthError = {
           type: 'auth',
@@ -214,26 +208,23 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
     },
   }), [authStore, router, options]);
 
-  // Initialize auth on mount
+  // The initialization logic is now handled globally by AuthProvider.
+  // This useEffect can be removed.
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        await authStore.initializeAuth();
-      } finally {
-        setIsInitializing(false);
-      }
-    };
-
-    initAuth();
-  }, []);
+    if(!authStore.isInitialized) {
+      setIsInitializing(true);
+    } else {
+      setIsInitializing(false);
+    }
+  }, [authStore.isInitialized]);
 
   // Handle auth requirements
   useEffect(() => {
-    if (isInitializing) return;
+    if (authState.isLoading) return;
 
     // Check if auth is required
     if (options.requireAuth && !authState.isAuthenticated) {
-      const redirectUrl = options.redirectTo || '/auth/login';
+      const redirectUrl = options.redirectTo || '/login';
       const returnUrl = encodeURIComponent(pathname);
       router.push(`${redirectUrl}?returnUrl=${returnUrl}`);
       return;
@@ -271,7 +262,7 @@ export const useAuth = (options: UseAuthOptions = {}): AuthState & AuthActions =
         return;
       }
     }
-  }, [isInitializing, authState.isAuthenticated, authState.user, pathname, router, options]);
+  }, [authState.isLoading, authState.isAuthenticated, authState.user, pathname, router, options]);
 
   // Handle session expiring warning
   useEffect(() => {
@@ -544,7 +535,7 @@ export const useProtectedRoute = (options: {
   redirectTo?: string;
   onUnauthorized?: () => void;
 } = {}) => {
-  const { requireAuth = true, roles, permissions, redirectTo = '/auth/login', onUnauthorized } = options;
+  const { requireAuth = true, roles, permissions, redirectTo = '/login', onUnauthorized } = options;
   const router = useRouter();
   const pathname = usePathname();
   const { user, isAuthenticated, isLoading } = useAuthStore();

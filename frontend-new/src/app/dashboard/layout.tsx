@@ -2,58 +2,30 @@
 "use client";
 import '@/styles/globals.css'; // Your global styles
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/features/dashboard/components/Sidebar';
-import { FiMenu, FiX, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
+import { FiMenu } from 'react-icons/fi';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/features/auth/store/authStore';
-import { ClipLoader } from 'react-spinners';
 import Link from 'next/link';
+
+import { useProtectedRoute } from '@/features/auth/hooks/useAuth';
+import DashboardLoading from './loading';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  console.log('Dashboard layout rendering');
+  const { isChecking, isAuthorized, user } = useProtectedRoute({ requireAuth: true });
   
-  const router = useRouter();
-  const pathname = usePathname();
-  
-  const { user, isAuthenticated, isLoading: authLoading, error: authError, validateAuth } = useAuthStore();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [layoutError, setLayoutError] = useState<string | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
   
   const isMobile = useMediaQuery('(max-width: 768px)');
-
-  console.log('Dashboard layout state:', { 
-    user, 
-    isAuthenticated, 
-    authLoading, 
-    isSidebarOpen, 
-    isMobile,
-    pathname 
-  });
-
-  // Check authentication on mount
-  useEffect(() => {
-    if (!isAuthenticated && !authLoading) {
-      router.push('/auth/login');
-    }
-  }, [isAuthenticated, authLoading, router]);
-
-  // Initialize auth on mount
-  useEffect(() => {
-    validateAuth();
-  }, [validateAuth]);
 
   // Close sidebar on mobile by default
   useEffect(() => {
     if (!isInitialized) {
-      console.log('Initializing sidebar state based on screen size');
       setIsSidebarOpen(!isMobile);
       setIsInitialized(true);
     }
@@ -61,7 +33,6 @@ export default function DashboardLayout({
 
   // Handle sidebar toggle
   const toggleSidebar = useCallback(() => {
-    console.log('Toggling sidebar');
     setIsSidebarOpen(prev => !prev);
   }, []);
 
@@ -89,45 +60,12 @@ export default function DashboardLayout({
     return () => window.removeEventListener('resize', handleResize);
   }, [isMobile, isSidebarOpen]);
 
-  // Handle retry authentication
-  const handleRetry = useCallback(async () => {
-    try {
-      setIsRetrying(true);
-      setLayoutError(null);
-      await validateAuth();
-      console.log('Authentication retry successful');
-    } catch (err) {
-      console.error('Authentication retry failed:', err);
-      setLayoutError('Authentication retry failed. Please try again later.');
-    } finally {
-      setIsRetrying(false);
-    }
-  }, [validateAuth]);
+  if (isChecking) {
+    return <DashboardLoading />;
+  }
 
-  // Memoize the username to prevent unnecessary re-renders
-  const username = useMemo(() => {
-    // Check if user is in the expected IUser format with username property
-    if (user && 'username' in user) {
-      return user.username;
-    }
-    
-    // Check for nested data structure
-    if (user && typeof user === 'object' && 'data' in user) {
-      const userData = user as { data?: { username?: string } };
-      return userData.data?.username || 'Guest';
-    }
-    
-    return 'Guest';
-  }, [user]);
-
-  // Show loading state during initial authentication
-  if (authLoading && !isAuthenticated && !user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <ClipLoader size={40} color="#10b981" />
-        <h2 className="mt-4 text-lg font-semibold text-gray-700">Verifying your session...</h2>
-      </div>
-    );
+  if (!isAuthorized) {
+    return null; // The hook redirects, so we render nothing.
   }
 
   return (
@@ -150,7 +88,7 @@ export default function DashboardLayout({
           fixed md:sticky top-0 left-0 z-30 h-screen w-64
           bg-white shadow-md overflow-y-auto
         `}>
-          <Sidebar username={username} />
+          <Sidebar username={user?.fullName || user?.username || "User"} />
         </aside>
 
         {/* Main Content Area */}

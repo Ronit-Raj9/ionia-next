@@ -5,7 +5,7 @@ import Navbar from "@/shared/components/common/Navbar";
 import Footer from "@/shared/components/common/Footer";
 import Notifications from "@/shared/components/common/Notifications";
 import CookieConsent from "@/shared/components/common/CookieConsent";
-import { AuthProvider } from "@/providers/AuthProvider";
+import AuthProvider from "@/providers/AuthProvider";
 // import PerformanceInitializer from "@/components/performance/PerformanceInitializer";
 import { initializeCacheSystem } from "@/stores/cacheStore";
 // import { preloadComponentsByRole } from "@/components/performance/LazyComponents";

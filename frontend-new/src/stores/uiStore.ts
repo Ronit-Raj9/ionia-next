@@ -63,6 +63,9 @@ interface UIState {
   
   // === MOBILE ===
   isMobile: boolean;
+
+  // === NAVBAR ===
+  isNavbarOpen: boolean;
   
   // ==========================================
   // 🎯 ACTIONS
@@ -96,6 +99,10 @@ interface UIState {
   
   // Mobile Actions
   setIsMobile: (isMobile: boolean) => void;
+
+  // Navbar Actions
+  setNavbarOpen: (open: boolean) => void;
+  toggleNavbar: () => void;
 }
 
 // ==========================================
@@ -124,6 +131,7 @@ export const useUIStore = create<UIState>()(
         sidebarOpen: true,
         sidebarCollapsed: false,
         isMobile: false,
+        isNavbarOpen: false,
 
         // ==========================================
         // 🎯 LOADING ACTIONS IMPLEMENTATION
@@ -249,7 +257,7 @@ export const useUIStore = create<UIState>()(
         },
 
         // ==========================================
-        // 📱 SIDEBAR ACTIONS IMPLEMENTATION
+        // 🎨 SIDEBAR ACTIONS IMPLEMENTATION
         // ==========================================
 
         setSidebarOpen: (open) =>
@@ -284,6 +292,19 @@ export const useUIStore = create<UIState>()(
             if (isMobile) {
               state.sidebarOpen = false;
             }
+          }),
+
+        // ==========================================
+        // 🎨 NAVBAR ACTIONS IMPLEMENTATION
+        // ==========================================
+        setNavbarOpen: (open) =>
+          set((state) => {
+            state.isNavbarOpen = open;
+          }),
+        
+        toggleNavbar: () =>
+          set((state) => {
+            state.isNavbarOpen = !state.isNavbarOpen;
           }),
       }))
     ),
@@ -323,6 +344,9 @@ export const uiSelectors = {
   
   // Mobile selectors
   isMobile: (state: any) => state.isMobile,
+
+  // Navbar selectors
+  isNavbarOpen: (state: any) => state.isNavbarOpen,
 };
 
 // ==========================================

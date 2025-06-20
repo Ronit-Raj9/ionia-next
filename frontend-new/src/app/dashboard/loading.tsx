@@ -9,8 +9,8 @@ export default function DashboardLoading() {
       <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg p-8 text-center">
         <div className="flex flex-col items-center mb-8">
           <ClipLoader size={60} color="#10b981" />
-          <h2 className="mt-6 text-2xl font-bold text-gray-800">Loading Your Dashboard</h2>
-          <p className="mt-2 text-gray-500">Please wait while we prepare your data...</p>
+          <h2 className="mt-6 text-2xl font-bold text-gray-800">Loading Dashboard</h2>
+          <p className="mt-2 text-gray-500">Please wait while we prepare the dashboard...</p>
         </div>
         
         <div className="space-y-6 mb-8">
@@ -19,15 +19,15 @@ export default function DashboardLoading() {
             <ul className="text-left text-gray-600 space-y-2">
               <li className="flex items-center">
                 <span className="w-4 h-4 bg-green-500 rounded-full mr-3 flex-shrink-0"></span>
-                <span>Retrieving your test history</span>
+                <span>Loading components</span>
               </li>
               <li className="flex items-center">
                 <span className="w-4 h-4 bg-blue-500 rounded-full mr-3 flex-shrink-0"></span>
-                <span>Calculating your performance metrics</span>
+                <span>Preparing layout</span>
               </li>
               <li className="flex items-center">
                 <span className="w-4 h-4 bg-purple-500 rounded-full mr-3 flex-shrink-0"></span>
-                <span>Preparing your personalized insights</span>
+                <span>Finalizing dashboard</span>
               </li>
             </ul>
           </div>
@@ -35,11 +35,11 @@ export default function DashboardLoading() {
           <div className="w-full bg-gray-200 rounded-full h-2.5">
             <div className="bg-green-500 h-2.5 rounded-full w-3/4 animate-pulse"></div>
           </div>
-          <p className="text-sm text-gray-500">Data retrieval in progress...</p>
+          <p className="text-sm text-gray-500">Almost there...</p>
         </div>
         
         <p className="text-sm text-gray-400 italic">
-          If loading takes too long, the dashboard will display sample data so you can explore the interface.
+          The dashboard is loading.
         </p>
       </div>
     </div>

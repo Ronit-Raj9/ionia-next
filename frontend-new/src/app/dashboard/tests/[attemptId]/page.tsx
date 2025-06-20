@@ -2,7 +2,6 @@
 
 import React from 'react';
 import AnalysisWindow from '@/features/analysis/components/AnalysisWindow';
-import { AnalysisProvider } from '@/context/AnalysisContext';
 
 interface AnalysisPageProps {
   params: {
@@ -12,14 +11,10 @@ interface AnalysisPageProps {
 
 const AnalysisPage: React.FC<AnalysisPageProps> = ({ params }) => {
   return (
-    
-      <AnalysisProvider>
-        <AnalysisWindow 
-          paperId={params.attemptId} 
-          examType="cuet" // Default exam type
-        />
-      </AnalysisProvider>
-    
+    <AnalysisWindow 
+      paperId={params.attemptId} 
+      examType="cuet" // Default exam type
+    />
   );
 };
 
