@@ -8,6 +8,7 @@ import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOu
 import { AiOutlineGoogle } from 'react-icons/ai';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'react-hot-toast';
+import { authAPI } from '@/features/auth/api/authApi';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -16,14 +17,10 @@ export default function RegisterPage() {
     username: '',
     password: '',
     confirmPassword: '',
-    acceptTerms: false,
   });
   const router = useRouter();
   
-  const { isLoading, error, register, clearError } = useAuthStore();
-  const [usernameError, setUsernameError] = useState('');
-  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const [usernameAvailable, setUsernameAvailable] = useState(false);
+  const { isLoading, error, clearError } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -33,104 +30,32 @@ export default function RegisterPage() {
   }, [clearError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-    
-    // Reset username availability when user starts typing
-    if (name === 'username') {
-      setUsernameAvailable(false);
-      setUsernameError('');
-    }
-  };
-
-  const validateUsername = (username: string): boolean => {
-    // Username should be 3-20 characters and include only letters, numbers, and underscores
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    if (!usernameRegex.test(username)) {
-      setUsernameError("Username must be 3-20 characters and can only contain letters, numbers, and underscores");
-      return false;
-    }
-    return true;
-  };
-
-  const checkUsernameAvailability = async (username: string): Promise<void> => {
-    if (!username || username.trim() === "" || !validateUsername(username)) {
-      return;
-    }
-    
-    try {
-      setIsCheckingUsername(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/check-username`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username }),
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        setUsernameAvailable(true);
-        setUsernameError('');
-      } else {
-        setUsernameAvailable(false);
-        setUsernameError(data.message || "Username is not available");
-      }
-    } catch (error) {
-      console.error('Error checking username:', error);
-      setUsernameAvailable(false);
-      setUsernameError("Error checking username availability");
-    } finally {
-      setIsCheckingUsername(false);
-    }
-  };
-
-  const handleUsernameBlur = () => {
-    if (formData.username && validateUsername(formData.username)) {
-      checkUsernameAvailability(formData.username);
-    }
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Reset errors
-    setUsernameError('');
-    
-    // Validate username format
-    if (!validateUsername(formData.username)) {
-      return;
-    }
+    clearError();
 
-    // Validate password match
     if (formData.password !== formData.confirmPassword) {
-      setUsernameError("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
     
     try {
-      // Check username availability again before submission
-      await checkUsernameAvailability(formData.username);
-      
-      // Only proceed if username is available
-      if (!usernameAvailable) {
-        return; // Stop if username is not available
-      }
-      
-      // Proceed with registration
-      const result = await register({ ...formData });
-      
-      if (result.success) {
-        toast.success("Registration successful! Please log in.");
-        router.push('/auth/login');
-      }
-    } catch (error) {
-      console.error(error);
-      setUsernameError("An error occurred during registration");
+      await authAPI.register({
+        fullName: formData.fullName,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+      });
+
+      toast.success("Registration successful! Please log in.");
+      router.push('/auth/login');
+    } catch (err: any) {
+      // Error notification is already handled by authAPI
+      console.error("Registration failed:", err.message);
     }
   };
 
@@ -179,7 +104,7 @@ export default function RegisterPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
             >
-              {typeof error === 'string' ? error : error?.message}
+              {error.message}
             </motion.div>
           )}
 
@@ -206,23 +131,11 @@ export default function RegisterPage() {
                 name="username"
                 type="text"
                 required
-                className={`block w-full rounded-md border ${
-                  usernameError ? 'border-red-300' : usernameAvailable ? 'border-green-300' : 'border-gray-300'
-                } bg-white/60 backdrop-blur placeholder-gray-500 pl-10 pr-3 py-2 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm`}
+                className="block w-full rounded-md border border-gray-300 bg-white/60 backdrop-blur placeholder-gray-500 pl-10 pr-3 py-2 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
                 placeholder="Username"
                 value={formData.username}
                 onChange={handleChange}
-                onBlur={handleUsernameBlur}
               />
-              {isCheckingUsername && (
-                <p className="text-gray-500 text-xs mt-1">Checking username availability...</p>
-              )}
-              {usernameError && (
-                <p className="text-red-500 text-xs mt-1">{usernameError}</p>
-              )}
-              {usernameAvailable && !usernameError && (
-                <p className="text-green-500 text-xs mt-1">Username is available!</p>
-              )}
             </div>
             {/* Email */}
             <div className="relative">
@@ -276,7 +189,7 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
-
+          
           <div>
             <button
               type="submit"
@@ -345,22 +258,6 @@ export default function RegisterPage() {
               <AiOutlineGoogle className="h-5 w-5" />
               <span>Google</span>
             </button>
-          </div>
-
-          {/* Accept Terms Checkbox */}
-          <div className="flex items-center">
-            <input
-              id="acceptTerms"
-              name="acceptTerms"
-              type="checkbox"
-              checked={formData.acceptTerms}
-              onChange={handleChange}
-              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-              required
-            />
-            <label htmlFor="acceptTerms" className="ml-2 block text-sm text-gray-700">
-              I agree to the <Link href="/terms" className="text-emerald-600 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-emerald-600 hover:underline">Privacy Policy</Link>
-            </label>
           </div>
         </motion.form>
 

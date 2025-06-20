@@ -262,6 +262,7 @@ export interface LoginResponse {
     email: string;
     username: string;
     role: string;
+    avatar?: string;
   };
   accessToken: string;
   refreshToken: string;
@@ -382,6 +383,7 @@ export const authAPI = {
     password: string;
   }): Promise<APIResponse<{ message: string }>> => {
     const { addNotification } = useUIStore.getState();
+    const { setError } = useAuthStore.getState();
     
     try {
       const response = await fetchWithAuth<APIResponse<{ message: string }>>(
@@ -402,6 +404,12 @@ export const authAPI = {
       
       return response;
     } catch (error: any) {
+      setError({
+        type: 'auth',
+        message: error.message || 'Registration failed',
+        timestamp: Date.now(),
+        context: { email: userData.email }
+      });
       addNotification({
         type: 'error',
         title: 'Registration Failed',
