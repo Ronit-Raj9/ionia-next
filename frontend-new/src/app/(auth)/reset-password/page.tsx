@@ -84,7 +84,7 @@ const ResetPassword = () => {
       
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push("/auth/login");
+        router.push("/login");
       }, 3000);
       
     } catch (error: any) {
@@ -242,7 +242,7 @@ const ResetPassword = () => {
                 <div className="text-center text-sm">
                   <p className="text-gray-600">
                     Remember your password?{" "}
-                    <Link href="/auth/login" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors duration-200">
+                    <Link href="/login" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors duration-200">
                       Back to Login
                     </Link>
                   </p>

@@ -6,6 +6,7 @@
 
 import React, { createContext, useContext, useEffect, ReactNode, useState } from 'react';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { clearAllCachedData } from '@/features/auth/api/authApi';
 
 // ==========================================
 // 🎯 AUTH PROVIDER CONTEXT
@@ -14,15 +15,9 @@ import { useAuthStore } from '@/features/auth/store/authStore';
 interface AuthProviderContextType {
   // Core authentication state
   isInitialized: boolean;
-  initializationError: string | null;
-  
-  // Session management
-  sessionWarningEnabled: boolean;
-  toggleSessionWarning: (enabled: boolean) => void;
   
   // Global auth actions
-  refreshApp: () => void;
-  clearAllData: () => void;
+  logout: () => void;
 }
 
 const AuthProviderContext = createContext<AuthProviderContextType | null>(null);
@@ -31,30 +26,8 @@ const AuthProviderContext = createContext<AuthProviderContextType | null>(null);
 // 🔧 AUTH PROVIDER CONFIGURATION
 // ==========================================
 
-interface AuthProviderConfig {
-  // Session management
-  sessionWarningEnabled?: boolean;
-  sessionWarningThreshold?: number; // milliseconds
-  autoRefreshTokens?: boolean;
-  refreshTokenThreshold?: number; // milliseconds before expiry
-  
-  // Error handling
-  onAuthError?: (error: Error) => void;
-  onSessionExpired?: () => void;
-  onTokenRefreshFailed?: (error: Error) => void;
-  
-  // Development settings
-  enableDebugLogs?: boolean;
-  apiBaseUrl?: string;
-  
-  // UI settings
-  showSessionWarning?: boolean;
-  sessionWarningPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
-}
-
 interface AuthProviderProps {
   children: ReactNode;
-  config?: AuthProviderConfig;
 }
 
 // ==========================================
@@ -67,17 +40,10 @@ interface AuthProviderProps {
  * the user's session, thus preventing race conditions.
  */
 const AuthProvider: React.FC<AuthProviderProps> = ({
-  children,
-  config = {},
+  children
 }) => {
-  const {
-    sessionWarningEnabled = true,
-    enableDebugLogs = false,
-    onAuthError,
-  } = config;
-
-  const [isHydrated, setHydrated] = useState(false);
-  const { isInitialized, initializeAuth } = useAuthStore();
+  const { isInitialized, initializeAuth, logout } = useAuthStore();
+  const [isHydrated, setHydrated] = useState(useAuthStore.persist.hasHydrated());
 
   // ==========================================
   // 🔄 INITIALIZATION EFFECT
@@ -88,11 +54,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({
     const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
       setHydrated(true);
     });
-
-    // Also set hydrated if it's already done.
-    if (useAuthStore.persist.hasHydrated()) {
-      setHydrated(true);
-    }
     
     return () => {
       unsubscribe();
@@ -112,22 +73,10 @@ const AuthProvider: React.FC<AuthProviderProps> = ({
 
   const contextValue: AuthProviderContextType = {
     isInitialized: isInitialized,
-    initializationError: null,
-    sessionWarningEnabled: sessionWarningEnabled,
-    
-    toggleSessionWarning: (enabled: boolean) => {
-      // Implementation needed
-    },
-    
-    refreshApp: () => {
-      window.location.reload();
-    },
-    
-    clearAllData: async () => {
-      // Clear any app data here
-      localStorage.clear();
-      sessionStorage.clear();
-    },
+    logout: () => {
+      logout('manual');
+      clearAllCachedData();
+    }
   };
 
   // ==========================================
@@ -136,7 +85,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({
 
   // While hydrating and initializing, we can show a global loader here
   // to prevent layout shifts or components flashing.
-  if (!isInitialized) {
+  if (!isHydrated || !isInitialized) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f9fafb' }}>
         {/* You can replace this with a more sophisticated loader component */}
@@ -166,23 +115,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({
 };
 
 // ==========================================
-// 🎨 HELPER FUNCTIONS
-// ==========================================
-
-const getSessionWarningPositionClasses = (position: string): string => {
-  switch (position) {
-    case 'top-left':
-      return 'top-4 left-4';
-    case 'bottom-right':
-      return 'bottom-4 right-4';
-    case 'bottom-left':
-      return 'bottom-4 left-4';
-    default:
-      return 'top-4 right-4';
-  }
-};
-
-// ==========================================
 // 🎯 PROVIDER CONTEXT HOOK
 // ==========================================
 
@@ -197,47 +129,6 @@ export const useAuthProvider = (): AuthProviderContextType => {
 };
 
 // ==========================================
-// 🛡️ ADMIN PROVIDER - ENHANCED FOR ADMIN FEATURES
-// ==========================================
-
-interface AdminProviderProps {
-  children: ReactNode;
-  requireSuperAdmin?: boolean;
-  fallback?: ReactNode;
-}
-
-export const AdminProvider: React.FC<AdminProviderProps> = ({
-  children,
-  requireSuperAdmin = false,
-  fallback,
-}) => {
-  // For now, just render children - can be enhanced when auth store is available
-  return <>{children}</>;
-};
-
-// ==========================================
-// 🔧 DEVELOPMENT PROVIDER - DEV TOOLS
-// ==========================================
-
-interface DevProviderProps {
-  children: ReactNode;
-  enabled?: boolean;
-}
-
-export const DevProvider: React.FC<DevProviderProps> = ({
-  children,
-  enabled = process.env.NODE_ENV === 'development',
-}) => {
-  useEffect(() => {
-    if (enabled && typeof window !== 'undefined') {
-      console.log('🧪 Dev: Auth debug tools available');
-    }
-  }, [enabled]);
-
-  return <>{children}</>;
-};
-
-// ==========================================
 // 📤 EXPORTS
 // ==========================================
 
@@ -248,6 +139,5 @@ export default AuthProvider;
 // ==========================================
 
 export type {
-  AuthProviderConfig,
   AuthProviderContextType,
 };

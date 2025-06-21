@@ -224,7 +224,7 @@ class AuthService {
 
       // Make API call to your Node.js backend
       const response = await enhancedFetch(
-        `${this.baseURL}/auth/login`,
+        `${this.baseURL}/login`,
         {
           method: 'POST',
           body: JSON.stringify(payload),
@@ -303,7 +303,7 @@ class AuthService {
 
       // Make API call
       const response = await enhancedFetch(
-        `${this.baseURL}/auth/register`,
+        `${this.baseURL}/register`,
         {
           method: 'POST',
           body: JSON.stringify(payload),

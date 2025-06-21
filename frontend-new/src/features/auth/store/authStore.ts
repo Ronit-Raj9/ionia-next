@@ -147,6 +147,49 @@ interface AuthState {
   cleanup: () => void;
 }
 
+type AuthStateValues = Omit<AuthState, keyof AuthStateActions>;
+type AuthStateActions = {
+  setUser: (user: User | null, rememberMe?: boolean) => void;
+  updateUser: (updates: Partial<User>) => void;
+  clearUser: () => void;
+  setLoading: (loading: boolean) => void;
+  setInitialized: (initialized: boolean) => void;
+  setError: (error: AuthError | null) => void;
+  clearError: () => void;
+  addError: (type: AuthError['type'], message: string, context?: Record<string, any>) => void;
+  setTokens: (accessToken: string, refreshToken?: string) => void;
+  clearTokens: () => void;
+  updateAccessToken: (accessToken: string) => void;
+  isTokenExpired: (token?: TokenInfo) => boolean;
+  isTokenExpiring: (token?: TokenInfo, thresholdMinutes?: number) => boolean;
+  getAccessToken: () => string | null;
+  getRefreshToken: () => string | null;
+  createSession: (deviceInfo?: Partial<SessionInfo>) => void;
+  updateActivity: () => void;
+  validateSession: () => boolean;
+  clearSession: () => void;
+  isSessionExpired: () => boolean;
+  getSessionDuration: () => number;
+  hasRole: (role: UserRole | UserRole[]) => boolean;
+  hasPermission: (permission: Permission | Permission[]) => boolean;
+  canAccess: (resource: string, action?: string) => boolean;
+  isMinimumRole: (minRole: UserRole) => boolean;
+  getRoleLevel: (role?: UserRole) => number;
+  login: (credentials: LoginCredentials) => Promise<AuthResult>;
+  logout: (reason?: LogoutReason) => Promise<void>;
+  register: (userData: RegisterData) => Promise<AuthResult>;
+  refreshAuth: () => Promise<boolean>;
+  validateAuth: () => Promise<boolean>;
+  initializeAuth: () => Promise<void>;
+  showSessionExpired: () => void;
+  hideSessionExpired: () => void;
+  showInactivityAlert: () => void;
+  hideInactivityAlert: () => void;
+  resetInactivityTimer: () => void;
+  reset: () => void;
+  cleanup: () => void;
+};
+
 // ==========================================
 // 🛠️ UTILITY CONSTANTS
 // ==========================================
@@ -161,6 +204,28 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const INACTIVITY_WARNING_TIME = 25 * 60 * 1000; // 25 minutes
 const TOKEN_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+
+const initialState: AuthStateValues = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: false,
+  isInitialized: false,
+  error: null,
+  rememberMe: false,
+  accessToken: null,
+  refreshToken: null,
+  isRefreshing: false,
+  refreshPromise: null,
+  session: null,
+  lastActivity: Date.now(),
+  loginTimestamp: null,
+  showSessionExpiredModal: false,
+  showInactivityWarning: false,
+  isSessionValid: false,
+  userRole: null,
+  userPermissions: [],
+  roleHierarchy: ROLE_HIERARCHY,
+};
 
 const customStorage: StateStorage = {
   getItem: (name: string) => {
@@ -193,30 +258,7 @@ export const useAuthStore = create<AuthState>()(
     subscribeWithSelector(
       persist(
         immer((set, get) => ({
-          // === INITIAL STATE ===
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          isInitialized: false,
-          error: null,
-          rememberMe: false,
-          
-          accessToken: null,
-          refreshToken: null,
-          isRefreshing: false,
-          refreshPromise: null,
-          
-          session: null,
-          lastActivity: Date.now(),
-          loginTimestamp: null,
-          
-          showSessionExpiredModal: false,
-          showInactivityWarning: false,
-          isSessionValid: false,
-          
-          userRole: null,
-          userPermissions: [],
-          roleHierarchy: ROLE_HIERARCHY,
+          ...initialState,
 
           // ==========================================
           // 🎯 CORE ACTIONS IMPLEMENTATION
@@ -495,87 +537,76 @@ export const useAuthStore = create<AuthState>()(
           // ==========================================
 
           login: async (credentials) => {
-            set((state) => { state.isLoading = true; state.error = null; });
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
 
             try {
-              // TODO: Replace with actual auth service call
-              // const result = await authService.login(credentials);
-              
-              // Mock successful login for now
-              const mockUser: User = {
-                id: '1',
-                email: credentials.email,
-                username: credentials.email.split('@')[0],
-                fullName: 'Test User',
-                role: 'user',
-                permissions: DEFAULT_PERMISSIONS.user,
-                avatar: '',
-                emailVerified: true,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
-
-              get().setUser(mockUser);
-              get().setTokens('mock-access-token', 'mock-refresh-token');
-              get().createSession(credentials.deviceInfo);
-
-              return { success: true, user: mockUser };
+              const response = await authAPI.login(credentials);
+              get().setUser(response.user, credentials.rememberMe);
+              get().setTokens(response.accessToken, response.refreshToken);
+              get().createSession();
+              return { success: true, user: response.user };
             } catch (error: any) {
               const authError: AuthError = {
                 type: 'auth',
                 message: error.message || 'Login failed',
                 timestamp: Date.now(),
-                context: { email: credentials.email }
+                context: { email: credentials.email },
               };
-              
               get().setError(authError);
               return { success: false, error: authError };
             } finally {
-              set((state) => { state.isLoading = false; });
+              set((state) => {
+                state.isLoading = false;
+              });
             }
           },
 
           logout: async (reason = 'manual') => {
-            set((state) => { state.isLoading = true; });
-
+            set((state) => {
+              state.isLoading = true;
+            });
             try {
-              // TODO: Call logout API
-              // await authService.logout(reason);
+              await authAPI.logout();
             } catch (error) {
               console.warn('Logout API call failed:', error);
             } finally {
-              // Always clear local state
               get().clearUser();
               get().clearTokens();
               get().clearSession();
-              set((state) => { state.isLoading = false; });
+              set((state) => {
+                state.isLoading = false;
+              });
             }
           },
 
           register: async (userData) => {
-            set((state) => { state.isLoading = true; state.error = null; });
+            set((state) => {
+              state.isLoading = true;
+              state.error = null;
+            });
 
             try {
-              // TODO: Replace with actual auth service call
-              // const result = await authService.register(userData);
-              
-              // Mock successful registration
-              return { 
-                success: true, 
-                requiresVerification: true 
+              await authAPI.register(userData);
+              return {
+                success: true,
+                requiresVerification: true,
               };
             } catch (error: any) {
               const authError: AuthError = {
                 type: 'auth',
                 message: error.message || 'Registration failed',
                 timestamp: Date.now(),
-                context: { email: userData.email }
+                context: { email: userData.email },
               };
-              
               get().setError(authError);
               return { success: false, error: authError };
             } finally {
-              set((state) => { state.isLoading = false; });
+              set((state) => {
+                state.isLoading = false;
+              });
             }
           },
 
@@ -655,9 +686,8 @@ export const useAuthStore = create<AuthState>()(
               }
               // If a token exists, validate it by fetching the user profile.
               const response = await authAPI.getCurrentUser();
-              if (response.data) {
-                // The User object from the API already has the correct shape.
-                get().setUser(response.data);
+              if (response) {
+                get().setUser(response);
               } else {
                 // The token is invalid, clear the session.
                 get().clearUser();
@@ -713,30 +743,7 @@ export const useAuthStore = create<AuthState>()(
           // 🧹 CLEANUP ACTIONS IMPLEMENTATION
           // ==========================================
 
-          reset: () =>
-            set((state) => {
-              // Reset to initial state
-              Object.assign(state, {
-                user: null,
-                isAuthenticated: false,
-                isLoading: false,
-                isInitialized: false,
-                error: null,
-                accessToken: null,
-                refreshToken: null,
-                isRefreshing: false,
-                refreshPromise: null,
-                session: null,
-                lastActivity: Date.now(),
-                loginTimestamp: null,
-                showSessionExpiredModal: false,
-                showInactivityWarning: false,
-                isSessionValid: false,
-                userRole: null,
-                userPermissions: [],
-                roleHierarchy: ROLE_HIERARCHY,
-              });
-            }),
+          reset: () => set(initialState),
 
           cleanup: () => {
             const state = get();

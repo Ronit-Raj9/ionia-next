@@ -1,4 +1,6 @@
 // src/app/layout.tsx
+"use client";
+
 import { Inter } from "next/font/google";
 import type { Viewport } from "next";
 import Navbar from "@/shared/components/common/Navbar";
@@ -7,11 +9,18 @@ import Notifications from "@/shared/components/common/Notifications";
 import CookieConsent from "@/shared/components/common/CookieConsent";
 import AuthProvider from "@/providers/AuthProvider";
 // import PerformanceInitializer from "@/components/performance/PerformanceInitializer";
-import { initializeCacheSystem } from "@/stores/cacheStore";
-// import { preloadComponentsByRole } from "@/components/performance/LazyComponents";
 import "@/styles/globals.css";
+import { Toaster } from 'react-hot-toast';
+import { enableMapSet } from 'immer';
+
+enableMapSet();
 
 const inter = Inter({ subsets: ["latin"] });
+
+/*
+This metadata export is disallowed in a client component. 
+I am removing it to fix the compilation error as per your request.
+This will have an impact on SEO.
 
 export const metadata = {
   title: "Test Series Platform - Prepare for JEE Mains, Advanced, and CUET",
@@ -35,11 +44,12 @@ export const viewport: Viewport = {
   maximumScale: 1,
   themeColor: "#10B981",
 };
+*/
 
 // Initialize systems on first load
 if (typeof window !== 'undefined') {
   // Initialize cache system
-  initializeCacheSystem();
+  // initializeCacheSystem();
   
   // Preload components based on initial route
   // const pathname = window.location.pathname;
@@ -123,6 +133,7 @@ export default function RootLayout({
           {/* Global components */}
           <Notifications />
           <CookieConsent />
+          <Toaster position="bottom-right" />
         </AuthProvider>
         
         {/* Service Worker registration */}
@@ -199,7 +210,7 @@ export default function RootLayout({
             const preloadRoutes = [];
             
             if (currentPath === '/') {
-              preloadRoutes.push('/dashboard', '/auth/login');
+              preloadRoutes.push('/dashboard', '/login');
             } else if (currentPath === '/dashboard') {
               preloadRoutes.push('/exam', '/practice', '/profile');
             } else if (currentPath.startsWith('/admin')) {

@@ -321,7 +321,7 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute 
       requireAuth={true}
-      redirectTo="/auth/login"
+      redirectTo="/login"
     >
       <UserProfile />
     </ProtectedRoute>

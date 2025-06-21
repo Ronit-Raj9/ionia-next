@@ -76,11 +76,11 @@ const Sidebar: React.FC<SidebarProps> = ({ username }) => {
       await logout();
       
       console.log('Logout successful, redirecting to login page');
-      router.push('/auth/login');
+      router.push('/login');
     } catch (error) {
       console.error('Error during logout:', error);
       // Even if there's an error, we should still redirect to login
-      router.push('/auth/login');
+      router.push('/login');
     }
   };
 

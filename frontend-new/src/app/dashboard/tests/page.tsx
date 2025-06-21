@@ -46,7 +46,7 @@ export default function MyTests() {
 
   useEffect(() => {
     if (!isAuthenticated && !authLoading) {
-      router.push('/auth/login');
+      router.push('/login');
       return;
     }
 

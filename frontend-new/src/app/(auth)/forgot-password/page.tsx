@@ -85,7 +85,7 @@ const ForgotPassword = () => {
                   <div className="ml-3">
                     <p className="text-sm font-medium text-emerald-800">{message}</p>
                     <div className="mt-2">
-                      <Link href="/auth/login" className="text-emerald-600 hover:text-emerald-800 font-medium text-sm">
+                      <Link href="/login" className="text-emerald-600 hover:text-emerald-800 font-medium text-sm">
                         Return to login
                       </Link>
                     </div>
@@ -163,7 +163,7 @@ const ForgotPassword = () => {
                 <div className="text-center text-sm">
                   <p className="text-gray-600">
                     Remember your password?{" "}
-                    <Link href="/auth/login" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors duration-200">
+                    <Link href="/login" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors duration-200">
                       Back to Login
                     </Link>
                   </p>

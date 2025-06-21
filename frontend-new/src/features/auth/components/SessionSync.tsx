@@ -1,44 +1,22 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useAuthStore, startTokenMonitoring, stopTokenMonitoring, startTabSynchronization, trackUserActivity } from '@/stores/authStore';
+import { useEffect } from 'react';
+import { useAuthStore } from '@/features/auth/store/authStore';
 
+/**
+ * This component handles the initialization of the auth state when the app loads.
+ * It ensures that the user's session is validated from storage.
+ */
 const SessionSync: React.FC = () => {
-  const { isAuthenticated } = useAuthStore();
-  const cleanupFunctions = useRef<(() => void)[]>([]);
+  const { initializeAuth, isInitialized } = useAuthStore();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    // Start token monitoring and activity tracking
-    if (isAuthenticated) {
-      startTokenMonitoring();
-      
-      // Start tab synchronization
-      const tabSyncCleanup = startTabSynchronization();
-      if (tabSyncCleanup) {
-        cleanupFunctions.current.push(tabSyncCleanup);
+    if (!isInitialized) {
+      initializeAuth();
       }
+  }, [initializeAuth, isInitialized]);
 
-      // Start activity tracking
-      const activityCleanup = trackUserActivity();
-      if (activityCleanup) {
-        cleanupFunctions.current.push(activityCleanup);
-      }
-    } else {
-      // Stop monitoring if not authenticated
-      stopTokenMonitoring();
-    }
-
-    // Cleanup on unmount or auth change
-    return () => {
-      stopTokenMonitoring();
-      cleanupFunctions.current.forEach(cleanup => cleanup());
-      cleanupFunctions.current = [];
-    };
-  }, [isAuthenticated]);
-
-  // This component doesn't render anything
+  // This component does not render anything.
   return null;
 };
 

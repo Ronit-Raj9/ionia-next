@@ -75,14 +75,12 @@ export interface RegisterData {
   acceptTerms: boolean;
 }
 
-export interface AuthResult {
-  success: boolean;
-  error?: AuthError;
-  user?: User;
-  requiresVerification?: boolean;
-}
+export type AuthResult = 
+  | { success: true; user: User; error?: undefined; requiresVerification?: boolean; }
+  | { success: true; requiresVerification: true; user?: undefined; error?: undefined; }
+  | { success: false; error: AuthError; user?: undefined; requiresVerification?: undefined; };
 
-export type LogoutReason = 'manual' | 'expired' | 'inactive' | 'security' | 'device_change';
+export type LogoutReason = 'manual' | 'expired' | 'inactive' | 'security' | 'device_change' | 'error';
 
 // ==========================================
 // 🎯 UTILITY TYPES

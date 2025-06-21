@@ -3,69 +3,57 @@
 import '@/styles/globals.css'; // Your global styles
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/features/dashboard/components/Sidebar';
 import { FiMenu } from 'react-icons/fi';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import Link from 'next/link';
-
-import { useProtectedRoute } from '@/features/auth/hooks/useAuth';
-import DashboardLoading from './loading';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isChecking, isAuthorized, user } = useProtectedRoute({ requireAuth: true });
-  
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
-  
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const router = useRouter();
+  const { user, isAuthenticated, isInitialized } = useAuth();
 
-  // Close sidebar on mobile by default
   useEffect(() => {
-    if (!isInitialized) {
-      setIsSidebarOpen(!isMobile);
-      setIsInitialized(true);
-    }
-  }, [isMobile, isInitialized]);
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
 
-  // Handle sidebar toggle
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isInitialized, isAuthenticated, router]);
+
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);
   }, []);
 
-  // Handle keyboard events for accessibility
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isSidebarOpen && isMobile) {
-        setIsSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSidebarOpen, isMobile]);
-
-  // Handle window resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (isMobile && isSidebarOpen) {
-        setIsSidebarOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isMobile, isSidebarOpen]);
-
-  if (isChecking) {
-    return <DashboardLoading />;
-  }
-
-  if (!isAuthorized) {
-    return null; // The hook redirects, so we render nothing.
+  // Show a loader while checking for authentication
+  if (!isInitialized || !isAuthenticated) {
+     return (
+       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f9fafb' }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '4px solid #f3f4f6',
+          borderTop: '4px solid #10b981',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <style jsx global>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
   }
 
   return (
@@ -88,7 +76,7 @@ export default function DashboardLayout({
           fixed md:sticky top-0 left-0 z-30 h-screen w-64
           bg-white shadow-md overflow-y-auto
         `}>
-          <Sidebar username={user?.fullName || user?.username || "User"} />
+          <Sidebar username={user?.fullName || 'Guest'} />
         </aside>
 
         {/* Main Content Area */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { 
   ClipboardDocumentListIcon, 
   QuestionMarkCircleIcon, 
@@ -11,13 +11,11 @@ import {
   AcademicCapIcon,
   DocumentCheckIcon,
   ExclamationCircleIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  UserPlusIcon
 } from "@heroicons/react/24/outline";
-import { fetchTestAnalytics } from '../../features/tests/api/analytics';
 import Link from 'next/link';
-import { TestAnalytics } from '../../features/tests/api/analytics';
-import { toast } from 'react-hot-toast';
-import axios from 'axios';
+import { useAdminStore } from '@/features/admin/store/adminStore';
 
 interface StatItem {
   name: string;
@@ -27,85 +25,20 @@ interface StatItem {
   description: string;
 }
 
-interface TestItem {
-  id: string;
-  title: string;
-  questions: number;
-  attempts: number;
-  createdAt: string;
-}
-
-interface QuestionItem {
-  id: string;
-  title: string;
-  subject: string;
-  createdAt: string;
-}
-
 export default function AdminPage() {
-  const [analytics, setAnalytics] = useState<TestAnalytics>({
-    totalTests: 0,
-    totalQuestions: 0,
-    activeUsers: 0,
-    totalStudents: 0,
-    testsBySubject: {},
-    completionRates: {},
-    recentTests: [],
-    recentQuestions: []
-  });
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { 
+    analytics, 
+    userAnalytics,
+    loading, 
+    error, 
+    fetchAdminAnalytics,
+    fetchUserAnalytics
+  } = useAdminStore();
 
   useEffect(() => {
-    const loadAnalytics = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        console.log("Starting analytics fetch...");
-        const data = await fetchTestAnalytics();
-        console.log("Analytics data received:", data);
-        // Check if we have valid data structure
-        if (!data || typeof data !== 'object') {
-          throw new Error("Invalid data structure received from API");
-        }
-        setAnalytics(data);
-        toast.success('Analytics loaded successfully');
-      } catch (error) {
-        console.error('Failed to load analytics:', error);
-        if (axios.isAxiosError(error)) {
-          if (error.response) {
-            const errorMsg = `Server error: ${error.response.status} - ${error.response.data?.message || error.response.data?.error || 'Could not retrieve data'}`;
-            console.error(errorMsg);
-            setError(errorMsg);
-          } else if (error.request) {
-            setError('No response from server. Please check your network connection.');
-          } else {
-            setError(`Error preparing request: ${error.message}`);
-          }
-        } else {
-          setError('Could not retrieve data from the server');
-        }
-        
-        setAnalytics({
-          totalTests: 0,
-          totalQuestions: 0,
-          activeUsers: 0,
-          totalStudents: 0,
-          testsBySubject: {},
-          completionRates: {},
-          recentTests: [],
-          recentQuestions: []
-        });
-        
-        toast.error('Failed to load analytics data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAnalytics();
-  }, []);
+    fetchAdminAnalytics();
+    fetchUserAnalytics();
+  }, [fetchAdminAnalytics, fetchUserAnalytics]);
 
   const formatValue = (value: number | undefined): string => {
     if (value === undefined || value === null) return 'N/A';
@@ -115,44 +48,67 @@ export default function AdminPage() {
   const mainStats: StatItem[] = [
     { 
       name: 'Total Tests', 
-      value: analytics.totalTests, 
+      value: analytics?.totalTests ?? 0, 
       icon: ClipboardDocumentListIcon,
       color: 'blue-600',
       description: 'Total number of tests available'
     },
     { 
       name: 'Total Questions', 
-      value: analytics.totalQuestions, 
+      value: analytics?.totalQuestions ?? 0, 
       icon: QuestionMarkCircleIcon,
       color: 'green-600',
       description: 'Total questions in the database'
     },
     { 
       name: 'Active Users', 
-      value: analytics.activeUsers, 
+      value: analytics?.activeUsers ?? 0, 
       icon: UserGroupIcon,
       color: 'purple-600',
       description: 'Users active in last 30 days'
     },
     { 
       name: 'Total Students', 
-      value: analytics.totalStudents, 
+      value: analytics?.totalStudents ?? 0, 
       icon: AcademicCapIcon,
       color: 'indigo-600',
       description: 'Total registered students'
+    },
+    {
+      name: 'Total Users',
+      value: userAnalytics?.totalUsers ?? 0,
+      icon: UserGroupIcon,
+      color: 'yellow-600',
+      description: 'All registered users'
+    },
+    {
+      name: 'New Users (Month)',
+      value: userAnalytics?.newUsersThisMonth ?? 0,
+      icon: UserPlusIcon,
+      color: 'pink-600',
+      description: 'New users in the last 30 days'
     }
   ];
 
-  if (error) {
+  const totalUsersByRole = userAnalytics ? Object.values(userAnalytics.usersByRole).reduce((sum, count) => sum + count, 0) : 0;
+
+
+  const errorKey = Object.keys(error).find(k => error[k]);
+  const errorMessage = errorKey ? error[errorKey] : null;
+
+  if (errorMessage && !loading.size) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <ExclamationCircleIcon className="h-12 w-12 text-red-500 mx-auto" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">Error Loading Data</h3>
-          <p className="mt-1 text-sm text-gray-500">{error}</p>
+          <p className="mt-1 text-sm text-gray-500">{errorMessage}</p>
           <div className="mt-6">
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                fetchAdminAnalytics();
+                fetchUserAnalytics();
+              }}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Retry
@@ -171,17 +127,17 @@ export default function AdminPage() {
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
             <p className="mt-2 text-sm text-gray-600">
-              {error ? 'Unable to fetch latest data' : 'Comprehensive overview of your platform\'s performance'}
+              {errorMessage ? 'Unable to fetch latest data' : 'Comprehensive overview of your platform\'s performance'}
             </p>
-            {error && (
+            {errorMessage && (
               <div className="mt-2 text-sm text-red-600">
-                {error}
+                {errorMessage}
               </div>
             )}
           </div>
 
           {/* Main Stats Grid */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
             {mainStats.map((stat) => {
               const Icon = stat.icon;
               return (
@@ -197,19 +153,8 @@ export default function AdminPage() {
                     <p className="ml-16 truncate text-xs text-gray-400">{stat.description}</p>
                   </dt>
                   <dd className="ml-16 flex items-baseline pt-2">
-                    {loading ? (
+                    {loading.has('analytics') || loading.has('userAnalytics') ? (
                       <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
-                    ) : error ? (
-                      <div className="text-center py-6">
-                        <ExclamationCircleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                        <p className="text-sm text-red-500 mb-4">{error}</p>
-                        <button 
-                          onClick={() => window.location.reload()}
-                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-                        >
-                          Retry
-                        </button>
-                      </div>
                     ) : (
                       <p className="text-2xl font-semibold text-gray-900">
                         {formatValue(stat.value)}
@@ -229,7 +174,7 @@ export default function AdminPage() {
                 Questions by Subject
               </h3>
               <div className="space-y-4">
-                {loading ? (
+                {loading.has('analytics') ? (
                   Array(4).fill(0).map((_, i) => (
                     <div key={i} className="animate-pulse flex items-center">
                       <div className="w-24 h-4 bg-gray-200 rounded"></div>
@@ -237,7 +182,7 @@ export default function AdminPage() {
                       <div className="w-12 h-4 bg-gray-200 rounded"></div>
                     </div>
                   ))
-                ) : error || Object.keys(analytics.testsBySubject).length === 0 ? (
+                ) : error.analytics || !analytics || Object.keys(analytics.testsBySubject).length === 0 ? (
                   <div className="text-center py-6">
                     <p className="text-sm text-gray-500">No subject data available</p>
                   </div>
@@ -249,7 +194,7 @@ export default function AdminPage() {
                         <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-blue-600 rounded-full"
-                            style={{ width: `${(count / analytics.totalQuestions * 100) || 0}%` }}
+                            style={{ width: `${(count / (analytics.totalQuestions || 1) * 100) || 0}%` }}
                           />
                         </div>
                       </div>
@@ -260,37 +205,37 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Completion Rates */}
+            {/* Users by Role */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Test Completion Rates
+                Users by Role
               </h3>
               <div className="space-y-4">
-                {loading ? (
-                  Array(4).fill(0).map((_, i) => (
+                {loading.has('userAnalytics') ? (
+                  Array(3).fill(0).map((_, i) => (
                     <div key={i} className="animate-pulse flex items-center">
                       <div className="w-24 h-4 bg-gray-200 rounded"></div>
                       <div className="flex-1 mx-4 h-4 bg-gray-200 rounded"></div>
                       <div className="w-12 h-4 bg-gray-200 rounded"></div>
                     </div>
                   ))
-                ) : error || Object.keys(analytics.completionRates).length === 0 ? (
+                ) : error.userAnalytics || !userAnalytics || totalUsersByRole === 0 ? (
                   <div className="text-center py-6">
-                    <p className="text-sm text-gray-500">No completion rate data available</p>
+                    <p className="text-sm text-gray-500">No user role data available</p>
                   </div>
                 ) : (
-                  Object.entries(analytics.completionRates).map(([test, rate]) => (
-                    <div key={test} className="flex items-center">
-                      <span className="w-24 text-sm text-gray-600 truncate">{test}</span>
+                  Object.entries(userAnalytics.usersByRole).map(([role, count]) => (
+                    <div key={role} className="flex items-center">
+                      <span className="w-24 text-sm text-gray-600 capitalize">{role}</span>
                       <div className="flex-1 mx-4">
                         <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-green-600 rounded-full"
-                            style={{ width: `${rate}%` }}
+                            style={{ width: `${(count / totalUsersByRole) * 100}%` }}
                           />
                         </div>
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{rate}%</span>
+                      <span className="text-sm font-medium text-gray-900">{count}</span>
                     </div>
                   ))
                 )}
@@ -341,7 +286,7 @@ export default function AdminPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Tests</h3>
               <div className="overflow-hidden">
                 <div className="flow-root">
-                  {loading ? (
+                  {loading.has('analytics') ? (
                     <div className="space-y-4">
                       {Array(3).fill(0).map((_, i) => (
                         <div key={i} className="animate-pulse">
@@ -349,13 +294,13 @@ export default function AdminPage() {
                         </div>
                       ))}
                     </div>
-                  ) : error || analytics.recentTests.length === 0 ? (
+                  ) : error.analytics || !analytics || analytics.recentTests.length === 0 ? (
                     <div className="text-center py-6">
                       <p className="text-sm text-gray-500">No tests available</p>
                     </div>
                   ) : (
                     <ul role="list" className="divide-y divide-gray-200">
-                      {(analytics.recentTests as TestItem[]).map((test) => (
+                      {analytics.recentTests.map((test) => (
                         <li key={test.id} className="py-4">
                           <div className="flex items-center space-x-4">
                             <div className="flex-1 min-w-0">
@@ -406,7 +351,7 @@ export default function AdminPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Questions</h3>
               <div className="overflow-hidden">
                 <div className="flow-root">
-                  {loading ? (
+                  {loading.has('analytics') ? (
                     <div className="space-y-4">
                       {Array(3).fill(0).map((_, i) => (
                         <div key={i} className="animate-pulse">
@@ -414,13 +359,13 @@ export default function AdminPage() {
                         </div>
                       ))}
                     </div>
-                  ) : error || analytics.recentQuestions.length === 0 ? (
+                  ) : error.analytics || !analytics || analytics.recentQuestions.length === 0 ? (
                     <div className="text-center py-6">
                       <p className="text-sm text-gray-500">No questions available</p>
                     </div>
                   ) : (
                     <ul role="list" className="divide-y divide-gray-200">
-                      {(analytics.recentQuestions as QuestionItem[]).map((question) => (
+                      {analytics.recentQuestions.map((question) => (
                         <li key={question.id} className="py-4">
                           <div className="flex items-center space-x-4">
                             <div className="flex-1 min-w-0">

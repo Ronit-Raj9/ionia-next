@@ -18,7 +18,7 @@ export default function TestPage() {
   // Check authentication and fetch test data
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login');
+      router.push('/login');
       return;
     }
 

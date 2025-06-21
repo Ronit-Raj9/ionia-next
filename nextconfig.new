@@ -291,7 +291,7 @@ const nextConfig = {
       },
       {
         source: '/login',
-        destination: '/auth/login',
+        destination: '/login',
         permanent: true,
       },
     ];

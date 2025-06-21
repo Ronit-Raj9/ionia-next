@@ -22,7 +22,7 @@ const RegisterForm: React.FC = () => {
         username: email.split('@')[0], // Generate a default username from email
         password 
       });
-      router.push("/auth/login");
+      router.push("/login");
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || "Registration failed. Please try again.");

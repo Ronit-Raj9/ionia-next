@@ -1,8 +1,7 @@
 // Enhanced Auth API with Zustand integration and secure token management
-import { useAuthStore, getAccessToken, getRefreshToken } from '@/features/auth/store/authStore';
-import { useUIStore } from '@/stores/uiStore';
+import { getAccessToken, getRefreshToken } from '@/features/auth/store/authStore';
 import { useCacheStore, generateCacheKey } from '@/stores/cacheStore';
-import { User } from '../types';
+import { User, LoginResponse, ApiResponse } from '../types';
 
 // Get the API base URL with proper environment detection
 const getApiBaseUrl = (): string => {
@@ -16,9 +15,9 @@ const getDefaultFetchOptions = (): RequestInit => ({
   credentials: 'include',
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
-  mode: 'cors'
+  mode: 'cors',
 });
 
 // Token refresh handling
@@ -49,8 +48,6 @@ export const refreshTokens = async (): Promise<string | null> => {
   }
 
   isRefreshing = true;
-  const { setTokens, setUser, logout, setError } = useAuthStore.getState();
-  const { addNotification } = useUIStore.getState();
 
   try {
     const response = await fetch(`${API_BASE}/users/refresh-token`, {
@@ -58,8 +55,8 @@ export const refreshTokens = async (): Promise<string | null> => {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
+        Accept: 'application/json',
+      },
     });
 
     if (!response.ok) {
@@ -67,46 +64,15 @@ export const refreshTokens = async (): Promise<string | null> => {
     }
 
     const data = await response.json();
-    
+
     if (data.data?.accessToken) {
-      // Update tokens in store
-      setTokens(data.data.accessToken, data.data.refreshToken);
-      
-      // Update user data if provided
-      if (data.data.user) {
-        setUser({
-          ...data.data.user,
-          role: data.data.user.role as 'user' | 'admin' | 'superadmin'
-        });
-      }
-      
       onTokenRefreshed();
       return data.data.accessToken;
     }
-    
+
     throw new Error('No access token in refresh response');
   } catch (error) {
     console.error('Token refresh failed:', error);
-    
-    // Clear auth state and redirect to login
-    logout();
-    
-    // Create proper AuthError object instead of plain string
-    setError({
-      type: 'auth',
-      message: 'Session expired. Please login again.',
-      timestamp: Date.now(),
-      context: { reason: 'token_refresh_failed' }
-    });
-    
-    // Show notification
-    addNotification({
-      type: 'error',
-      title: 'Session Expired',
-      message: 'Please login again to continue.',
-      duration: 5000,
-    });
-    
     onTokenRefreshed(error as Error);
     return null;
   } finally {
@@ -116,39 +82,24 @@ export const refreshTokens = async (): Promise<string | null> => {
 
 // Handle API errors with proper error types
 const handleApiError = async (response: Response, url: string) => {
-  const { addNotification } = useUIStore.getState();
   let errorMessage: string;
   let errorData: any = null;
-  
+
   try {
     errorData = await response.json();
-    errorMessage = errorData.message || errorData.error || `Request failed with status ${response.status}`;
+    errorMessage =
+      errorData.message ||
+      errorData.error ||
+      `Request failed with status ${response.status}`;
   } catch (jsonError) {
     errorMessage = `Request failed with status ${response.status}`;
   }
-  
-  // Add user-friendly notifications for specific errors
-  if (response.status === 429) {
-    addNotification({
-      type: 'warning',
-      title: 'Too Many Requests',
-      message: 'Please wait a moment before trying again.',
-      duration: 5000,
-    });
-  } else if (response.status >= 500) {
-    addNotification({
-      type: 'error',
-      title: 'Server Error',
-      message: 'Something went wrong. Please try again later.',
-      duration: 5000,
-    });
-  }
-  
+
   const error = new Error(errorMessage);
   (error as any).status = response.status;
   (error as any).response = errorData;
   (error as any).url = url;
-  
+
   throw error;
 };
 
@@ -161,12 +112,11 @@ export const fetchWithAuth = async <T>(
   useCache = true,
   cacheKey?: string
 ): Promise<T> => {
-  const { setLoading } = useUIStore.getState();
   const { get: getCache, set: setCache } = useCacheStore.getState();
-  
+
   // Generate cache key
   const finalCacheKey = cacheKey || generateCacheKey(url, options);
-  
+
   // Check cache first for GET requests
   if (useCache && (!options?.method || options.method === 'GET')) {
     const cached = getCache(finalCacheKey);
@@ -174,19 +124,15 @@ export const fetchWithAuth = async <T>(
       return cached as T;
     }
   }
-  
-  // Set loading state
-  const loadingKey = `api-${finalCacheKey}`;
-  setLoading(loadingKey, true);
-  
+
   try {
     // Get access token
     let accessToken = getAccessToken();
-    
+
     // Prepare headers
     const headers = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...(options?.headers || {}),
     };
@@ -204,10 +150,10 @@ export const fetchWithAuth = async <T>(
     // Handle token expiration
     if (response.status === 401 && accessToken && !url.includes('/refresh-token')) {
       console.log('Token expired, attempting refresh...');
-      
+
       // Try to refresh token
       const newAccessToken = await refreshTokens();
-      
+
       if (newAccessToken) {
         // Retry request with new token
         const retryOptions = {
@@ -217,7 +163,7 @@ export const fetchWithAuth = async <T>(
             Authorization: `Bearer ${newAccessToken}`,
           },
         };
-        
+
         response = await fetch(url, retryOptions);
       }
     }
@@ -228,125 +174,53 @@ export const fetchWithAuth = async <T>(
     }
 
     const data = await response.json();
-    
+
     // Cache successful GET requests
     if (useCache && (!options?.method || options.method === 'GET')) {
       setCache(finalCacheKey, data);
     }
-    
+
     return data as T;
   } catch (error) {
     console.error('API request failed:', error);
     throw error;
-  } finally {
-    // Clear loading state
-    setLoading(loadingKey, false);
   }
 };
-
-// Response interfaces
-interface APIResponse<T> {
-  data: T;
-  success?: boolean;
-  message?: string;
-}
-
-export interface LoginResponse {
-  user: {
-    id: string;
-    fullName: string;
-    email: string;
-    username: string;
-    role: string;
-    avatar?: string;
-  };
-  accessToken: string;
-  refreshToken: string;
-}
 
 /**
  * Authentication API endpoints
  */
 export const authAPI = {
-  login: async (credentials: { email: string; password: string; rememberMe?: boolean }): Promise<APIResponse<LoginResponse>> => {
-    const { setUser, setTokens, setError } = useAuthStore.getState();
-    const { addNotification } = useUIStore.getState();
-    
-    try {
-      const response = await fetchWithAuth<APIResponse<LoginResponse>>(
-        `${API_BASE}/users/login`,
-        {
-          method: 'POST',
-          body: JSON.stringify(credentials),
-        },
-        false // Don't cache login requests
-      );
-      
-      if (response.data) {
-        // Store user and tokens - map the response structure to store structure
-        const userData = {
-          id: response.data.user.id,
-          _id: response.data.user.id, // Ensure both id and _id are set
-          email: response.data.user.email,
-          username: response.data.user.username,
-          fullName: response.data.user.fullName,
-          role: response.data.user.role as 'user' | 'admin' | 'superadmin',
-          permissions: [], // Will be populated from role-based permissions
-          avatar: response.data.user.avatar,
-          emailVerified: true, // Assume verified if login successful
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        
-        setUser(userData, credentials.rememberMe);
-        setTokens(response.data.accessToken, response.data.refreshToken);
-        
-        // Clear any previous errors
-        setError(null);
-        
-        // Show success notification
-        addNotification({
-          type: 'success',
-          title: 'Welcome back!',
-          message: `Logged in successfully as ${response.data.user.fullName}`,
-          duration: 3000,
-        });
-      }
-      
-      return response;
-    } catch (error: any) {
-      // Create proper AuthError object instead of plain string
-      setError({
-        type: 'auth',
-        message: error.message || 'Login failed',
-        timestamp: Date.now(),
-        context: { email: credentials.email }
-      });
-      throw error;
+  login: async (credentials: {
+    email: string;
+    password: string;
+    rememberMe?: boolean;
+  }): Promise<LoginResponse> => {
+    const response = await fetchWithAuth<ApiResponse<LoginResponse>>(
+      `${API_BASE}/users/login`,
+      {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      },
+      false // Don't cache login requests
+    );
+    if (!response.data) {
+      throw new Error(response.message || 'Login failed');
     }
+    return response.data;
   },
 
   logout: async (): Promise<void> => {
-    const { logout, user } = useAuthStore.getState();
-    const { addNotification } = useUIStore.getState();
-    
     try {
-      // Call logout endpoint to invalidate refresh token
-      await fetchWithAuth(`${API_BASE}/users/logout`, {
-        method: 'POST',
-      }, false);
+      await fetchWithAuth(
+        `${API_BASE}/users/logout`,
+        {
+          method: 'POST',
+        },
+        false
+      );
     } catch (error) {
-      console.warn('Logout endpoint failed:', error);
-    } finally {
-      // Always clear local state
-      logout();
-      
-      addNotification({
-        type: 'info',
-        title: 'Logged Out',
-        message: user ? `Goodbye, ${user.fullName}!` : 'You have been logged out.',
-        duration: 3000,
-      });
+      console.warn('Logout endpoint failed, proceeding with local logout:', error);
     }
   },
 
@@ -355,146 +229,96 @@ export const authAPI = {
     email: string;
     fullName: string;
     password: string;
-  }): Promise<APIResponse<{ message: string }>> => {
-    const { addNotification } = useUIStore.getState();
-    const { setError } = useAuthStore.getState();
-    
-    try {
-      const response = await fetchWithAuth<APIResponse<{ message: string }>>(
-        `${API_BASE}/users/register`,
-        {
-          method: 'POST',
-          body: JSON.stringify(userData),
-        },
-        false
-      );
-      
-      addNotification({
-        type: 'success',
-        title: 'Account Created',
-        message: 'Registration successful! Please check your email to verify your account.',
-        duration: 5000,
-      });
-      
-      return response;
-    } catch (error: any) {
-      setError({
-        type: 'auth',
-        message: error.message || 'Registration failed',
-        timestamp: Date.now(),
-        context: { email: userData.email }
-      });
-      addNotification({
-        type: 'error',
-        title: 'Registration Failed',
-        message: error.message || 'Failed to create account',
-        duration: 5000,
-      });
-      throw error;
+  }): Promise<{ message: string }> => {
+    const response = await fetchWithAuth<ApiResponse<{ message: string }>>(
+      `${API_BASE}/users/register`,
+      {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      },
+      false
+    );
+    if (!response.data) {
+      throw new Error(response.message || 'Registration failed');
     }
+    return response.data;
   },
 
-  getCurrentUser: async (): Promise<APIResponse<User>> => {
-    return fetchWithAuth<APIResponse<User>>(`${API_BASE}/users/profile`);
-  },
-
-  forgotPassword: async (email: string): Promise<APIResponse<{ message: string }>> => {
-    const { addNotification } = useUIStore.getState();
-    
-    try {
-      const response = await fetchWithAuth<APIResponse<{ message: string }>>(
-        `${API_BASE}/users/forgot-password`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ email }),
-        },
-        false
-      );
-      
-      addNotification({
-        type: 'success',
-        title: 'Reset Email Sent',
-        message: 'Please check your email for password reset instructions.',
-        duration: 5000,
-      });
-      
-      return response;
-    } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Reset Failed',
-        message: error.message || 'Failed to send reset email',
-        duration: 5000,
-      });
-      throw error;
+  getCurrentUser: async (): Promise<User> => {
+    const response = await fetchWithAuth<ApiResponse<User>>(`${API_BASE}/users/profile`);
+    if (!response.data) {
+      throw new Error(response.message || 'Failed to fetch user');
     }
+    return response.data;
   },
 
-  resetPassword: async (token: string, newPassword: string): Promise<APIResponse<{ message: string }>> => {
-    const { addNotification } = useUIStore.getState();
-    
-    try {
-      const response = await fetchWithAuth<APIResponse<{ message: string }>>(
-        `${API_BASE}/users/reset-password`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ token, newPassword }),
-        },
-        false
-      );
-      
-      addNotification({
-        type: 'success',
-        title: 'Password Reset',
-        message: 'Your password has been reset successfully.',
-        duration: 3000,
-      });
-      
-      return response;
-    } catch (error: any) {
-      addNotification({
-        type: 'error',
-        title: 'Reset Failed',
-        message: error.message || 'Failed to reset password',
-        duration: 5000,
-      });
-      throw error;
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await fetchWithAuth<ApiResponse<{ message: string }>>(
+      `${API_BASE}/users/forgot-password`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      },
+      false
+    );
+    if (!response.data) {
+      throw new Error(response.message || 'Failed to send reset email');
     }
+    return response.data;
   },
 
-  refreshToken: async (): Promise<APIResponse<{ accessToken: string; refreshToken?: string; user?: any }>> => {
+  resetPassword: async (
+    token: string,
+    newPassword: string
+  ): Promise<{ message: string }> => {
+    const response = await fetchWithAuth<ApiResponse<{ message: string }>>(
+      `${API_BASE}/users/reset-password`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword }),
+      },
+      false
+    );
+    if (!response.data) {
+      throw new Error(response.message || 'Failed to reset password');
+    }
+    return response.data;
+  },
+
+  refreshToken: async (): Promise<{
+    accessToken: string;
+    refreshToken?: string;
+    user?: any;
+  }> => {
     const response = await fetch(`${API_BASE}/users/refresh-token`, {
       method: 'POST',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      }
+        Accept: 'application/json',
+      },
     });
 
     if (!response.ok) {
       throw new Error(`Token refresh failed: ${response.status}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    if (!data.data) {
+      throw new Error('Invalid refresh response');
+    }
+    return data.data;
   },
 };
 
 // Legacy compatibility exports
 export const loginUser = authAPI.login;
 export const registerUser = authAPI.register;
-export const getUserProfile = (userId: string) => authAPI.getCurrentUser();
+export const getUserProfile = () => authAPI.getCurrentUser();
 
 // Clear all cached auth data
 export const clearAllCachedData = () => {
   const { clear } = useCacheStore.getState();
-  const { logout } = useAuthStore.getState();
-  
-  // Clear cache
   clear();
-  
-  // Logout user
-  logout();
-  
-  console.log('All cached auth data cleared');
+  console.log('All cached data cleared. Please dispatch logout action to clear auth state.');
 };

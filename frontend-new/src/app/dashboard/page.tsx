@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Card } from "@/features/dashboard/components/card";
 import PerformanceChart, {
   PerformanceData,
@@ -19,13 +18,12 @@ import {
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user } = useAuth();
 
-  // TODO: Fetch user's performance data and test history from the API
+  // Data is now static since test hooks are removed.
   const performanceChartData: PerformanceData[] = [];
   const subjectChartData: SubjectData[] = [];
 
-  // TODO: Replace with data from API
+  // Static statistics
   const totalTests = 0;
   const averageScore = 0;
   const bestScore = 0;
@@ -36,7 +34,7 @@ export default function Dashboard() {
       {/* Welcome Section */}
       <div className="mb-8 animate-fade-in">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-          Welcome back, {user?.fullName || user?.username}!
+          Dashboard Overview
         </h1>
         <p className="text-base text-gray-600 mt-2">
           Track your test performance and progress

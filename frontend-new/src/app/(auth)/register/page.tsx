@@ -52,7 +52,7 @@ export default function RegisterPage() {
       });
 
       toast.success("Registration successful! Please log in.");
-      router.push('/auth/login');
+      router.push('/login');
     } catch (err: any) {
       // Error notification is already handled by authAPI
       console.error("Registration failed:", err.message);
@@ -83,7 +83,7 @@ export default function RegisterPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             Or{' '}
             <Link
-              href="/auth/login"
+              href="/login"
               className="font-medium text-emerald-600 hover:text-emerald-500"
             >
               sign in to your account

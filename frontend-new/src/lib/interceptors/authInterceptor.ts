@@ -41,11 +41,11 @@ const DEFAULT_CONFIG: AuthInterceptorConfig = {
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1',
   timeout: 30000, // 30 seconds
   skipAuthPaths: [
-    '/auth/login',
-    '/auth/register',
-    '/auth/forgot-password',
-    '/auth/reset-password',
-    '/auth/verify-email',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
     '/public',
     '/health',
   ],

@@ -1,33 +1,30 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
-export default function LoginForm() {
+export default function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
+  const [message, setMessage] = useState('');
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleForgotPassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setMessage('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      // Here you would typically make an API call to your backend
+      // to initiate the password reset process.
+      // For this example, we'll just simulate a successful response.
+      console.log('Password reset requested for:', email);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      if (!response.ok) {
-        throw new Error('Invalid email or password');
-      }
+      setMessage('If an account with that email exists, a password reset link has been sent.');
+      setEmail('');
 
-      const data = await response.json();
-      console.log('Login successful:', data);
-      router.push('/dashboard');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -39,11 +36,13 @@ export default function LoginForm() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">Forgot Password</h2>
       {error && <p className="text-center text-red-500 mb-4">{error}</p>}
-      <form onSubmit={handleLogin} className="space-y-4">
+      {message && <p className="text-center text-green-500 mb-4">{message}</p>}
+      <form onSubmit={handleForgotPassword} className="space-y-4">
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Email
+            Email Address
           </label>
           <input
             type="email"
@@ -52,31 +51,19 @@ export default function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
+            placeholder="you@example.com"
           />
         </div>
         <button
           type="submit"
           className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
         >
-          Login
+          Send Reset Link
         </button>
       </form>
       <div className="mt-4 text-center">
-        <Link href="/forgot-password" className="text-blue-600 hover:underline">
-          Forgot Password?
+        <Link href="/login" className="text-blue-600 hover:underline">
+          Back to Login
         </Link>
       </div>
     </div>

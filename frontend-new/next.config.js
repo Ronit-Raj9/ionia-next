@@ -7,11 +7,11 @@ const nextConfig = {
     return [
       {
         source: '/login', 
-        destination: '/auth/login',
+        destination: '/login',
       },
       {
         source: '/register',
-        destination: '/auth/register',
+        destination: '/register',
       },
       // API proxy to backend - ensure all API requests go through Next.js
       {
