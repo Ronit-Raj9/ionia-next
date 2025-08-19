@@ -10,29 +10,29 @@ const nextConfig = {
         source: '/register',
         destination: '/auth/register',
       },
-      // API proxy to backend - ensure all API requests go through Next.js
+      // API proxy to backend - remove the /api/v1 prefix from destination
       {
         source: '/api/v1/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/:path*`,
       },
       // Admin routes
       {
         source: '/api/v1/admin/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/admin/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/:path*`,
       },
-      // More specific routes for other endpoints
-      {
-        source: '/users/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/:path*`,
-      },
-      {
-        source: '/questions/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/questions/:path*`,
-      },
-      {
-        source: '/tests/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/tests/:path*`,
-      }
+      // Remove these conflicting routes - they're causing issues
+      // {
+      //   source: '/users/:path*',
+      //   destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/users/:path*`,
+      // },
+      // {
+      //   source: '/questions/:path*',
+      //   destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/questions/:path*`,
+      // },
+      // {
+      //   source: '/tests/:path*',
+      //   destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/tests/:path*`,
+      // }
     ];
   },
   images: {
