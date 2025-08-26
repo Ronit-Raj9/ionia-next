@@ -69,6 +69,11 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
       throw new ApiError(401, "User not found. Please login again.");
     }
 
+    // Add hasPassword field for frontend compatibility
+    // We need to fetch the user with password to check hasPassword status
+    const userWithPassword = await User.findById(decodedToken._id);
+    user.hasPassword = userWithPassword.hasPassword();
+
     // 6. Additional security checks
     if (user.email !== decodedToken.email) {
       console.log("❌ Token email mismatch");

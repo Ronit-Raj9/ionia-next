@@ -9,31 +9,39 @@
  */
 export const getAccessTokenCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = process.env.HTTPS_ENABLED === 'true';
   
   return {
     httpOnly: true,                    // Prevent XSS attacks
-    secure: isProduction,              // HTTPS only in production
-    sameSite: isProduction ? 'none' : 'lax', // CSRF protection
+    secure: isHttps,                   // Use environment variable
+    sameSite: isHttps ? 'none' : 'lax', // Align with secure setting
     path: '/',                         // Available on all paths
     maxAge: 15 * 60 * 1000,           // 15 minutes
-    domain: isProduction ? '.ionia.sbs' : undefined, // Domain for production
+    domain: process.env.COOKIE_DOMAIN || undefined, // Use environment variable
   };
 };
 
 /**
  * Get secure cookie options for refresh tokens
+ * @param {boolean} rememberMe - Whether to extend cookie lifetime
  * @returns {object} Cookie options for refresh tokens
  */
-export const getRefreshTokenCookieOptions = () => {
+export const getRefreshTokenCookieOptions = (rememberMe = false) => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = process.env.HTTPS_ENABLED === 'true';
+  
+  // Set cookie lifetime based on rememberMe flag
+  const maxAge = rememberMe 
+    ? 30 * 24 * 60 * 60 * 1000  // 30 days for "remember me"
+    : 7 * 24 * 60 * 60 * 1000;  // 7 days for normal sessions
   
   return {
     httpOnly: true,                    // Prevent XSS attacks
-    secure: isProduction,              // HTTPS only in production
-    sameSite: isProduction ? 'none' : 'lax', // CSRF protection
-    path: '/api/v1/users/refresh-token', // Only available on refresh endpoint
-    maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
-    domain: isProduction ? '.ionia.sbs' : undefined, // Domain for production
+    secure: isHttps,                   // Use environment variable
+    sameSite: isHttps ? 'none' : 'lax', // Align with secure setting
+    path: '/',                         // Available on all paths for refresh
+    maxAge: maxAge,                    // Dynamic lifetime based on rememberMe
+    domain: process.env.COOKIE_DOMAIN || undefined, // Use environment variable
   };
 };
 
@@ -43,14 +51,15 @@ export const getRefreshTokenCookieOptions = () => {
  */
 export const getClearCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = process.env.HTTPS_ENABLED === 'true';
   
   return {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
+    secure: isHttps,
+    sameSite: isHttps ? 'none' : 'lax',
     path: '/',
     maxAge: 0,                         // Expire immediately
-    domain: isProduction ? '.ionia.sbs' : undefined,
+    domain: process.env.COOKIE_DOMAIN || undefined,
   };
 };
 
@@ -60,14 +69,15 @@ export const getClearCookieOptions = () => {
  */
 export const getClearRefreshCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = process.env.HTTPS_ENABLED === 'true';
   
   return {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/api/v1/users/refresh-token',
+    secure: isHttps,
+    sameSite: isHttps ? 'none' : 'lax',
+    path: '/',                         // Match the set path
     maxAge: 0,                         // Expire immediately
-    domain: isProduction ? '.ionia.sbs' : undefined,
+    domain: process.env.COOKIE_DOMAIN || undefined,
   };
 };
 

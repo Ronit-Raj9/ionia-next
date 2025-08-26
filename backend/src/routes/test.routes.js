@@ -3,6 +3,7 @@ import {
     createTest,
     getTests,
     getTestById,
+    getTestWithQuestions,
     updateTest,
     deleteTest,
     getTestForAttempt
@@ -76,6 +77,12 @@ router.route("/:id").get(
     // Make JWT verification required, not optional
     verifyJWT, 
     getTestById
+);
+
+// GET /api/v1/tests/:id/with-questions - Get a single test by ID with populated questions
+router.route("/:id/with-questions").get(
+    verifyJWT, 
+    getTestWithQuestions
 );
 
 // GET /api/v1/tests - Get list of tests (filtered)

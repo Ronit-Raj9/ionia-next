@@ -18,7 +18,19 @@ import {
   getAllUsers,
   getUserDetails,
   updateUserRole,
-  getUsersAnalytics
+  getUsersAnalytics,
+  // Google OAuth routes
+  googleOAuthLogin,
+  googleOAuthCallback,
+  linkGoogleAccount,
+  unlinkGoogleAccount,
+  getAuthProviders,
+  // Email verification routes
+  sendEmailVerification,
+  verifyEmail,
+  // Account security routes
+  unlockAccount,
+  getUserActivityLogs
 } from "../controllers/user.controller.js";
 
 import { upload } from "../middlewares/multer.middleware.js";
@@ -68,6 +80,22 @@ router.route("/reset-password").post(
   createRateLimitMiddleware('forgot-password'), // Reuse forgot-password limits
   logAuthEvent('RESET_PASSWORD_ATTEMPT'),
   resetPassword
+);
+
+// 🔥 GOOGLE OAUTH ROUTES
+router.route("/auth/google").get(googleOAuthLogin);
+router.route("/auth/google/callback").get(googleOAuthCallback);
+
+// 🔥 EMAIL VERIFICATION ROUTES
+router.route("/verify-email/send").post(
+  verifyJWT,
+  createRateLimitMiddleware('forgot-password'), // Reuse forgot-password limits
+  sendEmailVerification
+);
+
+router.route("/verify-email").post(
+  createRateLimitMiddleware('forgot-password'), // Reuse forgot-password limits
+  verifyEmail
 );
 
 /**
@@ -139,6 +167,19 @@ router.route("/cover-image").patch(
 // Get user statistics
 router.route("/statistics").get(verifyJWT, getUserStatistics);
 
+// 🔥 GOOGLE OAUTH ACCOUNT MANAGEMENT
+router.route("/auth/providers").get(verifyJWT, getAuthProviders);
+router.route("/auth/google/link").post(
+  verifyJWT,
+  createRateLimitMiddleware('login'),
+  linkGoogleAccount
+);
+router.route("/auth/google/unlink").post(
+  verifyJWT,
+  createRateLimitMiddleware('login'),
+  unlinkGoogleAccount
+);
+
 /**
  * Admin Routes
  * - Only accessible by admin or superadmin
@@ -175,6 +216,21 @@ router.route("/admin/:userId/role").patch(
   verifyRole(["superadmin"]), 
   logAuthEvent('ADMIN_UPDATE_USER_ROLE'),
   updateUserRole
+);
+
+// 🔥 ADMIN SECURITY ROUTES
+router.route("/admin/:userId/unlock").post(
+  verifyJWT,
+  verifyRole(["admin", "superadmin"]),
+  logAuthEvent('ADMIN_UNLOCK_ACCOUNT'),
+  unlockAccount
+);
+
+router.route("/admin/:userId/activity").get(
+  verifyJWT,
+  verifyRole(["admin", "superadmin"]),
+  logAuthEvent('ADMIN_VIEW_USER_ACTIVITY'),
+  getUserActivityLogs
 );
 
 /**

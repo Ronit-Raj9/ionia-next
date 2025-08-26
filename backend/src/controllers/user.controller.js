@@ -14,6 +14,8 @@ import {
   getClearCookieOptions,
   getClearRefreshCookieOptions 
 } from "../utils/cookieConfig.js";
+import { AuditLogger } from "../utils/auditLogger.js";
+import passport from "passport";
 
 /**
  * Enhanced helper function to generate both Access Token and Refresh Token
@@ -128,6 +130,7 @@ const registerUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase().trim(),
     lastLoginIP: req.ip || req.connection.remoteAddress,
     isEmailVerified: false, // Require email verification in production
+    authProviders: [{ provider: 'email', linkedAt: new Date(), isActive: true }]
   });
 
   // 5. Return user without sensitive data
@@ -141,11 +144,17 @@ const registerUser = asyncHandler(async (req, res) => {
     req.rateLimiter.recordSuccessfulAttempt(req.rateLimiterIdentifier, 'register');
   }
 
+  // Log successful registration
+  await AuditLogger.logAuthEvent('register', req, createdUser, {
+    authMethod: 'email',
+    emailVerified: false
+  }, true);
+
   console.log(`✅ User registered successfully: ${createdUser.username}`);
   
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered successfully"));
+    .json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
 
 /**
@@ -153,12 +162,16 @@ const registerUser = asyncHandler(async (req, res) => {
  * - Rate limiting
  * - Session management
  * - Secure cookie handling
+ * - Account lockout
+ * - Audit logging
  */
 const loginUser = asyncHandler(async (req, res) => {
   console.log("🔐 Login attempt");
   
-  const { email, username, password } = req.body;
+  const { email, username, password, rememberMe } = req.body;
   const clientIP = req.ip || req.connection.remoteAddress;
+
+  console.log("req.body", req.body);
 
   // Validation
   if (!username && !email) {
@@ -179,29 +192,55 @@ const loginUser = asyncHandler(async (req, res) => {
     if (req.rateLimiter && req.rateLimiterIdentifier) {
       req.rateLimiter.recordFailedAttempt(req.rateLimiterIdentifier, 'login');
     }
+    
+    // Log failed login attempt
+    await AuditLogger.logLoginFailure(req, email || username, 'User not found', 'email');
+    
     throw new ApiError(404, "Invalid credentials");
   }
 
   // Check if account is active
   if (!user.isActive) {
+    await AuditLogger.logLoginFailure(req, user.email, 'Account deactivated', 'email');
     throw new ApiError(403, "Account has been deactivated. Please contact support.");
+  }
+
+  // Check if account is locked
+  if (user.isAccountLocked()) {
+    await AuditLogger.logSecurityEvent('account_locked', req, user, {
+      reason: 'Account locked due to failed attempts',
+      lockUntil: user.failedLoginAttempts.lockedUntil
+    });
+    throw new ApiError(423, "Account is temporarily locked due to multiple failed login attempts. Please try again later.");
   }
 
   // Verify password
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
+    // Record failed attempt
+    await user.recordFailedLoginAttempt();
+    
     // Record failed attempt for rate limiting
     if (req.rateLimiter && req.rateLimiterIdentifier) {
       req.rateLimiter.recordFailedAttempt(req.rateLimiterIdentifier, 'login');
     }
     
+    // Log failed login attempt
+    await AuditLogger.logLoginFailure(req, user.email, 'Invalid password', 'email');
+    
     throw new ApiError(401, "Invalid credentials");
+  }
+
+  // Reset failed login attempts on successful login
+  if (user.failedLoginAttempts.count > 0) {
+    await user.resetFailedLoginAttempts();
   }
 
   // Update login tracking
   user.lastLoginAt = new Date();
   user.lastLoginIP = clientIP;
   user.lastActivity = new Date();
+  user.lastLoginMethod = 'email';
   await user.save({ validateBeforeSave: false });
 
   // Generate tokens
@@ -212,28 +251,41 @@ const loginUser = asyncHandler(async (req, res) => {
     "-password -refreshToken -activeTokens"
   );
 
+  // Add hasPassword field for frontend compatibility
+  loggedInUser.hasPassword = user.hasPassword();
+
   // Record successful attempt
   if (req.rateLimiter && req.rateLimiterIdentifier) {
     req.rateLimiter.recordSuccessfulAttempt(req.rateLimiterIdentifier, 'login');
   }
 
+  // Log successful login
+  await AuditLogger.logLoginSuccess(req, user, 'email');
+
   console.log(`✅ Login successful for user: ${user.username} from IP: ${clientIP}`);
 
-  // Set secure cookies
+  // Set secure cookies with rememberMe support
+  console.log("accessToken", accessToken);
+  console.log("refreshToken", refreshToken);
+  console.log("rememberMe", rememberMe);
+  
+  // Get cookie options with rememberMe consideration
+  const accessTokenOptions = getAccessTokenCookieOptions();
+  const refreshTokenOptions = getRefreshTokenCookieOptions(rememberMe);
+  
   return res
     .status(200)
-    .cookie("accessToken", accessToken, getAccessTokenCookieOptions())
-    .cookie("refreshToken", refreshToken, getRefreshTokenCookieOptions())
+    .cookie("accessToken", accessToken, accessTokenOptions)
+    .cookie("refreshToken", refreshToken, refreshTokenOptions)
     .json(
       new ApiResponse(
         200,
         {
           user: loggedInUser,
-          accessToken,
-          refreshToken,
           sessionInfo: {
             loginTime: user.lastLoginAt,
             activeSessions: user.getActiveSessionsCount(),
+            rememberMe: !!rememberMe,
           }
         },
         "User logged in successfully"
@@ -470,9 +522,11 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
  * - Returns the user from req.user set by verifyJWT
  */
 const getCurrrentUser = asyncHandler(async (req, res) => {
+  const user = req.user.toObject();
+  user.hasPassword = req.user.hasPassword(); // Use the method instead of manual check
   return res
     .status(200)
-    .json(new ApiResponse(200, req.user, "current user fetched successfully"));
+    .json(new ApiResponse(200, user, "current user fetched successfully"));
 });
 
 /**
@@ -496,6 +550,9 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     },
     { new: true } // if we write new then object is returned after updating
   ).select("-password");
+
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
 
   return res
     .status(200)
@@ -532,6 +589,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
+
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Avatar image updated successfully"));
@@ -565,6 +625,9 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
+
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
 
   return res
     .status(200)
@@ -954,14 +1017,20 @@ const getUserDetails = asyncHandler(async (req, res) => {
   }
   
   try {
-    // Fetch basic user info
+    // Fetch basic user info with password to check hasPassword status
+    const userWithPassword = await User.findById(userId);
+    
+    if (!userWithPassword) {
+      throw new ApiError(404, "User not found");
+    }
+    
+    // Fetch user without sensitive fields for response
     const user = await User.findById(userId)
       .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires")
       .lean();
     
-    if (!user) {
-      throw new ApiError(404, "User not found");
-    }
+    // Add hasPassword field for frontend compatibility
+    user.hasPassword = userWithPassword.hasPassword();
     
     // Fetch test statistics
     const testStats = await AttemptedTest.aggregate([
@@ -1046,6 +1115,9 @@ const updateUserRole = asyncHandler(async (req, res) => {
     const updatedUser = await User.findById(userId)
       .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires");
     
+    // Add hasPassword field for frontend compatibility
+    updatedUser.hasPassword = user.hasPassword();
+    
     return res.status(200).json(
       new ApiResponse(200, updatedUser, `User role updated to ${role} successfully`)
     );
@@ -1056,6 +1128,402 @@ const updateUserRole = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Error updating user role", error.message);
   }
 });
+
+// 🔥 GOOGLE OAUTH CONTROLLERS
+
+/**
+ * Google OAuth Login
+ * Initiates Google OAuth flow
+ */
+const googleOAuthLogin = asyncHandler(async (req, res) => {
+  console.log("🔐 Google OAuth login initiated");
+  
+  // Store return URL in session if provided
+  if (req.query.returnUrl) {
+    req.session.returnUrl = req.query.returnUrl;
+  }
+  
+  // Authenticate with Google
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'],
+    accessType: 'offline',
+    prompt: 'consent'
+  })(req, res, (err) => {
+    if (err) {
+      console.error("Google OAuth error:", err);
+      throw new ApiError(500, "Google OAuth authentication failed");
+    }
+  });
+});
+
+/**
+ * Google OAuth Callback
+ * Handles Google OAuth callback and creates JWT tokens
+ */
+const googleOAuthCallback = asyncHandler(async (req, res) => {
+  console.log("🔄 Google OAuth callback received");
+  
+  passport.authenticate('google', { session: false }, async (err, user, info) => {
+    try {
+      if (err) {
+        console.error("Google OAuth callback error:", err);
+        await AuditLogger.logLoginFailure(req, 'unknown', err.message, 'google');
+        throw new ApiError(500, "Google OAuth authentication failed");
+      }
+      
+      if (!user) {
+        await AuditLogger.logLoginFailure(req, 'unknown', 'No user returned from Google', 'google');
+        throw new ApiError(401, "Google OAuth authentication failed");
+      }
+      
+      // Check if account is locked
+      if (user.isAccountLocked()) {
+        await AuditLogger.logSecurityEvent('account_locked', req, user, {
+          reason: 'Account locked due to failed attempts',
+          lockUntil: user.failedLoginAttempts.lockedUntil
+        });
+        throw new ApiError(423, "Account is temporarily locked due to multiple failed login attempts. Please try again later.");
+      }
+      
+      // Reset failed login attempts on successful login
+      if (user.failedLoginAttempts.count > 0) {
+        await user.resetFailedLoginAttempts();
+      }
+      
+      // Update login tracking
+      user.lastLoginAt = new Date();
+      user.lastLoginIP = req.ip || req.connection.remoteAddress;
+      user.lastActivity = new Date();
+      user.lastLoginMethod = 'google';
+      await user.save({ validateBeforeSave: false });
+      
+      // Generate tokens
+      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id, req);
+      
+      // Log successful Google OAuth login
+      await AuditLogger.logGoogleOAuthEvent('google_oauth_login', req, user, {
+        isNewUser: !user.createdAt || (Date.now() - user.createdAt.getTime()) < 60000
+      });
+      
+      // Get user data without sensitive fields
+      const loggedInUser = await User.findById(user._id).select(
+        "-password -refreshToken -activeTokens"
+      );
+      
+      // Add hasPassword field for frontend compatibility
+      loggedInUser.hasPassword = user.hasPassword();
+      
+      console.log(`✅ Google OAuth login successful for user: ${user.username}`);
+      
+      // Get return URL from session or use default
+      const returnUrl = req.session?.returnUrl || '/dashboard';
+      delete req.session?.returnUrl;
+      
+      // Set secure cookies
+      const accessTokenOptions = getAccessTokenCookieOptions();
+      const refreshTokenOptions = getRefreshTokenCookieOptions();
+      
+      return res
+        .status(200)
+        .cookie("accessToken", accessToken, accessTokenOptions)
+        .cookie("refreshToken", refreshToken, refreshTokenOptions)
+        .json(
+          new ApiResponse(
+            200,
+            {
+              user: loggedInUser,
+              sessionInfo: {
+                loginTime: user.lastLoginAt,
+                activeSessions: user.getActiveSessionsCount(),
+                authMethod: 'google',
+                returnUrl
+              }
+            },
+            "Google OAuth login successful"
+          )
+        );
+        
+    } catch (error) {
+      console.error("Google OAuth callback error:", error);
+      
+      // Ensure all errors are properly logged
+      await AuditLogger.logLoginFailure(req, user?.email || 'unknown', error.message, 'google');
+      
+      // Redirect to frontend with error
+      const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${encodeURIComponent(error.message)}`;
+      return res.redirect(errorUrl);
+    }
+  })(req, res);
+});
+
+/**
+ * Link Google Account
+ * Links Google OAuth to existing email/password account
+ */
+const linkGoogleAccount = asyncHandler(async (req, res) => {
+  console.log("🔗 Linking Google account for user:", req.user.username);
+  
+  const { googleToken } = req.body;
+  
+  if (!googleToken) {
+    throw new ApiError(400, "Google token is required");
+  }
+  
+  try {
+    // Verify Google token and get profile
+    const googleProfile = await verifyGoogleToken(googleToken);
+    
+    // Check if Google account is already linked to another user
+    const existingGoogleUser = await User.findOne({ googleId: googleProfile.id });
+    if (existingGoogleUser && !existingGoogleUser._id.equals(req.user._id)) {
+      throw new ApiError(409, "This Google account is already linked to another user");
+    }
+    
+    // Link Google account to current user
+    await req.user.linkGoogleAccount(googleProfile);
+    
+    // Log the linking event
+    await AuditLogger.logGoogleOAuthEvent('google_oauth_link', req, req.user, {
+      googleId: googleProfile.id,
+      googleEmail: googleProfile.emails[0]?.value
+    });
+    
+    console.log(`✅ Google account linked successfully for user: ${req.user.username}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Google account linked successfully"));
+      
+  } catch (error) {
+    console.error("Google account linking error:", error);
+    throw new ApiError(500, "Failed to link Google account");
+  }
+});
+
+/**
+ * Unlink Google Account
+ * Unlinks Google OAuth from account (requires password to be set)
+ */
+const unlinkGoogleAccount = asyncHandler(async (req, res) => {
+  console.log("🔗 Unlinking Google account for user:", req.user.username);
+  
+  try {
+    await req.user.unlinkGoogleAccount();
+    
+    // Log the unlinking event
+    await AuditLogger.logGoogleOAuthEvent('google_oauth_unlink', req, req.user);
+    
+    console.log(`✅ Google account unlinked successfully for user: ${req.user.username}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Google account unlinked successfully"));
+      
+  } catch (error) {
+    console.error("Google account unlinking error:", error);
+    throw new ApiError(400, error.message);
+  }
+});
+
+/**
+ * Get Auth Providers
+ * Returns the authentication providers linked to the user's account
+ */
+const getAuthProviders = asyncHandler(async (req, res) => {
+  const providers = req.user.getAuthProviders();
+  
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { providers }, "Auth providers retrieved successfully"));
+});
+
+// 🔥 EMAIL VERIFICATION CONTROLLERS
+
+/**
+ * Send Email Verification
+ * Sends verification email to user
+ */
+const sendEmailVerification = asyncHandler(async (req, res) => {
+  console.log("📧 Sending email verification for user:", req.user.username);
+  
+  // Check if email is already verified
+  if (req.user.isEmailVerified) {
+    throw new ApiError(400, "Email is already verified");
+  }
+  
+  // Check if user is blocked from verification attempts
+  if (req.user.isEmailVerificationBlocked()) {
+    throw new ApiError(429, "Too many verification attempts. Please try again later.");
+  }
+  
+  try {
+    // Generate verification token
+    const verificationToken = req.user.generateEmailVerificationToken();
+    await req.user.save({ validateBeforeSave: false });
+    
+    // Create verification URL
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    
+    // Send verification email
+    await sendEmail({
+      email: req.user.email,
+      subject: "Verify Your Email Address",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Verify Your Email Address</h2>
+          <p>Hello ${req.user.fullName},</p>
+          <p>Please click the button below to verify your email address:</p>
+          <a href="${verificationUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0;">
+            Verify Email
+          </a>
+          <p>If the button doesn't work, copy and paste this URL into your browser:</p>
+          <p style="word-break: break-all; background-color: #f4f4f4; padding: 10px; border-radius: 4px;">
+            ${verificationUrl}
+          </p>
+          <p>This link will expire in 24 hours.</p>
+          <p>If you didn't request this verification, please ignore this email.</p>
+        </div>
+      `
+    });
+    
+    // Log the verification email sent
+    await AuditLogger.logEmailVerificationEvent('email_verification_sent', req, req.user);
+    
+    console.log(`✅ Email verification sent to: ${req.user.email}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Verification email sent successfully"));
+      
+  } catch (error) {
+    console.error("Email verification error:", error);
+    throw new ApiError(500, "Failed to send verification email");
+  }
+});
+
+/**
+ * Verify Email
+ * Verifies user's email address using token
+ */
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    throw new ApiError(400, "Verification token is required");
+  }
+  
+  try {
+    // Find user by verification token
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() }
+    });
+    
+    if (!user) {
+      // Increment failed attempts
+      if (req.user) {
+        await req.user.incrementEmailVerificationAttempts();
+      }
+      
+      throw new ApiError(400, "Invalid or expired verification token");
+    }
+    
+    // Verify the email
+    user.isEmailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.resetEmailVerificationAttempts();
+    await user.save({ validateBeforeSave: false });
+    
+    // Log successful verification
+    await AuditLogger.logEmailVerificationEvent('email_verification_success', req, user);
+    
+    console.log(`✅ Email verified successfully for user: ${user.username}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Email verified successfully"));
+      
+  } catch (error) {
+    console.error("Email verification error:", error);
+    throw new ApiError(400, error.message);
+  }
+});
+
+// 🔥 ACCOUNT SECURITY CONTROLLERS
+
+/**
+ * Unlock Account (Admin Only)
+ * Unlocks a user account that was locked due to failed login attempts
+ */
+const unlockAccount = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+  
+  try {
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+    
+    // Reset failed login attempts
+    await user.resetFailedLoginAttempts();
+    
+    // Log the unlock action
+    await AuditLogger.logAdminAction('account_unlocked', req, req.user, user);
+    
+    console.log(`✅ Account unlocked for user: ${user.username} by admin: ${req.user.username}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Account unlocked successfully"));
+      
+  } catch (error) {
+    console.error("Account unlock error:", error);
+    throw new ApiError(500, "Failed to unlock account");
+  }
+});
+
+/**
+ * Get User Activity Logs (Admin Only)
+ * Returns audit logs for a specific user
+ */
+const getUserActivityLogs = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { limit = 50 } = req.query;
+  
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+  
+  try {
+    const logs = await AuditLogger.getUserActivity(userId, parseInt(limit));
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { logs }, "User activity logs retrieved successfully"));
+      
+  } catch (error) {
+    console.error("Get user activity logs error:", error);
+    throw new ApiError(500, "Failed to retrieve user activity logs");
+  }
+});
+
+// Helper function to verify Google token (simplified)
+const verifyGoogleToken = async (token) => {
+  // In a real implementation, you would verify the token with Google's API
+  // For now, we'll return a mock profile
+  return {
+    id: 'mock_google_id',
+    displayName: 'Mock User',
+    emails: [{ value: 'mock@example.com', verified: true }],
+    photos: [{ value: 'https://example.com/photo.jpg' }]
+  };
+};
 
 export {
   registerUser,
@@ -1076,5 +1544,17 @@ export {
   getUsersAnalytics,
   getUserDetails,
   updateUserRole,
-  logoutFromAllDevices
+  logoutFromAllDevices,
+  // Google OAuth controllers
+  googleOAuthLogin,
+  googleOAuthCallback,
+  linkGoogleAccount,
+  unlinkGoogleAccount,
+  getAuthProviders,
+  // Email verification controllers
+  sendEmailVerification,
+  verifyEmail,
+  // Account security controllers
+  unlockAccount,
+  getUserActivityLogs
 };

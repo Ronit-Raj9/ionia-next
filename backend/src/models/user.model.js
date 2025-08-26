@@ -34,7 +34,7 @@ const userSchema = new Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      // Not required anymore - can be null for Google OAuth users
     },
     refreshToken: {
       type: String,
@@ -114,6 +114,75 @@ const userSchema = new Schema(
         type: Date,
         default: null
       }
+    },
+
+    // 🔥 GOOGLE OAUTH FIELDS
+    googleId: {
+      type: String,
+      sparse: true, // Allows multiple null values but unique for non-null
+      index: true,
+    },
+    googleProfile: {
+      id: String,
+      displayName: String,
+      emails: [{
+        value: String,
+        verified: Boolean
+      }],
+      photos: [{
+        value: String
+      }],
+      provider: {
+        type: String,
+        default: 'google'
+      }
+    },
+    
+    // 🔥 AUTHENTICATION PROVIDER TRACKING
+    authProviders: [{
+      provider: {
+        type: String,
+        enum: ['email', 'google'],
+        required: true
+      },
+      linkedAt: {
+        type: Date,
+        default: Date.now
+      },
+      isActive: {
+        type: Boolean,
+        default: true
+      }
+    }],
+    
+    // 🔥 ACCOUNT SECURITY FIELDS
+    failedLoginAttempts: {
+      count: {
+        type: Number,
+        default: 0
+      },
+      lastAttempt: {
+        type: Date,
+        default: null
+      },
+      lockedUntil: {
+        type: Date,
+        default: null
+      }
+    },
+    
+    // 🔥 AUDIT LOGGING
+    lastLoginMethod: {
+      type: String,
+      enum: ['email', 'google'],
+      default: null
+    },
+    
+    // 🔥 PREFERRED AUTH METHOD (optional)
+    preferredAuthMethod: {
+      type: String,
+      enum: ['email', 'google'],
+      default: null
     }
   },
   {
@@ -121,16 +190,214 @@ const userSchema = new Schema(
   }
 );
 
-// Hash password before save
+// 🔥 CUSTOM VALIDATION: Ensure at least one auth method
+userSchema.pre('save', async function(next) {
+  // Skip validation for password updates
+  if (this.isModified('password') && !this.isNew) {
+    return next();
+  }
+  
+  // For new users or when removing auth methods, ensure at least one exists
+  if (this.isNew || this.isModified('password') || this.isModified('googleId')) {
+    if (!this.canAuthenticate()) {
+      return next(new Error('User must have at least one authentication method (password or Google OAuth)'));
+    }
+  }
+  
+  next();
+});
+
+// Hash password before save (only if password is provided)
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password") || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 12); // Increased salt rounds for better security
   next();
 });
 
 // Verify password
 userSchema.methods.isPasswordCorrect = async function (password) {
+  if (!this.password) return false; // No password set (Google OAuth user)
   return await bcrypt.compare(password, this.password);
+};
+
+// 🔥 GOOGLE OAUTH METHODS
+userSchema.methods.linkGoogleAccount = function(googleProfile) {
+  this.googleId = googleProfile.id;
+  this.googleProfile = {
+    id: googleProfile.id,
+    displayName: googleProfile.displayName,
+    emails: googleProfile.emails,
+    photos: googleProfile.photos,
+    provider: 'google'
+  };
+  
+  // Add Google to auth providers if not already present
+  const hasGoogleProvider = this.authProviders.some(provider => provider.provider === 'google');
+  if (!hasGoogleProvider) {
+    this.authProviders.push({
+      provider: 'google',
+      linkedAt: new Date(),
+      isActive: true
+    });
+  }
+  
+  // Auto-verify email if Google email is verified
+  if (googleProfile.emails && googleProfile.emails[0] && googleProfile.emails[0].verified) {
+    this.isEmailVerified = true;
+  }
+  
+  return this.save();
+};
+
+userSchema.methods.unlinkGoogleAccount = function() {
+  // Use the hasPassword method for consistency
+  if (!this.hasPassword()) {
+    throw new Error('Cannot unlink Google account: No password set. Please set a password first.');
+  }
+  
+  this.googleId = null;
+  this.googleProfile = null;
+  
+  // Remove Google from auth providers
+  this.authProviders = this.authProviders.filter(provider => provider.provider !== 'google');
+  
+  return this.save();
+};
+
+userSchema.methods.hasAuthProvider = function(provider) {
+  return this.authProviders.some(p => p.provider === provider && p.isActive);
+};
+
+userSchema.methods.getAuthProviders = function() {
+  return this.authProviders.filter(p => p.isActive).map(p => p.provider);
+};
+
+// Check if user can authenticate (has at least one auth method)
+userSchema.methods.canAuthenticate = function() {
+  const hasPassword = this.password && this.password.trim() !== '';
+  const hasGoogle = this.googleId && this.googleId.trim() !== '';
+  return hasPassword || hasGoogle;
+};
+
+// Check if user has a password set
+userSchema.methods.hasPassword = function() {
+  return this.password && this.password.trim() !== '';
+};
+
+// 🔥 ACCOUNT LOCKOUT METHODS
+userSchema.methods.recordFailedLoginAttempt = function() {
+  this.failedLoginAttempts.count += 1;
+  this.failedLoginAttempts.lastAttempt = new Date();
+  
+  // Lock account after 5 failed attempts for 30 minutes
+  if (this.failedLoginAttempts.count >= 5) {
+    this.failedLoginAttempts.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+  }
+  
+  return this.save();
+};
+
+userSchema.methods.resetFailedLoginAttempts = function() {
+  this.failedLoginAttempts = {
+    count: 0,
+    lastAttempt: null,
+    lockedUntil: null
+  };
+  return this.save();
+};
+
+userSchema.methods.isAccountLocked = function() {
+  if (!this.failedLoginAttempts.lockedUntil) {
+    return false;
+  }
+  
+  // Check if lock period has expired
+  if (this.failedLoginAttempts.lockedUntil < new Date()) {
+    this.resetFailedLoginAttempts();
+    return false;
+  }
+  
+  return true;
+};
+
+// 🔥 STATIC METHODS FOR GOOGLE OAUTH
+userSchema.statics.findOrCreateGoogleUser = async function(googleProfile) {
+  try {
+    // First, try to find by Google ID
+    let user = await this.findOne({ googleId: googleProfile.id });
+    
+    if (user) {
+      // Update Google profile data
+      user.googleProfile = {
+        id: googleProfile.id,
+        displayName: googleProfile.displayName,
+        emails: googleProfile.emails,
+        photos: googleProfile.photos,
+        provider: 'google'
+      };
+      user.lastLoginMethod = 'google';
+      user.lastLoginAt = new Date();
+      await user.save();
+      return user;
+    }
+    
+    // If not found by Google ID, try to find by email
+    const email = googleProfile.emails[0]?.value;
+    if (email) {
+      user = await this.findOne({ email: email.toLowerCase() });
+      
+      if (user) {
+        // Link Google account to existing user
+        await user.linkGoogleAccount(googleProfile);
+        user.lastLoginMethod = 'google';
+        user.lastLoginAt = new Date();
+        await user.save();
+        return user;
+      }
+    }
+    
+    // Create new user with Google OAuth
+    const username = await this.generateUniqueUsername(googleProfile.displayName);
+    
+    user = new this({
+      email: email,
+      fullName: googleProfile.displayName,
+      username: username,
+      avatar: googleProfile.photos[0]?.value,
+      isEmailVerified: googleProfile.emails[0]?.verified || false,
+      lastLoginMethod: 'google',
+      lastLoginAt: new Date()
+    });
+    
+    await user.linkGoogleAccount(googleProfile);
+    return user;
+    
+  } catch (error) {
+    throw new Error(`Failed to find or create Google user: ${error.message}`);
+  }
+};
+
+userSchema.statics.generateUniqueUsername = async function(baseName) {
+  let username = baseName
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .substring(0, 15);
+  
+  let counter = 1;
+  let finalUsername = username;
+  
+  while (await this.findOne({ username: finalUsername })) {
+    finalUsername = `${username}${counter}`;
+    counter++;
+    
+    if (counter > 100) {
+      // Fallback to timestamp-based username
+      finalUsername = `user${Date.now()}`;
+      break;
+    }
+  }
+  
+  return finalUsername;
 };
 
 // Generate access token with enhanced security
@@ -224,11 +491,15 @@ userSchema.methods.invalidateAllTokens = function() {
   return this.save();
 };
 
-// Clean up expired tokens
-userSchema.methods.cleanupExpiredTokens = function() {
+// Clean up expired tokens using atomic operations
+userSchema.methods.cleanupExpiredTokens = async function() {
   const now = new Date();
-  this.activeTokens = this.activeTokens.filter(token => token.expiresAt > now);
-  return this.save();
+  await this.updateOne({
+    $pull: {
+      activeTokens: { expiresAt: { $lt: now } }
+    }
+  });
+  return this;
 };
 
 // Get active sessions count
@@ -269,6 +540,13 @@ userSchema.methods.generateEmailVerificationToken = function() {
   const token = uuidv4();
   this.emailVerificationToken = token;
   this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  // Reset verification attempts when generating new token
+  this.emailVerificationAttempts = {
+    count: 0,
+    lastAttempt: null,
+    blocked: false,
+    blockedUntil: null
+  };
   return token;
 };
 
@@ -343,5 +621,6 @@ userSchema.index({ role: 1 });
 userSchema.index({ lastActivity: 1 });
 userSchema.index({ 'activeTokens.jti': 1 });
 userSchema.index({ 'activeTokens.expiresAt': 1 });
+userSchema.index({ googleId: 1 }); // Index for Google OAuth lookups
 
 export const User = mongoose.model("User", userSchema);

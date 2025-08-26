@@ -244,11 +244,15 @@ const getTestById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid Test ID format");
     }
 
-    // Find test and populate creator info and revision history users
+    // Find test and populate creator info, revision history users, and questions
     const test = await Test.findById(id)
         .populate('createdBy', 'username email')
         .populate('lastModifiedBy', 'username email')
-        .populate('revisionHistory.modifiedBy', 'username email');
+        .populate('revisionHistory.modifiedBy', 'username email')
+        .populate({
+            path: 'questions',
+            select: 'question options correctOption correctOptions marks subject examType class difficulty year chapter section negativeMarks isVerified isActive questionType image'
+        });
 
     if (!test) {
         throw new ApiError(404, "Test not found");
@@ -282,6 +286,45 @@ const getTestById = asyncHandler(async (req, res) => {
     console.log(`Found test: ${test.title} - Access granted`);
     return res.status(200).json(
         new ApiResponse(200, test, "Test retrieved successfully")
+    );
+});
+
+// --- Get Test with Populated Questions ---
+const getTestWithQuestions = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    console.log(`Fetching test with populated questions by ID: ${id}`);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new ApiError(400, "Invalid Test ID format");
+    }
+
+    // Find test and populate all related data including questions
+    const test = await Test.findById(id)
+        .populate('createdBy', 'username email')
+        .populate('lastModifiedBy', 'username email')
+        .populate('revisionHistory.modifiedBy', 'username email')
+        .populate({
+            path: 'questions',
+            select: 'question options correctOption correctOptions marks subject examType class difficulty year chapter section negativeMarks isVerified isActive questionType image'
+        });
+
+    if (!test) {
+        throw new ApiError(404, "Test not found");
+    }
+
+    // Check user role for access control
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    console.log(`User role check: isAdmin=${isAdmin}, user role=${req.user?.role}, test status=${test.status}`);
+    
+    // Only apply status check for non-admin users
+    if (!isAdmin && test.status !== 'published') {
+        console.log(`Access denied: non-admin user trying to access ${test.status} test`);
+        throw new ApiError(403, "You do not have permission to view this test");
+    }
+
+    console.log(`Found test with ${test.questions?.length || 0} populated questions: ${test.title}`);
+    return res.status(200).json(
+        new ApiResponse(200, test, "Test with questions retrieved successfully")
     );
 });
 
@@ -603,6 +646,7 @@ export {
     createTest,
     getTests,
     getTestById,
+    getTestWithQuestions,
     updateTest,
     deleteTest,
     getTestForAttempt
