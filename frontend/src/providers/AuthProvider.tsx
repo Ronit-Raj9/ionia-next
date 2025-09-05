@@ -198,7 +198,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({
     endSession,
   } = useSessionStatus();
 
-  const [isHydrated, setHydrated] = useState(useAuthStore.persist.hasHydrated());
+  const [isHydrated, setHydrated] = useState(useAuthStore.persist?.hasHydrated() ?? false);
   const [initError, setInitError] = useState<string | null>(null);
   const [cookiesSupported, setCookiesSupported] = useState(true);
   const [showCookieNotice, setShowCookieNotice] = useState(false);
@@ -208,6 +208,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({
   // ==========================================
 
   useEffect(() => {
+    if (!useAuthStore.persist) {
+      console.warn('🏪 Auth store persist is not available');
+      setHydrated(true);
+      return;
+    }
+
     const unsubscribe = useAuthStore.persist.onFinishHydration(() => {
       console.log('🏪 Auth store hydrated');
       setHydrated(true);

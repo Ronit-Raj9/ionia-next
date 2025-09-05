@@ -119,7 +119,7 @@ export default function RootLayout({
         {/* <PerformanceInitializer /> */}
         
         {/* Main application */}
-        <AuthProvider>
+        {/* <AuthProvider> */}
           <div className="flex flex-col min-h-screen">
             <Navbar />
             
@@ -134,7 +134,7 @@ export default function RootLayout({
           <Notifications />
           <CookieConsent />
           <Toaster position="bottom-right" />
-        </AuthProvider>
+        {/* </AuthProvider> */}
         
         {/* Service Worker registration */}
         <script dangerouslySetInnerHTML={{

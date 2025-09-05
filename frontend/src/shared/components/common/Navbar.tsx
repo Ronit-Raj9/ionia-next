@@ -127,7 +127,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
                 </Link>
                 <Link
                   href="/register"
-                  className="px-4 py-2 text-sm font-semibold text-white bg-emerald-400 rounded-lg shadow-lg hover:bg-emerald-500 hover:scale-105 transition-all duration-200 border border-emerald-400 animate-bounce hover:animate-none"
+                  className="px-4 py-2 text-sm font-semibold text-black bg-emerald-400 rounded-lg shadow-lg hover:bg-emerald-500 hover:scale-105 transition-all duration-200 border border-emerald-400"
                 >
                   Sign Up
                 </Link>
@@ -196,7 +196,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
                     </Link>
                     <Link
                       href="/register"
-                      className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-emerald-400 text-white border border-emerald-400 hover:bg-emerald-500 hover:scale-105 transition-all duration-200 animate-bounce hover:animate-none"
+                      className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-emerald-400 text-white border border-emerald-400 hover:bg-emerald-500 hover:scale-105 transition-all duration-200"
                       onClick={() => setNavbarOpen(false)}
                     >
                       Sign Up
