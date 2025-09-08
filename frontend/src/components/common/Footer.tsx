@@ -58,7 +58,7 @@ export default function Footer({ className = "" }: FooterProps) {
               </li>
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <Phone className="w-5 h-5 text-emerald-400" />
-                <span>+91 123 456 7890</span>
+                <span>+91 70610 76987</span>
               </li>
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <MapPin className="w-5 h-5 text-emerald-400" />
