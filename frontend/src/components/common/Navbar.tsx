@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu, X, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
@@ -50,6 +51,13 @@ export default function Navbar({ className = "" }: NavbarProps) {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center space-x-2">
+            <Image
+              src="/ionia_logo.png"
+              alt="Ionia Logo"
+              width={40}
+              height={40}
+              className="h-10 w-auto"
+            />
             <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent">
               Ionia
             </span>

@@ -10,8 +10,16 @@ import "@/styles/globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Test Series Platform",
+  title: "Ionia - Test Series Platform",
   description: "Prepare for JEE Mains, Advanced, and CUET",
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/ionia_logo.png', type: 'image/png' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/ionia_logo.png',
+  },
 };
 
 export default function RootLayout({

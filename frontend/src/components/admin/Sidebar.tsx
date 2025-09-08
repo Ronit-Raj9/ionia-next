@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { 
   HomeIcon, 
@@ -26,7 +27,16 @@ export function Sidebar() {
   return (
     <div className="sticky top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="flex items-center h-16 px-4 border-b border-gray-200">
-        <h1 className="text-xl font-semibold text-gray-800">Admin Panel</h1>
+        <div className="flex items-center space-x-2">
+          <Image
+            src="/ionia_logo.png"
+            alt="Ionia Logo"
+            width={28}
+            height={28}
+            className="h-7 w-auto"
+          />
+          <h1 className="text-xl font-semibold text-gray-800">Ionia Admin</h1>
+        </div>
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {

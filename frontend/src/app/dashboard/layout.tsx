@@ -12,6 +12,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { getCurrentUser } from '@/redux/slices/authSlice';
 import { ClipLoader } from 'react-spinners';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function DashboardLayout({
   children,
@@ -135,8 +136,17 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-gray-50">
       {/* Desktop Header */}
       <header className="hidden md:flex bg-white shadow-sm py-4 px-6 justify-between items-center">
-        <Link href="/" className="text-xl font-bold text-emerald-600">
-          Ionia
+        <Link href="/" className="flex items-center space-x-2">
+          <Image
+            src="/ionia_logo.png"
+            alt="Ionia Logo"
+            width={32}
+            height={32}
+            className="h-8 w-auto"
+          />
+          <span className="text-xl font-bold text-emerald-600">
+            Ionia
+          </span>
         </Link>
         <Link href="/" className="text-gray-600 hover:text-emerald-600">
           Back to Home

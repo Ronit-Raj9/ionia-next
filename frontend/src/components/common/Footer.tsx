@@ -1,6 +1,7 @@
 "use client";
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -27,9 +28,18 @@ export default function Footer({ className = "" }: FooterProps) {
             className="space-y-4"
             {...fadeInUp}
           >
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-200 bg-clip-text text-transparent">
-              TestSeries
-            </h3>
+            <div className="flex items-center space-x-3">
+              <Image
+                src="/ionia_logo.png"
+                alt="Ionia Logo"
+                width={40}
+                height={40}
+                className="h-10 w-auto"
+              />
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-200 bg-clip-text text-transparent">
+                Ionia
+              </h3>
+            </div>
             <p className="text-emerald-100 leading-relaxed">
               Your ultimate preparation platform for competitive exams. Empowering students to achieve their dreams through quality education.
             </p>
@@ -73,7 +83,7 @@ export default function Footer({ className = "" }: FooterProps) {
           {...fadeInUp}
         >
           <p className="text-emerald-200 text-sm">
-            © {new Date().getFullYear()} TestSeries. All rights reserved.
+            © {new Date().getFullYear()} Ionia. All rights reserved.
             <span className="mx-2">|</span>
             <Link href="/privacy" className="hover:text-white transition-colors duration-300">
               Privacy Policy
