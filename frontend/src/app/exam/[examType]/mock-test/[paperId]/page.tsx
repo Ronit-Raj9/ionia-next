@@ -296,7 +296,7 @@ const TestDetailsPage = () => {
             <div className="mt-8">
               <button
                 onClick={() => router.push(`/exam/${examType}/mock-test/${paperId}/instructions`)}
-                className="w-full py-3 bg-primary text-white font-medium rounded-md hover:bg-primary-dark transition-colors text-center"
+                className="w-full py-3 bg-gray-500 text-white font-medium rounded-md hover:bg-gray-600 transition-colors text-center"
               >
                 Start Test
               </button>
