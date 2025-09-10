@@ -42,7 +42,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ file, onRemove }) => {
         )}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
-            <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-emerald-500 rounded-full animate-spin"></div>
           </div>
         )}
       </div>

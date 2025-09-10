@@ -38,7 +38,7 @@ const TagsTopics: React.FC<TagsTopicsProps> = ({
         <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
           Tags (Optional)
         </label>
-        <div className="border rounded-lg p-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-shadow">
+        <div className="border rounded-lg p-3 bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-shadow">
           <div className="flex flex-wrap gap-2 mb-2">
             {formData.tags.map((tag, index) => (
               <div 
@@ -49,7 +49,7 @@ const TagsTopics: React.FC<TagsTopicsProps> = ({
                 <button
                   type="button"
                   onClick={() => removeTag(index, 'tags')}
-                  className="ml-1 text-blue-600 hover:text-blue-800"
+                  className="ml-1 text-emerald-600 hover:text-emerald-800"
                 >
                   <X size={14} />
                 </button>
@@ -74,7 +74,7 @@ const TagsTopics: React.FC<TagsTopicsProps> = ({
         <label htmlFor="relatedTopics" className="block text-sm font-medium text-gray-700 mb-1">
           Related Topics (Optional)
         </label>
-        <div className="border rounded-lg p-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-shadow">
+        <div className="border rounded-lg p-3 bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-shadow">
           <div className="flex flex-wrap gap-2 mb-2">
             {formData.relatedTopics.map((topic, index) => (
               <div 
@@ -110,7 +110,7 @@ const TagsTopics: React.FC<TagsTopicsProps> = ({
         <label htmlFor="prerequisites" className="block text-sm font-medium text-gray-700 mb-1">
           Prerequisites (Optional)
         </label>
-        <div className="border rounded-lg p-3 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-shadow">
+        <div className="border rounded-lg p-3 bg-white focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 transition-shadow">
           <div className="flex flex-wrap gap-2 mb-2">
             {formData.prerequisites.map((prereq, index) => (
               <div 

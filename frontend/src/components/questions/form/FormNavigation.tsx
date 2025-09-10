@@ -37,7 +37,7 @@ const FormNavigation: React.FC<FormNavigationProps> = ({
             type="button"
             onClick={onPrevStep}
             disabled={isSubmitting}
-            className="flex items-center px-4 py-2 text-sm font-medium rounded text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="flex items-center px-4 py-2 text-sm font-medium rounded text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
           >
             <ChevronLeft size={16} className="mr-1" />
             Previous: {stepNames[Math.max(0, activeStep - 2)] || "Previous Step"}
@@ -60,7 +60,7 @@ const FormNavigation: React.FC<FormNavigationProps> = ({
             className={`flex items-center px-4 py-2 text-sm font-medium rounded ${
               hasCriticalErrors
                 ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500'
             } transition-colors`}
           >
             Next: {stepNames[Math.min(stepNames.length - 1, activeStep)] || "Next Step"}

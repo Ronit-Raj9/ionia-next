@@ -655,7 +655,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
                 <div className="text-sm text-gray-500">Accuracy</div>
                 <div className="text-2xl font-bold">{calculateOverallAccuracy().toFixed(1)}%</div>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <div className="bg-emerald-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Completion</div>
                 <div className="text-2xl font-bold">{fixedPerformanceData?.totalQuestions > 0 ? 
                   ((fixedPerformanceData.totalCorrectAnswers + fixedPerformanceData.totalWrongAnswers) / 
@@ -763,7 +763,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
                 <div className="text-sm text-gray-500">Attempted</div>
                 <div className="text-2xl font-bold">{fixedPerformanceData.totalCorrectAnswers + fixedPerformanceData.totalWrongAnswers}</div>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <div className="bg-emerald-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Total Time</div>
                 <div className="text-2xl font-bold">{formatTime(normalizeTimeValue(data.timeAnalytics?.totalTimeSpent || 0))}</div>
               </div>

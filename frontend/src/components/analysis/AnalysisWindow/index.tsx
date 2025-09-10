@@ -583,7 +583,7 @@ const StatCard = ({ title, value, color }: { title: string; value: string; color
     blue: 'bg-blue-50 text-blue-600',
     green: 'bg-green-50 text-green-600',
     yellow: 'bg-yellow-50 text-yellow-600',
-    purple: 'bg-purple-50 text-purple-600',
+    purple: 'bg-emerald-50 text-emerald-600',
   };
 
   return (

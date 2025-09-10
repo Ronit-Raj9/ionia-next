@@ -256,7 +256,7 @@ const SolutionViewer: React.FC<SolutionViewerProps> = ({ examType, paperId, atte
           <div className="text-red-600 mb-4">{error}</div>
           <button 
             onClick={backToAnalysis}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
           >
             Back to Analysis
           </button>
@@ -276,7 +276,7 @@ const SolutionViewer: React.FC<SolutionViewerProps> = ({ examType, paperId, atte
           </div>
           <button 
             onClick={backToAnalysis}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
           >
             Back to Analysis
           </button>
@@ -384,7 +384,7 @@ const SolutionViewer: React.FC<SolutionViewerProps> = ({ examType, paperId, atte
                 className={`px-4 py-2 rounded-md transition-colors ${
                   currentQuestionIndex === 0
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
                 }`}
               >
                 Previous
@@ -398,7 +398,7 @@ const SolutionViewer: React.FC<SolutionViewerProps> = ({ examType, paperId, atte
                 className={`px-4 py-2 rounded-md transition-colors ${
                   currentQuestionIndex === filteredQuestions.length - 1
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700'
                 }`}
               >
                 Next

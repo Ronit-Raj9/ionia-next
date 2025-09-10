@@ -636,7 +636,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           <div className="flex justify-between">
             <button 
               onClick={() => window.location.reload()} 
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded transition-colors"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-6 rounded transition-colors"
             >
               Try again
             </button>
@@ -660,7 +660,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           <p>The requested test could not be loaded.</p>
           <button 
             onClick={() => router.push(`/exam/${examType}`)}
-            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            className="mt-4 bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded"
           >
             Return to Exams
           </button>
@@ -680,7 +680,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </pre>
           <button 
             onClick={() => router.push(`/exam/${examType}`)}
-            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            className="mt-4 bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded"
           >
             Return to Exams
           </button>
@@ -700,7 +700,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           <p>The requested question (#{activeQuestion + 1}) could not be loaded.</p>
           <button
             onClick={() => dispatch(setActiveQuestion(0))}
-            className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+            className="mt-4 bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded mr-2"
           >
             Go to First Question
           </button>
@@ -768,7 +768,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
                   <div 
                     key={index}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      currentQuestionData.userAnswer === index ? 'bg-blue-100 border-blue-500' : 'hover:bg-gray-100'
+                      currentQuestionData.userAnswer === index ? 'bg-emerald-100 border-emerald-500' : 'hover:bg-gray-100'
                     }`}
                     onClick={() => handleOptionChange(activeQuestion, index)}
                   >

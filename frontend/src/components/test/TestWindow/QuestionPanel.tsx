@@ -32,7 +32,7 @@ const QuestionOptions: React.FC<OptionProps> = ({
     <div
       className={`p-4 rounded-lg border-2 ${
         selectedAnswer === optionIndex
-          ? 'border-blue-500 bg-blue-50'
+          ? 'border-emerald-500 bg-emerald-50'
           : 'border-gray-300 hover:border-gray-400 bg-white'
       }`}
       onClick={() => handleOptionChange(questionNumber, optionIndex)}
@@ -49,7 +49,7 @@ const QuestionOptions: React.FC<OptionProps> = ({
         <div
           className={`flex-shrink-0 w-6 h-6 rounded-full border-2 ${
             selectedAnswer === optionIndex
-              ? 'border-blue-500 bg-blue-500'
+              ? 'border-emerald-500 bg-emerald-500'
               : 'border-gray-300'
           } flex items-center justify-center`}
         >
@@ -151,7 +151,7 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
             {question.difficulty}
           </div>
           {question.isMarked && (
-            <div className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-medium">
+            <div className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-medium">
               Marked for Review
             </div>
           )}

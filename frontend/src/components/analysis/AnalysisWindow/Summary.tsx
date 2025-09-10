@@ -67,9 +67,9 @@ const Summary: React.FC<SummaryProps> = ({ id, data }) => {
           <p className="text-sm text-gray-600 font-medium">Accuracy</p>
           <p className="text-2xl font-bold text-green-600">{formattedAccuracy}%</p>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg shadow-sm border border-purple-100 transition-all hover:shadow-md">
+        <div className="bg-emerald-50 p-4 rounded-lg shadow-sm border border-emerald-100 transition-all hover:shadow-md">
           <p className="text-sm text-gray-600 font-medium">Time Taken</p>
-          <p className="text-2xl font-bold text-purple-600">{formatTime(testInfo?.duration || 0)}</p>
+          <p className="text-2xl font-bold text-emerald-600">{formatTime(testInfo?.duration || 0)}</p>
         </div>
         <div className="bg-orange-50 p-4 rounded-lg shadow-sm border border-orange-100 transition-all hover:shadow-md">
           <p className="text-sm text-gray-600 font-medium">Questions</p>

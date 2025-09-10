@@ -187,7 +187,7 @@ const DetailsClassification: React.FC<StepProps> = ({
           <select
             value={formData.year}
             onChange={(e) => handleInputChange(e, 'year')}
-            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           >
             <option value="not applicable">Not Applicable</option>
             {YEARS.map(year => (
@@ -283,7 +283,7 @@ const DetailsClassification: React.FC<StepProps> = ({
           <select
             value={formData.difficulty}
             onChange={(e) => handleInputChange(e, 'difficulty')}
-            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           >
             {DIFFICULTY_LEVELS.map(level => (
               <option key={level.value} value={level.value}>{level.label}</option>
@@ -301,7 +301,7 @@ const DetailsClassification: React.FC<StepProps> = ({
           <select
             value={formData.language}
             onChange={(e) => handleInputChange(e, 'language')}
-            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           >
             {LANGUAGES.map(language => (
               <option key={language.value} value={language.value}>{language.label}</option>
@@ -319,7 +319,7 @@ const DetailsClassification: React.FC<StepProps> = ({
           <select
             value={formData.languageLevel}
             onChange={(e) => handleInputChange(e, 'languageLevel')}
-            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           >
             {LANGUAGE_LEVELS.map(level => (
               <option key={level.value} value={level.value}>{level.label}</option>
@@ -342,7 +342,7 @@ const DetailsClassification: React.FC<StepProps> = ({
             min="1"
             value={formData.marks}
             onChange={(e) => handleInputChange(e, 'marks')}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
           />
           {errors.marks && (
             <p className="mt-1 text-sm text-red-500">{errors.marks}</p>
@@ -358,7 +358,7 @@ const DetailsClassification: React.FC<StepProps> = ({
             max="0"
             value={formData.negativeMarks}
             onChange={(e) => handleInputChange(e, 'negativeMarks')}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
           />
           <p className="mt-1 text-xs text-gray-500">Enter as negative value (e.g., -0.25)</p>
           {errors.negativeMarks && (
@@ -375,7 +375,7 @@ const DetailsClassification: React.FC<StepProps> = ({
             min="0"
             value={formData.expectedTime}
             onChange={(e) => handleInputChange(e, 'expectedTime')}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
           />
           <p className="mt-1 text-xs text-gray-500">Time students should take to solve (in seconds)</p>
         </div>

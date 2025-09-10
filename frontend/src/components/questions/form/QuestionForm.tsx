@@ -529,7 +529,7 @@ const QuestionForm: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
               >
                 Next: {stepNames[step] || 'Next'}
               </button>
@@ -552,7 +552,7 @@ const QuestionForm: React.FC = () => {
       {loading && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg flex items-center">
-            <Loader2 className="h-6 w-6 text-blue-600 animate-spin mr-3" />
+            <Loader2 className="h-6 w-6 text-emerald-600 animate-spin mr-3" />
             <p className="text-gray-700">Saving question...</p>
           </div>
         </div>

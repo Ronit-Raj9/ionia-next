@@ -53,13 +53,13 @@ export default function Navbar({ className = "" }: NavbarProps) {
           <Link href="/" className="flex items-center space-x-2">
             <Image
               src="/ionia_logo.png"
-              alt="Ionia Logo"
+              alt="iONIA Logo"
               width={40}
               height={40}
               className="h-10 w-auto"
             />
             <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-400 bg-clip-text text-transparent">
-              Ionia
+              iONIA
             </span>
           </Link>
 

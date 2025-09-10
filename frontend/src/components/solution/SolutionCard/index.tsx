@@ -149,12 +149,12 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
         {/* Topic/Chapter Tags */}
         <div className="flex flex-wrap gap-2 mb-4">
           {question.subject && (
-            <span className={`text-xs ${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'} px-2 py-1 rounded-full`}>
+            <span className={`text-xs ${darkMode ? 'bg-emerald-900 text-emerald-200' : 'bg-emerald-100 text-emerald-800'} px-2 py-1 rounded-full`}>
               {question.subject}
             </span>
           )}
           {question.topic && (
-            <span className={`text-xs ${darkMode ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800'} px-2 py-1 rounded-full`}>
+            <span className={`text-xs ${darkMode ? 'bg-emerald-900 text-emerald-200' : 'bg-emerald-100 text-emerald-800'} px-2 py-1 rounded-full`}>
               {question.topic}
             </span>
           )}
@@ -264,7 +264,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
           <h3 className="text-lg font-semibold">Solution</h3>
           <button
             onClick={() => setShowDetailedSolution(!showDetailedSolution)}
-            className={`text-sm ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}
+            className={`text-sm ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}
           >
             {showDetailedSolution ? 'Show Brief Solution' : 'Show Detailed Solution'}
           </button>
@@ -411,7 +411,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
             onChange={(e) => setCurrentNote(e.target.value)}
             className={`w-full p-3 rounded-md ${
               darkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-700 border-gray-300'
-            } border focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            } border focus:outline-none focus:ring-2 focus:ring-emerald-500`}
             rows={4}
             placeholder="Add your notes here..."
           />
@@ -426,7 +426,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
             </button>
             <button
               onClick={handleSaveNote}
-              className="px-3 py-1 rounded-md text-sm bg-blue-600 text-white"
+              className="px-3 py-1 rounded-md text-sm bg-emerald-600 text-white"
             >
               Save Note
             </button>
@@ -450,7 +450,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
                   Similar question {idx} about {question.topic || 'this topic'}
                 </p>
                 <div className="flex gap-2 mt-2">
-                  <button className="text-xs px-2 py-1 rounded-md bg-blue-600 text-white">
+                  <button className="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white">
                     Practice
                   </button>
                   <button className="text-xs px-2 py-1 rounded-md bg-gray-600 text-white">
@@ -504,7 +504,7 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-2 rounded-md text-sm bg-blue-600 text-white"
+                  className="px-3 py-2 rounded-md text-sm bg-emerald-600 text-white"
                 >
                   Submit Report
                 </button>

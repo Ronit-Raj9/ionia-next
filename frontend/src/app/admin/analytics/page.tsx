@@ -171,13 +171,13 @@ export default function AnalyticsPage() {
       name: 'Total Tests',
       value: totalTests,
       icon: ClipboardList,
-      color: 'bg-blue-500'
+      color: 'bg-emerald-500'
     },
     {
       name: 'Questions per Test',
       value: averageQuestionsPerTest,
       icon: BarChart,
-      color: 'bg-purple-500'
+      color: 'bg-emerald-500'
     },
     {
       name: 'Exam Types',

@@ -52,7 +52,7 @@ const FileUpload: React.FC<ExtendedFileUploadProps> = ({
       {showUploadUI ? (
         <div 
           onClick={() => fileInputRef.current?.click()} 
-          className="cursor-pointer border border-dashed border-gray-300 rounded-lg p-2 text-center hover:border-blue-500 transition-colors"
+          className="cursor-pointer border border-dashed border-gray-300 rounded-lg p-2 text-center hover:border-emerald-500 transition-colors"
         >
           <Upload className="mx-auto h-4 w-4 text-gray-400" />
           <p className="mt-1 text-xs text-gray-500">Click to upload</p>

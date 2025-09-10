@@ -32,7 +32,7 @@ const SolutionNavigationBar: React.FC<NavigationBarProps> = ({
           <div className="flex items-center gap-4 w-full md:w-auto">
             <button
               onClick={backToAnalysis}
-              className="flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+              className="flex items-center text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium"
             >
               <ArrowLeftIcon className="w-5 h-5 mr-1" />
               Back to Analysis
@@ -142,7 +142,7 @@ const FilterButton: React.FC<{
       onClick={onClick}
       className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
         active
-          ? 'bg-blue-600 text-white'
+          ? 'bg-emerald-600 text-white'
           : darkMode
             ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
