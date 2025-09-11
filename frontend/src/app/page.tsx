@@ -214,7 +214,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6, duration: 0.8 }}
             >
-              Transform your preparation with AI-powered analytics, smart mock tests, and personalized insights. 
+               
               <br className="hidden md:block" />
               {/* Join thousands of successful students who achieved their dreams with us. */}
             </motion.p>
@@ -284,7 +284,7 @@ export default function Home() {
               Prepare for Your <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Future</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Choose from our comprehensive range of exam preparations, each tailored with cutting-edge technology
+              
             </p>
           </motion.div>
           
@@ -353,7 +353,7 @@ export default function Home() {
               Experience the <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Future</span> of Learning
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Powered by advanced AI and designed by education experts, our platform offers personalized learning experiences that adapt to your unique needs
+              
             </p>
           </motion.div>
 

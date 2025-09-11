@@ -41,7 +41,7 @@ export default function Footer({ className = "" }: FooterProps) {
               </h3>
             </div>
             <p className="text-emerald-100 leading-relaxed">
-              Your ultimate preparation platform for competitive exams. Empowering students to achieve their dreams through quality education.
+              We provide the perfect tools to personalise your own journey to achieve whatever you want.
             </p>
             <div className="flex space-x-4 pt-4">
               <a href="#" className="transform hover:scale-110 transition-transform duration-300">
@@ -64,7 +64,7 @@ export default function Footer({ className = "" }: FooterProps) {
             <ul className="space-y-4">
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <Mail className="w-5 h-5 text-emerald-400" />
-                <span>chitarthkumargupta@gmail.com</span>
+                <span>ionia.ebh@gmail.com</span>
               </li>
               <li className="flex items-center space-x-3 text-emerald-200 hover:text-white transition-colors duration-300">
                 <Phone className="w-5 h-5 text-emerald-400" />
