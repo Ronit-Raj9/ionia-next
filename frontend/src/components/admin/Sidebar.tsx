@@ -30,12 +30,12 @@ export function Sidebar() {
         <div className="flex items-center space-x-2">
           <Image
             src="/ionia_logo.png"
-            alt="Ionia Logo"
+            alt="iONIA Logo"
             width={28}
             height={28}
             className="h-7 w-auto"
           />
-          <h1 className="text-xl font-semibold text-gray-800">Ionia Admin</h1>
+          <h1 className="text-xl font-semibold text-gray-800">iONIA Admin</h1>
         </div>
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">

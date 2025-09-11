@@ -40,8 +40,8 @@ const QuestionGrid: React.FC<QuestionGridProps> = ({ questions, activeQuestion, 
           className={`
             relative flex items-center justify-center w-12 h-12 rounded-md 
             font-medium transition-all duration-200 
-            focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500
-            ${activeQuestion === index ? 'ring-2 ring-blue-500' : ''}
+            focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-emerald-500
+            ${activeQuestion === index ? 'ring-2 ring-emerald-500' : ''}
           `}
           aria-label={`Go to question ${index + 1}`}
         >

@@ -139,13 +139,13 @@ export default function DashboardLayout({
         <Link href="/" className="flex items-center space-x-2">
           <Image
             src="/ionia_logo.png"
-            alt="Ionia Logo"
+            alt="iONIA Logo"
             width={32}
             height={32}
             className="h-8 w-auto"
           />
           <span className="text-xl font-bold text-emerald-600">
-            Ionia
+            iONIA
           </span>
         </Link>
         <Link href="/" className="text-gray-600 hover:text-emerald-600">
@@ -170,7 +170,7 @@ export default function DashboardLayout({
           {isMobile && !isSidebarOpen && (
             <header className="sticky top-0 z-20 bg-white shadow-sm py-4 px-6 flex justify-between items-center md:hidden">
               <Link href="/" className="text-xl font-bold text-emerald-600">
-                Ionia
+                iONIA
               </Link>
               <button
                 onClick={toggleSidebar}

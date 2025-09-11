@@ -112,7 +112,7 @@ const QuestionStatistics: React.FC<QuestionStatisticsProps> = ({ questionId }) =
         {/* Total Attempts Card */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+            <div className="p-3 rounded-full bg-emerald-100 text-emerald-600 mr-4">
               <Users className="h-6 w-6" />
             </div>
             <div>
@@ -138,7 +138,7 @@ const QuestionStatistics: React.FC<QuestionStatisticsProps> = ({ questionId }) =
         {/* Average Time Card */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
+            <div className="p-3 rounded-full bg-emerald-100 text-emerald-600 mr-4">
               <Clock className="h-6 w-6" />
             </div>
             <div>

@@ -314,8 +314,8 @@ const BehavioralAnalysis: React.FC<BehavioralAnalysisProps> = ({ data }) => {
                 </div>
               </div>
 
-              <div className="border p-3 rounded-md bg-purple-50">
-                <h4 className="font-medium text-purple-800">Multiple Revisions (Changed Mind)</h4>
+              <div className="border p-3 rounded-md bg-emerald-50">
+                <h4 className="font-medium text-emerald-800">Multiple Revisions (Changed Mind)</h4>
                 <p className="text-sm text-gray-600 mt-1">
                   {confidenceMetrics.multipleRevisions.length} questions where you changed your answer
                 </p>
@@ -323,10 +323,10 @@ const BehavioralAnalysis: React.FC<BehavioralAnalysisProps> = ({ data }) => {
                   {confidenceMetrics.multipleRevisions.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {confidenceMetrics.multipleRevisions.slice(0, 5).map((q: string, i: number) => (
-                        <span key={i} className="px-2 py-1 bg-purple-100 rounded">Q{q.slice(-3)}</span>
+                        <span key={i} className="px-2 py-1 bg-emerald-100 rounded">Q{q.slice(-3)}</span>
                       ))}
                       {confidenceMetrics.multipleRevisions.length > 5 && (
-                        <span className="px-2 py-1 bg-purple-100 rounded">
+                        <span className="px-2 py-1 bg-emerald-100 rounded">
                           +{confidenceMetrics.multipleRevisions.length - 5} more
                         </span>
                       )}

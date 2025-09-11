@@ -123,7 +123,7 @@ const TimeAnalysis: React.FC<TimeAnalysisProps> = ({ data }) => {
             <div className="text-sm text-gray-500">Total Time Spent</div>
             <div className="text-2xl font-semibold">{formatDuration(totalTimeSpent)}</div>
           </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
+          <div className="bg-emerald-50 p-4 rounded-lg">
             <div className="text-sm text-gray-500">Average Time per Question</div>
             <div className="text-2xl font-semibold">
               {formatDuration(averageTimePerQuestion)}

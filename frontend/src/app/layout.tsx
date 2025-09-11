@@ -10,7 +10,7 @@ import "@/styles/globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Ionia - Test Series Platform",
+  title: "iONIA - Test Series Platform",
   description: "Prepare for JEE Mains, Advanced, and CUET",
   icons: {
     icon: [

@@ -229,7 +229,7 @@ const PreviewQuestion: React.FC<PreviewQuestionProps> = ({
                   {formData.relatedTopics.map((topic, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
+                      className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm"
                     >
                       {topic}
                     </span>
@@ -253,7 +253,7 @@ const PreviewQuestion: React.FC<PreviewQuestionProps> = ({
         <button
           type="button"
           onClick={onSubmit}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700"
         >
           Submit Question
         </button>

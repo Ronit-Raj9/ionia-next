@@ -99,13 +99,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
       switch (level) {
         case 'Expert':
           return {
-            badge: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white',
-            progress: 'from-purple-500 to-indigo-500'
+            badge: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
+            progress: 'from-emerald-500 to-teal-500'
           };
         case 'Advanced':
           return {
-            badge: 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white',
-            progress: 'from-blue-500 to-indigo-500'
+            badge: 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white',
+            progress: 'from-emerald-500 to-teal-500'
           };
         case 'Intermediate':
           return {
@@ -149,7 +149,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
       initial="hidden"
       animate="visible"
     >
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600 p-8 text-white">
+      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-600 p-8 text-white">
         <div className="absolute top-0 right-0 w-64 h-64 transform translate-x-32 -translate-y-32">
           <div className="absolute inset-0 bg-white opacity-10 rounded-full"></div>
         </div>
@@ -158,7 +158,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
           variants={itemVariants}
         >
           <div className="relative">
-            <div className="w-24 h-24 rounded-2xl bg-white shadow-lg text-blue-600 flex items-center justify-center text-4xl font-bold transform rotate-3 transition-transform duration-300 hover:rotate-6">
+            <div className="w-24 h-24 rounded-2xl bg-white shadow-lg text-emerald-600 flex items-center justify-center text-4xl font-bold transform rotate-3 transition-transform duration-300 hover:rotate-6">
               {getUserInitial()}
             </div>
             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-400 rounded-full border-4 border-white"></div>
@@ -196,7 +196,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
             </div>
           </div>
           <div className="flex items-center space-x-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-            <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
               <FiMail className="w-6 h-6" />
             </div>
             <div>
@@ -205,7 +205,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
             </div>
           </div>
           <div className="flex items-center space-x-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors duration-300">
-            <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
               <FiAward className="w-6 h-6" />
             </div>
             <div>
@@ -216,12 +216,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
         </motion.div>
         
         <motion.div variants={itemVariants}>
-          <h3 className="text-xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <h3 className="text-xl font-bold mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             Performance Summary
           </h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             <motion.div 
-              className="p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-lg transition-shadow duration-300"
+              className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-lg transition-shadow duration-300"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -232,11 +232,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, stats }) => {
               <p className="text-2xl font-bold text-gray-900">{validStats.totalTests}</p>
             </motion.div>
             <motion.div 
-              className="p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-indigo-50 hover:shadow-lg transition-shadow duration-300"
+              className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-lg transition-shadow duration-300"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
                 <FiTrendingUp className="w-6 h-6" />
               </div>
               <p className="text-sm text-gray-600 mb-1">Average Score</p>

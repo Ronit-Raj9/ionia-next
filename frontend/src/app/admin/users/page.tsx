@@ -143,8 +143,8 @@ const AdminUsersPage = () => {
                   <p className="text-gray-500 text-sm font-medium">Total Users</p>
                   <h3 className="text-3xl font-bold text-gray-900">{analytics.totalUsers}</h3>
                 </div>
-                <div className="bg-blue-50 p-3 rounded-full">
-                  <UserGroupIcon className="h-6 w-6 text-blue-500" />
+                <div className="bg-emerald-50 p-3 rounded-full">
+                  <UserGroupIcon className="h-6 w-6 text-emerald-500" />
                 </div>
               </div>
             </div>
@@ -167,8 +167,8 @@ const AdminUsersPage = () => {
                   <p className="text-gray-500 text-sm font-medium">Active Users</p>
                   <h3 className="text-3xl font-bold text-gray-900">{analytics.newUsersThisWeek}</h3>
                 </div>
-                <div className="bg-purple-50 p-3 rounded-full">
-                  <ChartBarIcon className="h-6 w-6 text-purple-500" />
+                <div className="bg-emerald-50 p-3 rounded-full">
+                  <ChartBarIcon className="h-6 w-6 text-emerald-500" />
                 </div>
               </div>
             </div>
@@ -179,7 +179,7 @@ const AdminUsersPage = () => {
                   <p className="text-gray-500 text-sm font-medium">User Roles</p>
                   <div className="flex items-center mt-1 gap-3">
                     <div className="flex items-center">
-                      <div className="h-3 w-3 rounded-full bg-blue-500 mr-1"></div>
+                      <div className="h-3 w-3 rounded-full bg-emerald-500 mr-1"></div>
                       <span className="text-xs text-gray-500">{analytics.usersByRole.user}</span>
                     </div>
                     <div className="flex items-center">
@@ -263,9 +263,9 @@ const AdminUsersPage = () => {
         {/* User Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-100">
           {loading && users.length > 0 && (
-            <div className="p-4 bg-blue-50 border-b border-blue-100 flex items-center">
-              <ArrowPathIcon className="h-5 w-5 text-blue-500 animate-spin mr-2" />
-              <span className="text-blue-700 text-sm font-medium">Refreshing user data...</span>
+            <div className="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center">
+              <ArrowPathIcon className="h-5 w-5 text-emerald-500 animate-spin mr-2" />
+              <span className="text-emerald-700 text-sm font-medium">Refreshing user data...</span>
             </div>
           )}
 
@@ -363,7 +363,7 @@ const AdminUsersPage = () => {
                           <button
                             onClick={() => handleRoleChange(user._id, "admin")}
                             disabled={isUpdatingRole}
-                            className="text-blue-600 hover:text-blue-800 relative group"
+                            className="text-emerald-600 hover:text-emerald-800 relative group"
                           >
                             <BriefcaseIcon className="h-5 w-5" />
                             <span className="hidden group-hover:block absolute right-0 top-full mt-1 p-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap z-10">
@@ -524,8 +524,8 @@ const AdminUsersPage = () => {
                             disabled={isUpdatingRole || selectedUser.role === "user"}
                             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium flex items-center justify-center ${
                               selectedUser.role === "user"
-                                ? "bg-blue-100 text-blue-800 cursor-not-allowed"
-                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                ? "bg-emerald-100 text-emerald-800 cursor-not-allowed"
+                                : "bg-emerald-600 text-white hover:bg-emerald-700"
                             }`}
                           >
                             <UserIcon className="h-4 w-4 mr-2" />
@@ -584,7 +584,7 @@ const AdminUsersPage = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                       <div className="bg-white rounded-lg border border-gray-200 p-5">
                         <div className="flex items-center mb-4">
-                          <DocumentTextIcon className="h-5 w-5 text-blue-500 mr-2" />
+                          <DocumentTextIcon className="h-5 w-5 text-emerald-500 mr-2" />
                           <h4 className="text-sm font-medium text-gray-700">Total Tests Taken</h4>
                         </div>
                         <p className="text-3xl font-bold text-gray-900">
@@ -613,7 +613,7 @@ const AdminUsersPage = () => {
 
                       <div className="bg-white rounded-lg border border-gray-200 p-5">
                         <div className="flex items-center mb-4">
-                          <CheckCircleIcon className="h-5 w-5 text-purple-500 mr-2" />
+                          <CheckCircleIcon className="h-5 w-5 text-emerald-500 mr-2" />
                           <h4 className="text-sm font-medium text-gray-700">Accuracy</h4>
                         </div>
                         <p className="text-3xl font-bold text-gray-900">
@@ -621,7 +621,7 @@ const AdminUsersPage = () => {
                         </p>
                         <div className="w-full bg-gray-200 h-2 rounded-full mt-2">
                           <div
-                            className="bg-purple-500 h-2 rounded-full"
+                            className="bg-emerald-500 h-2 rounded-full"
                             style={{ width: `${selectedUser.analytics?.accuracy || 0}%` }}
                           ></div>
                         </div>

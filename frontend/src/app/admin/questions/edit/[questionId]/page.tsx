@@ -179,7 +179,7 @@ export default function EditQuestionPage() {
             <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
               {question.subject}
             </div>
-            <div className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
+            <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
               {question.examType.replace('_', ' ').toUpperCase()}
             </div>
             <div className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium">

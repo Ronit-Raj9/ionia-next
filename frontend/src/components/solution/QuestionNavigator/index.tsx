@@ -136,7 +136,7 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
                 if (index === currentQuestionIndex) {
                   bgColor = 'bg-blue-700';
                   textColor = 'text-white';
-                  borderColor = 'border-blue-500';
+                  borderColor = 'border-emerald-500';
                 } else if (question.isCorrect) {
                   bgColor = 'bg-green-900';
                   textColor = 'text-green-100';
@@ -150,9 +150,9 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
               } else {
                 // Light mode colors
                 if (index === currentQuestionIndex) {
-                  bgColor = 'bg-blue-600';
+                  bgColor = 'bg-emerald-600';
                   textColor = 'text-white';
-                  borderColor = 'border-blue-400';
+                  borderColor = 'border-emerald-400';
                 } else if (question.isCorrect) {
                   bgColor = 'bg-green-500';
                   textColor = 'text-white';

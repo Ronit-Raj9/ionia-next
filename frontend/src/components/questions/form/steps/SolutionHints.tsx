@@ -42,7 +42,7 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
               name="solution.text"
               value={formData.solution.text}
               onChange={(e) => handleInputChange(e, 'solution', 'text')}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[80px] max-h-[120px] transition-shadow"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[80px] max-h-[120px] transition-shadow"
               placeholder="Explain the solution..."
             />
           </div>
@@ -161,7 +161,7 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
                       type="text"
                       value={mistake.description}
                       onChange={(e) => handleInputChange(e, 'commonMistakes', 'description', index)}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
                       placeholder="What students might do wrong..."
                     />
                     {errors[`commonMistakes[${index}].description`] && (
@@ -176,7 +176,7 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
                     <textarea
                       value={mistake.explanation}
                       onChange={(e) => handleInputChange(e, 'commonMistakes', 'explanation', index)}
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[60px] transition-shadow"
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[60px] transition-shadow"
                       placeholder="Why this is incorrect and how to avoid it..."
                     />
                     {errors[`commonMistakes[${index}].explanation`] && (

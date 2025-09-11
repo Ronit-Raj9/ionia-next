@@ -37,7 +37,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
           <select
             value={formData.questionType}
             onChange={(e) => handleInputChange(e, 'questionType')}
-            className="px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           >
             {QUESTION_TYPES.map(type => (
               <option key={type.value} value={type.value}>{type.label}</option>
@@ -52,7 +52,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
           <select
             value={formData.questionCategory}
             onChange={(e) => handleInputChange(e, 'questionCategory')}
-            className="px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           >
             {QUESTION_CATEGORIES.map(category => (
               <option key={category.value} value={category.value}>{category.label}</option>
@@ -67,7 +67,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
           <select
             value={formData.questionSource}
             onChange={(e) => handleInputChange(e, 'questionSource')}
-            className="px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="px-3 py-2 border rounded-lg bg-gray-50 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
           >
             {QUESTION_SOURCES.map(source => (
               <option key={source.value} value={source.value}>{source.label}</option>
@@ -87,7 +87,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
               name="question.text"
               value={formData.question.text}
               onChange={(e) => handleInputChange(e, 'question', 'text')}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[120px] transition-shadow"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[120px] transition-shadow"
               placeholder="Enter your question here..."
             />
           </div>
@@ -161,7 +161,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
                     type="text"
                     value={option.text}
                     onChange={(e) => handleInputChange(e, 'options', 'text', index)}
-                    className="flex-grow px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                    className="flex-grow px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
                     placeholder={`Option ${String.fromCharCode(65 + index)}`}
                   />
                   
@@ -206,7 +206,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
                     'exactValue',
                   )}
                   step="any"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
                 />
                 {errors['numericalAnswer.exactValue'] && (
                   <p className="mt-1 text-sm text-red-500">{errors['numericalAnswer.exactValue']}</p>
@@ -226,7 +226,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
                     'unit',
                   )}
                   placeholder="e.g., m/s, kg, °C"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
                 />
               </div>
               
@@ -248,7 +248,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
                     'min'
                   )}
                   step="any"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
                 />
               </div>
               
@@ -270,7 +270,7 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
                     'max'
                   )}
                   step="any"
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow"
                 />
               </div>
             </div>

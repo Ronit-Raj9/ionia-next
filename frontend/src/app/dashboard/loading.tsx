@@ -22,11 +22,11 @@ export default function DashboardLoading() {
                 <span>Retrieving your test history</span>
               </li>
               <li className="flex items-center">
-                <span className="w-4 h-4 bg-blue-500 rounded-full mr-3 flex-shrink-0"></span>
+                <span className="w-4 h-4 bg-emerald-500 rounded-full mr-3 flex-shrink-0"></span>
                 <span>Calculating your performance metrics</span>
               </li>
               <li className="flex items-center">
-                <span className="w-4 h-4 bg-purple-500 rounded-full mr-3 flex-shrink-0"></span>
+                <span className="w-4 h-4 bg-emerald-500 rounded-full mr-3 flex-shrink-0"></span>
                 <span>Preparing your personalized insights</span>
               </li>
             </ul>

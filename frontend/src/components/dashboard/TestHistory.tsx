@@ -141,7 +141,7 @@ const TestHistory: React.FC<TestHistoryProps> = ({ testHistory, testDetails }) =
       <div className="p-6 border-b border-gray-100">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
               Test History
             </h3>
             {error && (
@@ -162,8 +162,8 @@ const TestHistory: React.FC<TestHistoryProps> = ({ testHistory, testDetails }) =
               onClick={() => toggleSort('date')}
               className={`px-4 py-2 text-sm rounded-xl flex items-center space-x-2 transition-colors duration-200 ${
                 sortBy === 'date' 
-                  ? 'bg-blue-50 text-blue-600 border border-blue-200' 
-                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'
               }`}
             >
               <FiCalendar className="w-4 h-4" />
@@ -180,8 +180,8 @@ const TestHistory: React.FC<TestHistoryProps> = ({ testHistory, testDetails }) =
               onClick={() => toggleSort('score')}
               className={`px-4 py-2 text-sm rounded-xl flex items-center space-x-2 transition-colors duration-200 ${
                 sortBy === 'score' 
-                  ? 'bg-blue-50 text-blue-600 border border-blue-200' 
-                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
+                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'
               }`}
             >
               <FiBarChart2 className="w-4 h-4" />

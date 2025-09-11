@@ -46,7 +46,7 @@ const ForgotPassword = () => {
         className="text-center mb-6"
       >
         <Link href="/" className="inline-block">
-          <span className="text-4xl font-bold text-emerald-600">Ionia</span>
+          <span className="text-4xl font-bold text-emerald-600">iONIA</span>
         </Link>
       </motion.div>
 

@@ -24,9 +24,9 @@ const FormStepper: React.FC<FormStepperProps> = ({ currentStep, totalSteps, step
               tabIndex={0}
               aria-current={currentStep === stepNumber ? 'step' : undefined}
               aria-pressed={currentStep === stepNumber}
-              className={`flex items-center py-3 px-6 text-sm font-medium border-b-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              className={`flex items-center py-3 px-6 text-sm font-medium border-b-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
                 currentStep === stepNumber 
-                ? 'border-blue-500 text-blue-600' 
+                ? 'border-emerald-500 text-emerald-600' 
                 : step.isValid === false
                   ? 'border-red-300 text-red-600 hover:border-red-500' 
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -39,7 +39,7 @@ const FormStepper: React.FC<FormStepperProps> = ({ currentStep, totalSteps, step
                     : stepNumber < currentStep
                       ? 'bg-green-100 text-green-600 border border-green-500'
                       : currentStep === stepNumber
-                        ? 'bg-blue-100 text-blue-600 border border-blue-500'
+                        ? 'bg-emerald-100 text-emerald-600 border border-emerald-500'
                         : 'bg-gray-100 text-gray-400 border border-gray-300'
                 }`}>
                   {step.isValid === false ? (

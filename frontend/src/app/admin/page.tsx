@@ -131,14 +131,14 @@ export default function AdminPage() {
       name: 'Active Users', 
       value: analytics.activeUsers, 
       icon: UserGroupIcon,
-      color: 'purple-600',
+      color: 'emerald-600',
       description: 'Users active in last 30 days'
     },
     { 
       name: 'Total Students', 
       value: analytics.totalStudents, 
       icon: AcademicCapIcon,
-      color: 'indigo-600',
+      color: 'emerald-600',
       description: 'Total registered students'
     }
   ];
@@ -153,7 +153,7 @@ export default function AdminPage() {
           <div className="mt-6">
             <button
               onClick={() => window.location.reload()}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
             >
               Retry
             </button>
@@ -319,14 +319,14 @@ export default function AdminPage() {
                 </Link>
                 <Link 
                   href="/admin/analytics"
-                  className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
+                  className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-200"
                 >
                   <ChartBarIcon className="h-5 w-5 mr-2" />
                   Analytics
                 </Link>
                 <Link 
                   href="/admin/users"
-                  className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                  className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-200"
                 >
                   <UserGroupIcon className="h-5 w-5 mr-2" />
                   Manage Users

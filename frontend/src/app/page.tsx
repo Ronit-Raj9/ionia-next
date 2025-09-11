@@ -89,7 +89,7 @@ const features = [
   {
     title: 'Chapter-wise Mastery',
     description: 'Master every topic with structured learning paths and progress visualization',
-    icon: <BookOpen className="w-8 h-8 text-purple-600 group-hover:text-white transition-colors duration-300" />,
+    icon: <BookOpen className="w-8 h-8 text-emerald-600 group-hover:text-white transition-colors duration-300" />,
     gradient: 'from-emerald-500 to-teal-500'
   },
   {

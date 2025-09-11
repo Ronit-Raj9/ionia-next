@@ -128,15 +128,15 @@ const SummarySidebar: React.FC<SummarySidebarProps> = ({
         {/* Key Metrics */}
         <div className="mt-6 grid grid-cols-2 gap-4">
           {/* Accuracy */}
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-blue-50'}`}>
-            <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-blue-700'}`}>Accuracy</div>
-            <div className={`text-2xl font-bold ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>{accuracy}%</div>
+          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-emerald-50'}`}>
+            <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-emerald-700'}`}>Accuracy</div>
+            <div className={`text-2xl font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{accuracy}%</div>
           </div>
 
           {/* Completion */}
-          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-purple-50'}`}>
-            <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-purple-700'}`}>Completion</div>
-            <div className={`text-2xl font-bold ${darkMode ? 'text-purple-400' : 'text-purple-700'}`}>{completion}%</div>
+          <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-emerald-50'}`}>
+            <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-emerald-700'}`}>Completion</div>
+            <div className={`text-2xl font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-700'}`}>{completion}%</div>
           </div>
         </div>
 
@@ -187,8 +187,8 @@ const SummarySidebar: React.FC<SummarySidebarProps> = ({
           </button>
           <button className={`px-3 py-2 text-sm font-medium rounded-md ${
             darkMode 
-              ? 'bg-blue-700 hover:bg-blue-600 text-white' 
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              ? 'bg-emerald-700 hover:bg-emerald-600 text-white' 
+              : 'bg-emerald-600 hover:bg-emerald-700 text-white'
           }`}>
             Export PDF
           </button>
