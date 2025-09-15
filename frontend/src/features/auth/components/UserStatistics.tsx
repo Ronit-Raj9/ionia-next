@@ -13,7 +13,7 @@ import {
   HiOutlineTrendingUp, 
   HiRefresh
 } from 'react-icons/hi';
-import { HiTarget } from 'react-icons/hi2';
+import { HiOutlineTag } from 'react-icons/hi';
 
 interface UserStatisticsProps {
   className?: string;
@@ -154,7 +154,7 @@ export const UserStatistics: React.FC<UserStatisticsProps> = ({
         />
         
         <StatCard
-          icon={HiTarget}
+          icon={HiOutlineTag}
           title="Accuracy"
           value={stats.accuracy}
           suffix="%"

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FiBarChart2, FiClock, FiCalendar, FiCheckCircle, FiXCircle, FiArrowUp, FiArrowDown, FiFileText } from 'react-icons/fi';
 // Remove unused imports that might cause infinite loops
 // import { useTestStore, useCurrentTest, useTestActions, useTestResults } from '@/features/tests/store/testStore';
+import { TestResults } from '@/features/tests/store/testStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
 

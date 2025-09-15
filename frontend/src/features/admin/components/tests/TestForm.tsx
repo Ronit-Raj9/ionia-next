@@ -15,6 +15,7 @@ import {
   CheckIcon
 } from '@heroicons/react/24/outline';
 import { useTestStore } from '../../store/testStore';
+import { useQuestionStore } from '../../store/questionStore';
 import type { Test, CreateTestData, UpdateTestData, Question } from '../../types';
 import LoadingSpinner from '../analytics/LoadingSpinner';
 
@@ -75,6 +76,8 @@ const TestForm: React.FC<TestFormProps> = ({
     isCreating,
     isUpdating
   } = useTestStore();
+
+  const { fetchQuestions, questions } = useQuestionStore();
 
   const [formData, setFormData] = useState<FormData>({
     title: '',

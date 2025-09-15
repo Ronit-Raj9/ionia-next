@@ -296,14 +296,15 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
 
   // Update attempts data when analysis data changes
   useEffect(() => {
-    if (analysisData?.attempts && Array.isArray(analysisData.attempts)) {
-      setAttemptsData(analysisData.attempts);
-      
-      // If this is our first load and no attempt ID is set, use the current attempt
-      if (!currentAttemptId && analysisData.testInfo?.attemptId) {
-        setCurrentAttemptId(analysisData.testInfo.attemptId);
-      }
-    }
+    // TODO: Fix this when the AnalysisData interface is updated to include attempts and testInfo
+    // if (analysisData?.attempts && Array.isArray(analysisData.attempts)) {
+    //   setAttemptsData(analysisData.attempts);
+    //   
+    //   // If this is our first load and no attempt ID is set, use the current attempt
+    //   if (!currentAttemptId && analysisData.testInfo?.attemptId) {
+    //     setCurrentAttemptId(analysisData.testInfo.attemptId);
+    //   }
+    // }
   }, [analysisData, currentAttemptId]);
 
   // Cleanup on unmount
@@ -506,7 +507,7 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
                 case SubjectAnalysis:
                   return <SubjectAnalysis id={activeTab} subjectWise={processedAnalysisData.subjectWise} />;
                 case PerformanceAnalysis:
-                  return <PerformanceAnalysis data={processedAnalysisData} />;
+                  return <PerformanceAnalysis data={processedAnalysisData as any} />;
                 case StrategyAnalysis:
                   return <StrategyAnalysis completionMetrics={processedAnalysisData?.completionMetrics || processedAnalysisData?.strategyMetrics || {}} />;
                 case QuestionAnalysis:

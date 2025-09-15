@@ -56,6 +56,7 @@ export interface UserAnalytics {
   newUsersThisWeek: number;
   newUsersThisMonth: number;
   usersByRole: Record<string, number>;
+  recentSignups?: User[];
 }
 
 export interface PaginatedUsers {

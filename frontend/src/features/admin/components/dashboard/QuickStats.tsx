@@ -25,7 +25,7 @@ interface QuickStatsProps {
 }
 
 const QuickStats: React.FC<QuickStatsProps> = ({ className = '' }) => {
-  const { analytics, userAnalytics, loading } = useAdminStore();
+  const { analytics, loading } = useAdminStore();
   
   const formatValue = (value: number | undefined): string => {
     if (value === undefined || value === null) return '0';
@@ -63,7 +63,7 @@ const QuickStats: React.FC<QuickStatsProps> = ({ className = '' }) => {
     }
   ];
 
-  const isLoading = loading.has('analytics') || loading.has('userAnalytics');
+  const isLoading = loading.has('analytics');
 
   return (
     <div className={`grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 ${className}`}>

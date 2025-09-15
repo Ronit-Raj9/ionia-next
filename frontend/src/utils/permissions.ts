@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { UserRole } from '@/features/auth/types';
 import React from 'react';
 
 // Define permission constants
@@ -128,11 +129,11 @@ export function withPermission<T extends object>(
 // Role-based component wrapper
 export function withRole<T extends object>(
   WrappedComponent: React.ComponentType<T>,
-  allowedRoles: string[]
+  allowedRoles: UserRole[]
 ): React.FC<T> {
   return function RoleWrapper(props: T) {
-    const { hasAnyRole } = useAuthStore.getState();
-    const canAccess = hasAnyRole(allowedRoles);
+    const { hasRole } = useAuthStore.getState();
+    const canAccess = hasRole(allowedRoles);
     
     if (!canAccess) {
       return React.createElement('div', { className: 'p-4 bg-red-50 border border-red-200 rounded-lg' },

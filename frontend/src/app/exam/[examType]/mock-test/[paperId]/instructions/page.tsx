@@ -23,8 +23,8 @@ const Instructions = () => {
     const fetchTestDetails = async () => {
       try {
         // Get the correct examType value for the API
-        const apiExamType = getExamTypeParam(examType);
-        const response = await getTestById(paperId, apiExamType);
+        const apiExamType = getExamTypeParam(Array.isArray(examType) ? examType[0] : examType);
+        const response = await getTestById(Array.isArray(paperId) ? paperId[0] : paperId, apiExamType);
         setTestDetails(response);
       } catch (err) {
         console.error("Error fetching test details:", err);
@@ -38,7 +38,9 @@ const Instructions = () => {
 
   const handleProceed = () => {
     if (paperId && examType) {
-      router.push(`/exam/${examType}/mock-test/${paperId}/test`);
+      const examTypeStr = Array.isArray(examType) ? examType[0] : examType;
+      const paperIdStr = Array.isArray(paperId) ? paperId[0] : paperId;
+      router.push(`/exam/${examTypeStr}/mock-test/${paperIdStr}/test`);
     } else {
       console.error("Invalid paperId or examType");
     }

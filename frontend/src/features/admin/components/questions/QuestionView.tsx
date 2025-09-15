@@ -17,7 +17,7 @@ import {
   ExclamationTriangleIcon,
   ArrowLeftIcon
 } from '@heroicons/react/24/outline';
-import { useAdminStore } from '../../store/adminStore';
+import { useQuestionStore } from '../../store/questionStore';
 import type { Question } from '../../types';
 import LoadingSpinner from '../analytics/LoadingSpinner';
 import ErrorMessage from '../analytics/ErrorMessage';
@@ -34,9 +34,8 @@ const QuestionView: React.FC<QuestionViewProps> = ({ questionId, className = '' 
     error,
     fetchQuestionById,
     deleteQuestion,
-    verifyQuestion,
     clearError
-  } = useAdminStore();
+  } = useQuestionStore();
 
   useEffect(() => {
     fetchQuestionById(questionId);
@@ -54,11 +53,8 @@ const QuestionView: React.FC<QuestionViewProps> = ({ questionId, className = '' 
   };
 
   const handleVerify = async () => {
-    try {
-      await verifyQuestion(questionId);
-    } catch (error) {
-      console.error('Failed to verify question:', error);
-    }
+    // TODO: Implement verify question functionality
+    console.log('Verify question functionality not yet implemented');
   };
 
   const formatDate = (dateString: string) => {
@@ -89,8 +85,8 @@ const QuestionView: React.FC<QuestionViewProps> = ({ questionId, className = '' 
     }
   };
 
-  const isLoading = loading.has('questionDetails');
-  const hasError = error.questionDetails;
+  const isLoading = loading;
+  const hasError = error;
 
   if (isLoading && !selectedQuestion) {
     return <LoadingSpinner message="Loading question details..." />;
@@ -101,7 +97,7 @@ const QuestionView: React.FC<QuestionViewProps> = ({ questionId, className = '' 
       <ErrorMessage 
         message={hasError}
         onRetry={() => {
-          clearError('questionDetails');
+          clearError();
           fetchQuestionById(questionId);
         }}
       />

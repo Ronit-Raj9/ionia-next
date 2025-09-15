@@ -2,11 +2,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 // Remove this import as it's not being used in this component
 // import { useAuthStore } from '@/features/auth/store/authStore';
+import { User } from '@/features/auth/types';
 import { FiUser, FiMail, FiAward, FiTrendingUp, FiTarget, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
 interface UserProfileProps {
-  user: IUser;
+  user: User;
   stats: {
     totalTests: number;
     averageScore: number;

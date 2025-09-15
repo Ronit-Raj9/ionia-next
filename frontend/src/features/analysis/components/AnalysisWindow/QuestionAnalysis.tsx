@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { QuestionAnalysisType } from '@/features/analysis/store/analysisStore';
+import { QuestionAnalysis as QuestionAnalysisType } from '@/features/analysis/store/analysisStore';
 import { FiClock, FiCheck, FiX, FiMinus } from 'react-icons/fi';
 import { useAnalysisStore } from '@/features/analysis/store/analysisStore';
 
@@ -21,14 +21,14 @@ interface QuestionMetadata {
 }
 
 const QuestionAnalysis: React.FC<QuestionAnalysisProps> = ({ id }) => {
-  const { answers, metadata } = useAnalysisStore();
+  const { currentAnalysis } = useAnalysisStore();
   const [sortField, setSortField] = useState<string>('questionNumber');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   // Filter questions based on activeSubject
   const questions = id === 'Overall' 
-    ? metadata.questions 
-    : metadata.questions?.filter(q => q.subject === id);
+    ? (currentAnalysis as any)?.metadata?.questions 
+    : (currentAnalysis as any)?.metadata?.questions?.filter((q: any) => q.subject === id);
     
   if (!questions || questions.length === 0) {
     return (
@@ -60,7 +60,7 @@ const QuestionAnalysis: React.FC<QuestionAnalysisProps> = ({ id }) => {
     } else if (sortField === 'timeSpent') {
       comparison = a.timeSpent - b.timeSpent;
     } else if (sortField === 'status') {
-      const statusOrder = { correct: 0, incorrect: 1, unattempted: 2 };
+      const statusOrder: { [key: string]: number } = { correct: 0, incorrect: 1, unattempted: 2 };
       comparison = statusOrder[a.status] - statusOrder[b.status];
     } else if (sortField === 'subject') {
       comparison = a.subject.localeCompare(b.subject);

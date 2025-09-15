@@ -79,9 +79,6 @@ const QuestionListView: React.FC<QuestionListViewProps> = ({
     if (typeof question.question === 'object' && question.question?.image?.url) {
       return question.question.image.url;
     }
-    if (question.image?.url) {
-      return question.image.url;
-    }
     return null;
   };
 
@@ -109,13 +106,10 @@ const QuestionListView: React.FC<QuestionListViewProps> = ({
       ).join(', ');
     }
     
-    // Handle single choice questions - check both correctOptions array and correctOption field
+    // Handle single choice questions
     if (question.questionType === 'single') {
       if (question.correctOptions && question.correctOptions.length > 0) {
         return String.fromCharCode(65 + question.correctOptions[0]);
-      }
-      if (question.correctOption !== undefined) {
-        return String.fromCharCode(65 + question.correctOption);
       }
     }
     

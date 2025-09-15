@@ -262,15 +262,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                   <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
                     {/* Temporary direct img tag for testing */}
                     <img 
-                      src={question.question.image.url}
+                      src={question.question.image?.url}
                       alt="Question Image"
                       className="w-full h-auto object-contain bg-gray-50 rounded"
                       onError={(e) => {
-                        console.error('Direct img tag failed:', question.question.image.url);
+                        console.error('Direct img tag failed:', question.question.image?.url);
                         e.currentTarget.style.display = 'none';
                       }}
                       onLoad={() => {
-                        console.log('Direct img tag loaded successfully:', question.question.image.url);
+                        console.log('Direct img tag loaded successfully:', question.question.image?.url);
                       }}
                       style={{ maxHeight: '400px' }}
                     />
@@ -301,15 +301,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                             <div className="mt-2 rounded overflow-hidden border border-gray-200 max-w-xs">
                               {/* Temporary direct img tag for testing */}
                               <img 
-                                src={option.image.url}
+                                src={option.image?.url}
                                 alt={`Option ${String.fromCharCode(65 + index)} Image`}
                                 className="w-full h-auto object-contain bg-gray-50 rounded"
                                 onError={(e) => {
-                                  console.error('Option img tag failed:', option.image.url);
+                                  console.error('Option img tag failed:', option.image?.url);
                                   e.currentTarget.style.display = 'none';
                                 }}
                                 onLoad={() => {
-                                  console.log('Option img tag loaded successfully:', option.image.url);
+                                  console.log('Option img tag loaded successfully:', option.image?.url);
                                 }}
                                 style={{ maxHeight: '200px' }}
                               />

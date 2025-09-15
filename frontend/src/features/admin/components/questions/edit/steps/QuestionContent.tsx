@@ -14,6 +14,10 @@ interface QuestionContentProps {
       isCorrect: boolean;
     }>;
     questionImage?: File | null;
+    numericalAnswer?: string;
+    unit?: string;
+    rangeMin?: number;
+    rangeMax?: number;
   };
   errors: Record<string, string>;
   onInputChange: (field: string, value: any) => void;
@@ -242,8 +246,8 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
               </label>
               <input
                 type="number"
-                value={formData.exactValue || 0}
-                onChange={(e) => onInputChange('exactValue', parseFloat(e.target.value))}
+                value={formData.numericalAnswer || ''}
+                onChange={(e) => onInputChange('numericalAnswer', e.target.value)}
                 step="any"
                 className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
               />

@@ -6,11 +6,15 @@ import { FiAlertTriangle } from 'react-icons/fi';
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
-export function Card({ children, className = '' }: CardProps) {
+export function Card({ children, className = '', onClick }: CardProps) {
   return (
-    <div className={`bg-white rounded-lg shadow-sm ${className}`}>
+    <div 
+      className={`bg-white rounded-lg shadow-sm ${className}`}
+      onClick={onClick}
+    >
       {children}
     </div>
   );

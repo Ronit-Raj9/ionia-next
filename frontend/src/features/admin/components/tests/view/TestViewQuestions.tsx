@@ -27,6 +27,14 @@ interface Question {
   options?: Array<{ text?: string; image?: { url?: string; publicId?: string } } | string>;
   correctOptions?: number[];
   correctOption?: number;
+  numericalAnswer?: {
+    exactValue?: number;
+    range?: {
+      min: number;
+      max: number;
+    };
+    unit?: string;
+  };
   marks: number;
   subject?: string;
   examType?: string;

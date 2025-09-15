@@ -124,127 +124,100 @@ const TestQuestionFilters: React.FC<TestQuestionFiltersProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Subject Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subject
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.subjects)}
-                  selectedValues={filters.subject}
+                  options={Array.from(availableOptions.subjects).map(subject => ({ value: subject, label: subject }))}
+                  value={filters.subject}
                   onChange={(values) => updateFilter('subject', values)}
                   placeholder="Select subjects"
-                  maxDisplay={2}
+                  label="Subject"
                 />
               </div>
 
               {/* Exam Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Exam Type
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.examTypes)}
-                  selectedValues={filters.examType}
+                  options={Array.from(availableOptions.examTypes).map(type => ({ value: type, label: type }))}
+                  value={filters.examType}
                   onChange={(values) => updateFilter('examType', values)}
                   placeholder="Select exam types"
-                  maxDisplay={2}
+                  label="Exam Type"
                 />
               </div>
 
               {/* Class Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Class
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.classes)}
-                  selectedValues={filters.class}
+                  options={Array.from(availableOptions.classes).map(cls => ({ value: cls, label: cls }))}
+                  value={filters.class}
                   onChange={(values) => updateFilter('class', values)}
                   placeholder="Select classes"
-                  maxDisplay={2}
+                  label="Class"
                 />
               </div>
 
               {/* Difficulty Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Difficulty
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.difficulties)}
-                  selectedValues={filters.difficulty}
+                  options={Array.from(availableOptions.difficulties).map(diff => ({ value: diff, label: diff }))}
+                  value={filters.difficulty}
                   onChange={(values) => updateFilter('difficulty', values)}
                   placeholder="Select difficulty"
-                  maxDisplay={2}
+                  label="Difficulty"
                 />
               </div>
 
               {/* Question Type Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Question Type
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.questionTypes)}
-                  selectedValues={filters.questionType}
+                  options={Array.from(availableOptions.questionTypes).map(type => ({ value: type, label: type }))}
+                  value={filters.questionType}
                   onChange={(values) => updateFilter('questionType', values)}
                   placeholder="Select types"
-                  maxDisplay={2}
+                  label="Question Type"
                 />
               </div>
 
               {/* Year Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Year
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.years)}
-                  selectedValues={filters.year}
+                  options={Array.from(availableOptions.years).map(year => ({ value: year, label: year }))}
+                  value={filters.year}
                   onChange={(values) => updateFilter('year', values)}
                   placeholder="Select years"
-                  maxDisplay={2}
+                  label="Year"
                 />
               </div>
 
               {/* Chapter Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chapter
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.chapters)}
-                  selectedValues={filters.chapter}
+                  options={Array.from(availableOptions.chapters).map(chapter => ({ value: chapter, label: chapter }))}
+                  value={filters.chapter}
                   onChange={(values) => updateFilter('chapter', values)}
                   placeholder="Select chapters"
-                  maxDisplay={2}
+                  label="Chapter"
                 />
               </div>
 
               {/* Section Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Section
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.sections)}
-                  selectedValues={filters.section}
+                  options={Array.from(availableOptions.sections).map(section => ({ value: section, label: section }))}
+                  value={filters.section}
                   onChange={(values) => updateFilter('section', values)}
                   placeholder="Select sections"
-                  maxDisplay={2}
+                  label="Section"
                 />
               </div>
 
               {/* Language Level Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Language Level
-                </label>
                 <MultiSelect
-                  options={Array.from(availableOptions.languageLevels)}
-                  selectedValues={filters.languageLevel}
+                  options={Array.from(availableOptions.languageLevels).map(level => ({ value: level, label: level }))}
+                  value={filters.languageLevel}
                   onChange={(values) => updateFilter('languageLevel', values)}
                   placeholder="Select levels"
-                  maxDisplay={2}
+                  label="Language Level"
                 />
               </div>
             </div>

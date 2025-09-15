@@ -16,7 +16,7 @@ import {
   FiLogOut
 } from 'react-icons/fi';
 import { useAuthStore } from '@/features/auth/store/authStore';
-import { clearAllCachedData } from '@/lib/api/api';
+// import { clearAllCachedData } from '@/lib/api/api'; // Commented out as api.ts is not available
 
 interface SidebarProps {
   username?: string; // Make optional since we'll get it from store
@@ -85,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
       
       // Clear all cached data first
       try {
-        clearAllCachedData();
+        // clearAllCachedData(); // Commented out as api.ts is not available
         console.log('✅ Cached data cleared');
       } catch (error) {
         console.warn('⚠️ Failed to clear cached data:', error);

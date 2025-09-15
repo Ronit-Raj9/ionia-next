@@ -6,14 +6,14 @@ import { useAnalysisStore } from "@/features/analysis/store/analysisStore";
 const AttemptsAnalysis: React.FC = () => {
   const analysisData = useAnalysisStore();
 
-  if (!analysisData.testInfo) {
+  if (!analysisData.currentAnalysis) {
     return <div>No analysis data available.</div>;
   }
 
   // Compute the attempt percentage as (answeredQuestions / totalQuestions) * 100
-  const totalQuestions = analysisData.performance.totalQuestions || 0;
-  const questionsAttempted = (analysisData.performance.totalCorrectAnswers || 0) + 
-                            (analysisData.performance.totalWrongAnswers || 0);
+  const totalQuestions = analysisData.currentAnalysis.totalQuestions || 0;
+  const questionsAttempted = (analysisData.currentAnalysis.correctAnswers || 0) + 
+                            (analysisData.currentAnalysis.incorrectAnswers || 0);
   const attemptPercentage = totalQuestions > 0 ? (questionsAttempted / totalQuestions) * 100 : 0;
 
   return (

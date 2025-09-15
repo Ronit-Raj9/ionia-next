@@ -34,7 +34,7 @@ interface PerformanceAnalysisProps {
 }
 
 const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
-  const { progressionMetrics, historicalComparison, subjectWise } = data;
+  const { progressionMetrics, historicalComparison, subjectWise } = data as any;
   const [selectedView, setSelectedView] = useState('overall');
 
   // Ensure we have valid data
@@ -43,54 +43,54 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
   }
 
   // Add detailed debugging to track the issue with performance data
-  console.log("🔍 Raw performance data received:", data.performance);
+  console.log("🔍 Raw performance data received:", (data as any).performance);
   console.log("🧮 Performance calculations:", {
-    totalCorrect: data.performance?.totalCorrectAnswers,
-    totalWrong: data.performance?.totalWrongAnswers,
-    score: data.performance?.score,
-    totalQuestions: data.performance?.totalQuestions,
-    calculatedAccuracy: data.performance?.totalCorrectAnswers > 0 ? 
-      (data.performance.totalCorrectAnswers / 
-        (data.performance.totalCorrectAnswers + data.performance.totalWrongAnswers)) * 100 : 0
+    totalCorrect: (data as any).performance?.totalCorrectAnswers,
+    totalWrong: (data as any).performance?.totalWrongAnswers,
+    score: (data as any).performance?.score,
+    totalQuestions: (data as any).performance?.totalQuestions,
+    calculatedAccuracy: (data as any).performance?.totalCorrectAnswers > 0 ? 
+      ((data as any).performance.totalCorrectAnswers / 
+        ((data as any).performance.totalCorrectAnswers + (data as any).performance.totalWrongAnswers)) * 100 : 0
   });
   
   // Add marking scheme details
-  const markingScheme = data?.testInfo?.markingScheme || {
+  const markingScheme = (data as any)?.testInfo?.markingScheme || {
     correct: 5,
     incorrect: 0,
     unattempted: 0
   };
 
-  console.log("🎯 Performance Data:", data.performance);
+  console.log("🎯 Performance Data:", (data as any).performance);
   console.log("📊 Marking Scheme:", markingScheme);
 
   // Calculate scores based on marking scheme with null checks
-  const correctScore = (data.performance.totalCorrectAnswers || 0) * (markingScheme.correct || 5) || 0;
-  const incorrectScore = (data.performance.totalWrongAnswers || 0) * (markingScheme.incorrect || 0) || 0;
-  const unattemptedScore = ((data.performance.unattempted || data.performance.totalUnattempted || 0) * (markingScheme.unattempted || 0)) || 0;
+  const correctScore = ((data as any).performance.totalCorrectAnswers || 0) * (markingScheme.correct || 5) || 0;
+  const incorrectScore = ((data as any).performance.totalWrongAnswers || 0) * (markingScheme.incorrect || 0) || 0;
+  const unattemptedScore = (((data as any).performance.unattempted || (data as any).performance.totalUnattempted || 0) * (markingScheme.unattempted || 0)) || 0;
   
   // Total score calculated or from API
-  const totalScore = data.performance.score !== undefined ? data.performance.score : correctScore + incorrectScore + unattemptedScore;
+  const totalScore = (data as any).performance.score !== undefined ? (data as any).performance.score : correctScore + incorrectScore + unattemptedScore;
   
   console.log("🧮 Score Breakdown:", {
     correctScore,
     incorrectScore,
     unattemptedScore,
     totalScore,
-    apiScore: data.performance.score
+    apiScore: (data as any).performance.score
   });
   
   // CRITICAL FIX: Self-check the performance data to ensure it's valid
   // In case we detect incorrect data (e.g., 0 correct answers when there should be some)
   // we can fix it directly here
-  const fixedPerformanceData = {...data.performance};
+  const fixedPerformanceData = {...(data as any).performance};
   let dataWasFixed = false;
   
   // Check if we have answers array to validate against
-  if (Array.isArray(data.answers) && data.answers.length > 0) {
+  if (Array.isArray((data as any).answers) && (data as any).answers.length > 0) {
     // Count correct answers directly from answers
-    const actualCorrectAnswers = data.answers.filter(a => a.isCorrect === true).length;
-    const reportedCorrectAnswers = data.performance?.totalCorrectAnswers || 0;
+    const actualCorrectAnswers = (data as any).answers.filter((a: any) => a.isCorrect === true).length;
+    const reportedCorrectAnswers = (data as any).performance?.totalCorrectAnswers || 0;
     
     // If there's a discrepancy, update with the accurate count
     if (actualCorrectAnswers > 0 && reportedCorrectAnswers !== actualCorrectAnswers) {
@@ -100,7 +100,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
     }
     
     // Calculate attempted questions - answers with a selectedOption
-    const actualAttemptedAnswers = data.answers.filter(a => a.selectedOption !== undefined && a.selectedOption !== null).length;
+    const actualAttemptedAnswers = (data as any).answers.filter((a: any) => a.selectedOption !== undefined && a.selectedOption !== null).length;
     
     // Correct wrong answers should be attempted minus correct
     const actualWrongAnswers = actualAttemptedAnswers - actualCorrectAnswers;
@@ -146,7 +146,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
   };
 
   // Prepare accuracy trend data
-  const accuracyTrendData = progressionMetrics?.accuracyTrend?.map((point, index) => ({
+  const accuracyTrendData = progressionMetrics?.accuracyTrend?.map((point: any, index: number) => ({
     question: `Q${index + 1}`,
     accuracy: Math.round(point.cumulativeAccuracy * 100),
     timeSpent: Math.round(point.timeSpent / 1000),
@@ -154,14 +154,14 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
   })) || [];
 
   // Prepare speed trend data
-  const speedTrendData = progressionMetrics?.speedTrend?.map((segment) => ({
+  const speedTrendData = progressionMetrics?.speedTrend?.map((segment: any) => ({
     segment: `Segment ${segment.segment}`,
     averageTime: Math.round(segment.averageTimePerQuestion / 1000),
     questionsAttempted: segment.questionsAttempted,
   })) || [];
 
   // Prepare subject progression data
-  const subjectProgressionData = Object.entries(progressionMetrics?.subjectProgression || {}).map(([subject, data]) => ({
+  const subjectProgressionData = Object.entries(progressionMetrics?.subjectProgression || {}).map(([subject, data]: [string, any]) => ({
     subject,
     firstHalf: Math.round(data.firstHalfAccuracy * 100),
     secondHalf: Math.round(data.secondHalfAccuracy * 100),
@@ -169,7 +169,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
   }));
 
   // Prepare subject metrics for radar chart
-  const subjectRadarData = Object.entries(subjectWise || {}).map(([subject, data]) => ({
+  const subjectRadarData = Object.entries(subjectWise || {}).map(([subject, data]: [string, any]) => ({
     subject,
     accuracy: Math.round((data.correct / data.attempted) * 100) || 0,
     completeness: Math.round((data.attempted / data.total) * 100),
@@ -178,7 +178,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   // Historical trends (if available)
   const historicalData = historicalComparison?.previousAttempts || [];
-  const historicalTrendData = historicalData.map((attempt) => ({
+  const historicalTrendData = historicalData.map((attempt: any) => ({
     attempt: `Attempt ${attempt.attemptId}`,
     score: attempt.score,
     timeSpent: Math.round(attempt.timeSpent / 60000),
@@ -190,14 +190,14 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
     incorrectScore,
     unattemptedScore,
     totalScore,
-    maxPossibleScore: data.performance.totalQuestions * (markingScheme.correct || 5)
+    maxPossibleScore: (data as any).performance.totalQuestions * (markingScheme.correct || 5)
   };
 
   console.log("⏱️ Performance time values:", {
     rawTotalTime: fixedPerformanceData?.totalTimeTaken,
-    rawAvgTime: data.timeAnalytics?.averageTimePerQuestion,
-    normalizedTotalTime: normalizeTimeValue(fixedPerformanceData?.totalTimeTaken || data.timeAnalytics?.totalTimeSpent || 0),
-    normalizedAvgTime: normalizeTimeValue(data.timeAnalytics?.averageTimePerQuestion || 
+    rawAvgTime: (data as any).timeAnalytics?.averageTimePerQuestion,
+    normalizedTotalTime: normalizeTimeValue(fixedPerformanceData?.totalTimeTaken || (data as any).timeAnalytics?.totalTimeSpent || 0),
+    normalizedAvgTime: normalizeTimeValue((data as any).timeAnalytics?.averageTimePerQuestion || 
       (fixedPerformanceData?.totalTimeTaken && fixedPerformanceData?.totalQuestions ? 
       fixedPerformanceData.totalTimeTaken / fixedPerformanceData.totalQuestions : 0))
   });
@@ -211,7 +211,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
   });
 
   // 2. Subject-wise Performance Data
-  const subjectData = Object.entries(data.subjectWise || {}).map(([subject, metrics]: [string, any]) => {
+  const subjectData = Object.entries((data as any).subjectWise || {}).map(([subject, metrics]: [string, any]) => {
     const timeInMilliseconds = metrics.timeSpent || 0;
     const timeInSeconds = normalizeTimeValue(timeInMilliseconds);
     const avgTimeInSeconds = metrics.attempted > 0 ? timeInSeconds / metrics.attempted : 0;
@@ -308,14 +308,14 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   function calculateSpeedScore() {
     // Average time per question converted to a score where faster is better
-    const avgTime = normalizeTimeValue(data.timeAnalytics?.averageTimePerQuestion || 0);
+    const avgTime = normalizeTimeValue((data as any).timeAnalytics?.averageTimePerQuestion || 0);
     // Assume 120 seconds is slowest (0 score) and 10 seconds is fastest (100 score)
     return Math.min(100, Math.max(0, 100 - ((avgTime - 10) / 110) * 100));
   }
 
   function calculateSubjectBalanceScore() {
     // Check if there's balanced performance across subjects
-    const accuracies = Object.values(data.subjectWise || {}).map((subject: any) => 
+    const accuracies = Object.values((data as any).subjectWise || {}).map((subject: any) => 
       subject.attempted > 0 ? (subject.correct / subject.attempted) * 100 : 0
     );
     
@@ -332,7 +332,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   function calculateTimeEfficiencyScore() {
     // Look at time spent vs. questions attempted ratio
-    const totalTimeInMinutes = normalizeTimeValue(data.timeAnalytics?.totalTimeSpent || 0) / 60;
+    const totalTimeInMinutes = normalizeTimeValue((data as any).timeAnalytics?.totalTimeSpent || 0) / 60;
     const questionsPerMinute = totalTimeInMinutes > 0 ? 
       fixedPerformanceData?.totalCorrectAnswers / totalTimeInMinutes : 0;
     
@@ -349,8 +349,8 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   function findTopSubjects() {
     const subjects = Object.entries(subjectWise || {})
-      .filter(([_, data]) => data.attempted > 0)
-      .map(([subject, data]) => ({
+      .filter(([_, data]: [string, any]) => data.attempted > 0)
+      .map(([subject, data]: [string, any]) => ({
         subject,
         accuracy: (data.correct / data.attempted) * 100
       }))
@@ -362,8 +362,8 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   function findWeakestSubjects() {
     const subjects = Object.entries(subjectWise || {})
-      .filter(([_, data]) => data.attempted > 0)
-      .map(([subject, data]) => ({
+      .filter(([_, data]: [string, any]) => data.attempted > 0)
+      .map(([subject, data]: [string, any]) => ({
         subject,
         accuracy: (data.correct / data.attempted) * 100
       }))
@@ -421,12 +421,12 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   // Rendering function for the accuracy chart
   const renderAccuracyChart = () => {
-    if (!data || !data.performance?.totalQuestions || data.performance.totalQuestions === 0) {
+    if (!data || !(data as any).performance?.totalQuestions || (data as any).performance.totalQuestions === 0) {
       return <div className="text-center p-4">No data available</div>;
     }
 
-    const correctPercentage = (data.performance.totalCorrectAnswers / data.performance.totalQuestions) * 100;
-    const incorrectPercentage = (data.performance.totalWrongAnswers / data.performance.totalQuestions) * 100;
+    const correctPercentage = ((data as any).performance.totalCorrectAnswers / (data as any).performance.totalQuestions) * 100;
+    const incorrectPercentage = ((data as any).performance.totalWrongAnswers / (data as any).performance.totalQuestions) * 100;
     
     const accuracyData = [
       { name: 'Correct', value: correctPercentage, fill: '#4CAF50' },
@@ -467,7 +467,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   // Marks distribution chart
   const renderMarksDistribution = () => {
-    const markingScheme = data.testInfo?.markingScheme || {
+    const markingScheme = (data as any).testInfo?.markingScheme || {
       correct: 5,
       incorrect: 0,
       unattempted: 0
@@ -650,7 +650,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
                   {formatNumber(totalScore)}
                 </div>
                 <div className="text-xs text-gray-500">
-                  out of {formatNumber(data.performance.totalQuestions * (markingScheme.correct || 5))}
+                  out of {formatNumber((data as any).performance.totalQuestions * (markingScheme.correct || 5))}
                 </div>
               </div>
               <div className="bg-green-50 p-4 rounded-lg text-center">
@@ -665,7 +665,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
               </div>
               <div className="bg-amber-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Avg Time/Question</div>
-                <div className="text-2xl font-bold">{formatTime(normalizeTimeValue(data.timeAnalytics?.averageTimePerQuestion || 0))}</div>
+                <div className="text-2xl font-bold">{formatTime(normalizeTimeValue((data as any).timeAnalytics?.averageTimePerQuestion || 0))}</div>
               </div>
             </div>
           </div>
@@ -767,7 +767,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
               </div>
               <div className="bg-purple-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Total Time</div>
-                <div className="text-2xl font-bold">{formatTime(normalizeTimeValue(data.timeAnalytics?.totalTimeSpent || 0))}</div>
+                <div className="text-2xl font-bold">{formatTime(normalizeTimeValue((data as any).timeAnalytics?.totalTimeSpent || 0))}</div>
               </div>
               <div className="bg-amber-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Avg Score</div>
@@ -1027,7 +1027,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={subjectData.map(subject => {
-                    const markingScheme = data.testInfo?.markingScheme || {
+                    const markingScheme = (data as any).testInfo?.markingScheme || {
                       correct: 5,
                       incorrect: 0,
                       unattempted: 0

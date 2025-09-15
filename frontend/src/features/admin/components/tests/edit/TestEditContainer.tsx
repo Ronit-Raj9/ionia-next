@@ -98,7 +98,7 @@ const TestEditContainer: React.FC<TestEditContainerProps> = ({ children }) => {
   const params = useParams();
   const testId = params.id as string;
   const redirectInProgress = useRef(false);
-  const { updateTest, getTestById } = useAdminStore();
+  const { updateTest, fetchTestById } = useAdminStore();
   
   // Test data state
   const [testDetails, setTestDetails] = useState<TestDetails>({
@@ -503,23 +503,55 @@ const TestEditContainer: React.FC<TestEditContainerProps> = ({ children }) => {
     setError("");
 
     try {
+      // Map solutionsVisibility from TestDetails format to UpdateTestData format
+      const mapSolutionsVisibility = (visibility: string): 'always' | 'after_completion' | 'never' => {
+        switch (visibility) {
+          case 'immediate':
+            return 'always';
+          case 'after_submission':
+          case 'after_deadline':
+            return 'after_completion';
+          case 'manual':
+            return 'never';
+          default:
+            return 'after_completion';
+        }
+      };
+
+      // Map difficulty from TestDetails format to UpdateTestData format
+      const mapDifficulty = (difficulty: string): 'easy' | 'medium' | 'hard' => {
+        switch (difficulty) {
+          case 'easy':
+          case 'medium':
+          case 'hard':
+            return difficulty as 'easy' | 'medium' | 'hard';
+          case 'mixed':
+          case '':
+          default:
+            return 'medium'; // Default to medium if empty or mixed
+        }
+      };
+
       const payload = {
         ...testDetails,
+        testCategory: testDetails.testCategory || 'UserCustom', // Default to UserCustom if empty
         questions: selectedQuestions,
         year: testDetails.year ? Number(testDetails.year) : undefined,
-        month: testDetails.month ? Number(testDetails.month) : undefined,
+        month: testDetails.month ? String(testDetails.month) : undefined,
         day: testDetails.day ? Number(testDetails.day) : undefined,
         duration: Number(testDetails.duration),
-        attemptsAllowed: testDetails.attemptsAllowed ? Number(testDetails.attemptsAllowed) : null,
+        attemptsAllowed: testDetails.attemptsAllowed ? Number(testDetails.attemptsAllowed) : undefined,
+        solutionsVisibility: mapSolutionsVisibility(testDetails.solutionsVisibility),
+        difficulty: mapDifficulty(testDetails.difficulty),
         markingScheme: {
-           correct: testDetails.markingScheme?.correct !== undefined ? Number(testDetails.markingScheme.correct) : undefined,
-           incorrect: testDetails.markingScheme?.incorrect !== undefined ? Number(testDetails.markingScheme.incorrect) : undefined,
-           unattempted: testDetails.markingScheme?.unattempted !== undefined ? Number(testDetails.markingScheme.unattempted) : undefined,
+           correct: testDetails.markingScheme?.correct !== undefined ? Number(testDetails.markingScheme.correct) : 1,
+           incorrect: testDetails.markingScheme?.incorrect !== undefined ? Number(testDetails.markingScheme.incorrect) : 0,
+           unattempted: testDetails.markingScheme?.unattempted !== undefined ? Number(testDetails.markingScheme.unattempted) : 0,
         },
         isPremium: testDetails.testCategory === 'Platform' ? !!testDetails.isPremium : undefined,
         description: testDetails.description || undefined,
         instructions: testDetails.instructions || undefined,
-        syllabus: testDetails.syllabus || undefined,
+        syllabus: testDetails.syllabus ? [testDetails.syllabus] : undefined,
         session: testDetails.session || undefined,
       };
 

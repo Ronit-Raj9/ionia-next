@@ -7,7 +7,7 @@ interface TabsProps {
 }
 
 const Tabs: React.FC<TabsProps> = ({ children }) => {
-  const { activeTab, setActiveTab } = useAnalysisStore();
+  const { selectedView, setSelectedView } = useAnalysisStore();
 
   const tabs = [
     { id: 'summary', label: 'Summary' },
@@ -22,11 +22,11 @@ const Tabs: React.FC<TabsProps> = ({ children }) => {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => setSelectedView(tab.id as any)}
               className={`
                 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
                 ${
-                  activeTab === tab.id
+                  selectedView === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }
@@ -39,7 +39,7 @@ const Tabs: React.FC<TabsProps> = ({ children }) => {
       </div>
       <div className="mt-4">
         {React.Children.toArray(children).find((child: any) => 
-          child.props.id === activeTab
+          child.props.id === selectedView
         )}
       </div>
     </div>

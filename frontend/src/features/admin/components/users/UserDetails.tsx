@@ -173,7 +173,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onClose, className = 
           </div>
 
           {/* User Statistics */}
-          {selectedUser.stats && (
+          {selectedUser.analytics && (
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                 <ChartBarIcon className="h-5 w-5 mr-2" />
@@ -183,30 +183,30 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onClose, className = 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">
-                    {selectedUser.stats.testsCompleted}
+                    {selectedUser.analytics.totalTests}
                   </div>
                   <div className="text-sm text-gray-600">Tests Completed</div>
                 </div>
                 
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">
-                    {selectedUser.stats.accuracy}%
+                    {selectedUser.analytics.accuracy}%
                   </div>
                   <div className="text-sm text-gray-600">Accuracy</div>
                 </div>
                 
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">
-                    {selectedUser.stats.totalCorrect}
+                    {selectedUser.analytics.averageScore}
                   </div>
-                  <div className="text-sm text-gray-600">Correct Answers</div>
+                  <div className="text-sm text-gray-600">Average Score</div>
                 </div>
                 
                 <div className="text-center">
                   <div className="text-2xl font-bold text-red-600">
-                    {selectedUser.stats.totalWrong}
+                    {selectedUser.analytics.testsThisWeek}
                   </div>
-                  <div className="text-sm text-gray-600">Wrong Answers</div>
+                  <div className="text-sm text-gray-600">Tests This Week</div>
                 </div>
               </div>
             </div>

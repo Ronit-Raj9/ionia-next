@@ -17,12 +17,10 @@ import { useQuestionForm } from "@/features/questions/components/utils/useQuesti
 import { validateForm } from "@/features/questions/components/utils/validation";
 import { FORM_STEPS, SUBJECT_SECTION_MAP } from "@/features/questions/components/utils/constants";
 import { QuestionFormData } from "@/features/questions/components/utils/types";
+import { QuestionUpdateData } from '@/types/question';
 import QuestionPreview from './QuestionPreview';
 import { useQuestionCleanup } from '@/shared/hooks/useQuestionCleanup';
 import { useQuestionDraft } from '@/shared/hooks/useQuestionDraft';
-
-// Define the QuestionUpdateData type
-type QuestionUpdateData = QuestionFormData;
 
 interface QuestionEditFormProps {
   question: any;
@@ -67,7 +65,7 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
 
   // Use cleanup and draft hooks
   useQuestionCleanup();
-  const { clearCurrentDraft } = useQuestionDraft(true);
+  const { clearDraftFromStorage } = useQuestionDraft();
 
   // Initialize form data with the existing question data
   useEffect(() => {
@@ -224,14 +222,15 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
   };
 
   const handleCancel = () => {
-    clearCurrentDraft();
+    clearDraftFromStorage();
     router.push('/admin/questions');
   };
 
   // Transform form data before submission
-  const transformFormDataForBackend = (data: QuestionFormData): QuestionFormData => {
-    const transformedData: QuestionFormData = {
+  const transformFormDataForBackend = (data: QuestionFormData): QuestionUpdateData => {
+    const transformedData: QuestionUpdateData = {
       ...data,
+      year: data.year || '', // Ensure year is always a string
       question: {
         text: data.question.text,
         image: data.question.image || { url: '', publicId: '' }
@@ -252,14 +251,13 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
         ...data.numericalAnswer,
         unit: data.numericalAnswer.unit || ''
       } : undefined,
-      year: data.year || 'not applicable',
       feedback: data.feedback || { studentReports: [], teacherNotes: [] },
       isVerified: data.isVerified || false
     };
     
     // Ensure we have valid question type
     if (!['single', 'multiple', 'numerical'].includes(transformedData.questionType)) {
-      transformedData.questionType = transformedData.correctOptions.length > 1 ? 'multiple' : 'single';
+      transformedData.questionType = (transformedData.correctOptions?.length || 0) > 1 ? 'multiple' : 'single';
     }
     
     // Make sure questionCategory matches question type for numerical questions
@@ -365,7 +363,7 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
 
   // Handle successful submission
   const handleSubmitSuccess = () => {
-    clearCurrentDraft();
+    clearDraftFromStorage();
     toast.success('Question updated successfully');
   };
 
@@ -574,7 +572,7 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
       {showPreview && previewData && (
         <QuestionPreview
           originalQuestion={question}
-          updatedData={previewData}
+          updatedData={transformFormDataForBackend(previewData)}
           onConfirm={handleConfirmSubmit}
           onCancel={() => setShowPreview(false)}
           isSubmitting={isSubmitting}

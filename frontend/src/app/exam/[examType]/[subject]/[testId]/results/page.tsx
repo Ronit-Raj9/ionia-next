@@ -12,14 +12,16 @@ export default function ResultsPage() {
   const { examType, subject, testId: paperId } = params || {};
   const router = useRouter();
   
-  const { isAuthenticated, isLoading: authLoading, validateAuth } = useAuthStore();
+  const { isAuthenticated, isLoading: authLoading, initializeAuth } = useAuthStore();
   const { results, isTestCompleted } = useTestStore();
   const { addNotification } = useUIStore();
 
   // Check authentication
   useEffect(() => {
-    validateAuth();
-  }, [validateAuth]);
+    if (isAuthenticated) {
+      initializeAuth();
+    }
+  }, [initializeAuth, isAuthenticated]);
 
   // Handle authentication redirect
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function ResultsPage() {
         message: "No test results found. Please complete the test first.",
         type: "warning"
       });
-      router.push(`/exam/${examType}/${subject}/${paperId}`);
+      router.push(`/exam/${Array.isArray(examType) ? examType[0] : examType}/${Array.isArray(subject) ? subject[0] : subject}/${Array.isArray(paperId) ? paperId[0] : paperId}`);
     }
   }, [isTestCompleted, results, router, authLoading, isAuthenticated, examType, subject, paperId, addNotification]);
 
@@ -64,7 +66,7 @@ export default function ResultsPage() {
           <h2 className="text-xl font-semibold mb-4">No Results Found</h2>
           <p className="text-gray-600 mb-4">We couldn't find any results for this test.</p>
           <button 
-            onClick={() => router.push(`/exam/${examType}/${subject}/${paperId}`)}
+            onClick={() => router.push(`/exam/${Array.isArray(examType) ? examType[0] : examType}/${Array.isArray(subject) ? subject[0] : subject}/${Array.isArray(paperId) ? paperId[0] : paperId}`)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Take Test
@@ -77,9 +79,9 @@ export default function ResultsPage() {
   return (
     <div className="container mx-auto p-4 pt-20">
       <AnalysisWindow 
-        paperId={paperId as string} 
-        examType={examType as string} 
-        subject={subject as string} 
+        paperId={Array.isArray(paperId) ? paperId[0] : paperId} 
+        examType={Array.isArray(examType) ? examType[0] : examType} 
+        subject={Array.isArray(subject) ? subject[0] : subject} 
       />
     </div>
   );

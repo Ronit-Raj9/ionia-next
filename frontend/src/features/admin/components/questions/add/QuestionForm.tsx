@@ -439,9 +439,8 @@ const QuestionForm: React.FC = () => {
       {/* Stepper Navigation */}
       <FormStepper 
         currentStep={step} 
-        totalSteps={4} 
-        steps={stepsWithValidation}
         onStepClick={handleStepClick}
+        stepValidationStatus={stepValidation.reduce((acc, isValid, index) => ({ ...acc, [index + 1]: isValid }), {})}
       />
 
       <form className="bg-white rounded-lg shadow-sm border border-gray-200 p-6" onSubmit={handleSubmit}>
@@ -566,13 +565,12 @@ const QuestionForm: React.FC = () => {
       )}
 
       {/* Preview Modal */}
-      <PreviewModal 
-        isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
-        formData={formData}
-        onConfirm={handleConfirmSubmit}
-        isSubmitting={isSubmitting}
-      />
+      {showPreview && (
+        <PreviewModal
+          onClose={() => setShowPreview(false)}
+          formData={formData}
+        />
+      )}
 
       {/* Curriculum View Modal */}
       <ViewAllChaptersModal 

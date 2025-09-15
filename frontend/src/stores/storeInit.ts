@@ -1,5 +1,5 @@
 // Store initialization and cross-store communication
-import { useAuthStore } from './authStore';
+import { useAuthStore } from '@/features/auth/store/authStore';
 import { useUIStore } from './uiStore';
 import { useCacheStore } from './cacheStore';
 

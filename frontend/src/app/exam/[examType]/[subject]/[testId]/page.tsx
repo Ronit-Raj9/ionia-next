@@ -11,7 +11,7 @@ export default function TestPage() {
   const { examType, subject, testId: paperId } = params || {};
   
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, validateAuth } = useAuthStore();
+  const { isAuthenticated, isLoading: authLoading, initializeAuth } = useAuthStore();
   const { currentTest, loading, error, fetchTest, resetTest } = useTestStore();
   const { addNotification } = useUIStore();
 
@@ -22,12 +22,12 @@ export default function TestPage() {
       return;
     }
 
-    if (isAuthenticated) {
-      validateAuth();
-      fetchTest(paperId);
+    if (isAuthenticated && paperId) {
+      initializeAuth();
+      fetchTest(Array.isArray(paperId) ? paperId[0] : paperId);
       resetTest();
     }
-  }, [validateAuth, fetchTest, resetTest, paperId, isAuthenticated, authLoading, router]);
+  }, [initializeAuth, fetchTest, resetTest, paperId, isAuthenticated, authLoading, router]);
 
   if (authLoading || loading) {
     return (
@@ -65,9 +65,9 @@ export default function TestPage() {
   return (
     <div className="container mx-auto p-0 md:p-4 min-h-screen">
       <TestWindow 
-        examType={examType as string} 
-        paperId={paperId as string} 
-        subject={subject as string}
+        examType={Array.isArray(examType) ? examType[0] : examType} 
+        paperId={Array.isArray(paperId) ? paperId[0] : paperId} 
+        subject={Array.isArray(subject) ? subject[0] : subject}
       />
     </div>
   );

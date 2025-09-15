@@ -423,13 +423,15 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
           {/* Form Navigation */}
           <div className="border-t border-gray-200 px-6 py-4">
             <FormNavigation
-              currentStep={currentStep}
+              activeStep={currentStep}
               totalSteps={FORM_STEPS.length}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
+              stepNames={FORM_STEPS.map(step => step.title)}
+              onPrevStep={handlePrevious}
+              onNextStep={handleNext}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               canSubmit={isFormValid() && currentStep === FORM_STEPS.length}
+              validationResult={{ hasErrors: false, hasCriticalErrors: false, errors: {} }}
             />
           </div>
         </div>
