@@ -2,7 +2,7 @@
 export { default as TestList } from './TestList';
 export { default as TestForm } from './TestForm';
 export { default as TestView } from './TestView';
-export { default as DeleteConfirmationModal } from './DeleteConfirmationModal';
+export { default as TestDeleteModal } from './DeleteConfirmationModal';
 
 // Test Creation Components
 export * from './create';

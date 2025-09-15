@@ -11,6 +11,7 @@ export { default as QuestionEditPage } from './QuestionEditPage';
 export { default as RevisionHistory } from './RevisionHistory';
 export { default as QuestionStatistics } from './QuestionStatistics';
 export { default as QuestionPreview } from './QuestionPreview';
+export { default as QuestionPreviewModal } from './QuestionPreviewModal';
 
 // Note: QuestionEditForm exists but is likely redundant with the main QuestionForm
 // Consider removing QuestionEditForm if QuestionForm handles edit mode properly

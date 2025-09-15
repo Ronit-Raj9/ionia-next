@@ -26,7 +26,15 @@ const QuestionOptions: React.FC<OptionProps> = ({
 }) => {
   // Handle option as either string or object
   const optionText = typeof option === 'string' ? option : option.text;
-  const optionImage = typeof option === 'string' ? null : option.image;
+  // Only show image if URL is valid string and not empty
+  const optionImage = typeof option === 'string' 
+    ? null 
+    : option.image?.url && 
+      typeof option.image.url === 'string' &&
+      option.image.url.trim() !== ''
+      ? option.image
+      : null;
+  const optionLabel = String.fromCharCode(65 + optionIndex); // A, B, C, D
 
   return (
     <div
@@ -47,15 +55,13 @@ const QuestionOptions: React.FC<OptionProps> = ({
     >
       <div className="flex items-start gap-3">
         <div
-          className={`flex-shrink-0 w-6 h-6 rounded-full border-2 ${
+          className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center font-semibold text-sm ${
             selectedAnswer === optionIndex
-              ? 'border-blue-500 bg-blue-500'
-              : 'border-gray-300'
-          } flex items-center justify-center`}
+              ? 'border-blue-500 bg-blue-500 text-white'
+              : 'border-gray-300 text-gray-700'
+          }`}
         >
-          {selectedAnswer === optionIndex && (
-            <div className="w-2 h-2 rounded-full bg-white"></div>
-          )}
+          {optionLabel}
         </div>
         <div className="flex-grow">
           <div className="text-gray-800 whitespace-pre-wrap">
@@ -66,7 +72,7 @@ const QuestionOptions: React.FC<OptionProps> = ({
             <div className="mt-2">
               <img
                 src={optionImage.url}
-                alt={`Option ${optionIndex + 1} image`}
+                alt={`Option ${optionLabel} image`}
                 className="max-h-40 object-contain rounded"
               />
             </div>
@@ -108,7 +114,10 @@ const QuestionPanel: React.FC<QuestionPanelProps> = ({
               {question.question.text}
             </p>
           )}
-          {question.question.image && question.question.image.url && (
+          {question.question.image && 
+           question.question.image.url && 
+           typeof question.question.image.url === 'string' &&
+           question.question.image.url.trim() !== '' && (
             <div className="mt-4">
               <img 
                 src={question.question.image.url} 

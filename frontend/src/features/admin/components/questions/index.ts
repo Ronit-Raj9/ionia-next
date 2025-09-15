@@ -6,7 +6,7 @@ export { QuestionCard } from './QuestionCard';
 export { QuestionSearch } from './QuestionSearch';
 export { QuestionFilters } from './QuestionFilters';
 export { PaginationControls } from './PaginationControls';
-export { DeleteConfirmationModal } from './DeleteConfirmationModal';
+export { DeleteConfirmationModal as QuestionDeleteModal } from './DeleteConfirmationModal';
 
 // Add Question Components
 export { AddQuestionLayout } from './add';

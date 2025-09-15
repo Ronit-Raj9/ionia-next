@@ -59,7 +59,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // 5. Request size validation
-app.use(validateRequestSize('16mb')); // Increase for file uploads
+app.use(validateRequestSize('50mb')); // Increase for file uploads and large questions
 
 // 6. Content type validation (allow multipart for file uploads)
 app.use(validateContentType(['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded']));
@@ -156,13 +156,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Body Parsing Middleware
-app.use(express.json({ limit: "16kb" }));
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+// ✅ Body Parsing Middleware - Apply URL encoding for all requests
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static("public"));
 
-// ✅ Input Sanitization (after body parsing)
-app.use(sanitizeInput);
+// ✅ Input Sanitization (skip for multipart uploads)
+app.use((req, res, next) => {
+  // Skip sanitization for file upload routes to avoid processing multipart data
+  if (req.originalUrl.includes('/questions/upload') || 
+      req.originalUrl.includes('/questions') && req.method === 'PATCH' && req.originalUrl.match(/\/questions\/[^\/]+$/)) {
+    return next();
+  }
+  // Apply sanitization for other requests
+  sanitizeInput(req, res, next);
+});
 
 // ✅ Request Completion Logging
 app.use(requestCompletionLogger);
@@ -210,6 +217,17 @@ app.get('/api/security/status', (req, res) => {
       }
     });
   }
+});
+
+// ✅ Apply JSON parsing middleware, but skip for multipart upload routes
+app.use((req, res, next) => {
+  // Skip JSON parsing for specific file upload endpoints
+  if (req.originalUrl.includes('/questions/upload') || 
+      req.originalUrl.includes('/questions') && req.method === 'PATCH' && req.originalUrl.match(/\/questions\/[^\/]+$/)) {
+    return next();
+  }
+  // Apply JSON parsing for other requests
+  express.json({ limit: "50mb" })(req, res, next);
 });
 
 // ✅ Routes Declaration

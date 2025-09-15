@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useAnalysis } from "@/context/AnalysisContext";
+import { useAnalysisStore } from "@/features/analysis/store/analysisStore";
 import {
   BarChart,
   Bar,
@@ -14,26 +14,23 @@ import {
 } from 'recharts';
 
 const SubjectWiseTime: React.FC = () => {
-  const { analysisData } = useAnalysis();
+  const { currentAnalysis } = useAnalysisStore();
 
-  if (!analysisData) {
+  if (!currentAnalysis) {
     return <div className="bg-gray-50 p-6 rounded-lg shadow text-center text-gray-500">No analysis data available.</div>;
   }
 
-  // Calculate total questions and time spent
-  const totalQuestions = Object.values(analysisData.subjectWise).reduce(
-    (sum, subject) => sum + subject.total,
+  // Calculate total questions and time spent from subject performance data
+  const totalQuestions = currentAnalysis.subjectPerformance?.reduce(
+    (sum, subject) => sum + subject.totalQuestions,
     0
-  );
+  ) || 0;
 
-  const totalTimeSpent = Object.values(analysisData.subjectWise).reduce(
-    (sum, subject) => sum + (subject.timeSpent || 0),
-    0
-  );
+  const totalTimeSpent = currentAnalysis.timeAnalysis?.totalTime || 0;
 
   console.log("SubjectWiseTime data:", {
     totalTimeSpent,
-    subjectSample: Object.entries(analysisData.subjectWise).slice(0, 1)
+    subjectPerformance: currentAnalysis.subjectPerformance
   });
 
   // Function to normalize time values - properly handle milliseconds
@@ -61,18 +58,18 @@ const SubjectWiseTime: React.FC = () => {
     return `${min} min ${sec} sec`;
   };
 
-  // Prepare data for the bar chart
-  const chartData = Object.entries(analysisData.subjectWise).map(([subject, data]) => {
-    const timeInSeconds = normalizeTimeValue(data.timeSpent);
-    const averageTime = data.attempted ? timeInSeconds / data.attempted : 0;
+  // Prepare data for the bar chart from subject performance data
+  const chartData = currentAnalysis.subjectPerformance?.map((subject) => {
+    const timeInSeconds = normalizeTimeValue(subject.averageTime * subject.totalQuestions);
+    const averageTime = subject.totalQuestions ? timeInSeconds / subject.totalQuestions : 0;
     
     return {
-      subject,
-      timeSpent: Math.round(timeInSeconds), // Convert to seconds if needed
-      questionsAttempted: data.attempted,
+      subject: subject.subject,
+      timeSpent: Math.round(timeInSeconds),
+      questionsAttempted: subject.totalQuestions,
       averageTime: Math.round(averageTime),
     };
-  });
+  }) || [];
 
   // Calculate normalized total time
   const normalizedTotalTime = normalizeTimeValue(totalTimeSpent);

@@ -36,6 +36,19 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
   const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(attemptId || null);
   const [attemptsData, setAttemptsData] = useState<{id: string, number: number}[]>([]);
   
+  // Fallback to localStorage if attemptId is not provided
+  useEffect(() => {
+    if (!currentAttemptId && typeof window !== 'undefined') {
+      const storedAttemptId = localStorage.getItem('currentAttemptId');
+      const storedPaperId = localStorage.getItem('lastSubmittedPaperId');
+      
+      if (storedAttemptId && storedPaperId === paperId) {
+        console.log('🔄 Using stored attemptId as fallback:', storedAttemptId);
+        setCurrentAttemptId(storedAttemptId);
+      }
+    }
+  }, [currentAttemptId, paperId]);
+  
   // Use the analysis store and custom hook
   const { 
     analysisData, 

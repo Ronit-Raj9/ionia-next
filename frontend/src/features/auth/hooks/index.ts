@@ -1,10 +1,10 @@
 // ==========================================
-// 📦 AUTH HOOKS INDEX - DEPRECATED
+// 🪝 AUTH HOOKS INDEX
 // ==========================================
 
-// This file is deprecated. All authentication functionality has been moved to the Zustand store.
-// Please use the following imports instead:
-// 
-// import { useAuthStore, useAuthState, useAuthPermissions, useSessionStatus } from '../store/authStore';
-// 
-// The store provides all the functionality that was previously available through hooks.
+export { useUsernameValidation } from './useUsernameValidation';
+export { useUserStatistics } from './useUserStatistics';
+export { useAdminActions } from './useAdminActions';
+
+// Re-export the main auth store hook for convenience
+export { useAuthStore } from '../store/authStore';

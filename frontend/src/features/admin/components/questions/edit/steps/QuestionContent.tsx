@@ -1,5 +1,6 @@
 import React from 'react';
 import { PlusCircle, MinusCircle, Upload } from 'lucide-react';
+import FileUpload from '../../inputs/FileUpload';
 
 interface QuestionContentProps {
   formData: {
@@ -21,6 +22,9 @@ interface QuestionContentProps {
   onFileUpload: (file: File | null, field: string, index?: number) => void;
   onAddOption: () => void;
   onRemoveOption: (index: number) => void;
+  // Add props for existing images
+  questionImageUrl?: string;
+  optionImageUrls?: Array<string | undefined>;
 }
 
 const QUESTION_TYPES = [
@@ -49,7 +53,9 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
   onCorrectOptionChange,
   onFileUpload,
   onAddOption,
-  onRemoveOption
+  onRemoveOption,
+  questionImageUrl,
+  optionImageUrls = []
 }) => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, field: string, index?: number) => {
     const file = event.target.files?.[0] || null;
@@ -116,8 +122,8 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
         <label htmlFor="questionText" className="block text-sm font-medium text-gray-700 mb-1">
           Question Text <span className="text-red-500">*</span>
         </label>
-        <div className="flex space-x-3">
-          <div className="flex-grow">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
             <textarea
               id="questionText"
               value={formData.questionText}
@@ -126,21 +132,12 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
               placeholder="Enter your question here..."
             />
           </div>
-          <div className="w-32">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileSelect(e, 'questionImage')}
-                className="hidden"
-                id="questionImage"
-              />
-              <label htmlFor="questionImage" className="cursor-pointer">
-                <Upload className="h-6 w-6 mx-auto text-gray-400 mb-2" />
-                <p className="text-xs text-gray-500">Click to upload</p>
-                <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-              </label>
-            </div>
+          <div className="lg:col-span-1">
+            <FileUpload
+              onFileSelect={(file) => onFileUpload(file, 'questionImage')}
+              label="Question Image (Optional)"
+              initialUrl={questionImageUrl}
+            />
           </div>
         </div>
         <p className="mt-1 text-xs text-gray-500">Either Question Text or Question Image is required</p>
@@ -200,30 +197,23 @@ const QuestionContent: React.FC<QuestionContentProps> = ({
                   )}
                 </div>
                 
-                <div className="flex space-x-3">
-                  <input
-                    type="text"
-                    value={option.text}
-                    onChange={(e) => onOptionChange(index, 'text', e.target.value)}
-                    className="flex-grow px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
-                    placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                  />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  <div className="lg:col-span-2">
+                    <input
+                      type="text"
+                      value={option.text}
+                      onChange={(e) => onOptionChange(index, 'text', e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                      placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                    />
+                  </div>
                   
-                  <div className="w-24">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 text-center hover:border-gray-400 transition-colors cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileSelect(e, 'optionImage', index)}
-                        className="hidden"
-                        id={`optionImage${index}`}
-                      />
-                      <label htmlFor={`optionImage${index}`} className="cursor-pointer">
-                        <Upload className="h-4 w-4 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-gray-500">Click to upload</p>
-                        <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-                      </label>
-                    </div>
+                  <div className="lg:col-span-1">
+                    <FileUpload
+                      onFileSelect={(file) => onFileUpload(file, 'optionImage', index)}
+                      label={`Option ${String.fromCharCode(65 + index)} Image`}
+                      initialUrl={optionImageUrls[index]}
+                    />
                   </div>
                 </div>
               </div>

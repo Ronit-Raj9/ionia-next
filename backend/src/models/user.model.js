@@ -120,7 +120,6 @@ const userSchema = new Schema(
     googleId: {
       type: String,
       sparse: true, // Allows multiple null values but unique for non-null
-      index: true,
     },
     googleProfile: {
       id: String,
@@ -621,6 +620,6 @@ userSchema.index({ role: 1 });
 userSchema.index({ lastActivity: 1 });
 userSchema.index({ 'activeTokens.jti': 1 });
 userSchema.index({ 'activeTokens.expiresAt': 1 });
-userSchema.index({ googleId: 1 }); // Index for Google OAuth lookups
+// userSchema.index({ googleId: 1 }); // Index for Google OAuth lookups
 
 export const User = mongoose.model("User", userSchema);

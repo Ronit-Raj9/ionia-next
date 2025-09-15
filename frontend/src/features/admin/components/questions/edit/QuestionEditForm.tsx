@@ -4,71 +4,23 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Loader2, CheckCircle, XCircle, ArrowRight, ArrowLeft, RotateCcw, Download } from "lucide-react";
+import QuestionPreviewModal from './QuestionPreviewModal';
 import { Question, UpdateQuestionData } from "@/features/admin/types";
 import { updateQuestion } from "@/features/admin/api/questionApi";
 import { useQuestionStore } from "@/features/admin/store/questionStore";
+import { useQuestionForm } from "../../../utils/useQuestionForm";
 
 // Form step components
-import QuestionContentStep from "./steps/QuestionContent";
-import DetailsClassificationStep from "./steps/DetailsClassification";
-import SolutionHintsStep from "./steps/SolutionHints";
-import TagsTopicsStep from "./steps/TagsTopics";
+import QuestionContentStep from "../add/steps/QuestionContent";
+import DetailsClassificationStep from "../add/steps/DetailsClassification";
+import SolutionHintsStep from "../add/steps/SolutionHints";
+import TagsTopicsStep from "../add/steps/TagsTopics";
 
 interface QuestionEditFormProps {
   question: Question;
   onQuestionUpdate: (updatedQuestion: Question) => void;
 }
 
-interface FormData {
-  // Question Content
-  questionText: string;
-  questionType: 'mcq' | 'numerical' | 'assertion';
-  questionCategory: 'theoretical' | 'numerical' | 'conceptual';
-  questionSource: 'pyq' | 'custom' | 'platform';
-  options: Array<{
-    text: string;
-    image?: File | null;
-    isCorrect: boolean;
-  }>;
-  questionImage?: File | null;
-
-  // Details & Classification
-  examType: string;
-  class: string;
-  year: string;
-  subject: string;
-  section: string;
-  chapter: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  language: string;
-  languageLevel: 'basic' | 'intermediate' | 'advanced';
-  marks: number;
-  negativeMarks: number;
-  expectedTime: number;
-  conceptualDifficulty: number;
-
-  // Solution & Hints
-  solutionText: string;
-  solutionImage?: File | null;
-  hints: Array<{
-    text: string;
-    image?: File | null;
-  }>;
-  commonMistakes: Array<{
-    description: string;
-  }>;
-
-  // Tags & Topics
-  tags: string[];
-  relatedTopics: string[];
-  prerequisites: string[];
-
-  // Numerical specific
-  exactValue?: number;
-  rangeMin?: number;
-  rangeMax?: number;
-  unit?: string;
-}
 
 const STEPS = [
   { id: 1, title: "Question Content", description: "Define the question and options" },
@@ -79,138 +31,127 @@ const STEPS = [
 
 const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestionUpdate }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<FormData>({
-    questionText: '',
-    questionType: 'mcq',
-    questionCategory: 'theoretical',
-    questionSource: 'custom',
-    options: [
-      { text: '', image: null, isCorrect: false },
-      { text: '', image: null, isCorrect: false },
-      { text: '', image: null, isCorrect: false },
-      { text: '', image: null, isCorrect: false }
-    ],
-    examType: '',
-    class: '',
-    year: 'not applicable',
-    subject: '',
-    section: '',
-    chapter: '',
-    difficulty: 'medium',
-    language: 'english',
-    languageLevel: 'basic',
-    marks: 1,
-    negativeMarks: 0,
-    expectedTime: 60,
-    conceptualDifficulty: 5,
-    solutionText: '',
-    solutionImage: null,
-    hints: [],
-    commonMistakes: [],
-    tags: [],
-    relatedTopics: [],
-    prerequisites: []
-  });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stepValidation, setStepValidation] = useState([false, false, false, false]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
   
   const router = useRouter();
   const { updateQuestion: updateQuestionInStore } = useQuestionStore();
+  
+  // Use the question form hook for state management
+  const { 
+    formData, 
+    setFormData, 
+    errors, 
+    setErrors,
+    handleInputChange: hookHandleInputChange,
+    handleFileUpload: hookHandleFileUpload,
+    handleCorrectOptionChange: hookHandleCorrectOptionChange,
+    handleTagInput: hookHandleTagInput,
+    removeTag: hookRemoveTag,
+    addOption: hookAddOption,
+    removeOption: hookRemoveOption,
+    addHint: hookAddHint,
+    removeHint: hookRemoveHint,
+    addCommonMistake: hookAddCommonMistake,
+    removeCommonMistake: hookRemoveCommonMistake,
+    clearFormData
+  } = useQuestionForm();
 
   // Initialize form data from question
   useEffect(() => {
     if (question) {
-      setFormData({
-        questionText: question.question?.text || '',
-        questionType: question.questionType || 'mcq',
-        questionCategory: question.questionCategory || 'theoretical',
-        questionSource: question.questionSource || 'custom',
+      
+      // Convert Question format to QuestionFormData format
+      const questionFormData = {
+        question: {
+          text: question.question?.text || '',
+          image: {
+            url: question.question?.image?.url || '',
+            publicId: question.question?.image?.publicId || '',
+            file: null
+          }
+        },
         options: question.options?.map(opt => ({
           text: opt.text || '',
-          image: null,
-          isCorrect: question.correctOptions?.includes(question.options?.indexOf(opt) || 0) || false
+          image: {
+            url: opt.image?.url || '',
+            publicId: opt.image?.publicId || '',
+            file: null
+          }
         })) || [
-          { text: '', image: null, isCorrect: false },
-          { text: '', image: null, isCorrect: false },
-          { text: '', image: null, isCorrect: false },
-          { text: '', image: null, isCorrect: false }
+          { text: '', image: { url: '', publicId: '', file: null } },
+          { text: '', image: { url: '', publicId: '', file: null } },
+          { text: '', image: { url: '', publicId: '', file: null } },
+          { text: '', image: { url: '', publicId: '', file: null } }
         ],
-        examType: question.examType || '',
-        class: question.class || '',
+        correctOptions: question.correctOptions || [],
+        questionType: (question.questionType === 'mcq' ? 'single' : question.questionType === 'assertion' ? 'single' : question.questionType) as 'single' | 'multiple' | 'numerical',
+        questionCategory: (question.questionCategory === 'conceptual' ? 'theoretical' : question.questionCategory) as 'numerical' | 'theoretical',
+        questionSource: (question.questionSource === 'platform' ? 'custom' : question.questionSource) as 'custom' | 'india_book' | 'foreign_book' | 'pyq',
+        examType: (question.examType === 'NONE' ? 'none' : question.examType || 'jee_main') as 'jee_main' | 'jee_adv' | 'cuet' | 'neet' | 'cbse_11' | 'cbse_12' | 'none',
+        class: (question.class === 'N/A' ? 'none' : question.class || 'class_12') as 'none' | 'class_9' | 'class_10' | 'class_11' | 'class_12',
         year: question.year || 'not applicable',
         subject: question.subject || '',
         section: question.section || '',
         chapter: question.chapter || '',
         difficulty: question.difficulty || 'medium',
-        language: question.language || 'english',
-        languageLevel: question.languageLevel || 'basic',
+        language: (question.language === 'hindi' ? 'hindi' : 'english') as 'english' | 'hindi',
+        languageLevel: question.languageLevel || 'intermediate',
         marks: question.marks || 1,
         negativeMarks: question.negativeMarks || 0,
-        expectedTime: 60, // Default value since it's not in the type
+        expectedTime: 120, // Default value
         conceptualDifficulty: question.conceptualDifficulty || 5,
-        solutionText: question.solution?.text || '',
-        solutionImage: null,
+        solution: {
+          text: question.solution?.text || '',
+          image: {
+            url: question.solution?.image?.url || '',
+            publicId: question.solution?.image?.publicId || '',
+            file: null
+          }
+        },
         hints: question.hints?.map(hint => ({
           text: hint.text || '',
-          image: null
+          image: {
+            url: hint.image?.url || '',
+            publicId: hint.image?.publicId || '',
+            file: null
+          }
         })) || [],
-        commonMistakes: question.commonMistakes?.map(mistake => ({
-          description: mistake
-        })) || [],
+        commonMistakes: (question.commonMistakes || []).map(mistake => 
+          typeof mistake === 'string' 
+            ? { description: mistake, explanation: '' }
+            : mistake
+        ),
         tags: question.tags || [],
-        relatedTopics: [], // Not in the type, using empty array
-        prerequisites: question.prerequisites || []
-      });
+        relatedTopics: (question as any).relatedTopics || [],
+        prerequisites: question.prerequisites || [],
+        isVerified: question.isVerified || false,
+        numericalAnswer: {
+          exactValue: question.numericalAnswer?.exactValue || 0,
+          range: {
+            min: question.numericalAnswer?.range?.min || 0,
+            max: question.numericalAnswer?.range?.max || 0
+          },
+          unit: question.numericalAnswer?.unit || ''
+        },
+        feedback: {
+          studentReports: [],
+          teacherNotes: []
+        },
+        isActive: question.isActive !== false
+      };
+      
+      setFormData(questionFormData);
     }
-  }, [question]);
+  }, [question, setFormData]);
 
-  // Validate current step
+  // Basic validation for step navigation
   const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    switch (step) {
-      case 1:
-        if (!formData.questionText.trim()) {
-          newErrors.questionText = 'Question text is required';
-        }
-        if (formData.questionType === 'mcq') {
-          const validOptions = formData.options.filter(opt => opt.text.trim());
-          if (validOptions.length < 2) {
-            newErrors.options = 'At least 2 options are required';
-          }
-          const correctOptions = formData.options.filter(opt => opt.isCorrect);
-          if (correctOptions.length === 0) {
-            newErrors.correctOption = 'At least one correct option is required';
-          }
-        }
-        break;
-      case 2:
-        if (!formData.examType) {
-          newErrors.examType = 'Exam type is required';
-        }
-        if (!formData.subject) {
-          newErrors.subject = 'Subject is required';
-        }
-        if (!formData.class) {
-          newErrors.class = 'Class is required';
-        }
-        break;
-      case 3:
-        if (!formData.solutionText.trim()) {
-          newErrors.solutionText = 'Solution text is required';
-        }
-        break;
-      case 4:
-        if (formData.tags.length === 0) {
-          newErrors.tags = 'At least one tag is required';
-        }
-        break;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // For now, allow navigation between steps
+    // The useQuestionForm hook handles detailed validation
+    return true;
   };
 
   // Update step validation
@@ -220,54 +161,62 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
     setStepValidation(newStepValidation);
   }, [formData, currentStep]);
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+    field?: string,
+    nestedField?: string,
+    index?: number
+  ) => {
+    // Use the hook's handleInputChange function
+    hookHandleInputChange(e, field, nestedField, index);
   };
 
-  const handleOptionChange = (index: number, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      options: prev.options.map((option, i) => 
-        i === index ? { ...option, [field]: value } : option
-      )
-    }));
+
+  const handleFileUpload = (file: File | null, field: string, index?: number) => {
+    // Use the hook's handleFileUpload function
+    hookHandleFileUpload(file, field, index);
   };
 
   const handleCorrectOptionChange = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      options: prev.options.map((option, i) => ({
-        ...option,
-        isCorrect: i === index
-      }))
-    }));
+    // Use the hook's handleCorrectOptionChange function
+    hookHandleCorrectOptionChange(index);
   };
 
   const addOption = () => {
-    setFormData(prev => ({
-      ...prev,
-      options: [...prev.options, { text: '', image: null, isCorrect: false }]
-    }));
+    hookAddOption();
   };
 
   const removeOption = (index: number) => {
-    if (formData.options.length > 2) {
-      setFormData(prev => ({
-        ...prev,
-        options: prev.options.filter((_, i) => i !== index)
-      }));
-    }
+    hookRemoveOption(index);
   };
 
-  const handleFileUpload = (file: File | null, field: string, index?: number) => {
-    if (index !== undefined) {
-      handleOptionChange(index, field, file);
-    } else {
-      handleInputChange(field, file);
-    }
+  const addHint = () => {
+    hookAddHint();
+  };
+
+  const removeHint = (index: number) => {
+    hookRemoveHint(index);
+  };
+
+  const addCommonMistake = () => {
+    hookAddCommonMistake();
+  };
+
+  const removeCommonMistake = (index: number) => {
+    hookRemoveCommonMistake(index);
+  };
+
+  const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>, field: 'tags' | 'relatedTopics' | 'prerequisites') => {
+    hookHandleTagInput(e, field);
+  };
+
+  const removeTag = (index: number, field: 'tags' | 'relatedTopics' | 'prerequisites') => {
+    hookRemoveTag(index, field);
+  };
+
+  const handleArrayField = (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+    // Use the hook's handleInputChange for array fields
+    hookHandleInputChange(e, field);
   };
 
   const handleNextStep = () => {
@@ -296,21 +245,50 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
     }
   };
 
-  const handleSubmit = async () => {
+  const handlePreview = () => {
     if (!validateStep(currentStep)) {
-      toast.error('Please fix the errors before submitting');
+      toast.error('Please fix the errors before previewing');
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const updateData: UpdateQuestionData = {
-        questionText: formData.questionText,
-        questionType: formData.questionType,
+    const updateData: any = {
+        // Question structure that matches backend expectations
+        question: {
+          text: formData.question.text,
+          image: formData.question.image?.file ? undefined : {
+            url: formData.question.image?.url || '',
+            publicId: formData.question.image?.publicId || ''
+          }
+        },
+        // Options structure
+        options: formData.options.map(opt => ({
+          text: opt.text,
+          image: opt.image?.file ? undefined : {
+            url: opt.image?.url || '',
+            publicId: opt.image?.publicId || ''
+          }
+        })),
+        correctOptions: formData.correctOptions,
+        // Solution structure
+        solution: {
+          text: formData.solution.text,
+          image: formData.solution.image?.file ? undefined : {
+            url: formData.solution.image?.url || '',
+            publicId: formData.solution.image?.publicId || ''
+          }
+        },
+        // Hints structure
+        hints: formData.hints.map(hint => ({
+          text: hint.text,
+          image: hint.image?.file ? undefined : {
+            url: hint.image?.url || '',
+            publicId: hint.image?.publicId || ''
+          }
+        })),
+        // Other fields
+        questionType: formData.questionType, // Keep original values: 'single', 'multiple', 'numerical'
         questionCategory: formData.questionCategory,
-        questionSource: formData.questionSource,
-        options: formData.options.map(opt => opt.text),
-        correctOptions: formData.options.map((opt, index) => opt.isCorrect ? index : -1).filter(index => index !== -1),
+        questionSource: formData.questionSource === 'india_book' || formData.questionSource === 'foreign_book' ? 'custom' : formData.questionSource,
         examType: formData.examType,
         class: formData.class,
         year: formData.year,
@@ -322,21 +300,46 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
         languageLevel: formData.languageLevel,
         marks: formData.marks,
         negativeMarks: formData.negativeMarks,
-        solutionText: formData.solutionText,
-        hint0Text: formData.hints[0]?.text || '',
-        hint1Text: formData.hints[1]?.text || '',
-        hint2Text: formData.hints[2]?.text || '',
-        commonMistakes: formData.commonMistakes.map(mistake => mistake.description),
+        commonMistakes: formData.commonMistakes.map(mistake => ({
+          description: mistake.description || mistake,
+          explanation: mistake.explanation || ''
+        })),
         tags: formData.tags,
-        prerequisites: formData.prerequisites
+        relatedTopics: formData.relatedTopics,
+        prerequisites: formData.prerequisites,
+        // Add image files to updateData if they exist
+        questionImage: formData.question.image?.file,
+        solutionImage: formData.solution.image?.file,
+        optionImages: formData.options.map(opt => opt.image?.file).filter(Boolean) as File[],
+        hintImages: formData.hints.map(hint => hint.image?.file).filter(Boolean) as File[],
+        // Numerical answer fields
+        numericalAnswer: formData.numericalAnswer ? {
+          exactValue: formData.numericalAnswer.exactValue,
+          range: formData.numericalAnswer.range,
+          unit: formData.numericalAnswer.unit
+        } : undefined,
+        conceptualDifficulty: formData.conceptualDifficulty,
+        isVerified: formData.isVerified,
+        isActive: formData.isActive
       };
 
-      const updatedQuestion = await updateQuestion(question._id, updateData);
-      await updateQuestionInStore(question._id, updateData);
+    setPreviewData(updateData);
+    setShowPreview(true);
+  };
+
+  const handleConfirmUpdate = async () => {
+    if (!previewData) return;
+
+    setIsSubmitting(true);
+    try {
+      const updatedQuestion = await updateQuestion(question._id, previewData);
+      await updateQuestionInStore(question._id, previewData);
       onQuestionUpdate(updatedQuestion);
       
-      toast.success('Question updated successfully');
-      router.push('/admin/questions');
+      setShowPreview(false);
+      toast.success('Question updated successfully! You can continue editing or go back to questions list.');
+      // Don't auto-redirect, let user choose
+      // router.push('/admin/questions');
     } catch (error) {
       console.error('Error updating question:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to update question');
@@ -345,41 +348,14 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
     }
   };
 
+  const handleCancelPreview = () => {
+    setShowPreview(false);
+    setPreviewData(null);
+  };
+
   const handleResetForm = () => {
     if (confirm('Are you sure you want to reset the form? All changes will be lost.')) {
-      setFormData({
-        questionText: '',
-        questionType: 'mcq',
-        questionCategory: 'theoretical',
-        questionSource: 'custom',
-        options: [
-          { text: '', image: null, isCorrect: false },
-          { text: '', image: null, isCorrect: false },
-          { text: '', image: null, isCorrect: false },
-          { text: '', image: null, isCorrect: false }
-        ],
-        examType: '',
-        class: '',
-        year: 'not applicable',
-        subject: '',
-        section: '',
-        chapter: '',
-        difficulty: 'medium',
-        language: 'english',
-        languageLevel: 'basic',
-        marks: 1,
-        negativeMarks: 0,
-        expectedTime: 60,
-        conceptualDifficulty: 5,
-        solutionText: '',
-        solutionImage: null,
-        hints: [],
-        commonMistakes: [],
-        tags: [],
-        relatedTopics: [],
-        prerequisites: []
-      });
-      setErrors({});
+      clearFormData();
       setCurrentStep(1);
     }
   };
@@ -427,44 +403,41 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
         </div>
       </div>
 
-      {/* Step Indicators */}
-      <div className="flex items-center justify-between">
+      {/* Step Indicators - Horizontal Tabs Style */}
+      <div className="border-b border-gray-200 mb-6 bg-gray-50">
+        <div className="px-6">
+          <nav className="flex" aria-label="Form Steps">
         {STEPS.map((step, index) => (
-          <div key={step.id} className="flex items-center">
             <button
+                key={step.id}
               onClick={() => handleStepClick(step.id)}
-              className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                className={`relative flex items-center px-6 py-4 font-medium text-sm whitespace-nowrap transition-all duration-200 border-b-2 ${
+                  currentStep === step.id
+                    ? 'border-blue-500 text-blue-600 bg-white shadow-sm'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white hover:shadow-sm'
+                } ${index === 0 ? 'rounded-tl-lg' : ''} ${index === STEPS.length - 1 ? 'rounded-tr-lg' : ''}`}
+              >
+                <div className={`flex items-center justify-center w-6 h-6 rounded-full mr-3 text-xs font-semibold transition-colors ${
                 currentStep === step.id
-                  ? 'bg-blue-600 border-blue-600 text-white'
+                    ? 'bg-blue-500 text-white'
                   : stepValidation[index]
-                  ? 'bg-green-100 border-green-500 text-green-600 hover:bg-green-200'
-                  : 'bg-red-100 border-red-500 text-red-600 hover:bg-red-200'
-              }`}
-              aria-label={`Go to step ${step.id}: ${step.title}`}
-            >
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-300 text-gray-600'
+                }`}>
               {stepValidation[index] ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <XCircle className="h-4 w-4" />
+                    <CheckCircle className="h-3 w-3" />
+                  ) : (
+                    <span>{step.id}</span>
+                  )}
+                </div>
+                <span className="text-sm font-medium">{step.title}</span>
+                {currentStep === step.id && (
+                  <div className="absolute inset-x-0 -bottom-0.5 h-0.5 bg-blue-500"></div>
               )}
             </button>
-            <button
-              onClick={() => handleStepClick(step.id)}
-              className="ml-3 text-left hover:bg-gray-50 rounded-lg p-2 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-              aria-label={`Go to step ${step.id}: ${step.title}`}
-            >
-              <p className={`text-sm font-medium transition-colors ${
-                currentStep === step.id ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
-              }`}>
-                {step.id}. {step.title}
-              </p>
-              <p className="text-xs text-gray-400 transition-colors hover:text-gray-500">{step.description}</p>
-            </button>
-            {index < STEPS.length - 1 && (
-              <div className="mx-4 w-8 h-0.5 bg-gray-300"></div>
-            )}
+            ))}
+          </nav>
           </div>
-        ))}
       </div>
 
       {/* Form Content */}
@@ -473,12 +446,12 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
           <QuestionContentStep
             formData={formData}
             errors={errors}
-            onInputChange={handleInputChange}
-            onOptionChange={handleOptionChange}
-            onCorrectOptionChange={handleCorrectOptionChange}
-            onFileUpload={handleFileUpload}
-            onAddOption={addOption}
-            onRemoveOption={removeOption}
+            handleInputChange={handleInputChange}
+            handleFileUpload={handleFileUpload}
+            setErrors={setErrors}
+            handleCorrectOptionChange={handleCorrectOptionChange}
+            addOption={addOption}
+            removeOption={removeOption}
           />
         )}
 
@@ -486,7 +459,9 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
           <DetailsClassificationStep
             formData={formData}
             errors={errors}
-            onInputChange={handleInputChange}
+            handleInputChange={handleInputChange}
+            handleFileUpload={handleFileUpload}
+            setErrors={setErrors}
           />
         )}
 
@@ -494,8 +469,13 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
           <SolutionHintsStep
             formData={formData}
             errors={errors}
-            onInputChange={handleInputChange}
-            onFileUpload={handleFileUpload}
+            handleInputChange={handleInputChange}
+            handleFileUpload={handleFileUpload}
+            setErrors={setErrors}
+            addHint={addHint}
+            removeHint={removeHint}
+            addCommonMistake={addCommonMistake}
+            removeCommonMistake={removeCommonMistake}
           />
         )}
 
@@ -503,7 +483,15 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
           <TagsTopicsStep
             formData={formData}
             errors={errors}
-            onInputChange={handleInputChange}
+            handleInputChange={handleInputChange}
+            handleArrayField={handleArrayField}
+            handleTagInput={handleTagInput}
+            removeTag={removeTag}
+            addCommonMistake={addCommonMistake}
+            removeCommonMistake={removeCommonMistake}
+            clearFormData={clearFormData}
+            handleFileUpload={handleFileUpload}
+            setErrors={setErrors}
           />
         )}
       </div>
@@ -541,7 +529,7 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
             </button>
           ) : (
             <button
-              onClick={handleSubmit}
+              onClick={handlePreview}
               className="inline-flex items-center px-6 py-2 border border-transparent rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               disabled={isSubmitting}
             >
@@ -560,6 +548,17 @@ const QuestionEditForm: React.FC<QuestionEditFormProps> = ({ question, onQuestio
           )}
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {showPreview && previewData && (
+        <QuestionPreviewModal
+          originalQuestion={question}
+          updatedData={previewData}
+          onConfirm={handleConfirmUpdate}
+          onCancel={handleCancelPreview}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </div>
   );
 };

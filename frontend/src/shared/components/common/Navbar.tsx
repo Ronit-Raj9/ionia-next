@@ -35,7 +35,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
     { name: "JEE Mains", href: "/exam/jee-mains" },
     { name: "JEE Advanced", href: "/exam/jee-advanced" },
     { name: "CUET", href: "/exam/cuet" },
-    { name: "Practice", href: "/practice" },
+    { name: "Practice", href: "/dashboard/practice" },
   ];
 
   const displayName = user?.fullName || 'Guest';
@@ -112,7 +112,7 @@ export default function Navbar({ className = "" }: NavbarProps) {
                   </Link>
                   {/* Example dropdown (expand for real use) */}
                   {/* <div className="absolute right-0 mt-2 w-40 bg-white/90 rounded-lg shadow-lg py-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200">
-                    <Link href="/profile" className="block px-4 py-2 text-gray-700 hover:bg-emerald-50">Profile</Link>
+                    <Link href="/dashboard/profile" className="block px-4 py-2 text-gray-700 hover:bg-emerald-50">Profile</Link>
                     <button className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-emerald-50">Logout</button>
                   </div> */}
                 </div>

@@ -522,8 +522,19 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
  * - Returns the user from req.user set by verifyJWT
  */
 const getCurrrentUser = asyncHandler(async (req, res) => {
+  // Create a safe user object without password field
   const user = req.user.toObject();
-  user.hasPassword = req.user.hasPassword(); // Use the method instead of manual check
+  
+  // Remove sensitive fields
+  delete user.password;
+  delete user.refreshToken;
+  delete user.resetPasswordToken;
+  delete user.resetPasswordExpires;
+  delete user.emailVerificationToken;
+  
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
+  
   return res
     .status(200)
     .json(new ApiResponse(200, user, "current user fetched successfully"));
@@ -1135,7 +1146,7 @@ const updateUserRole = asyncHandler(async (req, res) => {
  * Google OAuth Login
  * Initiates Google OAuth flow
  */
-const googleOAuthLogin = asyncHandler(async (req, res) => {
+const googleOAuthLogin = asyncHandler(async (req, res, next) => {
   console.log("🔐 Google OAuth login initiated");
   
   // Store return URL in session if provided
@@ -1143,24 +1154,19 @@ const googleOAuthLogin = asyncHandler(async (req, res) => {
     req.session.returnUrl = req.query.returnUrl;
   }
   
-  // Authenticate with Google
+  // Authenticate with Google using passport
   passport.authenticate('google', { 
     scope: ['profile', 'email'],
     accessType: 'offline',
     prompt: 'consent'
-  })(req, res, (err) => {
-    if (err) {
-      console.error("Google OAuth error:", err);
-      throw new ApiError(500, "Google OAuth authentication failed");
-    }
-  });
+  })(req, res, next);
 });
 
 /**
  * Google OAuth Callback
  * Handles Google OAuth callback and creates JWT tokens
  */
-const googleOAuthCallback = asyncHandler(async (req, res) => {
+const googleOAuthCallback = asyncHandler(async (req, res, next) => {
   console.log("🔄 Google OAuth callback received");
   
   passport.authenticate('google', { session: false }, async (err, user, info) => {
@@ -1168,12 +1174,18 @@ const googleOAuthCallback = asyncHandler(async (req, res) => {
       if (err) {
         console.error("Google OAuth callback error:", err);
         await AuditLogger.logLoginFailure(req, 'unknown', err.message, 'google');
-        throw new ApiError(500, "Google OAuth authentication failed");
+        
+        // Redirect to OAuth callback with error
+        const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?error=oauth_failed`;
+        return res.redirect(redirectUrl);
       }
       
       if (!user) {
         await AuditLogger.logLoginFailure(req, 'unknown', 'No user returned from Google', 'google');
-        throw new ApiError(401, "Google OAuth authentication failed");
+        
+        // Redirect to OAuth callback with error
+        const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?error=oauth_no_user`;
+        return res.redirect(redirectUrl);
       }
       
       // Check if account is locked
@@ -1223,25 +1235,23 @@ const googleOAuthCallback = asyncHandler(async (req, res) => {
       const accessTokenOptions = getAccessTokenCookieOptions();
       const refreshTokenOptions = getRefreshTokenCookieOptions();
       
-      return res
-        .status(200)
+      console.log('🍪 Setting OAuth cookies with options:', {
+        accessTokenOptions,
+        refreshTokenOptions,
+        accessTokenPreview: accessToken.substring(0, 20) + '...'
+      });
+      
+      // Set cookies and redirect to frontend
+      res
         .cookie("accessToken", accessToken, accessTokenOptions)
-        .cookie("refreshToken", refreshToken, refreshTokenOptions)
-        .json(
-          new ApiResponse(
-            200,
-            {
-              user: loggedInUser,
-              sessionInfo: {
-                loginTime: user.lastLoginAt,
-                activeSessions: user.getActiveSessionsCount(),
-                authMethod: 'google',
-                returnUrl
-              }
-            },
-            "Google OAuth login successful"
-          )
-        );
+        .cookie("refreshToken", refreshToken, refreshTokenOptions);
+      
+      // Redirect to dedicated OAuth callback page with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const callbackUrl = `${frontendUrl}/oauth-callback?auth=success&token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}&returnUrl=${encodeURIComponent(returnUrl)}`;
+      
+      console.log(`🔄 Redirecting to OAuth callback: ${frontendUrl}/oauth-callback?auth=success&token=...&refresh=...&returnUrl=${returnUrl}`);
+      return res.redirect(callbackUrl);
         
     } catch (error) {
       console.error("Google OAuth callback error:", error);
@@ -1249,8 +1259,8 @@ const googleOAuthCallback = asyncHandler(async (req, res) => {
       // Ensure all errors are properly logged
       await AuditLogger.logLoginFailure(req, user?.email || 'unknown', error.message, 'google');
       
-      // Redirect to frontend with error
-      const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=${encodeURIComponent(error.message)}`;
+      // Redirect to OAuth callback with error
+      const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?error=${encodeURIComponent(error.message)}`;
       return res.redirect(errorUrl);
     }
   })(req, res);

@@ -7,7 +7,14 @@ import { AnalysisData, QuestionAnalysis, SubjectPerformance, TimeAnalysis, Diffi
 
 // Get the API base URL
 const getApiBaseUrl = (): string => {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1';
+  // Ensure the URL ends with /api/v1
+  if (baseUrl.endsWith('/api')) {
+    return `${baseUrl}/v1`;
+  } else if (!baseUrl.includes('/api/v1')) {
+    return `${baseUrl}/api/v1`;
+  }
+  return baseUrl;
 };
 
 const API_BASE = getApiBaseUrl();

@@ -24,7 +24,7 @@ import { useTestStore } from '../../store/testStore';
 import type { Test } from '../../types';
 import LoadingSpinner from '../analytics/LoadingSpinner';
 import ErrorMessage from '../analytics/ErrorMessage';
-import DeleteConfirmationModal from './DeleteConfirmationModal';
+import TestDeleteModal from './DeleteConfirmationModal';
 
 interface TestViewProps {
   testId: string;
@@ -493,7 +493,7 @@ const TestView: React.FC<TestViewProps> = ({ testId, className = '' }) => {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
+      <TestDeleteModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={async () => {

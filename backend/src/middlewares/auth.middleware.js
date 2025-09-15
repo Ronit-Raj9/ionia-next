@@ -14,12 +14,15 @@ import { tokenBlacklist } from "../utils/tokenBlacklist.js";
 export const verifyJWT = asyncHandler(async (req, res, next) => {
   try {
     console.log(`🔐 JWT verification for ${req.method} ${req.originalUrl}`);
+    console.log('🍪 Available cookies:', Object.keys(req.cookies || {}));
+    console.log('🍪 All cookies:', req.cookies);
     
     // 1. Get token ONLY from cookies (more secure than headers)
     const token = req.cookies?.accessToken;
 
     if (!token) {
       console.log("❌ No access token found in cookies");
+      console.log('🔍 Cookie details:', req.cookies);
       throw new ApiError(401, "Access token required. Please login.");
     }
 
@@ -62,17 +65,13 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
     }
 
     // 5. Fetch user from DB to ensure the user still exists and is active
-    const user = await User.findById(decodedToken._id).select("-password -refreshToken");
+    // Note: We keep the password field so hasPassword() method works
+    const user = await User.findById(decodedToken._id).select("-refreshToken");
     if (!user) {
       console.log(`❌ User not found for token: ${decodedToken._id}`);
       tokenBlacklist.addToBlacklist(token, decodedToken.exp);
       throw new ApiError(401, "User not found. Please login again.");
     }
-
-    // Add hasPassword field for frontend compatibility
-    // We need to fetch the user with password to check hasPassword status
-    const userWithPassword = await User.findById(decodedToken._id);
-    user.hasPassword = userWithPassword.hasPassword();
 
     // 6. Additional security checks
     if (user.email !== decodedToken.email) {

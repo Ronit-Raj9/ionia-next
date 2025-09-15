@@ -60,11 +60,5 @@ passport.use(
   )
 );
 
-// 🔥 PASSPORT ERROR HANDLING
-passport.use('google', passport.authenticate('google', {
-  failureRedirect: '/login',
-  failureFlash: true
-}));
-
 // 🔥 EXPORT CONFIGURED PASSPORT
 export default passport;

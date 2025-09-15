@@ -107,19 +107,17 @@ export default function RootLayout({
         
         {/* Security headers via meta tags */}
         <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
-        <meta httpEquiv="X-Frame-Options" content="DENY" />
         <meta httpEquiv="X-XSS-Protection" content="1; mode=block" />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
         
-        {/* Performance hints */}
-        <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        {/* Performance hints - font preload removed due to 404 */}
       </head>
       <body className="min-h-screen bg-gray-50 flex flex-col">
         {/* Performance monitoring initialization */}
         {/* <PerformanceInitializer /> */}
         
         {/* Main application */}
-        {/* <AuthProvider> */}
+        <AuthProvider>
           <div className="flex flex-col min-h-screen">
             <Navbar />
             
@@ -134,7 +132,7 @@ export default function RootLayout({
           <Notifications />
           <CookieConsent />
           <Toaster position="bottom-right" />
-        {/* </AuthProvider> */}
+        </AuthProvider>
         
         {/* Service Worker registration */}
         <script dangerouslySetInnerHTML={{
@@ -153,36 +151,7 @@ export default function RootLayout({
           `
         }} />
         
-        {/* Performance observer script */}
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            // Measure Core Web Vitals
-            function vitals(metric) {
-              console.log('Core Web Vitals:', metric);
-              
-              // Send to analytics (replace with your analytics service)
-              if (typeof gtag !== 'undefined') {
-                gtag('event', metric.name, {
-                  custom_parameter_value: Math.round(metric.value),
-                  custom_parameter_id: metric.id,
-                  custom_parameter_delta: metric.delta
-                });
-              }
-            }
-            
-            // Load web-vitals library dynamically
-            import('https://unpkg.com/web-vitals@3/dist/web-vitals.attribution.js')
-              .then(({ onCLS, onFCP, onFID, onLCP, onTTFB, onINP }) => {
-                onCLS(vitals);
-                onFCP(vitals);
-                onFID(vitals);
-                onLCP(vitals);
-                onTTFB(vitals);
-                onINP(vitals);
-              })
-              .catch(err => console.log('Web Vitals failed to load:', err));
-          `
-        }} />
+        {/* Performance observer script - removed due to CSP issues */}
         
         {/* Google Analytics (if configured) */}
         {process.env.NEXT_PUBLIC_GA_ID && (

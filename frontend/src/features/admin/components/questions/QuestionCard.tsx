@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { 
   ChevronDownIcon, 
   ChevronUpIcon,
@@ -12,6 +11,7 @@ import { useQuestionStore } from '../../store/questionStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { toast } from 'react-hot-toast';
 import type { Question } from '../../types';
+import CloudinaryImage from './components/CloudinaryImage';
 
 interface QuestionCardProps {
   question: Question;
@@ -20,6 +20,13 @@ interface QuestionCardProps {
 export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'superadmin';
+  
+  // Debug logging for image data
+  if (process.env.NODE_ENV === 'development') {
+    console.log('QuestionCard - Question ID:', question._id);
+    console.log('QuestionCard - Question Image:', question.question?.image);
+    console.log('QuestionCard - Options with Images:', question.options?.filter(opt => opt.image?.url));
+  }
   
   const {
     expandedQuestions,
@@ -253,24 +260,20 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                 </h3>
                 {question.question.image?.url && (
                   <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
-                    <div className="relative aspect-[16/9] w-full">
-                      <Image 
-                        src={question.question.image.url}
-                        alt="Question"
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        priority={false}
-                        className="object-contain bg-gray-50"
-                        loading="lazy"
-                        onError={(e) => {
-                          const img = e.target as HTMLImageElement;
-                          if (!img.dataset.fallback) {
-                            img.dataset.fallback = 'true';
-                            img.src = '/placeholder-image.png';
-                          }
-                        }}
-                      />
-                    </div>
+                    {/* Temporary direct img tag for testing */}
+                    <img 
+                      src={question.question.image.url}
+                      alt="Question Image"
+                      className="w-full h-auto object-contain bg-gray-50 rounded"
+                      onError={(e) => {
+                        console.error('Direct img tag failed:', question.question.image.url);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        console.log('Direct img tag loaded successfully:', question.question.image.url);
+                      }}
+                      style={{ maxHeight: '400px' }}
+                    />
                   </div>
                 )}
               </div>
@@ -296,15 +299,20 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({ question }) => {
                           <p className="text-sm text-gray-700">{option.text}</p>
                           {option.image?.url && (
                             <div className="mt-2 rounded overflow-hidden border border-gray-200 max-w-xs">
-                              <div className="relative aspect-video">
-                                <Image 
-                                  src={option.image.url}
-                                  alt={`Option ${String.fromCharCode(65 + index)}`}
-                                  fill
-                                  className="object-contain bg-gray-50"
-                                  sizes="(max-width: 768px) 100vw, 300px"
-                                />
-                              </div>
+                              {/* Temporary direct img tag for testing */}
+                              <img 
+                                src={option.image.url}
+                                alt={`Option ${String.fromCharCode(65 + index)} Image`}
+                                className="w-full h-auto object-contain bg-gray-50 rounded"
+                                onError={(e) => {
+                                  console.error('Option img tag failed:', option.image.url);
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                                onLoad={() => {
+                                  console.log('Option img tag loaded successfully:', option.image.url);
+                                }}
+                                style={{ maxHeight: '200px' }}
+                              />
                             </div>
                           )}
                         </div>

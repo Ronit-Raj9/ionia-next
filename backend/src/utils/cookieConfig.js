@@ -11,13 +11,16 @@ export const getAccessTokenCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const isHttps = process.env.HTTPS_ENABLED === 'true';
   
+  // In development, don't set domain so cookies work across localhost ports
+  const domain = isProduction ? process.env.COOKIE_DOMAIN : undefined;
+  
   return {
     httpOnly: true,                    // Prevent XSS attacks
     secure: isHttps,                   // Use environment variable
     sameSite: isHttps ? 'none' : 'lax', // Align with secure setting
     path: '/',                         // Available on all paths
     maxAge: 15 * 60 * 1000,           // 15 minutes
-    domain: process.env.COOKIE_DOMAIN || undefined, // Use environment variable
+    domain: domain, // Don't set domain in development for localhost cross-port access
   };
 };
 
@@ -35,13 +38,16 @@ export const getRefreshTokenCookieOptions = (rememberMe = false) => {
     ? 30 * 24 * 60 * 60 * 1000  // 30 days for "remember me"
     : 7 * 24 * 60 * 60 * 1000;  // 7 days for normal sessions
   
+  // In development, don't set domain so cookies work across localhost ports
+  const domain = isProduction ? process.env.COOKIE_DOMAIN : undefined;
+  
   return {
     httpOnly: true,                    // Prevent XSS attacks
     secure: isHttps,                   // Use environment variable
     sameSite: isHttps ? 'none' : 'lax', // Align with secure setting
     path: '/',                         // Available on all paths for refresh
     maxAge: maxAge,                    // Dynamic lifetime based on rememberMe
-    domain: process.env.COOKIE_DOMAIN || undefined, // Use environment variable
+    domain: domain, // Don't set domain in development for localhost cross-port access
   };
 };
 
@@ -53,13 +59,16 @@ export const getClearCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const isHttps = process.env.HTTPS_ENABLED === 'true';
   
+  // In development, don't set domain so cookies work across localhost ports
+  const domain = isProduction ? process.env.COOKIE_DOMAIN : undefined;
+  
   return {
     httpOnly: true,
     secure: isHttps,
     sameSite: isHttps ? 'none' : 'lax',
     path: '/',
     maxAge: 0,                         // Expire immediately
-    domain: process.env.COOKIE_DOMAIN || undefined,
+    domain: domain,
   };
 };
 
@@ -71,13 +80,16 @@ export const getClearRefreshCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const isHttps = process.env.HTTPS_ENABLED === 'true';
   
+  // In development, don't set domain so cookies work across localhost ports
+  const domain = isProduction ? process.env.COOKIE_DOMAIN : undefined;
+  
   return {
     httpOnly: true,
     secure: isHttps,
     sameSite: isHttps ? 'none' : 'lax',
     path: '/',                         // Match the set path
     maxAge: 0,                         // Expire immediately
-    domain: process.env.COOKIE_DOMAIN || undefined,
+    domain: domain,
   };
 };
 

@@ -15,7 +15,7 @@ import { QuestionCard } from './QuestionCard';
 import { QuestionSearch } from './QuestionSearch';
 import { QuestionFilters } from './QuestionFilters';
 import { PaginationControls } from './PaginationControls';
-import { DeleteConfirmationModal } from './DeleteConfirmationModal';
+import { DeleteConfirmationModal as QuestionDeleteModal } from './DeleteConfirmationModal';
 
 export const QuestionList: React.FC = () => {
   const {
@@ -196,7 +196,7 @@ export const QuestionList: React.FC = () => {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal />
+      <QuestionDeleteModal />
     </div>
   );
 };

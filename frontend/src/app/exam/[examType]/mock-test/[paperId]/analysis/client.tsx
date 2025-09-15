@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
 import AnalysisWindow from '@/features/analysis/components/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
 import { useRouter } from 'next/navigation';
-import { AnalysisProvider } from '@/context/AnalysisContext';
-
 interface ClientProps {
   examType: string;
   paperId: string;
@@ -51,10 +49,6 @@ export default function Client({ examType, paperId }: ClientProps) {
   }
   
   return (
-    
-      <AnalysisProvider>
-        <AnalysisWindow examType={examType} paperId={paperId} />
-      </AnalysisProvider>
-    
+    <AnalysisWindow examType={examType} paperId={paperId} />
   );
 } 

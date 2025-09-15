@@ -30,6 +30,8 @@ export const useAnalysisData = ({ attemptId, paperId, testId }: UseAnalysisDataP
       return;
     }
 
+    console.log('🔍 Fetching analysis data with:', { attemptId, paperId, testId });
+
     try {
       setLoading(true);
       clearError();
@@ -38,11 +40,15 @@ export const useAnalysisData = ({ attemptId, paperId, testId }: UseAnalysisDataP
 
       if (attemptId || paperId) {
         // Fetch from test analysis API
+        console.log('📊 Fetching test analysis...');
         const rawData = await getTestAnalysis(attemptId || '', paperId);
+        console.log('📊 Raw analysis data received:', rawData);
         analysisData = transformAnalysisData(rawData);
+        console.log('📊 Transformed analysis data:', analysisData);
       } else if (testId) {
         // Fetch from analysis data API
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/test/${testId}`, {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+        const response = await fetch(`${baseUrl}/v1/analytics/test/${testId}`, {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',

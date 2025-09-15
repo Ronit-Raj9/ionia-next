@@ -1,19 +1,11 @@
 // ==========================================
-// 🏪 AUTH STORE - ZUSTAND-BASED AUTHENTICATION
+// 🏪 SIMPLIFIED AUTH STORE - ZUSTAND-BASED
 // ==========================================
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { authAPI } from '../api/authApi';
-import { 
-  createAuthError, 
-  getSessionRemainingTime, 
-  isSessionExpiring, 
-  isSessionExpired,
-  formatRemainingTime,
-  SESSION_TIMEOUT,
-  INACTIVITY_WARNING_TIME
-} from '../utils/authUtils';
+import { createAuthError } from '../utils/authUtils';
 import type { 
   User, 
   UserRole, 
@@ -26,90 +18,55 @@ import type {
 } from '../types';
 
 // ==========================================
-// 🎯 AUTH STORE STATE INTERFACE
+// 🎯 SIMPLIFIED AUTH STATE
 // ==========================================
 
 interface AuthState {
-  // === CORE STATE ===
+  // Core state
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isInitialized: boolean;
   error: AuthError | null;
-  rememberMe: boolean;
-
-  // === SESSION MANAGEMENT ===
   lastActivity: number;
-  sessionExpiry: number;
-  isSessionExpiring: boolean;
-  sessionWarningThreshold: number;
-  proactiveRefreshTimer: NodeJS.Timeout | null;
-  sessionCheckTimer: NodeJS.Timeout | null;
+  sessionWarning: boolean;
 
-  // === ROLE & PERMISSION STATE ===
-  userRole: UserRole | null;
-  userPermissions: Permission[];
-
-  // ==========================================
-  // 🎯 CORE ACTIONS
-  // ==========================================
-  
-  // User Management
-  setUser: (user: User | null, rememberMe?: boolean) => void;
-  updateUser: (updates: Partial<User>) => void;
-  clearUser: () => void;
-
-  // Loading States
+  // Actions
+  setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
-  setInitialized: (initialized: boolean) => void;
-
-  // Error Management
   setError: (error: AuthError | null) => void;
   clearError: () => void;
-
-  // ==========================================
-  // 👤 ROLE & PERMISSION ACTIONS
-  // ==========================================
+  updateActivity: () => void;
   
-  hasRole: (role: UserRole | UserRole[]) => boolean;
-  hasPermission: (permission: Permission | Permission[]) => boolean;
-  canAccess: (resource: string, action?: string) => boolean;
-  isMinimumRole: (minRole: UserRole) => boolean;
-  getRoleLevel: (role?: UserRole) => number;
-  
-  // ==========================================
-  // 🔄 AUTH FLOW ACTIONS (COOKIE-BASED)
-  // ==========================================
-  
+  // Auth flow
   login: (credentials: LoginCredentials) => Promise<AuthResult>;
   logout: (reason?: LogoutReason) => Promise<void>;
+  logoutFromAllDevices: () => Promise<void>;
   register: (userData: RegisterData) => Promise<AuthResult>;
-  validateAuth: () => Promise<boolean>;
   initializeAuth: () => Promise<void>;
+  refreshTokens: () => Promise<void>;
 
-  // ==========================================
-  // ⏱️ SESSION MANAGEMENT ACTIONS
-  // ==========================================
-  
-  updateActivity: () => void;
-  startSessionMonitoring: () => void;
-  stopSessionMonitoring: () => void;
-  startProactiveRefresh: () => void;
-  stopProactiveRefresh: () => void;
-  performProactiveRefresh: () => Promise<void>;
+  // Session management
   extendSession: () => void;
-  endSession: () => void;
-  getSessionStatus: () => {
-    isExpiring: boolean;
-    remainingTime: number;
-    formattedRemainingTime: string;
-    isExpired: boolean;
-  };
-
-  // ==========================================
-  // 🧹 CLEANUP ACTIONS
-  // ==========================================
+  checkSessionStatus: () => { isExpiring: boolean; timeRemaining: number };
   
+  // Permissions (computed from user)
+  hasRole: (role: UserRole | UserRole[]) => boolean;
+  hasPermission: (permission: Permission | Permission[]) => boolean;
+  isMinimumRole: (minimumRole: UserRole) => boolean;
+  
+  // Username validation
+  checkUsername: (username: string) => Promise<{ available: boolean; message: string }>;
+  
+  // User statistics
+  getUserStatistics: () => Promise<{
+    totalTests: number;
+    averageScore: number;
+    testsThisWeek: number;
+    accuracy: number;
+  }>;
+  
+  // Cleanup
   reset: () => void;
 }
 
@@ -120,339 +77,286 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      // === INITIAL STATE ===
+      // Initial state
       user: null,
       isAuthenticated: false,
       isLoading: false,
       isInitialized: false,
       error: null,
-      rememberMe: false,
-
-      // === SESSION STATE ===
       lastActivity: Date.now(),
-      sessionExpiry: Date.now() + SESSION_TIMEOUT,
-      isSessionExpiring: false,
-      sessionWarningThreshold: INACTIVITY_WARNING_TIME,
-      proactiveRefreshTimer: null,
-      sessionCheckTimer: null,
+      sessionWarning: false,
 
-      // === ROLE STATE ===
-      userRole: null,
-      userPermissions: [],
-
-      // ==========================================
-      // 🎯 CORE ACTIONS
-      // ==========================================
-
-      setUser: (user, rememberMe = false) => {
+      // Actions
+      setUser: (user) => {
         set({
           user,
           isAuthenticated: !!user,
-          userRole: user?.role || null,
-          userPermissions: user?.permissions || [],
-          rememberMe,
-          lastActivity: Date.now(),
-          sessionExpiry: Date.now() + SESSION_TIMEOUT,
-          error: null,
-        });
-      },
-
-      updateUser: (updates) => {
-        const { user } = get();
-        if (user) {
-          set({ user: { ...user, ...updates } });
-        }
-      },
-
-      clearUser: () => {
-        set({
-          user: null,
-          isAuthenticated: false,
-          userRole: null,
-          userPermissions: [],
           error: null,
         });
       },
 
       setLoading: (loading) => set({ isLoading: loading }),
-      setInitialized: (initialized) => set({ isInitialized: initialized }),
       setError: (error) => set({ error }),
       clearError: () => set({ error: null }),
+      updateActivity: () => set({ lastActivity: Date.now(), sessionWarning: false }),
 
-      // ==========================================
-      // 👤 ROLE & PERMISSION ACTIONS
-      // ==========================================
-
-      hasRole: (role) => {
-        const { userRole } = get();
-        if (Array.isArray(role)) {
-          return userRole ? role.includes(userRole) : false;
-        }
-        return userRole === role;
-      },
-
-      hasPermission: (permission) => {
-        const { userPermissions } = get();
-        if (Array.isArray(permission)) {
-          return permission.some(p => userPermissions.includes(p));
-        }
-        return userPermissions.includes(permission);
-      },
-
-      canAccess: (resource, action = 'read') => {
-        const { userRole, userPermissions } = get();
-        if (!userRole) return false;
-        
-        // Admin and superadmin have broad access
-        if (userRole === 'admin' || userRole === 'superadmin') {
-          return true;
-        }
-        
-        const permission = `${resource}:${action}` as Permission;
-        return userPermissions.includes(permission);
-      },
-
-      isMinimumRole: (minRole) => {
-        const { userRole } = get();
-        if (!userRole) return false;
-        
-        const roleHierarchy = { user: 1, admin: 2, superadmin: 3 };
-        const userLevel = roleHierarchy[userRole] || 0;
-        const requiredLevel = roleHierarchy[minRole] || 0;
-        
-        return userLevel >= requiredLevel;
-      },
-
-      getRoleLevel: (role) => {
-        const roleHierarchy = { user: 1, admin: 2, superadmin: 3 };
-        return roleHierarchy[role || get().userRole || 'user'] || 0;
-      },
-
-      // ==========================================
-      // 🔄 AUTH FLOW ACTIONS
-      // ==========================================
-
+      // Auth flow
       login: async (credentials) => {
-        const { setLoading, setError, setUser, startSessionMonitoring } = get();
-        
         try {
-          setLoading(true);
-          setError(null);
+          set({ isLoading: true, error: null });
           
           const response = await authAPI.login(credentials);
-          setUser(response.user, credentials.rememberMe);
-          startSessionMonitoring();
+          get().setUser(response.user);
           
           return { success: true, user: response.user };
         } catch (error: any) {
-          const authError = createAuthError(
-            'auth',
-            error.message || 'Login failed',
-            { credentials: { email: credentials.email } }
-          );
-          setError(authError);
+          let authError;
+          
+          // Handle specific error types
+          if (error.status === 0 || error.isNetworkError) {
+            authError = createAuthError('network', 'Unable to connect to the server. Please check your internet connection and try again.', { networkError: true });
+          } else if (error.status === 401) {
+            authError = createAuthError('auth', 'Invalid email or password', { credentials: { email: credentials.email } });
+          } else if (error.status === 423) {
+            authError = createAuthError('auth', 'Account is temporarily locked due to multiple failed login attempts. Please try again later.', { locked: true });
+          } else if (error.status === 429) {
+            authError = createAuthError('auth', 'Too many login attempts. Please wait a few minutes before trying again.', { rateLimited: true });
+          } else if (error.status === 403) {
+            authError = createAuthError('auth', 'Account has been deactivated. Please contact support.', { deactivated: true });
+          } else if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('connection')) {
+            authError = createAuthError('network', 'Network error. Please check your connection and try again.', { networkError: true });
+          } else {
+            authError = createAuthError('auth', error.message || 'Login failed', { credentials: { email: credentials.email } });
+          }
+          
+          set({ error: authError });
           return { success: false, error: authError };
         } finally {
-          setLoading(false);
+          set({ isLoading: false });
         }
       },
 
       logout: async (reason = 'manual') => {
-        const { clearUser, stopSessionMonitoring, setLoading } = get();
-        
         try {
-          setLoading(true);
+          set({ isLoading: true });
+          
+          // Call logout API to clear cookies on server
           await authAPI.logout();
+          console.log('✅ Server logout successful');
         } catch (error) {
-          console.warn('Logout API call failed:', error);
+          console.warn('⚠️ Server logout failed, proceeding with local logout:', error);
+          // Continue with local logout even if server call fails
         } finally {
-          clearUser();
-          stopSessionMonitoring();
-          setLoading(false);
+          // Always clear local state regardless of server response
+          set({
+            user: null,
+            isAuthenticated: false,
+            error: null,
+            isLoading: false,
+            sessionWarning: false,
+            isInitialized: true, // Keep initialized true
+          });
+          
+          // Clear localStorage auth data
+          localStorage.removeItem('auth-store');
+          
+          console.log('🔄 Local logout completed');
+        }
+      },
+
+      logoutFromAllDevices: async () => {
+        try {
+          set({ isLoading: true });
+          
+          // Call logout from all devices API
+          await authAPI.logoutFromAllDevices();
+          console.log('✅ Logout from all devices successful');
+        } catch (error) {
+          console.warn('⚠️ Logout from all devices failed, proceeding with local logout:', error);
+        } finally {
+          // Always clear local state regardless of server response
+          set({
+            user: null,
+            isAuthenticated: false,
+            error: null,
+            isLoading: false,
+            sessionWarning: false,
+            isInitialized: true, // Keep initialized true
+          });
+          
+          // Clear localStorage auth data
+          localStorage.removeItem('auth-store');
+          
+          console.log('🔄 Local logout from all devices completed');
         }
       },
 
       register: async (userData) => {
-        const { setLoading, setError } = get();
-        
         try {
-          setLoading(true);
-          setError(null);
+          set({ isLoading: true, error: null });
           
           await authAPI.register(userData);
           
           return { success: true, requiresVerification: true };
         } catch (error: any) {
-          const authError = createAuthError(
-            'validation',
-            error.message || 'Registration failed',
-            { userData: { email: userData.email } }
-          );
-          setError(authError);
+          let authError;
+          
+          // Handle specific error types
+          if (error.status === 0 || error.isNetworkError) {
+            authError = createAuthError('network', 'Unable to connect to the server. Please check your internet connection and try again.', { networkError: true });
+          } else if (error.status === 400) {
+            authError = createAuthError('validation', error.message || 'Invalid registration data', { userData: { email: userData.email } });
+          } else if (error.status === 409) {
+            authError = createAuthError('validation', 'An account with this email already exists', { userData: { email: userData.email } });
+          } else if (error.status === 429) {
+            authError = createAuthError('auth', 'Too many registration attempts. Please wait a few minutes before trying again.', { rateLimited: true });
+          } else if (error.message?.includes('network') || error.message?.includes('fetch') || error.message?.includes('connection')) {
+            authError = createAuthError('network', 'Network error. Please check your connection and try again.', { networkError: true });
+          } else {
+            authError = createAuthError('validation', error.message || 'Registration failed', { userData: { email: userData.email } });
+          }
+          
+          set({ error: authError });
           return { success: false, error: authError };
         } finally {
-          setLoading(false);
-        }
-      },
-
-      validateAuth: async () => {
-        const { setLoading, setError, setUser, clearUser, startSessionMonitoring } = get();
-        
-        try {
-          setLoading(true);
-          const user = await authAPI.getCurrentUser();
-          setUser(user);
-          startSessionMonitoring();
-          return true;
-        } catch (error: any) {
-          clearUser();
-          setError(createAuthError('auth', 'Authentication validation failed'));
-          return false;
-        } finally {
-          setLoading(false);
+          set({ isLoading: false });
         }
       },
 
       initializeAuth: async () => {
-        const { setInitialized, validateAuth } = get();
-        
         try {
-          await validateAuth();
-        } catch (error) {
-          console.error('Auth initialization failed:', error);
-        } finally {
-          setInitialized(true);
-        }
-      },
-
-      // ==========================================
-      // ⏱️ SESSION MANAGEMENT ACTIONS
-      // ==========================================
-
-      updateActivity: () => {
-        const { startSessionMonitoring } = get();
-        set({ 
-          lastActivity: Date.now(),
-          sessionExpiry: Date.now() + SESSION_TIMEOUT 
-        });
-        startSessionMonitoring();
-      },
-
-      startSessionMonitoring: () => {
-        const { stopSessionMonitoring } = get();
-        stopSessionMonitoring(); // Clear existing timers
-        
-        const sessionCheckTimer = setInterval(() => {
-          const { getSessionStatus, isAuthenticated } = get();
-          if (!isAuthenticated) return;
+          console.log('🔄 Initializing auth...');
+          const user = await authAPI.getCurrentUser();
+          console.log('✅ Got user from API:', { id: user.id, email: user.email, isAuthenticated: true });
           
-          const { isExpiring, isExpired } = getSessionStatus();
+          // Set user and mark as authenticated
+          set({
+            user,
+            isAuthenticated: true,
+            error: null,
+            lastActivity: Date.now(),
+            isInitialized: true
+          });
           
-          if (isExpired) {
-            get().logout('expired');
-          } else if (isExpiring) {
-            set({ isSessionExpiring: true });
-          }
-        }, 30000); // Check every 30 seconds
-        
-        set({ sessionCheckTimer });
-      },
-
-      stopSessionMonitoring: () => {
-        const { sessionCheckTimer, proactiveRefreshTimer } = get();
-        
-        if (sessionCheckTimer) {
-          clearInterval(sessionCheckTimer);
+          console.log('✅ Auth state updated successfully');
+        } catch (error: any) {
+          console.log('❌ No valid session found:', error.message || error);
+          
+          // Clear any stale auth state
+          set({ 
+            user: null, 
+            isAuthenticated: false, 
+            error: null,
+            isInitialized: true
+          });
         }
-        if (proactiveRefreshTimer) {
-          clearTimeout(proactiveRefreshTimer);
-        }
-        
-        set({ 
-          sessionCheckTimer: null, 
-          proactiveRefreshTimer: null,
-          isSessionExpiring: false 
-        });
       },
 
-      startProactiveRefresh: () => {
-        const { stopProactiveRefresh } = get();
-        stopProactiveRefresh();
-        
-        const proactiveRefreshTimer = setTimeout(() => {
-          get().performProactiveRefresh();
-        }, 4 * 60 * 1000); // Refresh 4 minutes before expiry
-        
-        set({ proactiveRefreshTimer });
-      },
-
-      stopProactiveRefresh: () => {
-        const { proactiveRefreshTimer } = get();
-        if (proactiveRefreshTimer) {
-          clearTimeout(proactiveRefreshTimer);
-        }
-        set({ proactiveRefreshTimer: null });
-      },
-
-      performProactiveRefresh: async () => {
-        const { isAuthenticated, updateActivity } = get();
-        if (!isAuthenticated) return;
-        
+      refreshTokens: async () => {
         try {
-          // The refresh happens automatically via cookies
-          // We just need to update our activity tracking
-          updateActivity();
-        } catch (error) {
-          console.error('Proactive refresh failed:', error);
+          console.log('🔄 Manually refreshing tokens...');
+          await authAPI.refreshToken();
+          // Update last activity after successful refresh
+          set({ lastActivity: Date.now() });
+          console.log('✅ Tokens refreshed successfully');
+        } catch (error: any) {
+          console.log('❌ Token refresh failed:', error.message || error);
+          // If manual refresh fails, log out the user
+          get().logout('expired');
+          throw error;
         }
       },
 
+      // Session management
       extendSession: () => {
-        const { updateActivity } = get();
-        updateActivity();
+        get().updateActivity();
+        // In cookie-based auth, activity update is enough
+        // The backend handles session extension through cookie refresh
       },
 
-      endSession: () => {
-        const { logout } = get();
-        logout('manual');
-      },
-
-      getSessionStatus: () => {
-        const { lastActivity, sessionExpiry } = get();
-        const remainingTime = getSessionRemainingTime(lastActivity);
-        const isExpiring = isSessionExpiring(lastActivity);
-        const isExpired = isSessionExpired(lastActivity);
+      checkSessionStatus: () => {
+        const { lastActivity } = get();
+        const now = Date.now();
+        const elapsed = now - lastActivity;
+        const sessionTimeout = 30 * 60 * 1000; // 30 minutes
+        const warningThreshold = 25 * 60 * 1000; // 25 minutes
+        
+        const timeRemaining = sessionTimeout - elapsed;
+        const isExpiring = elapsed >= warningThreshold && elapsed < sessionTimeout;
+        
+        if (isExpiring && !get().sessionWarning) {
+          set({ sessionWarning: true });
+        }
         
         return {
           isExpiring,
-          remainingTime,
-          formattedRemainingTime: formatRemainingTime(remainingTime),
-          isExpired,
+          timeRemaining: Math.max(0, timeRemaining)
         };
       },
 
-      // ==========================================
-      // 🧹 CLEANUP ACTIONS
-      // ==========================================
-
-      reset: () => {
-        const { stopSessionMonitoring } = get();
-        stopSessionMonitoring();
+      // Permissions (computed from user)
+      hasRole: (role) => {
+        const { user } = get();
+        if (!user?.role) return false;
         
+        if (Array.isArray(role)) {
+          return role.includes(user.role);
+        }
+        return user.role === role;
+      },
+
+      hasPermission: (permission) => {
+        const { user } = get();
+        if (!user?.permissions) return false;
+        
+        if (Array.isArray(permission)) {
+          return permission.some(p => user.permissions.includes(p));
+        }
+        return user.permissions.includes(permission);
+      },
+
+      isMinimumRole: (minimumRole) => {
+        const { user } = get();
+        if (!user?.role) return false;
+        
+        const roleHierarchy = { user: 1, admin: 2, superadmin: 3 };
+        const userLevel = roleHierarchy[user.role] || 0;
+        const requiredLevel = roleHierarchy[minimumRole] || 0;
+        
+        return userLevel >= requiredLevel;
+      },
+
+      // Username validation
+      checkUsername: async (username) => {
+        try {
+          return await authAPI.checkUsername(username);
+        } catch (error: any) {
+          return {
+            available: false,
+            message: error.message || 'Error checking username availability'
+          };
+        }
+      },
+
+      // User statistics
+      getUserStatistics: async () => {
+        try {
+          return await authAPI.getUserStatistics();
+        } catch (error: any) {
+          throw new Error(error.message || 'Failed to fetch user statistics');
+        }
+      },
+
+      // Cleanup
+      reset: () => {
         set({
           user: null,
           isAuthenticated: false,
           isLoading: false,
           isInitialized: false,
           error: null,
-          rememberMe: false,
           lastActivity: Date.now(),
-          sessionExpiry: Date.now() + SESSION_TIMEOUT,
-          isSessionExpiring: false,
-          userRole: null,
-          userPermissions: [],
-          proactiveRefreshTimer: null,
-          sessionCheckTimer: null,
+          sessionWarning: false,
         });
       },
     }),
@@ -462,46 +366,19 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
-        rememberMe: state.rememberMe,
         lastActivity: state.lastActivity,
-        sessionExpiry: state.sessionExpiry,
+      }),
+      // Merge function to handle hydration properly
+      merge: (persistedState: any, currentState: AuthState) => ({
+        ...currentState,
+        ...persistedState,
+        // Always start uninitialized on page load
+        isInitialized: false,
+        isLoading: false,
+        error: null,
+        sessionWarning: false,
       }),
     }
   )
 );
 
-// ==========================================
-// 🎯 STORE SELECTORS & UTILITIES
-// ==========================================
-
-export const useAuthState = () => {
-  return useAuthStore((state) => ({
-    user: state.user,
-    isAuthenticated: state.isAuthenticated,
-    isLoading: state.isLoading,
-    isInitialized: state.isInitialized,
-    error: state.error,
-  }));
-};
-
-export const useAuthPermissions = () => {
-  return useAuthStore((state) => ({
-    hasRole: state.hasRole,
-    hasPermission: state.hasPermission,
-    canAccess: state.canAccess,
-    isMinimumRole: state.isMinimumRole,
-    userRole: state.userRole,
-    userPermissions: state.userPermissions,
-  }));
-};
-
-export const useSessionStatus = () => {
-  return useAuthStore((state) => {
-    const sessionStatus = state.getSessionStatus();
-    return {
-      ...sessionStatus,
-      extendSession: state.extendSession,
-      endSession: state.endSession,
-    };
-  });
-};

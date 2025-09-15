@@ -12,9 +12,9 @@ export {
 } from './store/analysisStore';
 export type { 
   AnalysisData, 
-  QuestionAnalysis, 
+  QuestionAnalysis as QuestionAnalysisType, 
   SubjectPerformance, 
-  TimeAnalysis, 
+  TimeAnalysis as TimeAnalysisType, 
   DifficultyAnalysis,
   ComparisonData 
 } from './store/analysisStore';

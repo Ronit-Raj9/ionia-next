@@ -77,7 +77,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     submitTest
   } = useTestStore();
 
-  const { user, isLoading: userLoading, validateAuth } = useAuthStore();
+  const { user, isLoading: userLoading } = useAuthStore();
   const { 
     startQuestionTracking, 
     endQuestionTracking, 
@@ -144,7 +144,8 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         
         try {
           // Always use the standard endpoint
-          const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/v1/tests/${paperId}/attempt`;
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+          const apiUrl = `${baseUrl}/v1/tests/${paperId}/attempt`;
           console.log("📌 Attempting to fetch test data for ID:", paperId, "from URL:", apiUrl);
           
           const token = localStorage.getItem('accessToken');
@@ -195,9 +196,9 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   // Fetch user data if not already in the store
   useEffect(() => {
     if (isClient && !user && !userLoading) {
-      validateAuth();
+      // User validation logic can be added here if needed
     }
-  }, [validateAuth, user, userLoading, isClient]);
+  }, [user, userLoading, isClient]);
 
   // Helper function to safely get user ID from potentially different user object structures
   const getUserId = useCallback(() => {
@@ -411,7 +412,8 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       console.log("Submitting test with payload:", payload);
       
       // Submit test
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/attempted-tests/submit`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+      const response = await fetch(`${baseUrl}/v1/attempted-tests/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -449,8 +451,8 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           // Continue with redirection even if analysis fetch fails
         }
         
-        // Redirect to analysis page without attempt ID
-        router.push(`/exam/${examType || "general"}/mock-test/${paperId}/analysis`);
+        // Redirect to analysis page with attempt ID
+        router.push(`/exam/${examType || "general"}/mock-test/${paperId}/analysis?attemptId=${responseData.data.attemptId}`);
       } else {
         // Still store paperId even if no attemptId is returned
         localStorage.setItem('lastSubmittedPaperId', paperId);
@@ -697,8 +699,11 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     ? currentQuestionData.question 
     : currentQuestionData.question?.text || '';
 
-  // Extract question image if available
-  const questionImage = typeof currentQuestionData.question === 'object' && currentQuestionData.question?.image?.url
+  // Extract question image if available - only if URL is valid
+  const questionImage = typeof currentQuestionData.question === 'object' && 
+                       currentQuestionData.question?.image?.url && 
+                       typeof currentQuestionData.question.image.url === 'string' &&
+                       currentQuestionData.question.image.url.trim() !== ''
     ? currentQuestionData.question.image.url
     : null;
 
@@ -750,7 +755,14 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           <div className="space-y-4 mb-8">
             {currentQuestionData.options.map((option, index) => {
               const optionText = typeof option === 'string' ? option : option.text;
-              const optionImage = typeof option === 'object' && option.image?.url ? option.image.url : null;
+              // Only show image if URL is valid string and not empty
+              const optionImage = typeof option === 'object' && 
+                                option.image?.url && 
+                                typeof option.image.url === 'string' &&
+                                option.image.url.trim() !== ''
+                ? option.image.url 
+                : null;
+              const optionLabel = String.fromCharCode(65 + index); // A, B, C, D
               
               return (
                 <div 
@@ -763,14 +775,12 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
                   onClick={() => handleOptionChange(activeQuestion, index)}
                 >
                   <div className="flex items-start space-x-4">
-                    <div className={`flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center font-semibold text-sm ${
                       currentQuestionData.userAnswer === index 
-                        ? 'border-blue-500 bg-blue-500' 
-                        : 'border-gray-400'
+                        ? 'border-blue-500 bg-blue-500 text-white' 
+                        : 'border-gray-400 text-gray-700'
                     }`}>
-                      {currentQuestionData.userAnswer === index && (
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      )}
+                      {optionLabel}
                     </div>
                     <div className="flex-1">
                       <div className="text-gray-800 leading-relaxed">
@@ -780,7 +790,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
                         <div className="mt-3">
                           <img 
                             src={optionImage} 
-                            alt={`Option ${String.fromCharCode(65 + index)} image`} 
+                            alt={`Option ${optionLabel} image`} 
                             className="max-w-full h-auto rounded border border-gray-200"
                           />
                         </div>
@@ -832,7 +842,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           <div className="mt-6 pt-4 border-t border-gray-200">
             <button
               onClick={() => setConfirmSubmit(true)}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors shadow-sm"
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors shadow-lg border-2 border-green-700"
             >
               Submit Test
             </button>
@@ -848,13 +858,13 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setConfirmSubmit(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors border-2 border-gray-600"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors border-2 border-green-700"
               >
                 Submit
               </button>

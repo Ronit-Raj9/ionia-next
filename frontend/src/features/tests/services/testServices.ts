@@ -6,7 +6,8 @@ import { fetchWithAuth } from '@/features/auth/api/authApi';
 
 // Get the API base URL
 const getApiBaseUrl = (): string => {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://3.7.73.172/api/v1';
+  return baseUrl;
 };
 
 const API_BASE = getApiBaseUrl();

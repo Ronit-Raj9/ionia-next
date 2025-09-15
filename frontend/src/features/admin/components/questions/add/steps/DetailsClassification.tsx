@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StepProps } from '../../utils/types';
 import { 
   EXAM_TYPES, 
@@ -24,9 +24,18 @@ const DetailsClassification: React.FC<StepProps> = ({
   // State for chapter options
   const [chapterOptions, setChapterOptions] = useState<Array<{value: string, label: string}>>([]);
   const [sectionOptions, setSectionOptions] = useState<Array<{value: string, label: string}>>([]);
+  const isInitializing = useRef(true);
   
   // Get sections and chapters from questionStore
   const { loading } = useQuestionStore();
+
+  // Set initialization flag to false after first render
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      isInitializing.current = false;
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Get available subjects based on exam type and class
   const getAvailableSubjects = () => {
@@ -43,7 +52,7 @@ const DetailsClassification: React.FC<StepProps> = ({
 
   // Reset dependent fields when exam type changes
   useEffect(() => {
-    if (formData.examType) {
+    if (!isInitializing.current && formData.examType && formData.subject) {
       const availableSubjects = getAvailableSubjects();
       // If current subject is not available in new exam type, reset it
       if (!availableSubjects.some(s => s.value === formData.subject)) {
@@ -61,23 +70,28 @@ const DetailsClassification: React.FC<StepProps> = ({
       const sections = getSubjectSections(formData.subject);
       setSectionOptions(sections);
       
-      // Reset section when subject changes
-      handleInputChange(
-        { target: { name: 'section', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
-        'section'
-      );
-      
-      // Also reset chapter when subject changes
-      handleInputChange(
-        { target: { name: 'chapter', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
-        'chapter'
-      );
+      // Only reset section if it's not valid for the new subject and not initializing
+      if (!isInitializing.current && formData.section && !sections.some(s => s.value === formData.section)) {
+        handleInputChange(
+          { target: { name: 'section', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
+          'section'
+        );
+        
+        // Also reset chapter when section becomes invalid
+        handleInputChange(
+          { target: { name: 'chapter', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
+          'chapter'
+        );
+      }
     } else {
       setSectionOptions([]);
-      handleInputChange(
-        { target: { name: 'section', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
-        'section'
-      );
+      // Only reset if there was actually a section selected and not initializing
+      if (!isInitializing.current && formData.section) {
+        handleInputChange(
+          { target: { name: 'section', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
+          'section'
+        );
+      }
     }
   }, [formData.subject]);
 
@@ -100,8 +114,8 @@ const DetailsClassification: React.FC<StepProps> = ({
       
       setChapterOptions(options);
       
-      // Reset chapter if it's not valid for new combination
-      if (formData.chapter && !options.some(opt => opt.value === formData.chapter)) {
+      // Only reset chapter if it's not valid for new combination and not initializing
+      if (!isInitializing.current && formData.chapter && !options.some(opt => opt.value === formData.chapter)) {
         handleInputChange(
           { target: { name: 'chapter', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
           'chapter'
@@ -109,7 +123,8 @@ const DetailsClassification: React.FC<StepProps> = ({
       }
     } else {
       setChapterOptions([]);
-      if (formData.chapter) {
+      // Only reset chapter if there was actually one selected and we don't have valid subject/section and not initializing
+      if (!isInitializing.current && formData.chapter && (!formData.subject || !formData.section)) {
         handleInputChange(
           { target: { name: 'chapter', value: '' }} as React.ChangeEvent<HTMLSelectElement>,
           'chapter'
@@ -118,11 +133,6 @@ const DetailsClassification: React.FC<StepProps> = ({
     }
   }, [formData.subject, formData.class, formData.section]);
 
-  // Get available chapters based on selected subject
-  const availableChapters = formData.subject ? chapters[formData.subject.toLowerCase()] || [] : [];
-  
-  // Get available sections based on selected subject
-  const availableSections = formData.subject ? sections[formData.subject.toLowerCase()] || [] : [];
 
   return (
     <div className="space-y-6">

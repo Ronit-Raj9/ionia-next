@@ -8,21 +8,7 @@ import type { UserRole, Permission } from '../types';
 // 🏷️ UTILITY TYPES
 // ==========================================
 
-export interface TokenValidation {
-  isValid: boolean;
-  isExpired: boolean;
-  isExpiring: boolean;
-  expiresIn: number;
-  expiresAt: Date | null;
-}
-
-export interface TokenExpiryInfo {
-  expiresAt: Date | null;
-  expiresIn: number;
-  formattedExpiry: string;
-  isExpired: boolean;
-  isExpiring: boolean;
-}
+// Note: Token-related interfaces removed as we use cookie-based auth
 
 export interface PermissionContext {
   resource: string;
@@ -30,107 +16,7 @@ export interface PermissionContext {
   conditions?: Record<string, any>;
 }
 
-// ==========================================
-// 🔍 TOKEN VALIDATION UTILITIES
-// ==========================================
-
-/**
- * Parse JWT token and extract payload
- */
-export const parseJWT = (token: string): any => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Invalid JWT token:', error);
-    return null;
-  }
-};
-
-/**
- * Validate JWT token structure and expiry
- */
-export const validateToken = (token: string | null): TokenValidation => {
-  if (!token) {
-    return {
-      isValid: false,
-      isExpired: true,
-      isExpiring: false,
-      expiresIn: 0,
-      expiresAt: null,
-    };
-  }
-
-  try {
-    const payload = parseJWT(token);
-    if (!payload || !payload.exp) {
-      return {
-        isValid: false,
-        isExpired: true,
-        isExpiring: false,
-        expiresIn: 0,
-        expiresAt: null,
-      };
-    }
-
-    const now = Date.now();
-    const expiresAt = new Date(payload.exp * 1000);
-    const expiresIn = expiresAt.getTime() - now;
-    const isExpired = expiresIn <= 0;
-    const isExpiring = expiresIn <= 5 * 60 * 1000; // 5 minutes
-
-    return {
-      isValid: !isExpired,
-      isExpired,
-      isExpiring: isExpiring && !isExpired,
-      expiresIn: Math.max(0, expiresIn),
-      expiresAt,
-    };
-  } catch (error) {
-    return {
-      isValid: false,
-      isExpired: true,
-      isExpiring: false,
-      expiresIn: 0,
-      expiresAt: null,
-    };
-  }
-};
-
-/**
- * Check if token should be refreshed
- */
-export const shouldRefreshToken = (token: string | null, thresholdMinutes = 10): boolean => {
-  const validation = validateToken(token);
-  if (!validation.isValid) return false;
-  
-  const threshold = thresholdMinutes * 60 * 1000;
-  return validation.expiresIn <= threshold;
-};
-
-/**
- * Get detailed token expiry information
- */
-export const getTokenExpiryInfo = (token: string | null): TokenExpiryInfo => {
-  const validation = validateToken(token);
-  
-  return {
-    expiresAt: validation.expiresAt,
-    expiresIn: validation.expiresIn,
-    formattedExpiry: validation.expiresAt 
-      ? formatDateTime(validation.expiresAt)
-      : 'Invalid token',
-    isExpired: validation.isExpired,
-    isExpiring: validation.isExpiring,
-  };
-};
+// Note: Token validation removed as we use cookie-based auth
 
 // ==========================================
 // 👥 ROLE & PERMISSION UTILITIES
@@ -313,40 +199,7 @@ export const formatDateTime = (date: Date): string => {
   }).format(date);
 };
 
-/**
- * Generate secure device ID
- */
-export const generateDeviceId = (): string => {
-  if (typeof window === 'undefined') return 'server';
-  
-  let deviceId = localStorage.getItem('device_id');
-  if (!deviceId) {
-    deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('device_id', deviceId);
-  }
-  return deviceId;
-};
-
-/**
- * Get browser and device information
- */
-export const getDeviceInfo = () => {
-  if (typeof window === 'undefined') {
-    return {
-      userAgent: 'server',
-      platform: 'server',
-      language: 'en',
-      timezone: 'UTC',
-    };
-  }
-
-  return {
-    userAgent: navigator.userAgent,
-    platform: navigator.platform,
-    language: navigator.language,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  };
-};
+// Note: Device info functions removed - not currently used
 
 /**
  * Create auth error object
@@ -371,22 +224,7 @@ export const isAuthError = (error: any): boolean => {
          error?.code === 'UNAUTHORIZED';
 };
 
-/**
- * Extract user info from token
- */
-export const getUserFromToken = (token: string): any => {
-  const payload = parseJWT(token);
-  if (!payload) return null;
-
-  return {
-    id: payload.sub || payload.userId,
-    email: payload.email,
-    role: payload.role,
-    permissions: payload.permissions || [],
-    exp: payload.exp,
-    iat: payload.iat,
-  };
-};
+// Note: getUserFromToken removed as we use cookie-based auth
 
 /**
  * Validate email format
@@ -438,22 +276,7 @@ export const sanitizeInput = (input: string): string => {
   return input.trim().replace(/[<>]/g, '');
 };
 
-/**
- * Deep clone object (for state management)
- */
-export const deepClone = <T>(obj: T): T => {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as unknown as T;
-  if (obj instanceof Array) return obj.map(item => deepClone(item)) as unknown as T;
-  if (typeof obj === 'object') {
-    const clonedObj = {} as { [key: string]: any };
-    for (const key in obj) {
-      clonedObj[key] = deepClone(obj[key]);
-    }
-    return clonedObj as T;
-  }
-  return obj;
-};
+// Note: deepClone removed - use structuredClone or lodash if needed
 
 // ==========================================
 // 🍪 COOKIE UTILITIES

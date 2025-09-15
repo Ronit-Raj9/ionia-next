@@ -122,25 +122,33 @@ const QuestionEditPage: React.FC<QuestionEditPageProps> = ({ questionId }) => {
         />
 
         {/* Question Info Badges */}
-        <QuestionInfoBadges question={question} />
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <QuestionInfoBadges question={question} />
+        </div>
 
         {/* Main Content with Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <EditPageTabs activeTab={activeTab} onTabChange={handleTabChange}>
-            <TabsContent value="edit" className="p-6">
-              <QuestionEditForm
-                question={question}
-                onQuestionUpdate={handleQuestionUpdate}
-              />
-            </TabsContent>
+            {activeTab === 'edit' && (
+              <div className="p-6 bg-white">
+                <QuestionEditForm
+                  question={question}
+                  onQuestionUpdate={handleQuestionUpdate}
+                />
+              </div>
+            )}
 
-            <TabsContent value="history" className="p-6">
-              <RevisionHistory questionId={questionId} />
-            </TabsContent>
+            {activeTab === 'history' && (
+              <div className="p-6 bg-white">
+                <RevisionHistory questionId={questionId} />
+              </div>
+            )}
 
-            <TabsContent value="stats" className="p-6">
-              <QuestionStatistics questionId={questionId} />
-            </TabsContent>
+            {activeTab === 'stats' && (
+              <div className="p-6 bg-white">
+                <QuestionStatistics questionId={questionId} />
+              </div>
+            )}
           </EditPageTabs>
         </div>
       </div>

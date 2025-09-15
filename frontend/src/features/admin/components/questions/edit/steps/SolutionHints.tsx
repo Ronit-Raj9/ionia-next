@@ -1,5 +1,6 @@
 import React from 'react';
 import { PlusCircle, MinusCircle, Upload } from 'lucide-react';
+import FileUpload from '../../inputs/FileUpload';
 
 interface SolutionHintsProps {
   formData: {
@@ -16,13 +17,18 @@ interface SolutionHintsProps {
   errors: Record<string, string>;
   onInputChange: (field: string, value: any) => void;
   onFileUpload: (file: File | null, field: string, index?: number) => void;
+  // Add props for existing images
+  solutionImageUrl?: string;
+  hintImageUrls?: Array<string | undefined>;
 }
 
 const SolutionHints: React.FC<SolutionHintsProps> = ({
   formData,
   errors,
   onInputChange,
-  onFileUpload
+  onFileUpload,
+  solutionImageUrl,
+  hintImageUrls = []
 }) => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>, field: string, index?: number) => {
     const file = event.target.files?.[0] || null;
@@ -77,8 +83,8 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
         <label htmlFor="solutionText" className="block text-sm font-medium text-gray-700 mb-1">
           Solution <span className="text-red-500">*</span>
         </label>
-        <div className="flex space-x-3">
-          <div className="flex-grow">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
             <textarea
               id="solutionText"
               value={formData.solutionText}
@@ -87,21 +93,12 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
               placeholder="Enter the solution here..."
             />
           </div>
-          <div className="w-32">
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleFileSelect(e, 'solutionImage')}
-                className="hidden"
-                id="solutionImage"
-              />
-              <label htmlFor="solutionImage" className="cursor-pointer">
-                <Upload className="h-6 w-6 mx-auto text-gray-400 mb-2" />
-                <p className="text-xs text-gray-500">Click to upload</p>
-                <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-              </label>
-            </div>
+          <div className="lg:col-span-1">
+            <FileUpload
+              onFileSelect={(file) => onFileUpload(file, 'solutionImage')}
+              label="Solution Image (Optional)"
+              initialUrl={solutionImageUrl}
+            />
           </div>
         </div>
         <p className="mt-1 text-xs text-gray-500">Either Solution Text or Solution Image is required</p>
@@ -144,8 +141,8 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
                     <MinusCircle size={16} />
                   </button>
                 </div>
-                <div className="flex space-x-3">
-                  <div className="flex-grow">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                  <div className="lg:col-span-2">
                     <textarea
                       value={hint.text}
                       onChange={(e) => updateHint(index, 'text', e.target.value)}
@@ -153,21 +150,12 @@ const SolutionHints: React.FC<SolutionHintsProps> = ({
                       placeholder={`Enter hint ${index + 1}...`}
                     />
                   </div>
-                  <div className="w-24">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-2 text-center hover:border-gray-400 transition-colors cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleFileSelect(e, 'hintImage', index)}
-                        className="hidden"
-                        id={`hintImage${index}`}
-                      />
-                      <label htmlFor={`hintImage${index}`} className="cursor-pointer">
-                        <Upload className="h-4 w-4 mx-auto text-gray-400 mb-1" />
-                        <p className="text-xs text-gray-500">Click to upload</p>
-                        <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-                      </label>
-                    </div>
+                  <div className="lg:col-span-1">
+                    <FileUpload
+                      onFileSelect={(file) => onFileUpload(file, 'hintImage', index)}
+                      label={`Hint ${index + 1} Image`}
+                      initialUrl={hintImageUrls[index]}
+                    />
                   </div>
                 </div>
               </div>

@@ -1,23 +1,56 @@
 // Main Admin Components Export
 
 // Dashboard Components
-export * from './dashboard';
-export { default as AdminDashboard } from './dashboard/AdminDashboard';
+export { 
+  DashboardHeader, 
+  QuickStats, 
+  AnalyticsOverview, 
+  QuickActions, 
+  RecentActivity, 
+  AdminDashboard 
+} from './dashboard';
 
 // Analytics Components
-export * from './analytics';
+export { 
+  AnalyticsDashboard, 
+  LoadingSpinner, 
+  ErrorMessage, 
+  StatCard, 
+  ProgressBar, 
+  RecentItems 
+} from './analytics';
 
 // Question Components
-export * from './questions';
+export { 
+  QuestionList, 
+  QuestionForm, 
+  QuestionView, 
+  QuestionCard, 
+  QuestionSearch, 
+  QuestionFilters, 
+  PaginationControls,
+  QuestionDeleteModal,
+  AddQuestionLayout 
+} from './questions';
 
 // Test Components
-export * from './tests';
+export { 
+  TestList, 
+  TestForm, 
+  TestView, 
+  TestDeleteModal 
+} from './tests';
 
 // User Components
-export * from './users';
+export { 
+  UserList, 
+  UserAnalytics, 
+  UserDetails, 
+  UserManagement 
+} from './users';
 
 // Settings Components
-export * from './settings';
+export { SettingsPanel } from './settings';
 
 // Sidebar Component
 export { Sidebar } from './Sidebar';

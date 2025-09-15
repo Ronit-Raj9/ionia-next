@@ -102,14 +102,28 @@ const QuestionListView: React.FC<QuestionListViewProps> = ({
   };
 
   const getCorrectAnswer = (question: Question) => {
-    if (question.questionType === 'multiple' && question.correctOptions) {
+    // Handle multiple choice questions
+    if (question.questionType === 'multiple' && question.correctOptions && question.correctOptions.length > 0) {
       return question.correctOptions.map(idx => 
         String.fromCharCode(65 + idx)
       ).join(', ');
     }
-    if (question.correctOption !== undefined) {
-      return String.fromCharCode(65 + question.correctOption);
+    
+    // Handle single choice questions - check both correctOptions array and correctOption field
+    if (question.questionType === 'single') {
+      if (question.correctOptions && question.correctOptions.length > 0) {
+        return String.fromCharCode(65 + question.correctOptions[0]);
+      }
+      if (question.correctOption !== undefined) {
+        return String.fromCharCode(65 + question.correctOption);
+      }
     }
+    
+    // Handle numerical questions
+    if (question.questionType === 'numerical' && question.numericalAnswer) {
+      return question.numericalAnswer.exactValue?.toString() || 'N/A';
+    }
+    
     return 'N/A';
   };
 

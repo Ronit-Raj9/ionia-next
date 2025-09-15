@@ -25,7 +25,6 @@ export default function DashboardLayout({
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const isLoading = useAuthStore(state => state.isLoading);
   const isInitialized = useAuthStore(state => state.isInitialized);
-  const userRole = useAuthStore(state => state.userRole);
 
   // Authentication check and redirect
   useEffect(() => {

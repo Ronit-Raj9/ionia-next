@@ -24,12 +24,14 @@ const EXAM_TYPES = [
   { value: 'jee_main', label: 'JEE Main' },
   { value: 'jee_advanced', label: 'JEE Advanced' },
   { value: 'cuet', label: 'CUET' },
-  { value: 'neet', label: 'NEET' }
+  { value: 'neet', label: 'NEET' },
+  { value: 'NONE', label: 'None' }
 ];
 
 const CLASSES = [
   { value: 'class_11', label: 'Class 11' },
-  { value: 'class_12', label: 'Class 12' }
+  { value: 'class_12', label: 'Class 12' },
+  { value: 'N/A', label: 'N/A' }
 ];
 
 const YEARS = [
@@ -49,19 +51,30 @@ const SUBJECTS = [
 ];
 
 const SECTIONS = [
-  { value: 'select_section', label: 'Select Section' },
+  { value: '', label: 'Select Section' },
   { value: 'algebra', label: 'Algebra' },
   { value: 'calculus', label: 'Calculus' },
   { value: 'geometry', label: 'Geometry' },
-  { value: 'trigonometry', label: 'Trigonometry' }
+  { value: 'trigonometry', label: 'Trigonometry' },
+  { value: 'kinematics', label: 'Kinematics' },
+  { value: 'mechanics', label: 'Mechanics' },
+  { value: 'thermodynamics', label: 'Thermodynamics' },
+  { value: 'optics', label: 'Optics' },
+  { value: 'electricity', label: 'Electricity' },
+  { value: 'magnetism', label: 'Magnetism' }
 ];
 
 const CHAPTERS = [
-  { value: 'select_chapter', label: 'Select Chapter' },
+  { value: '', label: 'Select Chapter' },
   { value: 'sets_and_relations', label: 'Sets and Relations' },
   { value: 'functions', label: 'Functions' },
   { value: 'complex_numbers', label: 'Complex Numbers' },
-  { value: 'quadratic_equations', label: 'Quadratic Equations' }
+  { value: 'quadratic_equations', label: 'Quadratic Equations' },
+  { value: 'kinematics', label: 'Kinematics' },
+  { value: 'motion_in_straight_line', label: 'Motion in a Straight Line' },
+  { value: 'motion_in_plane', label: 'Motion in a Plane' },
+  { value: 'laws_of_motion', label: 'Laws of Motion' },
+  { value: 'work_energy_power', label: 'Work, Energy and Power' }
 ];
 
 const DIFFICULTIES = [

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X } from 'lucide-react';
 import { FileUploadProps } from '../utils/types';
 import ImagePreview from './ImagePreview';
-import Image from 'next/image';
+import CloudinaryImage from '../components/CloudinaryImage';
 
 // Extended props to accept a URL string
 interface ExtendedFileUploadProps extends Omit<FileUploadProps, 'initialFile'> {
@@ -38,8 +38,8 @@ const FileUpload: React.FC<ExtendedFileUploadProps> = ({
     }
   };
 
-  // Show upload UI if neither file nor URL is present
-  const showUploadUI = !file && !imageUrl;
+  // Show upload UI if neither file nor URL is present (or URL is empty)
+  const showUploadUI = !file && (!imageUrl || imageUrl.trim() === '');
 
   return (
     <div>
@@ -60,7 +60,7 @@ const FileUpload: React.FC<ExtendedFileUploadProps> = ({
         </div>
       ) : file ? (
         <ImagePreview file={file} onRemove={handleRemoveFile} />
-      ) : imageUrl ? (
+      ) : (imageUrl && imageUrl.trim() !== '') ? (
         <div className="relative border border-gray-200 rounded-lg overflow-hidden">
           <button
             type="button"
@@ -69,12 +69,13 @@ const FileUpload: React.FC<ExtendedFileUploadProps> = ({
           >
             <X size={14} />
           </button>
-          <div className="w-full h-24 relative">
-            <Image
+          <div className="w-full h-24">
+            <CloudinaryImage
               src={imageUrl}
               alt="Image Preview"
-              fill
-              className="object-contain"
+              aspectRatio="auto"
+              className="h-24"
+              sizes="200px"
             />
           </div>
           <div className="p-1 bg-gray-50 text-[10px] text-gray-500 truncate text-center">

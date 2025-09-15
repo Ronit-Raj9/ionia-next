@@ -44,7 +44,7 @@ const itemVariants = {
   }
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ username: propUsername }) => {
+const Sidebar: React.FC<SidebarProps> = () => {
   const pathname = usePathname();
   const router = useRouter();
   // Use individual selectors to prevent infinite loops
@@ -52,10 +52,10 @@ const Sidebar: React.FC<SidebarProps> = ({ username: propUsername }) => {
   const user = useAuthStore(state => state.user);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   
-  // Get username from store or fallback to prop
+  // Get username from store
   const displayUsername = isAuthenticated && user 
     ? user.username || user.fullName || user.email || 'User'
-    : propUsername || 'Guest';
+    : 'Guest';
     
   // Get user role for display
   const displayRole = isAuthenticated && user?.role 
@@ -81,19 +81,29 @@ const Sidebar: React.FC<SidebarProps> = ({ username: propUsername }) => {
 
   const handleLogout = async () => {
     try {
-      console.log('Logging out...');
+      console.log('🔄 Starting logout process...');
+      
       // Clear all cached data first
-      clearAllCachedData();
+      try {
+        clearAllCachedData();
+        console.log('✅ Cached data cleared');
+      } catch (error) {
+        console.warn('⚠️ Failed to clear cached data:', error);
+      }
       
       // Call the logout action from the store
       await logout();
       
-      console.log('Logout successful, redirecting to login page');
-      router.push('/login');
+      console.log('✅ Logout successful, redirecting to login page');
+      
+      // Force redirect to login
+      window.location.href = '/login';
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('❌ Error during logout:', error);
+      
       // Even if there's an error, we should still redirect to login
-      router.push('/login');
+      // Use window.location.href for a hard redirect to ensure clean state
+      window.location.href = '/login';
     }
   };
 

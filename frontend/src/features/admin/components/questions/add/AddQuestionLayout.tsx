@@ -35,6 +35,7 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [showChaptersModal, setShowChaptersModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stepValidationStatus, setStepValidationStatus] = useState<{[key: number]: boolean}>({});
 
   const {
     loading,
@@ -51,6 +52,15 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
     handleInputChange,
     handleFileUpload,
     handleArrayField,
+    handleCorrectOptionChange,
+    handleTagInput,
+    removeTag,
+    addOption,
+    removeOption,
+    addHint,
+    removeHint,
+    addCommonMistake,
+    removeCommonMistake,
     clearFormData
   } = useQuestionForm();
 
@@ -59,27 +69,51 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
     clearError();
   }, [clearError]);
 
-  const handleStepChange = (step: number) => {
-    const stepValidation = validateForm(formData, step);
+  // Validate all steps and update their status
+  const validateAllStepsStatus = () => {
+    const newStatus: {[key: number]: boolean} = {};
     
-    if (Object.keys(stepValidation).length > 0) {
-      setErrors(stepValidation);
-      toast.error(`Please fix the errors in step ${step} before proceeding`);
-      return;
+    for (let step = 1; step <= FORM_STEPS.length; step++) {
+      const stepErrors = validateForm(formData, step);
+      newStatus[step] = Object.keys(stepErrors).length === 0;
     }
     
+    setStepValidationStatus(newStatus);
+    return newStatus;
+  };
+
+  // Update step validation status whenever formData changes
+  useEffect(() => {
+    validateAllStepsStatus();
+  }, [formData]);
+
+  const handleStepChange = (step: number) => {
+    // Validate the current step before leaving
+    const currentStepErrors = validateForm(formData, currentStep);
+    if (Object.keys(currentStepErrors).length > 0) {
+      // Update validation status immediately
+      validateAllStepsStatus();
+    }
+    
+    // Allow free navigation between steps
     setCurrentStep(step);
+    // Clear errors when changing steps to avoid confusion
     setErrors({});
   };
 
   const handleNext = () => {
     if (currentStep < FORM_STEPS.length) {
-      handleStepChange(currentStep + 1);
+      // Validate current step before moving
+      validateAllStepsStatus();
+      setCurrentStep(currentStep + 1);
+      setErrors({});
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
+      // Validate current step before moving
+      validateAllStepsStatus();
       setCurrentStep(currentStep - 1);
       setErrors({});
     }
@@ -108,8 +142,57 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
         icon: '🎉',
       });
 
-      // Reset form and redirect
-      clearFormData();
+      // Silently clear form data without confirmation (successful submission)
+      const silentClearFormData = () => {
+        localStorage.removeItem('questionDraft');
+        const defaultFormData = {
+          question: { text: "", image: { url: "", publicId: "", file: null } },
+          options: [
+            { text: "", image: { url: "", publicId: "", file: null } },
+            { text: "", image: { url: "", publicId: "", file: null } },
+            { text: "", image: { url: "", publicId: "", file: null } }, 
+            { text: "", image: { url: "", publicId: "", file: null } }
+          ],
+          correctOptions: [],
+          questionType: "single" as const,
+          questionCategory: "theoretical" as const,
+          questionSource: "custom" as const,
+          examType: "jee_main" as const,
+          class: "class_12" as const,
+          subject: "",
+          chapter: "",
+          section: "",
+          difficulty: "medium" as const,
+          year: "not applicable" as const,
+          languageLevel: "intermediate" as const,
+          language: "english" as const,
+          solution: { text: "", image: { url: "", publicId: "", file: null } },
+          hints: [],
+          tags: [],
+          relatedTopics: [],
+          prerequisites: [],
+          marks: 1,
+          negativeMarks: 0,
+          expectedTime: 120,
+          commonMistakes: [],
+          conceptualDifficulty: 5,
+          isVerified: false,
+          numericalAnswer: {
+            exactValue: 0,
+            range: { min: 0, max: 0 },
+            unit: ""
+          },
+          feedback: { studentReports: [], teacherNotes: [] },
+          isActive: true
+        };
+        setFormData(defaultFormData);
+        setErrors({});
+        setCurrentStep(1);
+      };
+      
+      silentClearFormData();
+      
+      // Redirect or call success callback
       onSuccess?.();
     } catch (error: any) {
       console.error('Error creating question:', error);
@@ -120,14 +203,8 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
   };
 
   const handlePreview = () => {
-    const formValidation = validateAllSteps();
-    
-    if (Object.keys(formValidation).length > 0) {
-      setErrors(formValidation);
-      toast.error('Please fix errors before previewing');
-      return;
-    }
-    
+    // Show preview regardless of validation status
+    // Users can see what they've entered so far
     setShowPreview(true);
   };
 
@@ -215,7 +292,7 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
   };
 
   const renderCurrentStep = () => {
-    const stepProps = {
+    const baseStepProps = {
       formData,
       errors,
       handleInputChange,
@@ -226,15 +303,46 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
 
     switch (currentStep) {
       case 1:
-        return <QuestionContent {...stepProps} />;
+        return (
+          <QuestionContent 
+            {...baseStepProps} 
+            handleCorrectOptionChange={handleCorrectOptionChange}
+            addOption={addOption}
+            removeOption={removeOption}
+          />
+        );
       case 2:
-        return <DetailsClassification {...stepProps} />;
+        return <DetailsClassification {...baseStepProps} />;
       case 3:
-        return <SolutionHints {...stepProps} />;
+        return (
+          <SolutionHints 
+            {...baseStepProps}
+            addHint={addHint}
+            removeHint={removeHint}
+            addCommonMistake={addCommonMistake}
+            removeCommonMistake={removeCommonMistake}
+          />
+        );
       case 4:
-        return <TagsTopics {...stepProps} />;
+        return (
+          <TagsTopics 
+            {...baseStepProps}
+            handleTagInput={handleTagInput}
+            removeTag={removeTag}
+            addCommonMistake={addCommonMistake}
+            removeCommonMistake={removeCommonMistake}
+            clearFormData={clearFormData}
+          />
+        );
       default:
-        return <QuestionContent {...stepProps} />;
+        return (
+          <QuestionContent 
+            {...baseStepProps} 
+            handleCorrectOptionChange={handleCorrectOptionChange}
+            addOption={addOption}
+            removeOption={removeOption}
+          />
+        );
     }
   };
 
@@ -302,7 +410,7 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
           <FormStepper 
             currentStep={currentStep} 
             onStepClick={handleStepChange}
-            errors={errors}
+            stepValidationStatus={stepValidationStatus}
           />
         </div>
 
@@ -336,12 +444,8 @@ export const AddQuestionLayout: React.FC<AddQuestionLayoutProps> = ({
 
         {showChaptersModal && (
           <ViewAllChaptersModal
-            subject={formData.subject}
+            isOpen={showChaptersModal}
             onClose={() => setShowChaptersModal(false)}
-            onChapterSelect={(chapter) => {
-              handleInputChange('chapter', chapter);
-              setShowChaptersModal(false);
-            }}
           />
         )}
       </div>

@@ -13,26 +13,121 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE = getApiBaseUrl();
 
-// Simple fetch wrapper for cookie-based auth
-const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
-  const response = await fetch(url, {
-    credentials: 'include', // Always include cookies
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    ...options,
-  });
+// Enhanced fetch wrapper with automatic token refresh
+let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const error = new Error(errorData.message || `Request failed with status ${response.status}`);
-    (error as any).status = response.status;
-    (error as any).response = errorData;
+const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
+  const makeRequest = async (): Promise<Response> => {
+    // Prepare headers - don't set Content-Type for FormData
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+    };
+    
+    // Only set Content-Type for non-FormData requests
+    if (!(options?.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+    
+    return fetch(url, {
+      credentials: 'include', // Always include cookies
+      headers,
+      ...options,
+    });
+  };
+
+  try {
+    const response = await makeRequest();
+
+    // If we get a 401 and this isn't already a refresh request, try to refresh the token
+    if (response.status === 401 && !url.includes('/refresh-token')) {
+      console.log('🔄 Received 401, attempting token refresh...');
+      
+      // If we're already refreshing, wait for that to complete
+      if (isRefreshing && refreshPromise) {
+        await refreshPromise;
+        // Retry the original request after refresh
+        const retryResponse = await makeRequest();
+        if (!retryResponse.ok) {
+          const errorData = await retryResponse.json().catch(() => ({}));
+          const error = new Error(errorData.message || `Request failed with status ${retryResponse.status}`);
+          (error as any).status = retryResponse.status;
+          (error as any).response = errorData;
+          throw error;
+        }
+        return retryResponse.json();
+      }
+
+      // Start the refresh process
+      isRefreshing = true;
+      refreshPromise = fetch(`${API_BASE}/users/refresh-token`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      }).then(async (refreshResponse) => {
+        if (!refreshResponse.ok) {
+          throw new Error('Token refresh failed');
+        }
+        console.log('✅ Token refreshed successfully');
+      });
+
+      try {
+        await refreshPromise;
+        // Token refreshed successfully, retry the original request
+        const retryResponse = await makeRequest();
+        if (!retryResponse.ok) {
+          const errorData = await retryResponse.json().catch(() => ({}));
+          const error = new Error(errorData.message || `Request failed with status ${retryResponse.status}`);
+          (error as any).status = retryResponse.status;
+          (error as any).response = errorData;
+          throw error;
+        }
+        return retryResponse.json();
+      } catch (refreshError) {
+        console.log('❌ Token refresh failed, user needs to login again');
+        // If refresh fails, throw the original 401 error to trigger logout
+        const errorData = await response.json().catch(() => ({}));
+        const error = new Error(errorData.message || 'Authentication failed');
+        (error as any).status = 401;
+        (error as any).response = errorData;
+        throw error;
+      } finally {
+        isRefreshing = false;
+        refreshPromise = null;
+      }
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const error = new Error(errorData.message || `Request failed with status ${response.status}`);
+      (error as any).status = response.status;
+      (error as any).response = errorData;
+      throw error;
+    }
+
+    return response.json();
+  } catch (error: any) {
+    // Handle network errors (connection refused, timeout, etc.)
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Unable to connect to the server. Please check your internet connection and try again.');
+      (networkError as any).status = 0;
+      (networkError as any).isNetworkError = true;
+      throw networkError;
+    }
+    
+    // Handle other fetch errors
+    if (!error.status && !error.response) {
+      const networkError = new Error('Network error occurred. Please check your connection and try again.');
+      (networkError as any).status = 0;
+      (networkError as any).isNetworkError = true;
+      throw networkError;
+    }
+    
     throw error;
   }
-
-  return response.json();
 };
 
 /**
@@ -82,12 +177,31 @@ export const authAPI = {
     }
   },
 
-  getCurrentUser: async (): Promise<User> => {
-    const response = await apiFetch<ApiResponse<User>>(`${API_BASE}/users/current-user`);
-    if (!response.data) {
-      throw new Error(response.message || 'Failed to fetch user');
+  refreshToken: async (): Promise<void> => {
+    try {
+      console.log('🔄 Refreshing access token...');
+      await apiFetch(`${API_BASE}/users/refresh-token`, { method: 'POST' });
+      console.log('✅ Token refreshed successfully');
+    } catch (error: any) {
+      console.log('❌ Token refresh failed:', error.message);
+      throw error;
     }
-    return response.data;
+  },
+
+  getCurrentUser: async (): Promise<User> => {
+    try {
+      console.log('📡 Calling getCurrentUser API...');
+      const response = await apiFetch<ApiResponse<User>>(`${API_BASE}/users/current-user`);
+      console.log('📡 getCurrentUser response:', { success: response.success, hasData: !!response.data });
+      
+      if (!response.data) {
+        throw new Error(response.message || 'Failed to fetch user');
+      }
+      return response.data;
+    } catch (error: any) {
+      console.log('📡 getCurrentUser error:', { status: error.status, message: error.message });
+      throw error;
+    }
   },
 
   // ==========================================
@@ -239,6 +353,44 @@ export const authAPI = {
   },
 
   // ==========================================
+  // 🔍 USERNAME VALIDATION
+  // ==========================================
+
+  checkUsername: async (username: string): Promise<{ available: boolean; message: string }> => {
+    const response = await apiFetch<ApiResponse<{ available: boolean }>>(`${API_BASE}/users/check-username`, {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    });
+    return {
+      available: response.data?.available || false,
+      message: response.message || (response.data?.available ? 'Username is available' : 'Username is taken')
+    };
+  },
+
+  // ==========================================
+  // 📊 USER STATISTICS
+  // ==========================================
+
+  getUserStatistics: async (): Promise<{
+    totalTests: number;
+    averageScore: number;
+    testsThisWeek: number;
+    accuracy: number;
+  }> => {
+    const response = await apiFetch<ApiResponse<{
+      totalTests: number;
+      averageScore: number;
+      testsThisWeek: number;
+      accuracy: number;
+    }>>(`${API_BASE}/users/statistics`);
+    
+    if (!response.data) {
+      throw new Error(response.message || 'Failed to fetch user statistics');
+    }
+    return response.data;
+  },
+
+  // ==========================================
   // 👥 ADMIN ENDPOINTS
   // ==========================================
 
@@ -294,6 +446,82 @@ export const authAPI = {
     });
     if (!response.data) {
       throw new Error(response.message || 'Failed to update user role');
+    }
+    return response.data;
+  },
+
+  getUsersAnalytics: async (): Promise<{
+    totalUsers: number;
+    usersByRole: { user: number; admin: number; superadmin: number };
+    newUsersThisWeek: number;
+    newUsersThisMonth: number;
+    recentSignups: Array<{
+      fullName: string;
+      username: string;
+      email: string;
+      role: string;
+      createdAt: string;
+    }>;
+  }> => {
+    const response = await apiFetch<ApiResponse<{
+      totalUsers: number;
+      usersByRole: { user: number; admin: number; superadmin: number };
+      newUsersThisWeek: number;
+      newUsersThisMonth: number;
+      recentSignups: Array<{
+        fullName: string;
+        username: string;
+        email: string;
+        role: string;
+        createdAt: string;
+      }>;
+    }>>(`${API_BASE}/users/admin/analytics`);
+    
+    if (!response.data) {
+      throw new Error(response.message || 'Failed to fetch user analytics');
+    }
+    return response.data;
+  },
+
+  // ==========================================
+  // 🛡️ ADMIN SECURITY FEATURES
+  // ==========================================
+
+  unlockAccount: async (userId: string): Promise<{ message: string }> => {
+    const response = await apiFetch<ApiResponse<{ message: string }>>(`${API_BASE}/users/admin/${userId}/unlock`, {
+      method: 'POST',
+    });
+    if (!response.data) {
+      throw new Error(response.message || 'Failed to unlock account');
+    }
+    return response.data;
+  },
+
+  getUserActivityLogs: async (userId: string, limit = 50): Promise<{
+    logs: Array<{
+      id: string;
+      action: string;
+      timestamp: string;
+      ip: string;
+      userAgent: string;
+      success: boolean;
+      details?: any;
+    }>;
+  }> => {
+    const response = await apiFetch<ApiResponse<{
+      logs: Array<{
+        id: string;
+        action: string;
+        timestamp: string;
+        ip: string;
+        userAgent: string;
+        success: boolean;
+        details?: any;
+      }>;
+    }>>(`${API_BASE}/users/admin/${userId}/activity?limit=${limit}`);
+    
+    if (!response.data) {
+      throw new Error(response.message || 'Failed to fetch user activity logs');
     }
     return response.data;
   },

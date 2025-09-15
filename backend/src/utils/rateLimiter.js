@@ -117,22 +117,22 @@ class RateLimiter {
   getLimitsForType(type) {
     const limits = {
       login: {
-        maxAttempts: 5,           // 5 failed attempts
+        maxAttempts: 30,           // 5 failed attempts
         windowMs: 15 * 60 * 1000, // in 15 minutes
         blockDurationMs: 30 * 60 * 1000 // block for 30 minutes
       },
       register: {
-        maxAttempts: 3,           // 3 registration attempts
+        maxAttempts: 30,           // 3 registration attempts
         windowMs: 60 * 60 * 1000, // in 1 hour
         blockDurationMs: 60 * 60 * 1000 // block for 1 hour
       },
       'forgot-password': {
-        maxAttempts: 3,           // 3 forgot password attempts
+        maxAttempts: 30,           // 3 forgot password attempts
         windowMs: 60 * 60 * 1000, // in 1 hour
         blockDurationMs: 60 * 60 * 1000 // block for 1 hour
       },
       'refresh-token': {
-        maxAttempts: 10,          // 10 refresh attempts
+        maxAttempts: 30,          // 10 refresh attempts
         windowMs: 5 * 60 * 1000,  // in 5 minutes
         blockDurationMs: 15 * 60 * 1000 // block for 15 minutes
       }

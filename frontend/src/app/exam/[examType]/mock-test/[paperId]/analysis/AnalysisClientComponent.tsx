@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import AnalysisWindow from '@/features/analysis/components/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
 import { useAnalysisStore } from '@/features/analysis/store/analysisStore';
-import { AnalysisProvider } from '@/context/AnalysisContext';
-
 interface AnalysisClientComponentProps {
   examType: string;
   paperId: string;
@@ -72,8 +70,6 @@ export default function AnalysisClientComponent({ examType, paperId }: AnalysisC
   }
 
   return (
-    <AnalysisProvider>
-      <AnalysisWindow examType={examType} paperId={paperId} />
-    </AnalysisProvider>
+    <AnalysisWindow examType={examType} paperId={paperId} />
   );
 } 
