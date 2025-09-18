@@ -58,5 +58,5 @@ export {
   getTimeUntilExpiry
 } from './utils/authUtils';
 
-// Logger
-export { authLogger } from './utils/logger';
+// Logger & Error Tracking
+export { authLogger, errorTracker } from './utils/logger';
