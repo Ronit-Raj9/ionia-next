@@ -10,10 +10,15 @@ class TokenBlacklist {
     this.blacklistedTokens = new Map();
     this.refreshTokens = new Map(); // Track active refresh tokens
     
-    // Clean up expired tokens every hour
+    // Clean up expired tokens every 5 minutes (more frequent)
     setInterval(() => {
       this.cleanupExpiredTokens();
-    }, 60 * 60 * 1000);
+    }, 5 * 60 * 1000);
+    
+    // Additional memory cleanup every 30 minutes
+    setInterval(() => {
+      this.performMemoryCleanup();
+    }, 30 * 60 * 1000);
   }
 
   /**
@@ -161,6 +166,61 @@ class TokenBlacklist {
     
     if (cleanedCount > 0) {
       console.log(`🧹 Cleaned up ${cleanedCount} expired tokens`);
+    }
+  }
+
+  /**
+   * Perform additional memory cleanup
+   * Removes old entries and optimizes memory usage
+   */
+  performMemoryCleanup() {
+    const now = Date.now();
+    let cleanedCount = 0;
+    
+    // Clean up very old blacklisted tokens (older than 24 hours)
+    for (const [token, expiry] of this.blacklistedTokens.entries()) {
+      if (now > expiry + (24 * 60 * 60 * 1000)) { // 24 hours after expiry
+        this.blacklistedTokens.delete(token);
+        cleanedCount++;
+      }
+    }
+    
+    // Clean up empty user entries
+    for (const [userId, tokens] of this.refreshTokens.entries()) {
+      if (tokens.size === 0) {
+        this.refreshTokens.delete(userId);
+        cleanedCount++;
+      }
+    }
+    
+    // PRODUCTION FIX: Limit memory usage for single instance
+    const maxBlacklistedTokens = 2000; // Reduced for single instance
+    const maxRefreshTokensPerUser = 20; // Reduced for single instance
+    
+    if (this.blacklistedTokens.size > maxBlacklistedTokens) {
+      const entries = Array.from(this.blacklistedTokens.entries());
+      // Keep only the most recent tokens
+      entries.sort((a, b) => b[1].blacklistedAt - a[1].blacklistedAt);
+      this.blacklistedTokens.clear();
+      entries.slice(0, maxBlacklistedTokens).forEach(([token, data]) => {
+        this.blacklistedTokens.set(token, data);
+      });
+      console.log(`🧹 Limited blacklisted tokens to ${maxBlacklistedTokens}`);
+    }
+    
+    // Limit refresh tokens per user
+    for (const [userId, tokens] of this.refreshTokens.entries()) {
+      if (tokens.size > maxRefreshTokensPerUser) {
+        const tokenArray = Array.from(tokens);
+        tokenArray.sort((a, b) => b.createdAt - a.createdAt);
+        const limitedTokens = new Set(tokenArray.slice(0, maxRefreshTokensPerUser));
+        this.refreshTokens.set(userId, limitedTokens);
+        console.log(`🧹 Limited refresh tokens for user ${userId} to ${maxRefreshTokensPerUser}`);
+      }
+    }
+    
+    if (cleanedCount > 0) {
+      console.log(`🧹 Memory cleanup: Removed ${cleanedCount} old entries`);
     }
   }
 
