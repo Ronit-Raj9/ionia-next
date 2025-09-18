@@ -19,7 +19,17 @@ class AuditLogger {
         ipAddress: req.ip || req.connection.remoteAddress,
         userAgent: req.get('User-Agent'),
         requestId: req.requestId,
-        details,
+        details: {
+          ...details,
+          // Add more context without changing functionality
+          timestamp: new Date().toISOString(),
+          referer: req.get('Referer'),
+          origin: req.get('Origin'),
+          acceptLanguage: req.get('Accept-Language'),
+          acceptEncoding: req.get('Accept-Encoding'),
+          contentType: req.get('Content-Type'),
+          contentLength: req.get('Content-Length')
+        },
         authMethod: this.getAuthMethod(event, details),
         success,
         error: error ? {
@@ -31,19 +41,23 @@ class AuditLogger {
           timestamp: new Date().toISOString(),
           userAgent: req.get('User-Agent'),
           referer: req.get('Referer'),
-          origin: req.get('Origin')
+          origin: req.get('Origin'),
+          duration: req.startTime ? Date.now() - req.startTime : undefined
         }
       };
 
       await AuditLog.logEvent(logData);
       
-      // Also log to console for immediate visibility
+      // Enhanced console logging with more context
       if (success) {
         Logger.info(`Audit: ${event}`, {
           userId: user?._id,
           email: user?.email,
           ipAddress: logData.ipAddress,
-          requestId: req.requestId
+          requestId: req.requestId,
+          duration: req.startTime ? `${Date.now() - req.startTime}ms` : undefined,
+          userAgent: req.get('User-Agent'),
+          referer: req.get('Referer')
         });
       } else {
         Logger.warn(`Audit: ${event} failed`, {
@@ -51,7 +65,10 @@ class AuditLogger {
           email: user?.email,
           ipAddress: logData.ipAddress,
           requestId: req.requestId,
-          error: error?.message
+          error: error?.message,
+          duration: req.startTime ? `${Date.now() - req.startTime}ms` : undefined,
+          userAgent: req.get('User-Agent'),
+          referer: req.get('Referer')
         });
       }
     } catch (logError) {
@@ -210,6 +227,114 @@ class AuditLogger {
     } catch (error) {
       Logger.error('Failed to cleanup old audit logs', { error: error.message });
       return 0;
+    }
+  }
+
+  /**
+   * Security event detection and analysis
+   */
+  static async analyzeLoginPatterns(req, user, success) {
+    try {
+      // Only analyze and log - don't block users
+      const patterns = {
+        ipChange: user.lastLoginIP && user.lastLoginIP !== req.ip,
+        userAgentChange: user.lastUserAgent && user.lastUserAgent !== req.get('User-Agent'),
+        rapidLogins: await this.checkRapidLogins(user._id),
+        unusualHours: this.checkUnusualHours(),
+        suspiciousLocation: await this.detectLocationChange(req.ip, user.lastLoginIP)
+      };
+      
+      if (Object.values(patterns).some(Boolean)) {
+        Logger.warn('Unusual login pattern detected', {
+          userId: user._id,
+          email: user.email,
+          patterns,
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          timestamp: new Date().toISOString()
+        });
+        
+        // Log as security event
+        await this.logAuthEvent('suspicious_login_pattern', req, user, {
+          patterns,
+          riskLevel: this.calculateRiskLevel(patterns)
+        }, false);
+      }
+    } catch (error) {
+      Logger.error('Failed to analyze login patterns', { error: error.message });
+    }
+  }
+  
+  static async checkRapidLogins(userId) {
+    try {
+      const recentLogins = await AuditLog.find({
+        userId,
+        event: 'login_success',
+        createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) } // Last 5 minutes
+      });
+      
+      return recentLogins.length > 3;
+    } catch (error) {
+      return false;
+    }
+  }
+  
+  static checkUnusualHours() {
+    const hour = new Date().getHours();
+    // Consider 11 PM to 5 AM as unusual hours
+    return hour >= 23 || hour <= 5;
+  }
+  
+  static async detectLocationChange(currentIP, lastIP) {
+    // Placeholder for location detection
+    // In production, you might use IP geolocation services
+    if (!lastIP || !currentIP) return false;
+    
+    // Simple check - if IPs are completely different, might be location change
+    // This is a basic implementation - you could enhance with actual geolocation
+    return currentIP !== lastIP;
+  }
+  
+  static calculateRiskLevel(patterns) {
+    const riskFactors = Object.values(patterns).filter(Boolean).length;
+    
+    if (riskFactors >= 3) return 'high';
+    if (riskFactors >= 2) return 'medium';
+    if (riskFactors >= 1) return 'low';
+    return 'none';
+  }
+
+  /**
+   * Detect brute force attempts
+   */
+  static async detectBruteForce(ipAddress, timeWindow = 15 * 60 * 1000) {
+    try {
+      const recentFailures = await AuditLog.find({
+        ipAddress,
+        event: 'login_failed',
+        createdAt: { $gte: new Date(Date.now() - timeWindow) }
+      });
+
+      if (recentFailures.length >= 10) {
+        Logger.error('🚨 BRUTE FORCE DETECTED', {
+          ipAddress,
+          attempts: recentFailures.length,
+          timeWindow: `${timeWindow / 1000}s`,
+          timestamp: new Date().toISOString()
+        });
+        
+        return {
+          detected: true,
+          attempts: recentFailures.length,
+          timeWindow,
+          riskLevel: 'critical'
+        };
+      }
+      
+      return { detected: false };
+    } catch (error) {
+      Logger.error('Failed to detect brute force', { error: error.message });
+      return { detected: false };
     }
   }
 }
