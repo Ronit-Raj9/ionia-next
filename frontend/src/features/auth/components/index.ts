@@ -6,8 +6,7 @@ export { default as LoginForm } from './LoginForm';
 export { default as RegisterForm } from './RegisterForm';
 export { default as ForgotPasswordForm } from './ForgotPasswordForm';
 export { default as ResetPasswordForm } from './ResetPasswordForm';
-export { default as ProtectedRoute } from './ProtectedRoute';
 export { default as EmailVerification } from './EmailVerification';
 export { default as AuthErrorBoundary } from './AuthErrorBoundary';
-export { UserStatistics } from './UserStatistics';
+export { withAuth, useAuthGuard } from './withAuth';
 
