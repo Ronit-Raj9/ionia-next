@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/authStore";
+import { useAuthGuard } from "@/features/auth/components/withAuth";
 import Link from 'next/link';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import { Sidebar } from '@/features/admin/components/Sidebar';
@@ -113,65 +114,25 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const { isInitialized, isAuthenticated, user, hasRole } = useAuthStore();
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false);
+
+  // Use auth guard for admin route protection
+  const { isInitialized, isAuthenticated, user } = useAuthGuard({
+    requireAuth: true,
+    requiredRole: ['admin', 'superadmin'],
+    redirectTo: '/login'
+  });
 
   const toggleSidebar = () => {
     setIsSidebarMinimized(!isSidebarMinimized);
   };
 
-  useEffect(() => {
-    if (isInitialized && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isInitialized, isAuthenticated, router]);
-
-  useEffect(() => {
-    if (isInitialized && isAuthenticated && user) {
-      const requiredRoles: ('admin' | 'superadmin')[] = ['admin', 'superadmin'];
-      const hasRequiredRole = hasRole(requiredRoles);
-      if (!hasRequiredRole) {
-        router.push('/dashboard');
-      }
-    }
-  }, [isInitialized, isAuthenticated, user, router]); // Remove hasRole dependency
-
-  // While checking auth, show a loader
-  if (!isInitialized || !isAuthenticated || !user) {
+  // Show loading during initialization
+  if (!isInitialized) {
     return (
-       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f9fafb' }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #f3f4f6',
-          borderTop: '4px solid #10b981',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <style jsx global>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  // Check role access
-  const requiredRoles: ('admin' | 'superadmin')[] = ['admin', 'superadmin'];
-  if (!hasRole(requiredRoles)) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f9fafb' }}>
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">You don't have permission to access the admin panel.</p>
-          <Link href="/dashboard" className="text-blue-600 hover:text-blue-800 underline">
-            Go to Dashboard
-          </Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
