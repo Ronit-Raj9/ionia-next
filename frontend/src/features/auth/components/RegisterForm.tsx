@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineUser } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
-import { useUsernameValidation } from '../hooks/useUsernameValidation';
 import { toast } from 'react-hot-toast';
 // import { GoogleLoginButton } from './GoogleLoginButton';
 
@@ -21,22 +20,50 @@ export default function RegisterForm() {
   });
   const router = useRouter();
   
-  const { register, isLoading, error, clearError } = useAuthStore();
+  const { register, isLoading, error, clearError, checkUsername } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // Username validation
-  const {
-    isChecking: isCheckingUsername,
-    isAvailable: isUsernameAvailable,
-    message: usernameMessage,
-    error: usernameError
-  } = useUsernameValidation(formData.username);
+  // Username validation state
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+  const [usernameMessage, setUsernameMessage] = useState('');
+  const [usernameError, setUsernameError] = useState('');
 
   useEffect(() => {
     // Clear any existing errors when component mounts
     clearError();
   }, [clearError]);
+
+  // Username validation effect
+  useEffect(() => {
+    if (!formData.username || formData.username.length < 3) {
+      setIsUsernameAvailable(null);
+      setUsernameMessage('');
+      setUsernameError('');
+      return;
+    }
+
+    const validateUsername = async () => {
+      setIsCheckingUsername(true);
+      setUsernameError('');
+      setUsernameMessage('');
+      
+      try {
+        const result = await checkUsername(formData.username);
+        setIsUsernameAvailable(result.available);
+        setUsernameMessage(result.message);
+      } catch (error: any) {
+        setIsUsernameAvailable(false);
+        setUsernameError(error.message || 'Error checking username');
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+
+    const timeoutId = setTimeout(validateUsername, 500);
+    return () => clearTimeout(timeoutId);
+  }, [formData.username, checkUsername]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;

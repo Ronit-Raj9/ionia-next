@@ -15,11 +15,7 @@ export { default as AuthProvider } from '../../providers/AuthProvider';
 export * from './components';
 
 // Auth Hooks
-export {
-  useUsernameValidation,
-  useUserStatistics,
-  useAdminActions
-} from './hooks';
+// useAuthStore is already exported above from store
 
 // Auth Types
 export type {

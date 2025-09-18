@@ -89,6 +89,22 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, [isAuthenticated, updateActivity]);
 
+  // Global error handler for authentication errors
+  useEffect(() => {
+    if (!isAuthenticated || !isInitialized) return;
+
+    const handleGlobalError = (event: ErrorEvent) => {
+      // Check if this is an authentication error from our API calls
+      if (event.error && event.error.isRefreshFailed) {
+        console.log('🔄 Global auth error detected, logging out...');
+        logout('expired');
+      }
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    return () => window.removeEventListener('error', handleGlobalError);
+  }, [isAuthenticated, isInitialized, logout]);
+
   // Format remaining time for display
   const formatTime = useCallback((ms: number): string => {
     const minutes = Math.floor(ms / 60000);
@@ -98,8 +114,10 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleExtendSession = useCallback(() => {
     extendSession();
-    setSessionStatus({ isExpiring: false, timeRemaining: 30 * 60 * 1000 });
-  }, [extendSession]);
+    // Get updated session status after extension
+    const status = checkSessionStatus();
+    setSessionStatus(status);
+  }, [extendSession, checkSessionStatus]);
 
   const handleLogout = useCallback(() => {
     logout('manual');
@@ -120,7 +138,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {isAuthenticated && sessionWarning && sessionStatus.isExpiring && (
         <SessionWarning
           isVisible={true}
-          timeRemaining={formatTime(sessionStatus.timeRemaining)}
           onExtend={handleExtendSession}
           onLogout={handleLogout}
         />

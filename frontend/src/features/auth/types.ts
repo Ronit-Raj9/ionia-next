@@ -4,6 +4,7 @@
 
 export interface User {
   id: string;
+  _id: string; // MongoDB's default _id field from backend
   email: string;
   username: string;
   fullName: string;

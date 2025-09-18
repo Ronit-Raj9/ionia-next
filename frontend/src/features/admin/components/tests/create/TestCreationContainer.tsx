@@ -314,16 +314,14 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
     setLoading(true);
     setError("");
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        throw new Error("Authentication required. Please log in again.");
-      }
-      
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions?limit=10000`, { 
+      // Use cookie-based authentication instead of Bearer tokens
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/questions?limit=10000`, { 
+        method: 'GET',
+        credentials: 'include', // Include cookies for authentication
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
-         },
+          "Accept": "application/json"
+        },
       });
 
       if (!res.ok) {

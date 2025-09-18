@@ -131,15 +131,21 @@ export const getEffectivePermissions = (
 // ⏱️ SESSION UTILITIES
 // ==========================================
 
-export const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-export const INACTIVITY_WARNING_TIME = 25 * 60 * 1000; // 25 minutes
+// Session timeout: 15 days for persistent sessions
+export const SESSION_TIMEOUT = 15 * 24 * 60 * 60 * 1000; // 15 days
+export const INACTIVITY_WARNING_TIME = 14 * 24 * 60 * 60 * 1000; // 14 days (1 day before expiry)
+
+// Short session timeout for non-remember me logins
+export const SHORT_SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
+export const SHORT_INACTIVITY_WARNING_TIME = 23 * 60 * 60 * 1000; // 23 hours
 
 /**
  * Get remaining session time
  */
-export const getSessionRemainingTime = (lastActivity: number): number => {
+export const getSessionRemainingTime = (lastActivity: number, isRememberMe = true): number => {
   const elapsed = Date.now() - lastActivity;
-  const remaining = SESSION_TIMEOUT - elapsed;
+  const timeout = isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT;
+  const remaining = timeout - elapsed;
   return Math.max(0, remaining);
 };
 
@@ -148,18 +154,31 @@ export const getSessionRemainingTime = (lastActivity: number): number => {
  */
 export const isSessionExpiring = (
   lastActivity: number, 
-  warningThreshold = INACTIVITY_WARNING_TIME
+  isRememberMe = true,
+  warningThreshold?: number
 ): boolean => {
   const elapsed = Date.now() - lastActivity;
-  return elapsed >= warningThreshold && elapsed < SESSION_TIMEOUT;
+  const timeout = isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT;
+  const warning = warningThreshold || (isRememberMe ? INACTIVITY_WARNING_TIME : SHORT_INACTIVITY_WARNING_TIME);
+  
+  return elapsed >= warning && elapsed < timeout;
 };
 
 /**
  * Check if session has expired
  */
-export const isSessionExpired = (lastActivity: number): boolean => {
+export const isSessionExpired = (lastActivity: number, isRememberMe = true): boolean => {
   const elapsed = Date.now() - lastActivity;
-  return elapsed >= SESSION_TIMEOUT;
+  const timeout = isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT;
+  return elapsed >= timeout;
+};
+
+/**
+ * Calculate session expiry time based on remember me setting
+ */
+export const calculateSessionExpiryTime = (isRememberMe: boolean): number => {
+  const now = Date.now();
+  return now + (isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT);
 };
 
 /**
@@ -171,8 +190,11 @@ export const formatRemainingTime = (milliseconds: number): string => {
   const seconds = Math.floor(milliseconds / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
   
-  if (hours > 0) {
+  if (days > 0) {
+    return `${days}d ${hours % 24}h`;
+  } else if (hours > 0) {
     return `${hours}h ${minutes % 60}m`;
   } else if (minutes > 0) {
     return `${minutes}m ${seconds % 60}s`;

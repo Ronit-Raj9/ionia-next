@@ -289,15 +289,13 @@ const TestEditContainer: React.FC<TestEditContainerProps> = ({ children }) => {
     setTestError("");
     
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        throw new Error("Authentication required. Please log in again.");
-      }
-
+      // Use cookie-based authentication instead of Bearer tokens
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${testId}`, {
+        method: 'GET',
+        credentials: 'include', // Include cookies for authentication
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
+          "Accept": "application/json"
         }
       });
 
@@ -362,16 +360,14 @@ const TestEditContainer: React.FC<TestEditContainerProps> = ({ children }) => {
     setLoading(true);
     setError("");
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        throw new Error("Authentication required. Please log in again.");
-      }
-      
+      // Use cookie-based authentication instead of Bearer tokens
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/questions?limit=10000`, { 
+        method: 'GET',
+        credentials: 'include', // Include cookies for authentication
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
-         },
+          "Accept": "application/json"
+        },
       });
 
       if (!res.ok) {
@@ -571,14 +567,13 @@ const TestEditContainer: React.FC<TestEditContainerProps> = ({ children }) => {
   const handleLoadRevisionHistory = async () => {
     setLoadingHistory(true);
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        throw new Error("Authentication required");
-      }
-
+      // Use cookie-based authentication instead of Bearer tokens
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${testId}/history`, {
+        method: 'GET',
+        credentials: 'include', // Include cookies for authentication
         headers: {
-          "Authorization": `Bearer ${accessToken}`
+          "Content-Type": "application/json",
+          "Accept": "application/json"
         }
       });
 

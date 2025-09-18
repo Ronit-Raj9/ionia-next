@@ -6,7 +6,7 @@ import { User, LoginResponse, ApiResponse, RegisterData } from '../types';
 
 // Get the API base URL
 const getApiBaseUrl = (): string => {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
   const cleanBaseUrl = baseUrl.replace(/\/$/, '');
   return cleanBaseUrl.endsWith('/v1') ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
 };
@@ -69,7 +69,9 @@ const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
         },
       }).then(async (refreshResponse) => {
         if (!refreshResponse.ok) {
-          throw new Error('Token refresh failed');
+          const errorText = await refreshResponse.text().catch(() => 'Unknown error');
+          console.log('❌ Token refresh failed:', refreshResponse.status, errorText);
+          throw new Error(`Token refresh failed: ${refreshResponse.status} ${errorText}`);
         }
         console.log('✅ Token refreshed successfully');
       });
@@ -86,13 +88,14 @@ const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
           throw error;
         }
         return retryResponse.json();
-      } catch (refreshError) {
-        console.log('❌ Token refresh failed, user needs to login again');
+      } catch (refreshError: any) {
+        console.log('❌ Token refresh failed, user needs to login again:', refreshError.message);
         // If refresh fails, throw the original 401 error to trigger logout
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || 'Authentication failed');
         (error as any).status = 401;
         (error as any).response = errorData;
+        (error as any).isRefreshFailed = true;
         throw error;
       } finally {
         isRefreshing = false;

@@ -4,9 +4,9 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useUserStatistics } from '../hooks/useUserStatistics';
+import { useAuthStore } from '../store/authStore';
 import { 
   HiOutlineChartBar, 
   HiOutlineClipboardList, 
@@ -24,7 +24,38 @@ export const UserStatistics: React.FC<UserStatisticsProps> = ({
   className = '',
   showRefreshButton = true
 }) => {
-  const { stats, isLoading, error, refresh, isStale } = useUserStatistics();
+  const { getUserStatistics } = useAuthStore();
+  const [stats, setStats] = useState<{
+    totalTests: number;
+    averageScore: number;
+    testsThisWeek: number;
+    accuracy: number;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastFetched, setLastFetched] = useState<number | null>(null);
+  
+  const isStale = lastFetched ? Date.now() - lastFetched > 5 * 60 * 1000 : false; // 5 minutes
+  
+  const refresh = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getUserStatistics();
+      setStats(data);
+      setLastFetched(Date.now());
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch statistics');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (!stats) {
+      refresh();
+    }
+  }, []);
 
   const StatCard = ({ 
     icon: Icon, 

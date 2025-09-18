@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { authAPI } from '../api/authApi';
-import { createAuthError } from '../utils/authUtils';
+import { createAuthError, isSessionExpired, isSessionExpiring, formatRemainingTime, calculateSessionExpiryTime } from '../utils/authUtils';
 import type { 
   User, 
   UserRole, 
@@ -30,6 +30,8 @@ interface AuthState {
   error: AuthError | null;
   lastActivity: number;
   sessionWarning: boolean;
+  rememberMe: boolean;
+  sessionExpiryTime: number | null;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -37,6 +39,7 @@ interface AuthState {
   setError: (error: AuthError | null) => void;
   clearError: () => void;
   updateActivity: () => void;
+  setRememberMe: (remember: boolean) => void;
   
   // Auth flow
   login: (credentials: LoginCredentials) => Promise<AuthResult>;
@@ -85,30 +88,71 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       lastActivity: Date.now(),
       sessionWarning: false,
+      rememberMe: false,
+      sessionExpiryTime: null,
 
       // Actions
       setUser: (user) => {
+        const now = Date.now();
+        const expiryTime = user ? calculateSessionExpiryTime(get().rememberMe) : null;
+        
+        // Map _id to id for frontend compatibility if user exists
+        const mappedUser = user ? {
+          ...user,
+          id: (user as any)._id || user.id, // Use _id if id is not present
+        } : null;
+        
         set({
-          user,
-          isAuthenticated: !!user,
+          user: mappedUser,
+          isAuthenticated: !!mappedUser,
           error: null,
+          lastActivity: now,
+          sessionExpiryTime: expiryTime,
         });
       },
 
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       clearError: () => set({ error: null }),
-      updateActivity: () => set({ lastActivity: Date.now(), sessionWarning: false }),
+      updateActivity: () => {
+        const now = Date.now();
+        const { rememberMe, user } = get();
+        const expiryTime = user ? calculateSessionExpiryTime(rememberMe) : null;
+        set({ 
+          lastActivity: now, 
+          sessionWarning: false,
+          sessionExpiryTime: expiryTime,
+        });
+      },
+      setRememberMe: (remember) => {
+        set({ rememberMe: remember });
+        // Update session expiry if user is authenticated
+        const { user } = get();
+        if (user) {
+          const expiryTime = calculateSessionExpiryTime(remember);
+          set({ sessionExpiryTime: expiryTime });
+        }
+      },
 
       // Auth flow
       login: async (credentials) => {
         try {
           set({ isLoading: true, error: null });
           
-          const response = await authAPI.login(credentials);
-          get().setUser(response.user);
+          // Set remember me preference before login
+          get().setRememberMe(credentials.rememberMe || false);
           
-          return { success: true, user: response.user };
+          const response = await authAPI.login(credentials);
+          
+          // Map _id to id for frontend compatibility
+          const mappedUser = {
+            ...response.user,
+            id: (response.user as any)._id || response.user.id, // Use _id if id is not present
+          };
+          
+          get().setUser(mappedUser);
+          
+          return { success: true, user: mappedUser };
         } catch (error: any) {
           let authError;
           
@@ -155,6 +199,8 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             sessionWarning: false,
             isInitialized: true, // Keep initialized true
+            rememberMe: false,
+            sessionExpiryTime: null,
           });
           
           // Clear localStorage auth data
@@ -182,6 +228,8 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             sessionWarning: false,
             isInitialized: true, // Keep initialized true
+            rememberMe: false,
+            sessionExpiryTime: null,
           });
           
           // Clear localStorage auth data
@@ -226,28 +274,65 @@ export const useAuthStore = create<AuthState>()(
       initializeAuth: async () => {
         try {
           console.log('🔄 Initializing auth...');
-          const user = await authAPI.getCurrentUser();
-          console.log('✅ Got user from API:', { id: user.id, email: user.email, isAuthenticated: true });
           
-          // Set user and mark as authenticated
+          // Check if we have a stored session and if it's expired
+          const { user: storedUser, lastActivity, rememberMe, sessionExpiryTime } = get();
+          if (storedUser && sessionExpiryTime && Date.now() > sessionExpiryTime) {
+            console.log('❌ Stored session expired, logging out...');
+            get().logout('expired');
+            return;
+          }
+          
+          const user = await authAPI.getCurrentUser();
+          
+          // Map _id to id for frontend compatibility
+          const mappedUser = {
+            ...user,
+            id: (user as any)._id || user.id, // Use _id if id is not present
+          };
+          
+          console.log('✅ Got user from API:', { id: mappedUser.id, email: mappedUser.email, isAuthenticated: true });
+          
+          // Set user and mark as authenticated with proper session expiry
+          const now = Date.now();
+          const expiryTime = calculateSessionExpiryTime(rememberMe);
           set({
-            user,
+            user: mappedUser,
             isAuthenticated: true,
             error: null,
-            lastActivity: Date.now(),
-            isInitialized: true
+            lastActivity: now,
+            isInitialized: true,
+            sessionExpiryTime: expiryTime,
           });
           
           console.log('✅ Auth state updated successfully');
         } catch (error: any) {
           console.log('❌ No valid session found:', error.message || error);
           
+          // If this is a refresh failure, ensure we're logged out
+          if (error.isRefreshFailed) {
+            console.log('🔄 Refresh failed during initialization, clearing auth state');
+            set({ 
+              user: null, 
+              isAuthenticated: false, 
+              error: null,
+              isInitialized: true,
+              rememberMe: false,
+              sessionExpiryTime: null,
+            });
+            // Clear localStorage auth data
+            localStorage.removeItem('auth-store');
+            return;
+          }
+          
           // Clear any stale auth state
           set({ 
             user: null, 
             isAuthenticated: false, 
             error: null,
-            isInitialized: true
+            isInitialized: true,
+            rememberMe: false,
+            sessionExpiryTime: null,
           });
         }
       },
@@ -256,8 +341,14 @@ export const useAuthStore = create<AuthState>()(
         try {
           console.log('🔄 Manually refreshing tokens...');
           await authAPI.refreshToken();
-          // Update last activity after successful refresh
-          set({ lastActivity: Date.now() });
+          // Update last activity and session expiry after successful refresh
+          const now = Date.now();
+          const { rememberMe } = get();
+          const expiryTime = calculateSessionExpiryTime(rememberMe);
+          set({ 
+            lastActivity: now,
+            sessionExpiryTime: expiryTime,
+          });
           console.log('✅ Tokens refreshed successfully');
         } catch (error: any) {
           console.log('❌ Token refresh failed:', error.message || error);
@@ -275,14 +366,20 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkSessionStatus: () => {
-        const { lastActivity } = get();
-        const now = Date.now();
-        const elapsed = now - lastActivity;
-        const sessionTimeout = 30 * 60 * 1000; // 30 minutes
-        const warningThreshold = 25 * 60 * 1000; // 25 minutes
+        const { lastActivity, rememberMe, sessionExpiryTime } = get();
         
-        const timeRemaining = sessionTimeout - elapsed;
-        const isExpiring = elapsed >= warningThreshold && elapsed < sessionTimeout;
+        // Check if session has expired
+        if (sessionExpiryTime && Date.now() > sessionExpiryTime) {
+          get().logout('expired');
+          return {
+            isExpiring: false,
+            timeRemaining: 0
+          };
+        }
+        
+        // Check if session is expiring soon
+        const isExpiring = isSessionExpiring(lastActivity, rememberMe);
+        const timeRemaining = sessionExpiryTime ? Math.max(0, sessionExpiryTime - Date.now()) : 0;
         
         if (isExpiring && !get().sessionWarning) {
           set({ sessionWarning: true });
@@ -290,7 +387,7 @@ export const useAuthStore = create<AuthState>()(
         
         return {
           isExpiring,
-          timeRemaining: Math.max(0, timeRemaining)
+          timeRemaining
         };
       },
 
@@ -357,6 +454,8 @@ export const useAuthStore = create<AuthState>()(
           error: null,
           lastActivity: Date.now(),
           sessionWarning: false,
+          rememberMe: false,
+          sessionExpiryTime: null,
         });
       },
     }),
@@ -367,6 +466,8 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         lastActivity: state.lastActivity,
+        rememberMe: state.rememberMe,
+        sessionExpiryTime: state.sessionExpiryTime,
       }),
       // Merge function to handle hydration properly
       merge: (persistedState: any, currentState: AuthState) => ({
@@ -377,6 +478,9 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
         error: null,
         sessionWarning: false,
+        // Keep rememberMe and sessionExpiryTime from persisted state
+        rememberMe: persistedState.rememberMe || false,
+        sessionExpiryTime: persistedState.sessionExpiryTime || null,
       }),
     }
   )

@@ -80,9 +80,19 @@ export const useAdminStore = create<AdminState & AdminActions>()(
             state.analytics = data;
           });
         } catch (err: any) {
+          console.log('❌ Admin analytics fetch failed:', err.message || err);
           set((state) => {
             Object.assign(state.error, createErrorState('analytics', err));
           });
+          
+          // If this is an authentication error, don't throw to avoid breaking the UI
+          if (err.status === 401 || err.isRefreshFailed) {
+            console.log('🔄 Authentication error in analytics, user will be logged out automatically');
+            return; // Don't throw, let the auth system handle logout
+          }
+          
+          // For other errors, we might want to show them to the user
+          throw err;
         } finally {
           set((state) => {
             state.loading.delete('analytics');

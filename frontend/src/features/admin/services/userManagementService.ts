@@ -5,7 +5,7 @@ import type {
   UserAnalytics
 } from '../types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
 interface APIResponse<T> {
   data: T;
@@ -27,7 +27,7 @@ export class UserManagementService {
    */
   static async getUsers(queryParams: string = ''): Promise<PaginatedUsers> {
     const response = await fetchWithAuth<APIResponse<PaginatedUsers>>(
-      `${API_BASE}/users/admin?${queryParams}`
+      `${API_BASE}/v1/users/admin?${queryParams}`
     );
     return response.data;
   }
@@ -37,7 +37,7 @@ export class UserManagementService {
    */
   static async getUsersAnalytics(): Promise<UserAnalytics> {
     const response = await fetchWithAuth<APIResponse<UserAnalytics>>(
-      `${API_BASE}/users/admin/analytics`
+      `${API_BASE}/v1/users/admin/analytics`
     );
     return response.data;
   }
@@ -47,7 +47,7 @@ export class UserManagementService {
    */
   static async getUserDetails(userId: string): Promise<User> {
     const response = await fetchWithAuth<APIResponse<User>>(
-      `${API_BASE}/users/admin/${userId}`
+      `${API_BASE}/v1/users/admin/${userId}`
     );
     return response.data;
   }
@@ -58,7 +58,7 @@ export class UserManagementService {
    */
   static async updateUserRole(userId: string, role: 'user' | 'admin'): Promise<User> {
     const response = await fetchWithAuth<APIResponse<User>>(
-      `${API_BASE}/users/admin/${userId}/role`,
+      `${API_BASE}/v1/users/admin/${userId}/role`,
       {
         method: 'PATCH',
         body: JSON.stringify({ role }),
