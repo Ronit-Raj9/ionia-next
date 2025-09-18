@@ -31,7 +31,8 @@ import {
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT, verifyRole, logAuthEvent } from "../middlewares/auth.middleware.js";
 import { createRateLimitMiddleware } from "../utils/rateLimiter.js";
-import { csrfProtection, generateCSRFForAuth } from "../middlewares/csrf.middleware.js";
+import { csrfProtection, generateCSRFForAuth, generateCSRFToken, setCSRFTokenCookie } from "../middlewares/csrf.middleware.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 const router = Router();
 
@@ -101,6 +102,7 @@ router.route("/verify-email").post(
 // Logout with logging
 router.route("/logout").post(
   verifyJWT, 
+  csrfProtection,
   logAuthEvent('LOGOUT'),
   logoutUser
 );
@@ -108,6 +110,7 @@ router.route("/logout").post(
 // Logout from all devices
 router.route("/logout-all").post(
   verifyJWT,
+  csrfProtection,
   logAuthEvent('LOGOUT_ALL_DEVICES'),
   logoutFromAllDevices
 );
@@ -119,9 +122,21 @@ router.route("/refresh-token").post(
   refreshAccessToken
 );
 
+// CSRF token refresh endpoint
+router.route("/refresh-csrf").post(
+  verifyJWT,
+  (req, res) => {
+    const csrfToken = generateCSRFToken();
+    setCSRFTokenCookie(res, csrfToken);
+    
+    res.json(new ApiResponse(200, { csrfToken }, "CSRF token refreshed successfully"));
+  }
+);
+
 // Password change with rate limiting
 router.route("/change-password").post(
   verifyJWT,
+  csrfProtection,
   createRateLimitMiddleware('login'), // Use login limits for password changes
   logAuthEvent('PASSWORD_CHANGE'),
   changeCurrentPassword
@@ -139,6 +154,7 @@ router.route("/current-user").get(verifyJWT, getCurrrentUser);
 // Update account details
 router.route("/update-account").patch(
   verifyJWT, 
+  csrfProtection,
   verifyRole(["user", "admin", "superadmin"]), 
   updateAccountDetails
 );
@@ -146,6 +162,7 @@ router.route("/update-account").patch(
 // Update avatar
 router.route("/avatar").patch(
     verifyJWT,
+    csrfProtection,
   verifyRole(["user", "admin", "superadmin"]),
     upload.single("avatar"),
     updateUserAvatar
@@ -154,6 +171,7 @@ router.route("/avatar").patch(
 // Update cover image
 router.route("/cover-image").patch(
     verifyJWT,
+    csrfProtection,
   verifyRole(["user", "admin", "superadmin"]),
     upload.single("coverImage"),
     updateUserCoverImage
@@ -198,6 +216,7 @@ router.route("/admin/:userId").get(
 // Update user role (only superadmin can do this)
 router.route("/admin/:userId/role").patch(
   verifyJWT, 
+  csrfProtection,
   verifyRole(["superadmin"]), 
   logAuthEvent('ADMIN_UPDATE_USER_ROLE'),
   updateUserRole
@@ -206,6 +225,7 @@ router.route("/admin/:userId/role").patch(
 // 🔥 ADMIN SECURITY ROUTES
 router.route("/admin/:userId/unlock").post(
   verifyJWT,
+  csrfProtection,
   verifyRole(["admin", "superadmin"]),
   logAuthEvent('ADMIN_UNLOCK_ACCOUNT'),
   unlockAccount
@@ -243,5 +263,56 @@ router.route("/auth/status").get(
     });
   }
 );
+
+// Health check endpoint (public - no auth required)
+router.route("/health/auth").get((req, res) => {
+  try {
+    // Import here to avoid circular dependencies
+    const mongoose = require('mongoose');
+    const { tokenBlacklist } = require("../utils/tokenBlacklist.js");
+    const { rateLimiter } = require("../utils/rateLimiter.js");
+    
+    const health = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: {
+          status: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+          readyState: mongoose.connection.readyState,
+          host: mongoose.connection.host,
+          port: mongoose.connection.port,
+          name: mongoose.connection.name
+        },
+        tokenBlacklist: {
+          status: 'operational',
+          stats: tokenBlacklist.getStats()
+        },
+        rateLimiter: {
+          status: 'operational',
+          stats: rateLimiter.getStats()
+        }
+      },
+      system: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        nodeVersion: process.version,
+        platform: process.platform,
+        environment: process.env.NODE_ENV || 'development'
+      }
+    };
+    
+    // Determine overall health status
+    const isHealthy = health.services.database.status === 'connected';
+    const statusCode = isHealthy ? 200 : 503;
+    
+    res.status(statusCode).json(health);
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 export default router;
