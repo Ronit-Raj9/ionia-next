@@ -19,31 +19,65 @@ export const generateCSRFToken = () => {
  * Validates CSRF token using double-submit cookie pattern
  */
 export const csrfProtection = (req, res, next) => {
-  // Skip CSRF for safe methods
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    return next();
+  try {
+    // Skip CSRF for safe methods
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      return next();
+    }
+
+    // CRITICAL SECURITY FIX: Remove CSRF bypass for auth endpoints
+    // Login and register endpoints should be protected by CSRF in production
+    // This prevents CSRF attacks on authentication flows
+
+    // Get CSRF token from header and cookie
+    const csrfToken = req.headers['x-csrf-token'];
+    const csrfCookie = req.cookies['csrf-token'];
+
+    // Enhanced validation with detailed error messages
+    if (!csrfToken && !csrfCookie) {
+      throw new ApiError(403, 'CSRF token required', [], 'CSRF_TOKEN_MISSING');
+    }
+
+    if (!csrfToken) {
+      throw new ApiError(403, 'CSRF token missing in header', [], 'CSRF_HEADER_MISSING');
+    }
+
+    if (!csrfCookie) {
+      throw new ApiError(403, 'CSRF token missing in cookie', [], 'CSRF_COOKIE_MISSING');
+    }
+
+    // Validate CSRF token using constant-time comparison
+    if (!constantTimeCompare(csrfToken, csrfCookie)) {
+      // Log security event for monitoring
+      console.warn('🚨 CSRF token mismatch detected', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        path: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString()
+      });
+      
+      throw new ApiError(403, 'Invalid CSRF token', [], 'CSRF_TOKEN_MISMATCH');
+    }
+
+    // CSRF validation successful
+    console.debug('✅ CSRF validation successful', {
+      path: req.path,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
+
+    next();
+  } catch (error) {
+    // Ensure error is properly formatted
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    // Handle unexpected errors
+    console.error('🚨 CSRF validation error:', error);
+    throw new ApiError(500, 'CSRF validation failed', [], 'CSRF_VALIDATION_ERROR');
   }
-
-  // Skip CSRF for public endpoints that don't modify state
-  const publicEndpoints = ['/api/v1/users/register', '/api/v1/users/login'];
-  if (publicEndpoints.includes(req.path)) {
-    return next();
-  }
-
-  // Get CSRF token from header
-  const csrfToken = req.headers['x-csrf-token'];
-  const csrfCookie = req.cookies['csrf-token'];
-
-  if (!csrfToken || !csrfCookie) {
-    throw new ApiError(403, 'CSRF token required');
-  }
-
-  // Validate CSRF token using constant-time comparison
-  if (!constantTimeCompare(csrfToken, csrfCookie)) {
-    throw new ApiError(403, 'Invalid CSRF token');
-  }
-
-  next();
 };
 
 /**
@@ -60,7 +94,7 @@ export const setCSRFTokenCookie = (res, token) => {
     secure: isHttps,
     sameSite: isHttps ? 'strict' : 'lax',
     path: '/',
-    maxAge: 5 * 60 * 1000, // 5 minutes (same as access token)
+    maxAge: 5 * 60 * 1000, // 5 minutes - match access token
   });
 };
 
@@ -97,4 +131,30 @@ export const generateCSRFForAuth = (req, res, next) => {
   }
   
   next();
+};
+
+/**
+ * CSRF Test Endpoint for verification
+ * This endpoint helps verify CSRF protection is working correctly
+ */
+export const csrfTestEndpoint = (req, res) => {
+  try {
+    // This endpoint requires CSRF protection
+    res.json({
+      success: true,
+      message: 'CSRF protection is working correctly',
+      data: {
+        method: req.method,
+        path: req.path,
+        timestamp: new Date().toISOString(),
+        csrfValidated: true
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'CSRF test endpoint error',
+      error: error.message
+    });
+  }
 };
