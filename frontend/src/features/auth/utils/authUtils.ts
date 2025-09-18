@@ -446,6 +446,104 @@ export const getRoleDisplayName = (role: UserRole): string => {
 };
 
 // ==========================================
+// 🔐 TOKEN REUSE DETECTION
+// ==========================================
+
+/**
+ * Check if error indicates token reuse/compromise
+ */
+export const isTokenReuseError = (error: any): boolean => {
+  if (!error) return false;
+  
+  // Check for specific error codes/messages that indicate token reuse
+  const reuseIndicators = [
+    'token_reuse',
+    'refresh_token_reuse',
+    'compromised',
+    'security_breach',
+    'invalid_refresh_token',
+    'refresh_token_revoked'
+  ];
+  
+  const errorMessage = error.message?.toLowerCase() || '';
+  const errorCode = error.code?.toLowerCase() || '';
+  const errorType = error.type?.toLowerCase() || '';
+  
+  return reuseIndicators.some(indicator => 
+    errorMessage.includes(indicator) || 
+    errorCode.includes(indicator) ||
+    errorType.includes(indicator)
+  );
+};
+
+/**
+ * Handle token reuse detection
+ */
+export const handleTokenReuse = (error: any, authStore: any): void => {
+  authLogger.securityEvent('Token reuse detected', { error: error.message });
+  
+  // Track security event
+  if (typeof window !== 'undefined' && (window as any).errorTracker) {
+    (window as any).errorTracker.trackAuthEvent('token_reuse_detected', {
+      error: error.message,
+      code: error.code,
+      type: error.type,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Force logout from all devices
+  authStore.logoutFromAllDevices().catch((logoutError: any) => {
+    authLogger.error('Failed to logout after token reuse', { error: logoutError.message }, 'SECURITY');
+  });
+  
+  // Show security warning to user
+  authStore.setError({
+    type: 'security_breach',
+    message: 'Security Alert: Your account may have been compromised. You have been logged out from all devices for your security.',
+    userFriendlyMessage: 'Security Alert: Your account may have been compromised. You have been logged out from all devices for your security.',
+    retryable: false,
+    suggestedAction: 'Please log in again and change your password if you suspect unauthorized access.'
+  });
+};
+
+/**
+ * Enhanced error classification for token reuse
+ */
+export const classifyAuthError = (error: any): {
+  isTokenReuse: boolean;
+  isSecurityBreach: boolean;
+  isRefreshFailure: boolean;
+  isNetworkError: boolean;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+} => {
+  const isTokenReuse = isTokenReuseError(error);
+  const isSecurityBreach = isTokenReuse || error.type === 'security_breach';
+  const isRefreshFailure = error.message?.includes('refresh') || error.type === 'refresh_failed';
+  const isNetworkError = !navigator.onLine || error.message?.includes('network') || error.type === 'network';
+  
+  let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
+  
+  if (isTokenReuse) {
+    severity = 'critical';
+  } else if (isSecurityBreach) {
+    severity = 'high';
+  } else if (isRefreshFailure) {
+    severity = 'medium';
+  } else if (isNetworkError) {
+    severity = 'low';
+  }
+  
+  return {
+    isTokenReuse,
+    isSecurityBreach,
+    isRefreshFailure,
+    isNetworkError,
+    severity
+  };
+};
+
+// ==========================================
 // 🎨 UI UTILITIES
 // ==========================================
 
