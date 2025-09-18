@@ -8,6 +8,7 @@ import Sidebar from '@/features/dashboard/components/Sidebar';
 import { FiMenu } from 'react-icons/fi';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useAuthStore } from '@/features/auth/store/authStore';
+import { useAuthGuard } from '@/features/auth/components/withAuth';
 import Link from 'next/link';
 import { ClipLoader } from 'react-spinners';
 
@@ -16,26 +17,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const isMobile = useMediaQuery('(max-width: 768px)');
   
-  // Get auth state from store
-  const user = useAuthStore(state => state.user);
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  const isLoading = useAuthStore(state => state.isLoading);
-  const isInitialized = useAuthStore(state => state.isInitialized);
-
-  // Authentication check and redirect
-  useEffect(() => {
-    if (isInitialized && !isLoading) {
-      if (!isAuthenticated || !user) {
-        console.log('User not authenticated, redirecting to login');
-        router.push('/login');
-        return;
-      }
-    }
-  }, [isAuthenticated, user, isLoading, isInitialized, router]);
+  // Use auth guard for route protection
+  const { isInitialized, isAuthenticated, user } = useAuthGuard({
+    requireAuth: true,
+    redirectTo: '/login'
+  });
+  
+  // Get loading state from auth store
+  const { isLoading } = useAuthStore();
 
   useEffect(() => {
     setIsSidebarOpen(!isMobile);
