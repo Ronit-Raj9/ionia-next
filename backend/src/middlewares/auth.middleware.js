@@ -80,7 +80,19 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
       throw new ApiError(401, "Token validation failed. Please login again.");
     }
 
-    // 7. Attach user and token info to request
+    // 7. Check session timeout (30 days of inactivity)
+    const thirtyDaysAgo = new Date(Date.now() - (30 * 24 * 60 * 60 * 1000));
+    if (user.lastActivity && new Date(user.lastActivity) < thirtyDaysAgo) {
+      console.log(`❌ Session expired due to inactivity for user: ${user.username}`);
+      tokenBlacklist.addToBlacklist(token, decodedToken.exp);
+      throw new ApiError(401, "Session expired due to inactivity. Please login again.");
+    }
+
+    // 8. Update last activity
+    user.lastActivity = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    // 9. Attach user and token info to request
     req.user = user;
     req.token = token;
     req.tokenPayload = decodedToken;
