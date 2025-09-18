@@ -248,6 +248,9 @@ const loginUser = asyncHandler(async (req, res) => {
     // Log failed login attempt
     await AuditLogger.logLoginFailure(req, user.email, 'Invalid password', 'email');
     
+    // Check for brute force attempts (non-blocking)
+    await AuditLogger.detectBruteForce(clientIP);
+    
     throw new ApiError(401, "Invalid credentials");
   }
 
@@ -282,6 +285,9 @@ const loginUser = asyncHandler(async (req, res) => {
   // Log successful login
   await AuditLogger.logLoginSuccess(req, user, 'email');
 
+  // Analyze login patterns for security (non-blocking)
+  await AuditLogger.analyzeLoginPatterns(req, user, true);
+
   console.log(`✅ Login successful for user: ${user.username} from IP: ${clientIP}`);
 
   // Set secure cookies with rememberMe support
@@ -305,7 +311,7 @@ const loginUser = asyncHandler(async (req, res) => {
       secure: process.env.HTTPS_ENABLED === 'true',
       sameSite: process.env.HTTPS_ENABLED === 'true' ? 'strict' : 'lax',
       path: '/',
-      maxAge: 5 * 60 * 1000, // 5 minutes (same as access token)
+      maxAge: 5 * 60 * 1000, // 5 minutes - match access token
     })
     .json(
       new ApiResponse(
@@ -317,7 +323,12 @@ const loginUser = asyncHandler(async (req, res) => {
             activeSessions: user.getActiveSessionsCount(),
             rememberMe: !!rememberMe,
           },
-          csrfToken: csrfToken // Include CSRF token in response
+          csrfToken: csrfToken, // Include CSRF token in response
+          // 🔥 CRITICAL: Add token expiry information for proactive refresh
+          tokenExpiry: {
+            access_expires_at: Math.floor(Date.now() / 1000) + (5 * 60), // 5 minutes from now
+            refresh_expires_at: Math.floor(Date.now() / 1000) + (rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60), // 30 days or 7 days
+          },
         },
         "User logged in successfully"
       )
@@ -485,7 +496,15 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          { accessToken: newAccessToken, refreshToken: newRefreshToken },
+          { 
+            accessToken: newAccessToken, 
+            refreshToken: newRefreshToken,
+            // 🔥 CRITICAL: Add token expiry information for proactive refresh
+            tokenExpiry: {
+              access_expires_at: Math.floor(Date.now() / 1000) + (5 * 60), // 5 minutes from now
+              refresh_expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days from now
+            },
+          },
           "Access token refreshed successfully"
         )
       );
