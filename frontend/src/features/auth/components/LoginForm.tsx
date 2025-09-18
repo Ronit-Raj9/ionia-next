@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
+import { AuthErrorHandler } from '../utils/errorHandler';
+import { authLogger } from '../utils/logger';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -45,7 +47,7 @@ export default function LoginForm() {
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
-      console.error('🚫 Auth error received:', error);
+      authLogger.error('Auth error received from URL', { error }, 'AUTH');
       setError(decodeURIComponent(error));
       // Clean URL
       const newUrl = new URL(window.location.href);
@@ -59,7 +61,7 @@ export default function LoginForm() {
     if (isAuthenticated && isInitialized && !hasRedirected.current) {
       hasRedirected.current = true;
       const returnUrl = searchParams.get('returnUrl') || '/dashboard';
-      console.log('🔄 Already authenticated, redirecting to:', returnUrl);
+      authLogger.info('Already authenticated, redirecting', { returnUrl }, 'AUTH');
       router.replace(returnUrl);
     }
   }, [isAuthenticated, isInitialized, router, searchParams]);
@@ -73,19 +75,6 @@ export default function LoginForm() {
     setError('');
 
     try {
-      // Check cookie support before attempting login
-      try {
-        document.cookie = 'test_cookie=1; SameSite=Lax';
-        const supported = document.cookie.indexOf('test_cookie=1') !== -1;
-        document.cookie = 'test_cookie=1; expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax';
-        
-        if (!supported) {
-          throw new Error('Cookies are required for authentication. Please enable cookies in your browser and try again.');
-        }
-      } catch {
-        throw new Error('Cookies are required for authentication. Please enable cookies in your browser and try again.');
-      }
-
       // Prepare credentials
       const credentials = {
         email: email.trim(),
@@ -93,7 +82,7 @@ export default function LoginForm() {
         rememberMe,
       };
 
-      console.log('🔐 Attempting login with cookie-based auth...');
+      authLogger.authFlow('login attempt started', { email: credentials.email });
       
       // Use the store login function directly
       const result = await login(credentials);
@@ -101,46 +90,28 @@ export default function LoginForm() {
       if (result.success) {
         // Handle successful login - redirect
         const returnUrl = searchParams.get('returnUrl') || '/dashboard';
-        console.log('✅ Login successful, redirecting to:', returnUrl);
+        authLogger.authFlow('login successful', { returnUrl });
         router.push(returnUrl);
       } else {
         setError(result.error?.message || 'Login failed. Please check your credentials.');
       }
       
     } catch (err: any) {
-      console.error('❌ Login error:', err);
+      authLogger.error('Login error occurred', { error: err.message }, 'AUTH');
       
-      let errorMessage = 'Login failed. Please try again.';
-      
-      // Handle different error types with appropriate messages
+      // Handle cookie-specific errors
       if (err.message.includes('cookie')) {
-        errorMessage = 'Please enable cookies in your browser and accept our cookie policy to login.';
-      } else if (err.status === 0 || err.isNetworkError || err.message.includes('Unable to connect')) {
-        errorMessage = '🌐 Unable to connect to the server. Please check your internet connection and try again.';
-      } else if (err.message.includes('network') || err.message.includes('fetch') || err.message.includes('connection')) {
-        errorMessage = '🌐 Network error. Please check your connection and try again.';
-      } else if (err.status === 401) {
-        errorMessage = '🔒 Invalid email or password. Please check your credentials.';
-      } else if (err.status === 423) {
-        errorMessage = '⏳ Account is temporarily locked due to multiple failed login attempts. Please try again later.';
-      } else if (err.status === 429) {
-        errorMessage = '⏱️ Too many login attempts. Please wait a few minutes before trying again.';
-      } else if (err.status === 403) {
-        // Check if it's a CSRF error
-        if (err.message?.includes('CSRF') || err.message?.includes('csrf')) {
-          errorMessage = '🔄 CSRF token mismatch. Please refresh the page and try again.';
-        } else {
-          errorMessage = '🚫 Account has been deactivated. Please contact support.';
-        }
-      } else if (err.status === 500) {
-        errorMessage = '⚠️ Server error. Please try again later or contact support if the problem persists.';
-      } else if (err.isRefreshFailed) {
-        errorMessage = '🔄 Session expired. Please refresh the page and try again.';
-      } else if (err.message) {
-        errorMessage = err.message;
+        setError('Please enable cookies in your browser and accept our cookie policy to login.');
+        return;
       }
       
-      setError(errorMessage);
+      // Use centralized error handler for other errors
+      const authError = AuthErrorHandler.handleAuthError(err, { 
+        action: 'login', 
+        credentials: { email: email.trim() } 
+      });
+      
+      setError(AuthErrorHandler.getUserFriendlyMessage(authError));
     }
   };
 
