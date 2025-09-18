@@ -6,6 +6,7 @@
 
 import React, { Component, ReactNode } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { authLogger } from '../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -28,7 +29,7 @@ class AuthErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('🚨 Auth Error Boundary caught an error:', error, errorInfo);
+    authLogger.error('Auth Error Boundary caught an error', { error: error.message, errorInfo }, 'ERROR_BOUNDARY');
     
     // Check if this is a refresh failure
     if (error.message?.includes('refresh') || error.message?.includes('401')) {
