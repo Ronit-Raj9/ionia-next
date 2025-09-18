@@ -1,9 +1,10 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 
 // Enhanced middleware imports
-import { errorHandler, requestIdMiddleware, requestCompletionLogger, Logger } from './middlewares/error.middleware.js';
+import { errorHandler, requestIdMiddleware, requestCompletionLogger, enhancedAuthLogging, Logger } from './middlewares/error.middleware.js';
 import { sanitizeInput, validateRequestSize, validateContentType } from './middlewares/validation.middleware.js';
 import { performanceMonitoring, healthCheck, getMetrics, errorTracking } from './middlewares/monitoring.middleware.js';
 
@@ -15,6 +16,125 @@ const app = express();
 
 // ✅ Initialize Security Systems
 Logger.info("Initializing authentication security systems...");
+
+// Validate environment configuration
+const validateProductionConfig = () => {
+  const required = [
+    'ACCESS_TOKEN_SECRET',
+    'REFRESH_TOKEN_SECRET',
+    'JWT_SECRET',
+    'DATABASE_ATLAS',
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
+    'FRONTEND_URL',
+    'COOKIE_DOMAIN',
+    'HTTPS_ENABLED',
+    'PORT'
+  ];
+  
+  // PRODUCTION FIX: Add optional but recommended variables
+  const recommended = [
+    'NODE_ENV',
+    'SESSION_SECRET',
+    'ENCRYPTION_KEY'
+  ];
+  
+  // Add production-specific validation
+  if (process.env.NODE_ENV === 'production') {
+    const productionRequired = [
+      'NODE_ENV',
+      'HTTPS_ENABLED',
+      'COOKIE_DOMAIN',
+      'FRONTEND_URL'
+    ];
+    
+    const missing = [...required, ...productionRequired].filter(key => !process.env[key]);
+    
+    if (missing.length > 0) {
+      Logger.error('Missing required environment variables for production', { 
+        missing,
+        environment: process.env.NODE_ENV
+      });
+      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    }
+  } else {
+    const missing = required.filter(key => !process.env[key]);
+    
+    if (missing.length > 0) {
+      Logger.error('Missing required environment variables', { 
+        missing,
+        environment: process.env.NODE_ENV || 'development'
+      });
+      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    }
+  }
+  
+  // PRODUCTION FIX: Warn about missing recommended variables
+  const missingRecommended = recommended.filter(key => !process.env[key]);
+  if (missingRecommended.length > 0) {
+    Logger.warn('Missing recommended environment variables', { 
+      missing: missingRecommended,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  }
+  
+  // Validate specific values
+  const validations = [
+    {
+      key: 'ACCESS_TOKEN_SECRET',
+      condition: process.env.ACCESS_TOKEN_SECRET && process.env.ACCESS_TOKEN_SECRET.length >= 32,
+      message: 'ACCESS_TOKEN_SECRET must be at least 32 characters'
+    },
+    {
+      key: 'REFRESH_TOKEN_SECRET', 
+      condition: process.env.REFRESH_TOKEN_SECRET && process.env.REFRESH_TOKEN_SECRET.length >= 32,
+      message: 'REFRESH_TOKEN_SECRET must be at least 32 characters'
+    },
+    {
+      key: 'PORT',
+      condition: !isNaN(parseInt(process.env.PORT)) && parseInt(process.env.PORT) > 0,
+      message: 'PORT must be a valid positive number'
+    },
+    {
+      key: 'HTTPS_ENABLED',
+      condition: ['true', 'false'].includes(process.env.HTTPS_ENABLED),
+      message: 'HTTPS_ENABLED must be "true" or "false"'
+    },
+    {
+      key: 'SESSION_SECRET',
+      condition: !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length >= 32,
+      message: 'SESSION_SECRET must be at least 32 characters (recommended)'
+    },
+    {
+      key: 'ENCRYPTION_KEY',
+      condition: !process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length >= 32,
+      message: 'ENCRYPTION_KEY must be at least 32 characters (recommended)'
+    }
+  ];
+  
+  for (const validation of validations) {
+    if (!validation.condition) {
+      Logger.error('Invalid environment variable', { 
+        key: validation.key,
+        value: process.env[validation.key],
+        message: validation.message
+      });
+      throw new Error(validation.message);
+    }
+  }
+  
+  Logger.info('✅ All required environment variables are set and valid');
+  return true;
+};
+
+// Validate production configuration
+try {
+  validateProductionConfig();
+} catch (error) {
+  Logger.error('Environment validation failed', { error: error.message });
+  process.exit(1);
+}
 
 // Validate cookie configuration
 validateCookieConfig();
@@ -31,8 +151,44 @@ Logger.info("Security systems initialized");
 // 1. Request ID tracking (must be first)
 app.use(requestIdMiddleware);
 
-// 2. Trust proxy for accurate IP addresses (important for rate limiting)
+// 2. Security headers with Helmet (must be early in the stack)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
+}));
+
+// 3. Trust proxy for accurate IP addresses (important for rate limiting)
 app.set('trust proxy', 1);
+
+// 2.5. HTTPS Enforcement for Production
+if (process.env.NODE_ENV === 'production' && process.env.HTTPS_ENABLED === 'true') {
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect(`https://${req.header('host')}${req.url}`);
+    } else {
+      next();
+    }
+  });
+}
 
 // 3. Performance monitoring
 app.use(performanceMonitoring);
@@ -59,10 +215,34 @@ app.options('*', (req, res) => {
   res.status(200).end();
 });
 
-// ✅ Define Allowed Origins - using function instead of array for more flexibility
+// ✅ Define Allowed Origins - using environment variables for production
+const getAllowedOrigins = () => {
+  const baseOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
+  ];
+  
+  // Add production origins from environment variables
+  const productionOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.ADMIN_URL,
+    process.env.API_URL
+  ].filter(Boolean);
+  
+  return [...baseOrigins, ...productionOrigins];
+};
+
 const isOriginAllowed = (origin) => {
   // Allow requests with no origin (like mobile apps or curl requests)
   if (!origin) return true;
+  
+  // Get allowed origins from environment
+  const allowedOrigins = getAllowedOrigins();
+  
+  // Check exact matches first
+  if (allowedOrigins.includes(origin)) return true;
   
   // Allow any subdomain of ionia.sbs
   if (origin.endsWith('.ionia.sbs') || origin === 'https://ionia.sbs') return true;
@@ -70,14 +250,16 @@ const isOriginAllowed = (origin) => {
   // Allow all localhost origins
   if (origin.match(/https?:\/\/localhost(:\d+)?$/)) return true;
   
-  // Allow specific IP addresses
-  const allowedIPs = [
-    'http://3.110.43.68',
-    'http://3.110.43.68/',
-    'https://3.110.43.68',
-    'https://3.110.43.68/'
-  ];
-  if (allowedIPs.includes(origin)) return true;
+  // Allow specific IP addresses (remove hardcoded IPs in production)
+  if (process.env.NODE_ENV === 'development') {
+    const allowedIPs = [
+      'http://3.110.43.68',
+      'http://3.110.43.68/',
+      'https://3.110.43.68',
+      'https://3.110.43.68/'
+    ];
+    if (allowedIPs.includes(origin)) return true;
+  }
   
   // Reject all other origins
   return false;
@@ -158,6 +340,9 @@ app.use((req, res, next) => {
 
 // ✅ Request Completion Logging
 app.use(requestCompletionLogger);
+
+// ✅ Enhanced Auth Logging
+app.use(enhancedAuthLogging);
 
 // ✅ Routes Import
 import userRouter from "./routes/user.routes.js";
