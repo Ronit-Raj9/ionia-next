@@ -107,8 +107,17 @@ export interface ApiResponse<T = any> {
 // Simplified login response (no tokens in response body)
 export interface LoginResponse {
   user: User;
-  sessionId?: string;
-  expiresIn?: number;
+  sessionInfo?: {
+    loginTime: string;
+    activeSessions: number;
+    rememberMe: boolean;
+  };
+  csrfToken?: string;
+  // 🔥 CRITICAL: Token expiry information for proactive refresh
+  tokenExpiry?: {
+    access_expires_at: number; // Unix timestamp
+    refresh_expires_at: number; // Unix timestamp
+  };
   // Note: accessToken and refreshToken are set as httpOnly cookies
   // and are not included in the response body for security
 }
@@ -116,6 +125,11 @@ export interface LoginResponse {
 export interface RefreshResponse {
   success: boolean;
   message?: string;
+  // 🔥 CRITICAL: Token expiry information for proactive refresh
+  tokenExpiry?: {
+    access_expires_at: number; // Unix timestamp
+    refresh_expires_at: number; // Unix timestamp
+  };
   // Note: New tokens are set as httpOnly cookies
   // and are not included in the response body
 }
