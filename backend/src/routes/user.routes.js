@@ -19,12 +19,7 @@ import {
   getUserDetails,
   updateUserRole,
   getUsersAnalytics,
-  // Google OAuth routes
-  googleOAuthLogin,
-  googleOAuthCallback,
-  linkGoogleAccount,
-  unlinkGoogleAccount,
-  getAuthProviders,
+  // Note: Google OAuth routes removed - using email/password only authentication
   // Email verification routes
   sendEmailVerification,
   verifyEmail,
@@ -36,6 +31,7 @@ import {
 import { upload } from "../middlewares/multer.middleware.js";
 import { verifyJWT, verifyRole, logAuthEvent } from "../middlewares/auth.middleware.js";
 import { createRateLimitMiddleware } from "../utils/rateLimiter.js";
+import { csrfProtection, generateCSRFForAuth } from "../middlewares/csrf.middleware.js";
 
 const router = Router();
 
@@ -82,9 +78,7 @@ router.route("/reset-password").post(
   resetPassword
 );
 
-// 🔥 GOOGLE OAUTH ROUTES
-router.route("/auth/google").get(googleOAuthLogin);
-router.route("/auth/google/callback").get(googleOAuthCallback);
+// Note: Google OAuth routes removed - using email/password only authentication
 
 // 🔥 EMAIL VERIFICATION ROUTES
 router.route("/verify-email/send").post(
@@ -118,9 +112,10 @@ router.route("/logout-all").post(
   logoutFromAllDevices
 );
 
-// Token refresh with rate limiting
+// Token refresh with rate limiting and CSRF protection
 router.route("/refresh-token").post(
   createRateLimitMiddleware('refresh-token'),
+  csrfProtection,
   refreshAccessToken
 );
 
@@ -167,18 +162,8 @@ router.route("/cover-image").patch(
 // Get user statistics
 router.route("/statistics").get(verifyJWT, getUserStatistics);
 
-// 🔥 GOOGLE OAUTH ACCOUNT MANAGEMENT
-router.route("/auth/providers").get(verifyJWT, getAuthProviders);
-router.route("/auth/google/link").post(
-  verifyJWT,
-  createRateLimitMiddleware('login'),
-  linkGoogleAccount
-);
-router.route("/auth/google/unlink").post(
-  verifyJWT,
-  createRateLimitMiddleware('login'),
-  unlinkGoogleAccount
-);
+// Note: Auth providers route removed - using email/password only authentication
+// Note: Google OAuth link/unlink routes removed - using email/password only authentication
 
 /**
  * Admin Routes

@@ -17,9 +17,9 @@ export const getAccessTokenCookieOptions = () => {
   return {
     httpOnly: true,                    // Prevent XSS attacks
     secure: isHttps,                   // Use environment variable
-    sameSite: isHttps ? 'none' : 'lax', // Align with secure setting
+    sameSite: isHttps ? 'strict' : 'lax', // Use strict for better CSRF protection
     path: '/',                         // Available on all paths
-    maxAge: 15 * 60 * 1000,           // 15 minutes
+    maxAge: 5 * 60 * 1000,            // 5 minutes
     domain: domain, // Don't set domain in development for localhost cross-port access
   };
 };
@@ -44,7 +44,7 @@ export const getRefreshTokenCookieOptions = (rememberMe = false) => {
   return {
     httpOnly: true,                    // Prevent XSS attacks
     secure: isHttps,                   // Use environment variable
-    sameSite: isHttps ? 'none' : 'lax', // Align with secure setting
+    sameSite: isHttps ? 'strict' : 'lax', // Use strict for better CSRF protection
     path: '/',                         // Available on all paths for refresh
     maxAge: maxAge,                    // Dynamic lifetime based on rememberMe
     domain: domain, // Don't set domain in development for localhost cross-port access
@@ -120,12 +120,14 @@ export const validateCookieConfig = () => {
  */
 export const logCookieConfig = () => {
   const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = process.env.HTTPS_ENABLED === 'true';
   
   console.log('🍪 Cookie Configuration:');
   console.log(`   Environment: ${isProduction ? 'Production' : 'Development'}`);
-  console.log(`   Secure: ${isProduction}`);
-  console.log(`   SameSite: ${isProduction ? 'none' : 'lax'}`);
-  console.log(`   Domain: ${isProduction ? '.ionia.sbs' : 'localhost'}`);
-  console.log(`   Access Token TTL: 15 minutes`);
+  console.log(`   HTTPS Enabled: ${isHttps}`);
+  console.log(`   Secure: ${isHttps}`);
+  console.log(`   SameSite: ${isHttps ? 'strict' : 'lax'}`);
+  console.log(`   Domain: ${isProduction ? (process.env.COOKIE_DOMAIN || '.ionia.sbs') : 'localhost'}`);
+  console.log(`   Access Token TTL: 5 minutes`);
   console.log(`   Refresh Token TTL: 7 days`);
 }; 

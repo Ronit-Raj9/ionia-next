@@ -21,10 +21,7 @@ const auditLogSchema = new Schema(
         'email_verification_success',
         'email_verification_failed',
         
-        // Google OAuth events
-        'google_oauth_login',
-        'google_oauth_link',
-        'google_oauth_unlink',
+        // Note: Google OAuth events removed - using email/password only authentication
         
         // Security events
         'account_locked',
@@ -37,10 +34,7 @@ const auditLogSchema = new Schema(
         'admin_user_delete',
         'admin_role_change',
         
-        // Session events
-        'session_created',
-        'session_expired',
-        'session_revoked',
+        // Note: Session events removed - using JWT-only authentication
         
         // System events
         'rate_limit_exceeded',
@@ -81,7 +75,7 @@ const auditLogSchema = new Schema(
     // 🔥 AUTHENTICATION METHOD
     authMethod: {
       type: String,
-      enum: ['email', 'google', 'admin', 'system'],
+      enum: ['email', 'admin', 'system'],
       required: false
     },
     
@@ -190,7 +184,7 @@ auditLogSchema.statics.getLoginStats = async function(timeWindow = 24 * 60 * 60 
   const stats = await this.aggregate([
     {
       $match: {
-        event: { $in: ['login_success', 'login_failed', 'google_oauth_login'] },
+        event: { $in: ['login_success', 'login_failed'] },
         createdAt: { $gte: cutoffTime }
       }
     },

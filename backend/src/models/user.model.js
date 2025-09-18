@@ -86,6 +86,11 @@ const userSchema = new Schema(
       expiresAt: Date,
       ip: String,
       userAgent: String,
+      revoked: {
+        type: Boolean,
+        default: false,
+      },
+      revokedAt: Date,
     }],
     
     // Email verification fields
@@ -116,43 +121,7 @@ const userSchema = new Schema(
       }
     },
 
-    // 🔥 GOOGLE OAUTH FIELDS
-    googleId: {
-      type: String,
-      sparse: true, // Allows multiple null values but unique for non-null
-    },
-    googleProfile: {
-      id: String,
-      displayName: String,
-      emails: [{
-        value: String,
-        verified: Boolean
-      }],
-      photos: [{
-        value: String
-      }],
-      provider: {
-        type: String,
-        default: 'google'
-      }
-    },
-    
-    // 🔥 AUTHENTICATION PROVIDER TRACKING
-    authProviders: [{
-      provider: {
-        type: String,
-        enum: ['email', 'google'],
-        required: true
-      },
-      linkedAt: {
-        type: Date,
-        default: Date.now
-      },
-      isActive: {
-        type: Boolean,
-        default: true
-      }
-    }],
+    // Note: Google OAuth fields removed - using email/password only authentication
     
     // 🔥 ACCOUNT SECURITY FIELDS
     failedLoginAttempts: {
@@ -170,37 +139,23 @@ const userSchema = new Schema(
       }
     },
     
-    // 🔥 AUDIT LOGGING
-    lastLoginMethod: {
-      type: String,
-      enum: ['email', 'google'],
-      default: null
-    },
-    
-    // 🔥 PREFERRED AUTH METHOD (optional)
-    preferredAuthMethod: {
-      type: String,
-      enum: ['email', 'google'],
-      default: null
-    }
+    // Note: Login method tracking removed - using email/password only authentication
   },
   {
     timestamps: true,
   }
 );
 
-// 🔥 CUSTOM VALIDATION: Ensure at least one auth method
+// 🔥 CUSTOM VALIDATION: Ensure password is set for new users
 userSchema.pre('save', async function(next) {
   // Skip validation for password updates
   if (this.isModified('password') && !this.isNew) {
     return next();
   }
   
-  // For new users or when removing auth methods, ensure at least one exists
-  if (this.isNew || this.isModified('password') || this.isModified('googleId')) {
-    if (!this.canAuthenticate()) {
-      return next(new Error('User must have at least one authentication method (password or Google OAuth)'));
-    }
+  // For new users, ensure password is set (email/password only authentication)
+  if (this.isNew && !this.password) {
+    return next(new Error('Password is required for new users'));
   }
   
   next();
@@ -219,64 +174,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-// 🔥 GOOGLE OAUTH METHODS
-userSchema.methods.linkGoogleAccount = function(googleProfile) {
-  this.googleId = googleProfile.id;
-  this.googleProfile = {
-    id: googleProfile.id,
-    displayName: googleProfile.displayName,
-    emails: googleProfile.emails,
-    photos: googleProfile.photos,
-    provider: 'google'
-  };
-  
-  // Add Google to auth providers if not already present
-  const hasGoogleProvider = this.authProviders.some(provider => provider.provider === 'google');
-  if (!hasGoogleProvider) {
-    this.authProviders.push({
-      provider: 'google',
-      linkedAt: new Date(),
-      isActive: true
-    });
-  }
-  
-  // Auto-verify email if Google email is verified
-  if (googleProfile.emails && googleProfile.emails[0] && googleProfile.emails[0].verified) {
-    this.isEmailVerified = true;
-  }
-  
-  return this.save();
-};
-
-userSchema.methods.unlinkGoogleAccount = function() {
-  // Use the hasPassword method for consistency
-  if (!this.hasPassword()) {
-    throw new Error('Cannot unlink Google account: No password set. Please set a password first.');
-  }
-  
-  this.googleId = null;
-  this.googleProfile = null;
-  
-  // Remove Google from auth providers
-  this.authProviders = this.authProviders.filter(provider => provider.provider !== 'google');
-  
-  return this.save();
-};
-
-userSchema.methods.hasAuthProvider = function(provider) {
-  return this.authProviders.some(p => p.provider === provider && p.isActive);
-};
-
-userSchema.methods.getAuthProviders = function() {
-  return this.authProviders.filter(p => p.isActive).map(p => p.provider);
-};
-
-// Check if user can authenticate (has at least one auth method)
-userSchema.methods.canAuthenticate = function() {
-  const hasPassword = this.password && this.password.trim() !== '';
-  const hasGoogle = this.googleId && this.googleId.trim() !== '';
-  return hasPassword || hasGoogle;
-};
+// Note: Google OAuth methods removed - using email/password only authentication
 
 // Check if user has a password set
 userSchema.methods.hasPassword = function() {
@@ -319,91 +217,13 @@ userSchema.methods.isAccountLocked = function() {
   return true;
 };
 
-// 🔥 STATIC METHODS FOR GOOGLE OAUTH
-userSchema.statics.findOrCreateGoogleUser = async function(googleProfile) {
-  try {
-    // First, try to find by Google ID
-    let user = await this.findOne({ googleId: googleProfile.id });
-    
-    if (user) {
-      // Update Google profile data
-      user.googleProfile = {
-        id: googleProfile.id,
-        displayName: googleProfile.displayName,
-        emails: googleProfile.emails,
-        photos: googleProfile.photos,
-        provider: 'google'
-      };
-      user.lastLoginMethod = 'google';
-      user.lastLoginAt = new Date();
-      await user.save();
-      return user;
-    }
-    
-    // If not found by Google ID, try to find by email
-    const email = googleProfile.emails[0]?.value;
-    if (email) {
-      user = await this.findOne({ email: email.toLowerCase() });
-      
-      if (user) {
-        // Link Google account to existing user
-        await user.linkGoogleAccount(googleProfile);
-        user.lastLoginMethod = 'google';
-        user.lastLoginAt = new Date();
-        await user.save();
-        return user;
-      }
-    }
-    
-    // Create new user with Google OAuth
-    const username = await this.generateUniqueUsername(googleProfile.displayName);
-    
-    user = new this({
-      email: email,
-      fullName: googleProfile.displayName,
-      username: username,
-      avatar: googleProfile.photos[0]?.value,
-      isEmailVerified: googleProfile.emails[0]?.verified || false,
-      lastLoginMethod: 'google',
-      lastLoginAt: new Date()
-    });
-    
-    await user.linkGoogleAccount(googleProfile);
-    return user;
-    
-  } catch (error) {
-    throw new Error(`Failed to find or create Google user: ${error.message}`);
-  }
-};
-
-userSchema.statics.generateUniqueUsername = async function(baseName) {
-  let username = baseName
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
-    .substring(0, 15);
-  
-  let counter = 1;
-  let finalUsername = username;
-  
-  while (await this.findOne({ username: finalUsername })) {
-    finalUsername = `${username}${counter}`;
-    counter++;
-    
-    if (counter > 100) {
-      // Fallback to timestamp-based username
-      finalUsername = `user${Date.now()}`;
-      break;
-    }
-  }
-  
-  return finalUsername;
-};
+// Note: Google OAuth static methods removed - using email/password only authentication
 
 // Generate access token with enhanced security
 userSchema.methods.generateAccessToken = function (additionalPayload = {}) {
   const jti = uuidv4(); // Unique token ID
   const now = Math.floor(Date.now() / 1000);
-  const expiresIn = 15 * 60; // 15 minutes in seconds
+  const expiresIn = 5 * 60; // 5 minutes in seconds
   
   const payload = {
       _id: this._id,
@@ -453,7 +273,7 @@ userSchema.methods.generateRefreshToken = function (additionalPayload = {}) {
 
   const refreshToken = jwt.sign(
     payload,
-    process.env.REFRESH_TOKEN_SECRET,
+    process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET,
     {
       algorithm: 'HS256', // Explicitly specify algorithm
     }
@@ -471,10 +291,80 @@ userSchema.methods.generateRefreshToken = function (additionalPayload = {}) {
   return refreshToken;
 };
 
-// Invalidate specific token by JTI
-userSchema.methods.invalidateToken = function(jti) {
-  this.activeTokens = this.activeTokens.filter(token => token.jti !== jti);
-  return this.save();
+// Invalidate specific token by JTI (atomic operation)
+userSchema.methods.invalidateToken = async function(jti) {
+  const result = await this.updateOne({
+    $pull: {
+      activeTokens: { jti: jti }
+    }
+  });
+  return result;
+};
+
+// Atomic refresh token rotation with reuse detection
+userSchema.methods.rotateRefreshToken = async function(oldJti, newTokenData) {
+  const session = await this.db.startSession();
+  
+  try {
+    let result;
+    await session.withTransaction(async () => {
+      // Check if old token exists and is not revoked
+      const oldToken = this.activeTokens.find(token => 
+        token.jti === oldJti && token.type === 'refresh'
+      );
+      
+      if (!oldToken) {
+        throw new Error('Invalid or already revoked refresh token');
+      }
+      
+      // Check for token reuse (security breach)
+      if (oldToken.revoked) {
+        // Token reuse detected - revoke all sessions for security
+        await this.updateOne({
+          $set: {
+            'activeTokens.$[].revoked': true,
+            'activeTokens.$[].revokedAt': new Date()
+          }
+        }, { session });
+        
+        throw new Error('Token reuse detected - all sessions revoked');
+      }
+      
+      // Mark old token as revoked
+      await this.updateOne({
+        $set: {
+          'activeTokens.$[elem].revoked': true,
+          'activeTokens.$[elem].revokedAt': new Date()
+        }
+      }, {
+        arrayFilters: [{ 'elem.jti': oldJti }],
+        session
+      });
+      
+      // Add new refresh token
+      await this.updateOne({
+        $push: {
+          activeTokens: {
+            jti: newTokenData.jti,
+            type: 'refresh',
+            createdAt: new Date(),
+            expiresAt: newTokenData.expiresAt,
+            ip: newTokenData.ip,
+            userAgent: newTokenData.userAgent,
+            revoked: false
+          }
+        }
+      }, { session });
+      
+      result = { success: true };
+    });
+    
+    return result;
+  } catch (error) {
+    throw error;
+  } finally {
+    await session.endSession();
+  }
 };
 
 // Invalidate all tokens of a specific type
@@ -518,7 +408,7 @@ userSchema.methods.updateActivity = function() {
 // Static method to find user by refresh token
 userSchema.statics.findByRefreshToken = async function(refreshToken) {
   try {
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET);
     const user = await this.findById(decoded._id);
     
     if (!user) return null;
@@ -619,7 +509,9 @@ userSchema.methods.resetEmailVerificationAttempts = function() {
 userSchema.index({ role: 1 });
 userSchema.index({ lastActivity: 1 });
 userSchema.index({ 'activeTokens.jti': 1 });
-userSchema.index({ 'activeTokens.expiresAt': 1 });
+userSchema.index({ 'activeTokens.expiresAt': 1 }, { expireAfterSeconds: 0 }); // TTL index for automatic cleanup
+userSchema.index({ resetPasswordExpires: 1 }, { expireAfterSeconds: 0 }); // TTL index for password reset tokens
+userSchema.index({ emailVerificationExpires: 1 }, { expireAfterSeconds: 0 }); // TTL index for email verification tokens
 // userSchema.index({ googleId: 1 }); // Index for Google OAuth lookups
 
 export const User = mongoose.model("User", userSchema);

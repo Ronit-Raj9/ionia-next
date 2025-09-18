@@ -81,15 +81,7 @@ class AuditLogger {
     }, false, new Error(reason));
   }
 
-  /**
-   * Log Google OAuth events
-   */
-  static async logGoogleOAuthEvent(event, req, user = null, details = {}) {
-    await this.logAuthEvent(event, req, user, {
-      ...details,
-      provider: 'google'
-    }, true);
-  }
+  // Note: Google OAuth logging removed - using email/password only authentication
 
   /**
    * Log account security events
@@ -167,11 +159,10 @@ class AuditLogger {
    * Get authentication method from event and details
    */
   static getAuthMethod(event, details) {
-    if (event.includes('google')) return 'google';
     if (details.authMethod) return details.authMethod;
     if (event.includes('admin')) return 'admin';
     if (event.includes('system')) return 'system';
-    return 'email';
+    return 'email'; // Only email authentication supported
   }
 
   /**

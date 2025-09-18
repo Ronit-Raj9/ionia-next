@@ -14,6 +14,7 @@ import {
   getClearCookieOptions,
   getClearRefreshCookieOptions 
 } from "../utils/cookieConfig.js";
+import { generateCSRFToken, setCSRFTokenCookie } from "../middlewares/csrf.middleware.js";
 import { AuditLogger } from "../utils/auditLogger.js";
 import passport from "passport";
 
@@ -96,6 +97,16 @@ const registerUser = asyncHandler(async (req, res) => {
   if (password.length < 8) {
     throw new ApiError(400, "Password must be at least 8 characters long");
   }
+  
+  // Additional password strength checks
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  
+  if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+    throw new ApiError(400, "Password must contain at least one uppercase letter, one lowercase letter, and one number");
+  }
 
   // 2. Check if user already exists
   const existedUser = await User.findOne({
@@ -107,6 +118,11 @@ const registerUser = asyncHandler(async (req, res) => {
     if (req.rateLimiter && req.rateLimiterIdentifier) {
       req.rateLimiter.recordFailedAttempt(req.rateLimiterIdentifier, 'register');
     }
+    
+    // Prevent user enumeration - always return same response
+    // Add artificial delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
+    
     throw new ApiError(409, "User with this email or username already exists");
   }
 
@@ -130,7 +146,7 @@ const registerUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase().trim(),
     lastLoginIP: req.ip || req.connection.remoteAddress,
     isEmailVerified: false, // Require email verification in production
-    authProviders: [{ provider: 'email', linkedAt: new Date(), isActive: true }]
+    // Note: Auth provider tracking removed - using email/password only authentication
   });
 
   // 5. Return user without sensitive data
@@ -196,6 +212,10 @@ const loginUser = asyncHandler(async (req, res) => {
     // Log failed login attempt
     await AuditLogger.logLoginFailure(req, email || username, 'User not found', 'email');
     
+    // Prevent user enumeration - always return same response
+    // Add artificial delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 200));
+    
     throw new ApiError(404, "Invalid credentials");
   }
 
@@ -240,7 +260,7 @@ const loginUser = asyncHandler(async (req, res) => {
   user.lastLoginAt = new Date();
   user.lastLoginIP = clientIP;
   user.lastActivity = new Date();
-  user.lastLoginMethod = 'email';
+  // Note: Login method tracking removed - using email/password only authentication
   await user.save({ validateBeforeSave: false });
 
   // Generate tokens
@@ -273,10 +293,20 @@ const loginUser = asyncHandler(async (req, res) => {
   const accessTokenOptions = getAccessTokenCookieOptions();
   const refreshTokenOptions = getRefreshTokenCookieOptions(rememberMe);
   
+  // Generate CSRF token for authenticated user
+  const csrfToken = generateCSRFToken();
+  
   return res
     .status(200)
     .cookie("accessToken", accessToken, accessTokenOptions)
     .cookie("refreshToken", refreshToken, refreshTokenOptions)
+    .cookie("csrf-token", csrfToken, {
+      httpOnly: false, // Must be accessible to JavaScript
+      secure: process.env.HTTPS_ENABLED === 'true',
+      sameSite: process.env.HTTPS_ENABLED === 'true' ? 'strict' : 'lax',
+      path: '/',
+      maxAge: 5 * 60 * 1000, // 5 minutes (same as access token)
+    })
     .json(
       new ApiResponse(
         200,
@@ -286,7 +316,8 @@ const loginUser = asyncHandler(async (req, res) => {
             loginTime: user.lastLoginAt,
             activeSessions: user.getActiveSessionsCount(),
             rememberMe: !!rememberMe,
-          }
+          },
+          csrfToken: csrfToken // Include CSRF token in response
         },
         "User logged in successfully"
       )
@@ -377,7 +408,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
   try {
     // 1. Verify refresh token
-    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET);
     
     // 2. Find user and validate token
     const user = await User.findById(decodedToken._id);
@@ -399,12 +430,46 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh token has been invalidated");
     }
 
-    // 5. Generate new tokens (token rotation)
-    const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshToken(user._id, req);
-
-    // 6. Invalidate old refresh token
-    await user.invalidateToken(decodedToken.jti);
+    // 5. Generate new tokens (atomic token rotation)
+    const newAccessToken = user.generateAccessToken({
+      ip: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent') || 'Unknown',
+    });
+    
+    const newRefreshToken = user.generateRefreshToken({
+      ip: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent') || 'Unknown',
+    });
+    
+    // 6. Atomic refresh token rotation with reuse detection
+    try {
+      await user.rotateRefreshToken(decodedToken.jti, {
+        jti: jwt.decode(newRefreshToken).jti,
+        expiresAt: new Date(jwt.decode(newRefreshToken).exp * 1000),
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent') || 'Unknown',
+      });
+    } catch (error) {
+      // Token reuse detected - revoke all sessions
+      if (error.message.includes('Token reuse detected')) {
+        await AuditLogger.logSecurityEvent('token_reuse_detected', req, user, {
+          oldJti: decodedToken.jti,
+          reason: 'Refresh token reuse detected - security breach'
+        });
+        
+        // Clear all cookies and force re-authentication
+        res.cookie("accessToken", "", getClearCookieOptions());
+        res.cookie("refreshToken", "", getClearRefreshCookieOptions());
+        
+        throw new ApiError(401, 'Security breach detected - please log in again');
+      }
+      throw error;
+    }
+    
+    // 7. Update blacklist manager
     tokenBlacklist.invalidateRefreshToken(user._id.toString(), incomingRefreshToken);
+    const newDecoded = jwt.decode(newRefreshToken);
+    tokenBlacklist.storeRefreshToken(user._id.toString(), newRefreshToken, newDecoded.exp);
 
     // 7. Update user activity
     user.lastActivity = new Date();
@@ -415,12 +480,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     // 8. Return new tokens
     return res
       .status(200)
-      .cookie("accessToken", accessToken, getAccessTokenCookieOptions())
+      .cookie("accessToken", newAccessToken, getAccessTokenCookieOptions())
       .cookie("refreshToken", newRefreshToken, getRefreshTokenCookieOptions())
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken: newRefreshToken },
+          { accessToken: newAccessToken, refreshToken: newRefreshToken },
           "Access token refreshed successfully"
         )
       );
@@ -761,8 +826,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
       .update(resetToken)
       .digest("hex");
     
-    // Set token expiry (10 minutes from now)
-    const tokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    // Set token expiry (1 hour from now - more user-friendly)
+    const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
     
     // Store the token in the user document
     user.resetPasswordToken = hashedToken;
@@ -777,7 +842,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     
     // Email content
     const subject = "Password Reset Request";
-    const text = `You requested a password reset. Please use the following link to reset your password. This link is valid for 10 minutes: ${resetUrl}`;
+    const text = `You requested a password reset. Please use the following link to reset your password. This link is valid for 1 hour: ${resetUrl}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <h1 style="color: #10b981; text-align: center;">Password Reset Request</h1>
@@ -787,7 +852,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
         <div style="text-align: center; margin: 30px 0;">
           <a href="${resetUrl}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
         </div>
-        <p>This link is valid for 10 minutes and can only be used once.</p>
+        <p>This link is valid for 1 hour and can only be used once.</p>
         <p>If you didn't request this, please ignore this email or contact support if you have concerns.</p>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           &copy; ${new Date().getFullYear()} Ionia. All rights reserved.
@@ -1140,212 +1205,7 @@ const updateUserRole = asyncHandler(async (req, res) => {
   }
 });
 
-// 🔥 GOOGLE OAUTH CONTROLLERS
-
-/**
- * Google OAuth Login
- * Initiates Google OAuth flow
- */
-const googleOAuthLogin = asyncHandler(async (req, res, next) => {
-  console.log("🔐 Google OAuth login initiated");
-  
-  // Store return URL in session if provided
-  if (req.query.returnUrl) {
-    req.session.returnUrl = req.query.returnUrl;
-  }
-  
-  // Authenticate with Google using passport
-  passport.authenticate('google', { 
-    scope: ['profile', 'email'],
-    accessType: 'offline',
-    prompt: 'consent'
-  })(req, res, next);
-});
-
-/**
- * Google OAuth Callback
- * Handles Google OAuth callback and creates JWT tokens
- */
-const googleOAuthCallback = asyncHandler(async (req, res, next) => {
-  console.log("🔄 Google OAuth callback received");
-  
-  passport.authenticate('google', { session: false }, async (err, user, info) => {
-    try {
-      if (err) {
-        console.error("Google OAuth callback error:", err);
-        await AuditLogger.logLoginFailure(req, 'unknown', err.message, 'google');
-        
-        // Redirect to OAuth callback with error
-        const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?error=oauth_failed`;
-        return res.redirect(redirectUrl);
-      }
-      
-      if (!user) {
-        await AuditLogger.logLoginFailure(req, 'unknown', 'No user returned from Google', 'google');
-        
-        // Redirect to OAuth callback with error
-        const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?error=oauth_no_user`;
-        return res.redirect(redirectUrl);
-      }
-      
-      // Check if account is locked
-      if (user.isAccountLocked()) {
-        await AuditLogger.logSecurityEvent('account_locked', req, user, {
-          reason: 'Account locked due to failed attempts',
-          lockUntil: user.failedLoginAttempts.lockedUntil
-        });
-        throw new ApiError(423, "Account is temporarily locked due to multiple failed login attempts. Please try again later.");
-      }
-      
-      // Reset failed login attempts on successful login
-      if (user.failedLoginAttempts.count > 0) {
-        await user.resetFailedLoginAttempts();
-      }
-      
-      // Update login tracking
-      user.lastLoginAt = new Date();
-      user.lastLoginIP = req.ip || req.connection.remoteAddress;
-      user.lastActivity = new Date();
-      user.lastLoginMethod = 'google';
-      await user.save({ validateBeforeSave: false });
-      
-      // Generate tokens
-      const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id, req);
-      
-      // Log successful Google OAuth login
-      await AuditLogger.logGoogleOAuthEvent('google_oauth_login', req, user, {
-        isNewUser: !user.createdAt || (Date.now() - user.createdAt.getTime()) < 60000
-      });
-      
-      // Get user data without sensitive fields
-      const loggedInUser = await User.findById(user._id).select(
-        "-password -refreshToken -activeTokens"
-      );
-      
-      // Add hasPassword field for frontend compatibility
-      loggedInUser.hasPassword = user.hasPassword();
-      
-      console.log(`✅ Google OAuth login successful for user: ${user.username}`);
-      
-      // Get return URL from session or use default
-      const returnUrl = req.session?.returnUrl || '/dashboard';
-      delete req.session?.returnUrl;
-      
-      // Set secure cookies
-      const accessTokenOptions = getAccessTokenCookieOptions();
-      const refreshTokenOptions = getRefreshTokenCookieOptions();
-      
-      console.log('🍪 Setting OAuth cookies with options:', {
-        accessTokenOptions,
-        refreshTokenOptions,
-        accessTokenPreview: accessToken.substring(0, 20) + '...'
-      });
-      
-      // Set cookies and redirect to frontend
-      res
-        .cookie("accessToken", accessToken, accessTokenOptions)
-        .cookie("refreshToken", refreshToken, refreshTokenOptions);
-      
-      // Redirect to dedicated OAuth callback page with tokens
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const callbackUrl = `${frontendUrl}/oauth-callback?auth=success&token=${encodeURIComponent(accessToken)}&refresh=${encodeURIComponent(refreshToken)}&returnUrl=${encodeURIComponent(returnUrl)}`;
-      
-      console.log(`🔄 Redirecting to OAuth callback: ${frontendUrl}/oauth-callback?auth=success&token=...&refresh=...&returnUrl=${returnUrl}`);
-      return res.redirect(callbackUrl);
-        
-    } catch (error) {
-      console.error("Google OAuth callback error:", error);
-      
-      // Ensure all errors are properly logged
-      await AuditLogger.logLoginFailure(req, user?.email || 'unknown', error.message, 'google');
-      
-      // Redirect to OAuth callback with error
-      const errorUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-callback?error=${encodeURIComponent(error.message)}`;
-      return res.redirect(errorUrl);
-    }
-  })(req, res);
-});
-
-/**
- * Link Google Account
- * Links Google OAuth to existing email/password account
- */
-const linkGoogleAccount = asyncHandler(async (req, res) => {
-  console.log("🔗 Linking Google account for user:", req.user.username);
-  
-  const { googleToken } = req.body;
-  
-  if (!googleToken) {
-    throw new ApiError(400, "Google token is required");
-  }
-  
-  try {
-    // Verify Google token and get profile
-    const googleProfile = await verifyGoogleToken(googleToken);
-    
-    // Check if Google account is already linked to another user
-    const existingGoogleUser = await User.findOne({ googleId: googleProfile.id });
-    if (existingGoogleUser && !existingGoogleUser._id.equals(req.user._id)) {
-      throw new ApiError(409, "This Google account is already linked to another user");
-    }
-    
-    // Link Google account to current user
-    await req.user.linkGoogleAccount(googleProfile);
-    
-    // Log the linking event
-    await AuditLogger.logGoogleOAuthEvent('google_oauth_link', req, req.user, {
-      googleId: googleProfile.id,
-      googleEmail: googleProfile.emails[0]?.value
-    });
-    
-    console.log(`✅ Google account linked successfully for user: ${req.user.username}`);
-    
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {}, "Google account linked successfully"));
-      
-  } catch (error) {
-    console.error("Google account linking error:", error);
-    throw new ApiError(500, "Failed to link Google account");
-  }
-});
-
-/**
- * Unlink Google Account
- * Unlinks Google OAuth from account (requires password to be set)
- */
-const unlinkGoogleAccount = asyncHandler(async (req, res) => {
-  console.log("🔗 Unlinking Google account for user:", req.user.username);
-  
-  try {
-    await req.user.unlinkGoogleAccount();
-    
-    // Log the unlinking event
-    await AuditLogger.logGoogleOAuthEvent('google_oauth_unlink', req, req.user);
-    
-    console.log(`✅ Google account unlinked successfully for user: ${req.user.username}`);
-    
-    return res
-      .status(200)
-      .json(new ApiResponse(200, {}, "Google account unlinked successfully"));
-      
-  } catch (error) {
-    console.error("Google account unlinking error:", error);
-    throw new ApiError(400, error.message);
-  }
-});
-
-/**
- * Get Auth Providers
- * Returns the authentication providers linked to the user's account
- */
-const getAuthProviders = asyncHandler(async (req, res) => {
-  const providers = req.user.getAuthProviders();
-  
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { providers }, "Auth providers retrieved successfully"));
-});
+// Note: Google OAuth controllers removed - using email/password only authentication
 
 // 🔥 EMAIL VERIFICATION CONTROLLERS
 
@@ -1523,17 +1383,7 @@ const getUserActivityLogs = asyncHandler(async (req, res) => {
   }
 });
 
-// Helper function to verify Google token (simplified)
-const verifyGoogleToken = async (token) => {
-  // In a real implementation, you would verify the token with Google's API
-  // For now, we'll return a mock profile
-  return {
-    id: 'mock_google_id',
-    displayName: 'Mock User',
-    emails: [{ value: 'mock@example.com', verified: true }],
-    photos: [{ value: 'https://example.com/photo.jpg' }]
-  };
-};
+// Note: Google token verification helper removed - using email/password only authentication
 
 export {
   registerUser,
@@ -1555,12 +1405,7 @@ export {
   getUserDetails,
   updateUserRole,
   logoutFromAllDevices,
-  // Google OAuth controllers
-  googleOAuthLogin,
-  googleOAuthCallback,
-  linkGoogleAccount,
-  unlinkGoogleAccount,
-  getAuthProviders,
+  // Note: Google OAuth controllers removed - using email/password only authentication
   // Email verification controllers
   sendEmailVerification,
   verifyEmail,

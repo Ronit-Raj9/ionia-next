@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import session from "express-session";
 
 // Enhanced middleware imports
 import { errorHandler, requestIdMiddleware, requestCompletionLogger, Logger } from './middlewares/error.middleware.js';
@@ -10,8 +9,7 @@ import { performanceMonitoring, healthCheck, getMetrics, errorTracking } from '.
 
 import { logCookieConfig, validateCookieConfig } from './utils/cookieConfig.js';
 
-// 🔥 PASSPORT CONFIGURATION
-import passport from './config/passport.js';
+// Note: Passport removed - using JWT-only authentication for educational platform
 
 const app = express();
 
@@ -42,21 +40,8 @@ app.use(performanceMonitoring);
 // 4. Cookie Parser Middleware
 app.use(cookieParser());
 
-// 🔥 SESSION CONFIGURATION (for Passport)
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
-// 🔥 PASSPORT MIDDLEWARE
-app.use(passport.initialize());
-app.use(passport.session());
+// Note: Sessions removed - using JWT-only authentication for educational platform
+// This allows users to stay logged in for months without server dependencies
 
 // 5. Request size validation
 app.use(validateRequestSize('50mb')); // Increase for file uploads and large questions

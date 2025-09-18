@@ -19,9 +19,10 @@ class RateLimiter {
    * Check if request should be rate limited
    * @param {string} identifier - IP address or user identifier
    * @param {string} type - Type of request ('login', 'register', 'forgot-password')
+   * @param {string} accountIdentifier - Optional account identifier (email) for account-based limiting
    * @returns {object} - { allowed: boolean, retryAfter?: number }
    */
-  checkRateLimit(identifier, type = 'login') {
+  checkRateLimit(identifier, type = 'login', accountIdentifier = null) {
     const now = Date.now();
     const limits = this.getLimitsForType(type);
     
@@ -34,6 +35,19 @@ class RateLimiter {
         retryAfter,
         reason: `Too many failed attempts. Try again in ${retryAfter} seconds.`
       };
+    }
+
+    // Check account-based rate limiting if account identifier provided
+    if (accountIdentifier) {
+      const accountBlockInfo = this.blockedIPs.get(`account:${accountIdentifier}`);
+      if (accountBlockInfo && now < accountBlockInfo.blockedUntil) {
+        const retryAfter = Math.ceil((accountBlockInfo.blockedUntil - now) / 1000);
+        return { 
+          allowed: false, 
+          retryAfter,
+          reason: `Account temporarily locked due to failed attempts. Try again in ${retryAfter} seconds.`
+        };
+      }
     }
 
     // Get current attempts for this identifier
@@ -117,22 +131,22 @@ class RateLimiter {
   getLimitsForType(type) {
     const limits = {
       login: {
-        maxAttempts: 30,           // 5 failed attempts
+        maxAttempts: 5,             // 5 failed attempts
         windowMs: 15 * 60 * 1000, // in 15 minutes
         blockDurationMs: 30 * 60 * 1000 // block for 30 minutes
       },
       register: {
-        maxAttempts: 30,           // 3 registration attempts
+        maxAttempts: 3,            // 3 registration attempts
         windowMs: 60 * 60 * 1000, // in 1 hour
         blockDurationMs: 60 * 60 * 1000 // block for 1 hour
       },
       'forgot-password': {
-        maxAttempts: 30,           // 3 forgot password attempts
+        maxAttempts: 3,            // 3 forgot password attempts
         windowMs: 60 * 60 * 1000, // in 1 hour
         blockDurationMs: 60 * 60 * 1000 // block for 1 hour
       },
       'refresh-token': {
-        maxAttempts: 30,          // 10 refresh attempts
+        maxAttempts: 10,           // 10 refresh attempts
         windowMs: 5 * 60 * 1000,  // in 5 minutes
         blockDurationMs: 15 * 60 * 1000 // block for 15 minutes
       }
