@@ -6,20 +6,27 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineUser } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
+import { useFormValidation } from '../store/validationStore';
+import type { RegisterData } from '../types';
 import { toast } from 'react-hot-toast';
+import { authLogger } from '../utils/logger';
 
 export default function RegisterForm() {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
-    acceptTerms: false,
-  });
   const router = useRouter();
-  
   const { register, isLoading, error, clearError, checkUsername } = useAuthStore();
+  
+  // Use validation store
+  const {
+    values: formData,
+    validation,
+    setValue,
+    setTouched,
+    reset,
+    isValid: isFormValid,
+    isDirty,
+    isTouched
+  } = useFormValidation('registration', 'registration');
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
@@ -66,24 +73,22 @@ export default function RegisterForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    const fieldValue = type === 'checkbox' ? checked : value;
+    setValue(name, fieldValue);
   };
 
-  const handleRegister = async (userData: typeof formData) => {
+  const handleRegister = async () => {
     try {
-      const result = await register(userData);
+      const result = await register(formData as RegisterData);
       if (result.success) {
         toast.success('Registration successful! Please log in.');
         router.push('/login');
       } else {
         toast.error(result.error?.message || 'Registration failed.');
       }
-    } catch (err) {
+    } catch (err: any) {
       toast.error('Registration failed. Please try again.');
-      console.error('Registration failed:', err);
+      authLogger.error('Registration failed', { error: err.message }, 'AUTH');
     }
   };
 
@@ -91,11 +96,16 @@ export default function RegisterForm() {
     e.preventDefault();
     clearError();
 
+    if (!isFormValid) {
+      toast.error("Please fix the validation errors before submitting");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }    
-    await handleRegister(formData);
+    await handleRegister();
   };
 
   return (
@@ -271,8 +281,9 @@ export default function RegisterForm() {
                   required
                   className="block w-full pl-10 pr-3 py-3.5 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
                   placeholder="Enter your full name"
-                  value={formData.fullName}
+                  value={formData.fullName || ''}
                   onChange={handleChange}
+                  onBlur={() => setTouched('fullName')}
                 />
               </div>
             </motion.div>
@@ -303,8 +314,9 @@ export default function RegisterForm() {
                       : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500/20 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
                   } placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white`}
                   placeholder="Choose a unique username"
-                  value={formData.username}
+                  value={formData.username || ''}
                   onChange={handleChange}
+                  onBlur={() => setTouched('username')}
                 />
                 
                 {/* Username validation indicator */}
@@ -379,11 +391,19 @@ export default function RegisterForm() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="block w-full pl-10 pr-3 py-3.5 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className={`block w-full pl-10 pr-3 py-3.5 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    validation.errors.length > 0 && isTouched
+                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500/20 focus:border-blue-500'
+                  }`}
                   placeholder="Enter your email address"
-                  value={formData.email}
+                  value={formData.email || ''}
                   onChange={handleChange}
+                  onBlur={() => setTouched('email')}
                 />
+                {validation.errors.length > 0 && isTouched && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
+                )}
               </div>
             </motion.div>
 
@@ -407,11 +427,19 @@ export default function RegisterForm() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="block w-full pl-10 pr-12 py-3.5 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className={`block w-full pl-10 pr-12 py-3.5 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    validation.errors.length > 0 && isTouched
+                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500/20 focus:border-blue-500'
+                  }`}
                   placeholder="Create a strong password"
-                  value={formData.password}
+                  value={formData.password || ''}
                   onChange={handleChange}
+                  onBlur={() => setTouched('password')}
                 />
+                {validation.errors.length > 0 && isTouched && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
+                )}
                 <motion.button 
                   type="button" 
                   whileHover={{ scale: 1.05 }}
@@ -444,11 +472,19 @@ export default function RegisterForm() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className="block w-full pl-10 pr-12 py-3.5 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className={`block w-full pl-10 pr-12 py-3.5 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    validation.errors.length > 0 && isTouched
+                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500/20 focus:border-blue-500'
+                  }`}
                   placeholder="Confirm your password"
-                  value={formData.confirmPassword}
+                  value={formData.confirmPassword || ''}
                   onChange={handleChange}
+                  onBlur={() => setTouched('confirmPassword')}
                 />
+                {validation.errors.length > 0 && isTouched && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
+                )}
                 <motion.button 
                   type="button" 
                   whileHover={{ scale: 1.05 }}
@@ -471,10 +507,18 @@ export default function RegisterForm() {
                 type="checkbox"
                 id="acceptTerms"
                 name="acceptTerms"
-                checked={formData.acceptTerms}
+                checked={formData.acceptTerms || false}
                 onChange={handleChange}
-                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 border-gray-300 rounded transition-colors"
+                onBlur={() => setTouched('acceptTerms')}
+                className={`mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 border-gray-300 rounded transition-colors ${
+                  validation.errors.length > 0 && isTouched
+                    ? 'border-red-500 focus:ring-red-500'
+                    : ''
+                }`}
               />
+              {validation.errors.length > 0 && isTouched && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
+              )}
               <label htmlFor="acceptTerms" className="text-sm text-gray-600 dark:text-gray-400 leading-5">
                 I agree to the{' '}
                 <Link href="/terms" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-300">
@@ -495,11 +539,11 @@ export default function RegisterForm() {
           >
             <motion.button
               type="submit"
-              disabled={isLoading}
-              whileHover={!isLoading ? { scale: 1.02 } : {}}
-              whileTap={!isLoading ? { scale: 0.98 } : {}}
+              disabled={isLoading || !isFormValid}
+              whileHover={(!isLoading && isFormValid) ? { scale: 1.02 } : {}}
+              whileTap={(!isLoading && isFormValid) ? { scale: 0.98 } : {}}
               className={`group relative w-full flex justify-center items-center py-3.5 px-6 border-0 text-sm font-semibold rounded-xl text-white transition-all duration-300 ${
-                isLoading
+                (isLoading || !isFormValid)
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2 shadow-lg hover:shadow-xl'
               }`}
