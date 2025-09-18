@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
-import { GoogleLoginButton } from './GoogleLoginButton';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -42,11 +41,11 @@ export default function LoginForm() {
     }
   }, [email, password, error]);
 
-  // Handle OAuth errors (success is handled by dedicated callback page)
+  // Handle authentication errors from URL parameters
   useEffect(() => {
     const error = searchParams.get('error');
     if (error) {
-      console.error('🚫 OAuth error received:', error);
+      console.error('🚫 Auth error received:', error);
       setError(decodeURIComponent(error));
       // Clean URL
       const newUrl = new URL(window.location.href);
@@ -127,9 +126,16 @@ export default function LoginForm() {
       } else if (err.status === 429) {
         errorMessage = '⏱️ Too many login attempts. Please wait a few minutes before trying again.';
       } else if (err.status === 403) {
-        errorMessage = '🚫 Account has been deactivated. Please contact support.';
+        // Check if it's a CSRF error
+        if (err.message?.includes('CSRF') || err.message?.includes('csrf')) {
+          errorMessage = '🔄 CSRF token mismatch. Please refresh the page and try again.';
+        } else {
+          errorMessage = '🚫 Account has been deactivated. Please contact support.';
+        }
       } else if (err.status === 500) {
         errorMessage = '⚠️ Server error. Please try again later or contact support if the problem persists.';
+      } else if (err.isRefreshFailed) {
+        errorMessage = '🔄 Session expired. Please refresh the page and try again.';
       } else if (err.message) {
         errorMessage = err.message;
       }
@@ -264,6 +270,10 @@ export default function LoginForm() {
                       <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
+                    ) : error.includes('CSRF') || error.includes('csrf') ? (
+                      <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
                     ) : (
                       <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -275,6 +285,11 @@ export default function LoginForm() {
                     {(error.includes('🌐') || error.includes('network') || error.includes('connect')) && (
                       <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                         Make sure the backend server is running on port 8000
+                      </p>
+                    )}
+                    {(error.includes('CSRF') || error.includes('csrf')) && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        Please refresh the page and try again
                       </p>
                     )}
                   </div>
@@ -364,21 +379,16 @@ export default function LoginForm() {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="flex items-center justify-between"
           >
-            <div className="flex items-center">
+            <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
               <input
-                id="remember-me"
-                name="remember-me"
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 border-gray-300 rounded transition-colors"
-                disabled={isLoading}
+                className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded transition-colors"
               />
-              <label htmlFor="remember-me" className="ml-3 block text-sm text-gray-600 dark:text-gray-400">
-                Remember me
-              </label>
-            </div>
-
+              <span>Remember me</span>
+            </label>
+            
             <Link
               href="/forgot-password"
               className="text-sm font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-300"
@@ -437,36 +447,6 @@ export default function LoginForm() {
             </motion.button>
           </motion.div>
 
-          {/* Divider */}
-          {/* <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200 dark:border-gray-600" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400 backdrop-blur-sm">
-                or continue with
-              </span>
-            </div>
-          </motion.div> */}
-
-          {/* Google Login */}
-          {/* <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-          >
-            <GoogleLoginButton
-              returnUrl={searchParams.get('returnUrl') || undefined}
-              onError={(error) => setError(error)}
-              disabled={isLoading}
-              className="w-full"
-            />
-          </motion.div> */}
         </motion.form>
 
         {/* Footer Note */}

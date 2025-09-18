@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineUser } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'react-hot-toast';
-// import { GoogleLoginButton } from './GoogleLoginButton';
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({
@@ -222,6 +221,10 @@ export default function RegisterForm() {
                       <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
+                    ) : error.message?.includes('CSRF') || error.message?.includes('csrf') ? (
+                      <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
                     ) : (
                       <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
@@ -233,6 +236,11 @@ export default function RegisterForm() {
                     {(error.message?.includes('🌐') || error.message?.includes('network') || error.message?.includes('connect')) && (
                       <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                         Make sure the backend server is running on port 8000
+                      </p>
+                    )}
+                    {(error.message?.includes('CSRF') || error.message?.includes('csrf')) && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        Please refresh the page and try again
                       </p>
                     )}
                   </div>
@@ -531,34 +539,6 @@ export default function RegisterForm() {
             </motion.button>
           </motion.div>
           
-          {/* Divider */}
-          {/* <motion.div 
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 1.0 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200 dark:border-gray-600" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/85 dark:bg-gray-800/85 text-gray-500 dark:text-gray-400 backdrop-blur-sm">
-                or continue with
-              </span>
-            </div>
-          </motion.div> */}
-
-          {/* <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 1.1 }}
-          >
-            <GoogleLoginButton
-              onError={(error) => toast.error(error)}
-              disabled={isLoading}
-              className="w-full"
-            />
-          </motion.div> */}
         </motion.form>
 
         {/* Footer */}

@@ -1,5 +1,5 @@
 // ==========================================
-// 🍪 SIMPLIFIED COOKIE-BASED AUTH API
+// 🍪 SIMPLIFIED JWT-ONLY AUTH API
 // ==========================================
 
 import { User, LoginResponse, ApiResponse, RegisterData } from '../types';
@@ -13,27 +13,87 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE = getApiBaseUrl();
 
-// Enhanced fetch wrapper with automatic token refresh
+// 🔥 CSRF TOKEN HANDLING
+const getCSRFToken = (): string | null => {
+  // Get CSRF token from cookie (set by backend)
+  const cookies = document.cookie.split(';');
+  const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('csrf-token='));
+  return csrfCookie ? csrfCookie.split('=')[1] : null;
+};
+
+// Enhanced fetch wrapper with automatic token refresh and CSRF protection
 let isRefreshing = false;
 let refreshPromise: Promise<void> | null = null;
+let refreshQueue: Array<{ resolve: (value: any) => void; reject: (error: any) => void }> = [];
+
+// Retry configuration
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000, // 1 second
+  maxDelay: 10000, // 10 seconds
+  retryableStatuses: [408, 429, 500, 502, 503, 504],
+  retryableErrors: ['NETWORK_ERROR', 'TIMEOUT', 'CONNECTION_REFUSED']
+};
 
 const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
-  const makeRequest = async (): Promise<Response> => {
-    // Prepare headers - don't set Content-Type for FormData
-    const headers: Record<string, string> = {
-      Accept: 'application/json',
-    };
-    
-    // Only set Content-Type for non-FormData requests
-    if (!(options?.body instanceof FormData)) {
-      headers['Content-Type'] = 'application/json';
+  const makeRequest = async (retryCount: number = 0): Promise<Response> => {
+    try {
+      // Prepare headers - don't set Content-Type for FormData
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+      };
+
+      // 🔥 ADD CSRF TOKEN TO HEADERS
+      const csrfToken = getCSRFToken();
+      if (csrfToken) {
+        headers['x-csrf-token'] = csrfToken;
+      }
+      
+      // Only set Content-Type for non-FormData requests
+      if (!(options?.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+      
+      const response = await fetch(url, {
+        credentials: 'include', // Always include cookies
+        headers,
+        ...options,
+      });
+
+      // Check if response status is retryable
+      if (RETRY_CONFIG.retryableStatuses.includes(response.status) && retryCount < RETRY_CONFIG.maxRetries) {
+        const delay = Math.min(
+          RETRY_CONFIG.baseDelay * Math.pow(2, retryCount),
+          RETRY_CONFIG.maxDelay
+        );
+        
+        console.log(`🔄 Retrying request (${retryCount + 1}/${RETRY_CONFIG.maxRetries}) after ${delay}ms due to status ${response.status}...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return makeRequest(retryCount + 1);
+      }
+
+      return response;
+    } catch (error: any) {
+      // Check if this is a retryable network error
+      const isRetryableError = RETRY_CONFIG.retryableErrors.some(errType => 
+        error.message?.toUpperCase().includes(errType)
+      );
+      
+      if (isRetryableError && retryCount < RETRY_CONFIG.maxRetries) {
+        const delay = Math.min(
+          RETRY_CONFIG.baseDelay * Math.pow(2, retryCount),
+          RETRY_CONFIG.maxDelay
+        );
+        
+        console.log(`🔄 Retrying request (${retryCount + 1}/${RETRY_CONFIG.maxRetries}) after ${delay}ms due to network error...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return makeRequest(retryCount + 1);
+      }
+      
+      throw error;
     }
-    
-    return fetch(url, {
-      credentials: 'include', // Always include cookies
-      headers,
-      ...options,
-    });
   };
 
   try {
@@ -43,19 +103,22 @@ const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
     if (response.status === 401 && !url.includes('/refresh-token')) {
       console.log('🔄 Received 401, attempting token refresh...');
       
-      // If we're already refreshing, wait for that to complete
+      // If we're already refreshing, queue this request
       if (isRefreshing && refreshPromise) {
-        await refreshPromise;
-        // Retry the original request after refresh
-        const retryResponse = await makeRequest();
-        if (!retryResponse.ok) {
-          const errorData = await retryResponse.json().catch(() => ({}));
-          const error = new Error(errorData.message || `Request failed with status ${retryResponse.status}`);
-          (error as any).status = retryResponse.status;
-          (error as any).response = errorData;
-          throw error;
-        }
-        return retryResponse.json();
+        return new Promise((resolve, reject) => {
+          refreshQueue.push({ resolve, reject });
+        }).then(async () => {
+          // Retry the original request after refresh
+          const retryResponse = await makeRequest();
+          if (!retryResponse.ok) {
+            const errorData = await retryResponse.json().catch(() => ({}));
+            const error = new Error(errorData.message || `Request failed with status ${retryResponse.status}`);
+            (error as any).status = retryResponse.status;
+            (error as any).response = errorData;
+            throw error;
+          }
+          return retryResponse.json();
+        });
       }
 
       // Start the refresh process
@@ -66,6 +129,7 @@ const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          'x-csrf-token': getCSRFToken() || '', // 🔥 ADD CSRF TOKEN TO REFRESH REQUEST
         },
       }).then(async (refreshResponse) => {
         if (!refreshResponse.ok) {
@@ -78,7 +142,12 @@ const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
 
       try {
         await refreshPromise;
-        // Token refreshed successfully, retry the original request
+        
+        // Token refreshed successfully, resolve all queued requests
+        refreshQueue.forEach(({ resolve }) => resolve(undefined));
+        refreshQueue = [];
+        
+        // Retry the original request
         const retryResponse = await makeRequest();
         if (!retryResponse.ok) {
           const errorData = await retryResponse.json().catch(() => ({}));
@@ -90,6 +159,11 @@ const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
         return retryResponse.json();
       } catch (refreshError: any) {
         console.log('❌ Token refresh failed, user needs to login again:', refreshError.message);
+        
+        // Reject all queued requests
+        refreshQueue.forEach(({ reject }) => reject(refreshError));
+        refreshQueue = [];
+        
         // If refresh fails, throw the original 401 error to trigger logout
         const errorData = await response.json().catch(() => ({}));
         const error = new Error(errorData.message || 'Authentication failed');
@@ -98,6 +172,7 @@ const apiFetch = async <T>(url: string, options?: RequestInit): Promise<T> => {
         (error as any).isRefreshFailed = true;
         throw error;
       } finally {
+        // 🔥 CLEAN UP REFRESH STATE TO PREVENT MEMORY LEAKS
         isRefreshing = false;
         refreshPromise = null;
       }
@@ -144,12 +219,14 @@ export const authAPI = {
   login: async (credentials: {
     email: string;
     password: string;
-    rememberMe?: boolean;
   }): Promise<LoginResponse> => {
     const response = await apiFetch<ApiResponse<LoginResponse>>(`${API_BASE}/users/login`, {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+
+    // 🔥 CSRF TOKEN IS AUTOMATICALLY SET BY BACKEND IN COOKIE
+    // The getCSRFToken() function will automatically pick it up for future requests
 
     if (!response.data) {
       throw new Error(response.message || 'Login failed');
@@ -248,46 +325,6 @@ export const authAPI = {
     return response.data;
   },
 
-  // ==========================================
-  // 🔥 GOOGLE OAUTH ENDPOINTS
-  // ==========================================
-
-  googleLogin: async (returnUrl?: string): Promise<void> => {
-    const url = new URL(`${API_BASE}/users/auth/google`);
-    if (returnUrl) {
-      url.searchParams.append('returnUrl', returnUrl);
-    }
-    window.location.href = url.toString();
-  },
-
-  getAuthProviders: async (): Promise<{ providers: string[] }> => {
-    const response = await apiFetch<ApiResponse<{ providers: string[] }>>(`${API_BASE}/users/auth/providers`);
-    if (!response.data) {
-      throw new Error(response.message || 'Failed to fetch auth providers');
-    }
-    return response.data;
-  },
-
-  linkGoogleAccount: async (googleToken: string): Promise<{ message: string }> => {
-    const response = await apiFetch<ApiResponse<{ message: string }>>(`${API_BASE}/users/auth/google/link`, {
-      method: 'POST',
-      body: JSON.stringify({ googleToken }),
-    });
-    if (!response.data) {
-      throw new Error(response.message || 'Failed to link Google account');
-    }
-    return response.data;
-  },
-
-  unlinkGoogleAccount: async (): Promise<{ message: string }> => {
-    const response = await apiFetch<ApiResponse<{ message: string }>>(`${API_BASE}/users/auth/google/unlink`, {
-      method: 'POST',
-    });
-    if (!response.data) {
-      throw new Error(response.message || 'Failed to unlink Google account');
-    }
-    return response.data;
-  },
 
   // ==========================================
   // 📧 EMAIL VERIFICATION ENDPOINTS

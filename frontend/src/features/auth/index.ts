@@ -14,6 +14,9 @@ export { default as AuthProvider } from '../../providers/AuthProvider';
 // Auth Components
 export * from './components';
 
+// Auth Error Boundary
+export { default as AuthErrorBoundary } from './components/AuthErrorBoundary';
+
 // Auth Hooks
 // useAuthStore is already exported above from store
 
@@ -45,8 +48,15 @@ export {
   roleHasPermission,
   canAccessResource,
   getEffectivePermissions,
-  formatRemainingTime,
   getRoleDisplayName,
   getRoleColor,
-  formatLastLogin
+  formatLastLogin,
+  // JWT utilities
+  decodeJWT,
+  getTokenExpiry,
+  isTokenExpiringSoon,
+  getTimeUntilExpiry
 } from './utils/authUtils';
+
+// Logger
+export { authLogger } from './utils/logger';

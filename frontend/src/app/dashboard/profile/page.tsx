@@ -7,7 +7,6 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { FiUser, FiMail, FiLock } from "react-icons/fi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
-import AccountSecurity from "@/features/auth/components/AccountSecurity";
 
 export default function ProfilePage() {
   // Use individual selectors to prevent infinite loops
@@ -110,8 +109,6 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Account Security */}
-          <AccountSecurity />
         </div>
       </div>
     </div>

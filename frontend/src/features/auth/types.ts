@@ -1,5 +1,5 @@
 // ==========================================
-// 🏷️ SIMPLIFIED AUTH TYPES - COOKIE-BASED
+// 🏷️ SIMPLIFIED AUTH TYPES - JWT ONLY
 // ==========================================
 
 export interface User {
@@ -15,34 +15,12 @@ export interface User {
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
-  // 🔥 GOOGLE OAUTH FIELDS
-  googleId?: string;
-  googleProfile?: {
-    id: string;
-    displayName: string;
-    emails: Array<{
-      value: string;
-      verified: boolean;
-    }>;
-    photos: Array<{
-      value: string;
-    }>;
-    provider: string;
-  };
-  // 🔥 AUTHENTICATION PROVIDER TRACKING
-  authProviders?: Array<{
-    provider: 'email' | 'google';
-    linkedAt: string;
-    isActive: boolean;
-  }>;
   // 🔥 ACCOUNT SECURITY FIELDS
   failedLoginAttempts?: {
     count: number;
     lastAttempt?: string;
     lockedUntil?: string;
   };
-  lastLoginMethod?: 'email' | 'google';
-  preferredAuthMethod?: 'email' | 'google';
   // 🔥 EMAIL VERIFICATION FIELDS
   emailVerificationToken?: string;
   emailVerificationExpires?: string;
@@ -71,11 +49,14 @@ export type Permission =
   | 'superadmin:logs:view' | 'superadmin:security:manage';
 
 export interface AuthError {
-  type: 'auth' | 'network' | 'validation' | 'server' | 'permission';
+  type: 'auth' | 'network' | 'validation' | 'server' | 'permission' | 'csrf' | 'rate_limit' | 'account_locked' | 'refresh_failed' | 'session_expired';
   message: string;
   code?: string | number;
   timestamp: number;
   context?: Record<string, any>;
+  retryable?: boolean;
+  userFriendlyMessage?: string;
+  suggestedAction?: string;
 }
 
 export interface LoginCredentials {

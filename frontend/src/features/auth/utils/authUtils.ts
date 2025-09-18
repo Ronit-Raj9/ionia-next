@@ -1,6 +1,8 @@
 // ==========================================
-// 🛠️ AUTH UTILITIES LAYER - TOKEN & ROLE UTILITIES
+// 🛠️ AUTH UTILITIES LAYER - JWT ONLY
 // ==========================================
+
+import { authLogger } from './logger';
 
 import type { UserRole, Permission } from '../types';
 
@@ -127,81 +129,7 @@ export const getEffectivePermissions = (
   return allPermissions;
 };
 
-// ==========================================
-// ⏱️ SESSION UTILITIES
-// ==========================================
-
-// Session timeout: 15 days for persistent sessions
-export const SESSION_TIMEOUT = 15 * 24 * 60 * 60 * 1000; // 15 days
-export const INACTIVITY_WARNING_TIME = 14 * 24 * 60 * 60 * 1000; // 14 days (1 day before expiry)
-
-// Short session timeout for non-remember me logins
-export const SHORT_SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
-export const SHORT_INACTIVITY_WARNING_TIME = 23 * 60 * 60 * 1000; // 23 hours
-
-/**
- * Get remaining session time
- */
-export const getSessionRemainingTime = (lastActivity: number, isRememberMe = true): number => {
-  const elapsed = Date.now() - lastActivity;
-  const timeout = isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT;
-  const remaining = timeout - elapsed;
-  return Math.max(0, remaining);
-};
-
-/**
- * Check if session is expiring soon
- */
-export const isSessionExpiring = (
-  lastActivity: number, 
-  isRememberMe = true,
-  warningThreshold?: number
-): boolean => {
-  const elapsed = Date.now() - lastActivity;
-  const timeout = isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT;
-  const warning = warningThreshold || (isRememberMe ? INACTIVITY_WARNING_TIME : SHORT_INACTIVITY_WARNING_TIME);
-  
-  return elapsed >= warning && elapsed < timeout;
-};
-
-/**
- * Check if session has expired
- */
-export const isSessionExpired = (lastActivity: number, isRememberMe = true): boolean => {
-  const elapsed = Date.now() - lastActivity;
-  const timeout = isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT;
-  return elapsed >= timeout;
-};
-
-/**
- * Calculate session expiry time based on remember me setting
- */
-export const calculateSessionExpiryTime = (isRememberMe: boolean): number => {
-  const now = Date.now();
-  return now + (isRememberMe ? SESSION_TIMEOUT : SHORT_SESSION_TIMEOUT);
-};
-
-/**
- * Format remaining time for display
- */
-export const formatRemainingTime = (milliseconds: number): string => {
-  if (milliseconds <= 0) return '0s';
-  
-  const seconds = Math.floor(milliseconds / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-  
-  if (days > 0) {
-    return `${days}d ${hours % 24}h`;
-  } else if (hours > 0) {
-    return `${hours}h ${minutes % 60}m`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds % 60}s`;
-  } else {
-    return `${seconds}s`;
-  }
-};
+// Note: Session utilities removed - using JWT-only authentication
 
 // ==========================================
 // 🔧 UTILITY FUNCTIONS
@@ -224,18 +152,136 @@ export const formatDateTime = (date: Date): string => {
 // Note: Device info functions removed - not currently used
 
 /**
- * Create auth error object
+ * Enhanced error types for better error differentiation
+ */
+export type ErrorType = 
+  | 'network' 
+  | 'auth' 
+  | 'csrf' 
+  | 'rate_limit' 
+  | 'account_locked' 
+  | 'validation' 
+  | 'server' 
+  | 'permission'
+  | 'refresh_failed'
+  | 'session_expired';
+
+export interface EnhancedAuthError {
+  type: ErrorType;
+  message: string;
+  timestamp: number;
+  context?: Record<string, any>;
+  retryable: boolean;
+  userFriendlyMessage: string;
+  suggestedAction?: string;
+}
+
+/**
+ * Create enhanced auth error object with better categorization
  */
 export const createAuthError = (
-  type: 'auth' | 'network' | 'validation' | 'server' | 'permission',
+  type: ErrorType,
   message: string,
   context?: Record<string, any>
-) => ({
-  type,
-  message,
-  timestamp: Date.now(),
-  context,
-});
+): EnhancedAuthError => {
+  const errorConfig = getErrorConfig(type, message);
+  
+  authLogger.error(`Auth error: ${type}`, { message, context }, 'ERROR');
+  
+  return {
+    type,
+    message,
+    timestamp: Date.now(),
+    context,
+    retryable: errorConfig.retryable,
+    userFriendlyMessage: errorConfig.userFriendlyMessage,
+    suggestedAction: errorConfig.suggestedAction,
+  };
+};
+
+/**
+ * Get error configuration based on error type
+ */
+const getErrorConfig = (type: ErrorType, originalMessage: string) => {
+  switch (type) {
+    case 'network':
+      return {
+        retryable: true,
+        userFriendlyMessage: 'Network connection issue. Please check your internet connection.',
+        suggestedAction: 'Try again in a moment or check your internet connection.'
+      };
+      
+    case 'auth':
+      return {
+        retryable: false,
+        userFriendlyMessage: 'Authentication failed. Please log in again.',
+        suggestedAction: 'Please log in again to continue.'
+      };
+      
+    case 'csrf':
+      return {
+        retryable: true,
+        userFriendlyMessage: 'Security token mismatch. Please refresh the page.',
+        suggestedAction: 'Refresh the page and try again.'
+      };
+      
+    case 'rate_limit':
+      return {
+        retryable: true,
+        userFriendlyMessage: 'Too many attempts. Please wait before trying again.',
+        suggestedAction: 'Wait a few minutes before trying again.'
+      };
+      
+    case 'account_locked':
+      return {
+        retryable: false,
+        userFriendlyMessage: 'Account temporarily locked due to security concerns.',
+        suggestedAction: 'Contact support or try again later.'
+      };
+      
+    case 'validation':
+      return {
+        retryable: false,
+        userFriendlyMessage: 'Please check your input and try again.',
+        suggestedAction: 'Review the form and correct any errors.'
+      };
+      
+    case 'server':
+      return {
+        retryable: true,
+        userFriendlyMessage: 'Server error. Please try again later.',
+        suggestedAction: 'Try again in a few minutes or contact support if the problem persists.'
+      };
+      
+    case 'permission':
+      return {
+        retryable: false,
+        userFriendlyMessage: 'You don\'t have permission to perform this action.',
+        suggestedAction: 'Contact your administrator if you believe this is an error.'
+      };
+      
+    case 'refresh_failed':
+      return {
+        retryable: false,
+        userFriendlyMessage: 'Session expired. Please log in again.',
+        suggestedAction: 'Please log in again to continue.'
+      };
+      
+    case 'session_expired':
+      return {
+        retryable: false,
+        userFriendlyMessage: 'Your session has expired. Please log in again.',
+        suggestedAction: 'Please log in again to continue.'
+      };
+      
+    default:
+      return {
+        retryable: false,
+        userFriendlyMessage: originalMessage,
+        suggestedAction: 'Please try again or contact support.'
+      };
+  }
+};
 
 /**
  * Check if error is auth-related
@@ -438,7 +484,61 @@ export const formatLastLogin = (lastLogin: string | undefined): string => {
 };
 
 // ==========================================
+// 🔐 JWT UTILITIES
+// ==========================================
+
+/**
+ * Decode JWT token (client-side only, no verification)
+ * Used for extracting expiry information
+ */
+export const decodeJWT = (token: string): any | null => {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const payload = parts[1];
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Extract token expiry from JWT
+ */
+export const getTokenExpiry = (token: string): number | null => {
+  const decoded = decodeJWT(token);
+  return decoded?.exp ? decoded.exp * 1000 : null; // Convert to milliseconds
+};
+
+/**
+ * Check if token is expired or will expire soon
+ */
+export const isTokenExpiringSoon = (token: string, bufferSeconds: number = 30): boolean => {
+  const expiry = getTokenExpiry(token);
+  if (!expiry) return true;
+  
+  const now = Date.now();
+  const bufferMs = bufferSeconds * 1000;
+  return expiry - now <= bufferMs;
+};
+
+/**
+ * Get time until token expires (in seconds)
+ */
+export const getTimeUntilExpiry = (token: string): number => {
+  const expiry = getTokenExpiry(token);
+  if (!expiry) return 0;
+  
+  const now = Date.now();
+  return Math.max(0, Math.floor((expiry - now) / 1000));
+};
+
+// ==========================================
 // 📤 EXPORTS
 // ==========================================
+
+// JWT utilities are already exported above as individual functions
 
 // Types are already exported above, no need to re-export
