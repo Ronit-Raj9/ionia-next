@@ -129,26 +129,28 @@ class RateLimiter {
    * @returns {object} - Rate limit configuration
    */
   getLimitsForType(type) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     const limits = {
       login: {
-        maxAttempts: 5,             // 5 failed attempts
+        maxAttempts: isProduction ? 5 : 15,             // 5 attempts in production, 15 in dev
         windowMs: 15 * 60 * 1000, // in 15 minutes
-        blockDurationMs: 30 * 60 * 1000 // block for 30 minutes
+        blockDurationMs: isProduction ? 30 * 60 * 1000 : 20 * 60 * 1000 // 30 min in prod, 20 min in dev
       },
       register: {
-        maxAttempts: 3,            // 3 registration attempts
+        maxAttempts: isProduction ? 3 : 15,            // 3 attempts in production, 15 in dev
         windowMs: 60 * 60 * 1000, // in 1 hour
-        blockDurationMs: 60 * 60 * 1000 // block for 1 hour
+        blockDurationMs: isProduction ? 60 * 60 * 1000 : 30 * 60 * 1000 // 1 hour in prod, 30 min in dev
       },
       'forgot-password': {
-        maxAttempts: 3,            // 3 forgot password attempts
+        maxAttempts: isProduction ? 3 : 15,            // 3 attempts in production, 15 in dev
         windowMs: 60 * 60 * 1000, // in 1 hour
-        blockDurationMs: 60 * 60 * 1000 // block for 1 hour
+        blockDurationMs: isProduction ? 60 * 60 * 1000 : 30 * 60 * 1000 // 1 hour in prod, 30 min in dev
       },
       'refresh-token': {
-        maxAttempts: 10,           // 10 refresh attempts
+        maxAttempts: isProduction ? 5 : 15,           // 5 attempts in production, 15 in dev
         windowMs: 5 * 60 * 1000,  // in 5 minutes
-        blockDurationMs: 15 * 60 * 1000 // block for 15 minutes
+        blockDurationMs: isProduction ? 15 * 60 * 1000 : 10 * 60 * 1000 // 15 min in prod, 10 min in dev
       }
     };
 
@@ -183,6 +185,32 @@ class RateLimiter {
         this.blockedIPs.delete(identifier);
         cleanedBlocks++;
       }
+    }
+
+    // Limit memory usage - keep only last 1000 identifiers
+    if (this.attempts.size > 1000) {
+      const entries = Array.from(this.attempts.entries());
+      entries.sort((a, b) => {
+        const aLastAttempt = a[1][a[1].length - 1]?.timestamp || 0;
+        const bLastAttempt = b[1][b[1].length - 1]?.timestamp || 0;
+        return bLastAttempt - aLastAttempt;
+      });
+      this.attempts.clear();
+      entries.slice(0, 1000).forEach(([key, value]) => {
+        this.attempts.set(key, value);
+      });
+      console.log(`🧹 Rate limiter: Limited attempts to 1000 identifiers`);
+    }
+    
+    // Limit blocked IPs to 500
+    if (this.blockedIPs.size > 500) {
+      const entries = Array.from(this.blockedIPs.entries());
+      entries.sort((a, b) => b[1].blockedUntil - a[1].blockedUntil);
+      this.blockedIPs.clear();
+      entries.slice(0, 500).forEach(([key, value]) => {
+        this.blockedIPs.set(key, value);
+      });
+      console.log(`🧹 Rate limiter: Limited blocked IPs to 500`);
     }
 
     if (cleanedAttempts > 0 || cleanedBlocks > 0) {
@@ -226,12 +254,27 @@ export const createRateLimitMiddleware = (type = 'login') => {
   return (req, res, next) => {
     const identifier = req.ip || req.connection.remoteAddress;
     const result = rateLimiter.checkRateLimit(identifier, type);
+    const limits = rateLimiter.getLimitsForType(type);
+    
+    // Get current attempts for this identifier
+    const userAttempts = rateLimiter.attempts.get(identifier) || [];
+    const now = Date.now();
+    const recentAttempts = userAttempts.filter(
+      attempt => now - attempt.timestamp < limits.windowMs
+    );
+    
+    // Always set informative headers
+    res.set({
+      'X-RateLimit-Limit': limits.maxAttempts,
+      'X-RateLimit-Window': limits.windowMs,
+      'X-RateLimit-Remaining': Math.max(0, limits.maxAttempts - recentAttempts.length),
+      'X-RateLimit-Reset': new Date(Date.now() + limits.windowMs).toISOString()
+    });
     
     if (!result.allowed) {
-      // Set rate limit headers
+      // Set additional headers for blocked requests
       res.set({
         'Retry-After': result.retryAfter,
-        'X-RateLimit-Limit': rateLimiter.getLimitsForType(type).maxAttempts,
         'X-RateLimit-Remaining': 0,
         'X-RateLimit-Reset': new Date(Date.now() + (result.retryAfter * 1000)).toISOString()
       });
