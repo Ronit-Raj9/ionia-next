@@ -103,7 +103,7 @@ const categorizeError = (err) => {
 };
 
 // Enhanced error formatter
-const formatError = (err, req) => {
+const formatError = (err, req, statusCode = 500) => {
   const category = categorizeError(err);
   const requestId = req.requestId;
   
@@ -170,6 +170,25 @@ const formatError = (err, req) => {
         statusCode: err.statusCode
       }
     };
+  } else {
+    // PRODUCTION FIX: Enhanced error sanitization for security
+    if (statusCode >= 500) {
+      errorResponse.error.message = 'Internal server error';
+      errorResponse.error.details = undefined;
+    }
+    
+    // Remove sensitive information from all production errors
+    delete errorResponse.error.stack;
+    delete errorResponse.error.originalError;
+    
+    // Sanitize validation errors in production
+    if (category === ERROR_CATEGORIES.VALIDATION && errorResponse.error.details) {
+      errorResponse.error.details = errorResponse.error.details.map(detail => ({
+        field: detail.field,
+        message: detail.message
+        // Remove 'value' field to prevent data leakage
+      }));
+    }
   }
 
   return errorResponse;
@@ -222,13 +241,18 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Format and send error response
-  const errorResponse = formatError(err, req);
+  const errorResponse = formatError(err, req, statusCode);
+  
+  // PRODUCTION FIX: Add request ID header for debugging
+  res.set('X-Request-ID', requestId);
+  
   res.status(statusCode).json(errorResponse);
 };
 
 // Request completion logging middleware
 export const requestCompletionLogger = (req, res, next) => {
   const startTime = Date.now();
+  req.startTime = startTime; // Store start time for audit logging
   
   res.on('finish', () => {
     const duration = Date.now() - startTime;
@@ -243,6 +267,39 @@ export const requestCompletionLogger = (req, res, next) => {
       userId: req.user?._id,
       username: req.user?.username
     });
+  });
+  
+  next();
+};
+
+// Enhanced auth-specific logging middleware
+export const enhancedAuthLogging = (req, res, next) => {
+  const startTime = Date.now();
+  req.startTime = startTime;
+  
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    
+    // Enhanced logging for auth endpoints
+    if (req.originalUrl.includes('/auth/') || req.originalUrl.includes('/users/')) {
+      const level = res.statusCode >= 400 ? 'warn' : 'info';
+      
+      Logger.log(level, 'Auth request completed', {
+        requestId: req.requestId,
+        method: req.method,
+        url: req.originalUrl,
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        userId: req.user?._id,
+        username: req.user?.username,
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent'),
+        referer: req.get('Referer'),
+        origin: req.get('Origin'),
+        acceptLanguage: req.get('Accept-Language'),
+        acceptEncoding: req.get('Accept-Encoding')
+      });
+    }
   });
   
   next();
