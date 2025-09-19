@@ -30,6 +30,7 @@ export class TokenManager {
   private refreshInterval: NodeJS.Timeout | null = null;
   private retryCount = 0;
   private lastRefreshAttempt = 0;
+  private lastSuccessfulRefresh = 0;
   private config: TokenManagerConfig;
   private onTokenExpired?: () => void;
   private onTokenRefreshed?: (expiry: TokenExpiry) => void;
@@ -63,7 +64,7 @@ export class TokenManager {
       return;
     }
 
-    const refreshTime = expiry.access_expires_at - (this.config.refreshBufferSeconds * 1000);
+    const refreshTime = (expiry.access_expires_at * 1000) - (this.config.refreshBufferSeconds * 1000);
     const now = Date.now();
     
     if (refreshTime <= now) {
@@ -101,6 +102,15 @@ export class TokenManager {
   async refreshTokens(): Promise<void> {
     const now = Date.now();
     
+    // Cooldown: prevent rapid successive refreshes (minimum 30 seconds between refreshes)
+    const timeSinceLastRefresh = now - this.lastSuccessfulRefresh;
+    if (timeSinceLastRefresh < 30000) { // 30 seconds cooldown
+      authLogger.warn('Token refresh cooldown active, skipping refresh', { 
+        timeSinceLastRefresh: Math.round(timeSinceLastRefresh / 1000)
+      }, 'TOKEN');
+      return;
+    }
+    
     // Circuit breaker: if too many failures, stop trying
     if (this.retryCount >= this.config.circuitBreakerThreshold) {
       const timeSinceLastAttempt = now - this.lastRefreshAttempt;
@@ -126,6 +136,7 @@ export class TokenManager {
         // Reset retry count on success
         this.retryCount = 0;
         this.lastRefreshAttempt = 0;
+        this.lastSuccessfulRefresh = now;
         
         // Schedule next refresh
         this.startBackgroundRefresh(response.tokenExpiry);
@@ -136,7 +147,7 @@ export class TokenManager {
         }
         
         authLogger.info('Token refresh successful', { 
-          expiresAt: new Date(response.tokenExpiry.access_expires_at).toISOString()
+          expiresAt: new Date(response.tokenExpiry.access_expires_at * 1000).toISOString()
         }, 'TOKEN');
       }
       
