@@ -17,9 +17,53 @@ interface FooterProps {
 
 export default function Footer({ className = "" }: FooterProps) {
   return (
-    <footer className={`bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900 text-white relative overflow-hidden ${className}`}>
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:24px_24px] opacity-20"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]"></div>
+    <footer className={`bg-gradient-to-br from-emerald-900 via-emerald-700 to-teal-600 text-white relative overflow-hidden ${className}`}>
+      {/* Updated grid pattern to match hero section */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30"></div>
+      
+      {/* Updated overlay gradient to match hero section */}
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-800/50 via-transparent to-teal-800/50"></div>
+      
+      {/* Add floating animated elements like hero section */}
+      <motion.div 
+        className="absolute top-20 left-10 w-20 h-20 bg-emerald-400/20 rounded-full blur-xl"
+        animate={{ 
+          y: [-20, 20, -20],
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.6, 0.3]
+        }}
+        transition={{
+          duration: 6,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div 
+        className="absolute top-40 right-20 w-32 h-32 bg-teal-400/20 rounded-full blur-xl"
+        animate={{ 
+          y: [20, -20, 20],
+          scale: [1.2, 1, 1.2],
+          opacity: [0.4, 0.7, 0.4]
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
+      <motion.div 
+        className="absolute bottom-20 left-1/4 w-24 h-24 bg-emerald-300/20 rounded-full blur-xl"
+        animate={{ 
+          x: [-30, 30, -30],
+          scale: [1, 1.3, 1],
+          opacity: [0.2, 0.5, 0.2]
+        }}
+        transition={{
+          duration: 7,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+      />
       
       <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
