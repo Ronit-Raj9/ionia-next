@@ -134,8 +134,11 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const handleBeforeUnload = () => {
       // Use sendBeacon for reliable logout on page unload
       if (isAuthenticated && typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-        const logoutUrl = `${apiBase}/v1/users/logout`;
+        // Use same logic as authApi.ts to construct API base URL
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+        const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+        const apiBase = cleanBaseUrl.endsWith('/v1') ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
+        const logoutUrl = `${apiBase}/users/logout`;
         
         authLogger.info('Sending logout beacon on page unload', {});
         navigator.sendBeacon(logoutUrl, '');

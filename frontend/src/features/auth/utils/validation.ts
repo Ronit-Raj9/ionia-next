@@ -315,7 +315,10 @@ export function validateRegistrationForm(data: {
   // Collect errors
   errors.push(...fullNameValidation.errors);
   errors.push(...usernameValidation.errors);
-  errors.push(...passwordValidation.errors);
+  
+  if (!passwordValidation.isValid) {
+    errors.push(...passwordValidation.suggestions);
+  }
 
   if (!emailValidation.isValid) {
     errors.push('Please enter a valid email address');
