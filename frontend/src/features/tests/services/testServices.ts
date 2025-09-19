@@ -551,8 +551,20 @@ export class TestService {
    */
   static async getSolutions(attemptId: string) {
     try {
-      const response = await fetchWithAuth<APIResponse<any>>(`${API_BASE}/v1/attempted-tests/solutions/${attemptId}`, { method: 'GET' });
-      return response.data;
+      const url = `${API_BASE}/v1/attempted-tests/solutions/${attemptId}`;
+      console.log('TestService.getSolutions - URL:', url);
+      console.log('TestService.getSolutions - attemptId:', attemptId);
+      
+      const response = await fetchWithAuth<APIResponse<any>>(url, { method: 'GET' });
+      console.log('TestService.getSolutions - Response:', response);
+      
+      if (response && response.data) {
+        console.log('TestService.getSolutions - Response data:', response.data);
+        return response.data;
+      } else {
+        console.warn('TestService.getSolutions - No data in response:', response);
+        return null;
+      }
     } catch (error) {
       console.error('Error fetching solutions:', error);
       throw new Error('Failed to fetch solutions');
