@@ -138,22 +138,22 @@ class RateLimiter {
     
     const limits = {
       login: {
-        maxAttempts: isProduction ? 5 : 15,             // 5 attempts in production, 15 in dev
+        maxAttempts: isProduction ? 30 : 15,             // 5 attempts in production, 15 in dev
         windowMs: 15 * 60 * 1000, // in 15 minutes
         blockDurationMs: isProduction ? 30 * 60 * 1000 : 20 * 60 * 1000 // 30 min in prod, 20 min in dev
       },
       register: {
-        maxAttempts: isProduction ? 3 : 15,            // 3 attempts in production, 15 in dev
+        maxAttempts: isProduction ? 15 : 15,            // 3 attempts in production, 15 in dev
         windowMs: 60 * 60 * 1000, // in 1 hour
         blockDurationMs: isProduction ? 60 * 60 * 1000 : 30 * 60 * 1000 // 1 hour in prod, 30 min in dev
       },
       'forgot-password': {
-        maxAttempts: isProduction ? 3 : 15,            // 3 attempts in production, 15 in dev
+        maxAttempts: isProduction ? 15 : 15,            // 3 attempts in production, 15 in dev
         windowMs: 60 * 60 * 1000, // in 1 hour
         blockDurationMs: isProduction ? 60 * 60 * 1000 : 30 * 60 * 1000 // 1 hour in prod, 30 min in dev
       },
       'refresh-token': {
-        maxAttempts: isProduction ? 5 : 15,           // 5 attempts in production, 15 in dev
+        maxAttempts: isProduction ? 15 : 15,           // 5 attempts in production, 15 in dev
         windowMs: 5 * 60 * 1000,  // in 5 minutes
         blockDurationMs: isProduction ? 15 * 60 * 1000 : 10 * 60 * 1000 // 15 min in prod, 10 min in dev
       }
