@@ -122,13 +122,28 @@ const TestForm: React.FC<TestFormProps> = ({
   }, [selectedTest, mode]);
 
   const populateFormWithTest = (test: Test) => {
+    // Map solutionsVisibility from Test format to form format
+    const mapSolutionsVisibility = (visibility: 'immediate' | 'after_submission' | 'after_deadline' | 'manual'): 'always' | 'after_completion' | 'never' => {
+      switch (visibility) {
+        case 'immediate':
+          return 'always';
+        case 'after_submission':
+        case 'after_deadline':
+          return 'after_completion';
+        case 'manual':
+          return 'never';
+        default:
+          return 'after_completion';
+      }
+    };
+
     setFormData({
       title: test.title,
       description: test.description || '',
       testCategory: test.testCategory,
       status: test.status,
       instructions: test.instructions || '',
-      solutionsVisibility: test.solutionsVisibility,
+      solutionsVisibility: mapSolutionsVisibility(test.solutionsVisibility),
       attemptsAllowed: test.attemptsAllowed,
       duration: test.duration,
       subject: test.subject,
@@ -141,7 +156,7 @@ const TestForm: React.FC<TestFormProps> = ({
       session: test.session,
       platformTestType: test.platformTestType,
       isPremium: test.isPremium,
-      syllabus: test.syllabus || [],
+      syllabus: test.syllabus ? [test.syllabus] : [],
       isPublic: test.isPublic,
       tags: test.tags || [],
       questions: test.questions || [],
@@ -241,8 +256,24 @@ const TestForm: React.FC<TestFormProps> = ({
     }
 
     try {
+      // Map solutionsVisibility from form format to API format
+      const mapSolutionsVisibilityToAPI = (visibility: 'always' | 'after_completion' | 'never'): 'immediate' | 'after_submission' | 'after_deadline' | 'manual' => {
+        switch (visibility) {
+          case 'always':
+            return 'immediate';
+          case 'after_completion':
+            return 'after_submission';
+          case 'never':
+            return 'manual';
+          default:
+            return 'after_submission';
+        }
+      };
+
       const testData: CreateTestData | UpdateTestData = {
         ...formData,
+        solutionsVisibility: mapSolutionsVisibilityToAPI(formData.solutionsVisibility),
+        syllabus: formData.syllabus && formData.syllabus.length > 0 ? formData.syllabus[0] : undefined,
         changesDescription: mode === 'edit' ? 'Test updated via admin interface' : undefined
       };
 
