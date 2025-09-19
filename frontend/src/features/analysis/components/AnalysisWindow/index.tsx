@@ -72,7 +72,8 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
   const processAnalysisData = (data: any) => {
     if (!data) return null;
 
-    // First ensure we have default data structure
+    // Use the raw data structure (which is what PerformanceAnalysis expects)
+    // but ensure we have all the necessary fields
     const processedData = {
       testInfo: data?.testInfo || {},
       performance: data?.performance || {
@@ -80,7 +81,11 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
         totalCorrectAnswers: 0,
         totalWrongAnswers: 0,
         totalVisitedQuestions: 0,
-        accuracy: 0
+        accuracy: 0,
+        score: 0,
+        totalTimeTaken: 0,
+        unattempted: 0,
+        totalUnattempted: 0
       },
       answers: data?.answers || [],
       metadata: data?.metadata || { questions: [] },
@@ -166,18 +171,29 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
       const unattemptedScore = unattemptedAnswers * markingScheme.unattempted;
       const totalScore = correctScore + incorrectScore + unattemptedScore;
       
-      // Update the performance data
-      processedData.performance.totalCorrectAnswers = correctAnswers;
-      processedData.performance.totalWrongAnswers = wrongAnswers;
-      processedData.performance.totalUnattempted = unattemptedAnswers;
-      processedData.performance.totalQuestions = totalQuestions;
-      processedData.performance.score = totalScore;
-      
-      // Recalculate accuracy
+      // Create a new performance object instead of mutating the existing one
       const attemptedAnswers = correctAnswers + wrongAnswers;
-      if (attemptedAnswers > 0) {
-        processedData.performance.accuracy = (correctAnswers / attemptedAnswers) * 100;
-      }
+      const calculatedAccuracy = attemptedAnswers > 0 ? (correctAnswers / attemptedAnswers) * 100 : 0;
+      
+      processedData.performance = {
+        ...processedData.performance, // Spread existing performance data
+        totalCorrectAnswers: correctAnswers,
+        totalWrongAnswers: wrongAnswers,
+        totalUnattempted: unattemptedAnswers,
+        unattempted: unattemptedAnswers, // Also set unattempted for compatibility
+        totalQuestions: totalQuestions,
+        score: totalScore,
+        accuracy: calculatedAccuracy
+      };
+      
+      console.log('🎯 Updated performance data:', {
+        correctAnswers,
+        wrongAnswers,
+        unattemptedAnswers,
+        totalQuestions,
+        totalScore,
+        accuracy: processedData.performance.accuracy
+      });
     }
     
     // DIRECT FIX: Ensure we have proper time data from totalTimeTaken
@@ -187,15 +203,23 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
       // CRITICAL FIX: API returns time in milliseconds, convert to seconds
       const convertedTimeTaken = rawTimeTaken > 100 ? rawTimeTaken / 1000 : rawTimeTaken;
       
-      // Directly set the timeAnalytics values
-      processedData.timeAnalytics.totalTimeSpent = convertedTimeTaken;
-      
-      // Calculate average time per question
-      const totalQuestions = data.performance.totalQuestions || 
+      // Create a new timeAnalytics object instead of mutating the existing one
+      const totalQuestions = processedData.performance.totalQuestions || 
                              processedData.answers.length ||
-                             data.metadata?.questions?.length || 1;
+                             processedData.metadata?.questions?.length || 1;
                              
-      processedData.timeAnalytics.averageTimePerQuestion = convertedTimeTaken / totalQuestions;
+      processedData.timeAnalytics = {
+        ...processedData.timeAnalytics, // Spread existing timeAnalytics data
+        totalTimeSpent: convertedTimeTaken,
+        averageTimePerQuestion: convertedTimeTaken / totalQuestions
+      };
+      
+      console.log('⏱️ Time processing:', {
+        rawTimeTaken,
+        convertedTimeTaken,
+        totalQuestions,
+        averageTimePerQuestion: processedData.timeAnalytics.averageTimePerQuestion
+      });
       
       // Now distribute this time across subjects based on their question counts
       if (processedData.subjectWise && Object.keys(processedData.subjectWise).length > 0) {
@@ -203,30 +227,38 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
           (sum: number, subject: any) => sum + (subject.total || 0), 0
         );
         
-        // Distribute time proportionally
-        Object.keys(processedData.subjectWise).forEach(subject => {
-          const subjectData = processedData.subjectWise[subject];
+        // Create a new subjectWise object with updated time data
+        const updatedSubjectWise = { ...processedData.subjectWise };
+        
+        Object.keys(updatedSubjectWise).forEach(subject => {
+          const subjectData = updatedSubjectWise[subject];
           const questionRatio = (subjectData.total || 0) / totalSubjectQuestions;
           
-          // Assign time based on question ratio
-          subjectData.timeSpent = convertedTimeTaken * questionRatio;
-          subjectData.averageTimePerQuestion = subjectData.attempted > 0 ? 
-            subjectData.timeSpent / subjectData.attempted : 0;
-            
-          // Calculate accuracy for subject
-          subjectData.accuracy = subjectData.attempted > 0 ? 
-              subjectData.correct / subjectData.attempted : 0;
+          // Create new subject data with updated time
+          updatedSubjectWise[subject] = {
+            ...subjectData,
+            timeSpent: convertedTimeTaken * questionRatio,
+            averageTimePerQuestion: subjectData.attempted > 0 ? 
+              (convertedTimeTaken * questionRatio) / subjectData.attempted : 0,
+            accuracy: subjectData.attempted > 0 ? 
+              subjectData.correct / subjectData.attempted : 0
+          };
         });
+        
+        processedData.subjectWise = updatedSubjectWise;
       }
     }
     
     // Process subject wise time data
     if (processedData.subjectWise) {
-      Object.keys(processedData.subjectWise).forEach(subject => {
-        const subjectData = processedData.subjectWise[subject];
+      const updatedSubjectWise = { ...processedData.subjectWise };
+      
+      Object.keys(updatedSubjectWise).forEach(subject => {
+        const subjectData = updatedSubjectWise[subject];
+        let timeSpent = subjectData.timeSpent;
         
         // Ensure timeSpent is present and is a number
-        if (!subjectData.timeSpent) {
+        if (!timeSpent) {
           // Try to calculate from answers if not present
           if (processedData.answers && processedData.answers.length > 0) {
             // Get answers for this subject
@@ -239,7 +271,7 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
             });
             
             // Calculate time spent
-            subjectData.timeSpent = subjectAnswers.reduce(
+            timeSpent = subjectAnswers.reduce(
               (sum: number, answer: any) => sum + (Number(answer.timeSpent) || 0), 
               0
             );
@@ -247,31 +279,38 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
             // If we have total time but no breakdown, estimate based on question ratio
             if (processedData.timeAnalytics.totalTimeSpent && subjectData.total && processedData.performance?.totalQuestions) {
               const subjectRatio = subjectData.total / processedData.performance.totalQuestions;
-              subjectData.timeSpent = processedData.timeAnalytics.totalTimeSpent * subjectRatio;
+              timeSpent = processedData.timeAnalytics.totalTimeSpent * subjectRatio;
             } else {
-              subjectData.timeSpent = 0;
+              timeSpent = 0;
             }
           }
         }
         
         // Calculate average time per question for this subject
-        subjectData.averageTimePerQuestion = 
-          subjectData.attempted > 0 ? 
-          subjectData.timeSpent / subjectData.attempted : 0;
+        const averageTimePerQuestion = subjectData.attempted > 0 ? timeSpent / subjectData.attempted : 0;
+        
+        // Update the subject data with new values
+        updatedSubjectWise[subject] = {
+          ...subjectData,
+          timeSpent,
+          averageTimePerQuestion
+        };
       });
+      
+      processedData.subjectWise = updatedSubjectWise;
     }
     
     // Add section completion data from subjects if not present
     if (!processedData.completionMetrics.sectionCompletion || 
         Object.keys(processedData.completionMetrics.sectionCompletion).length === 0) {
       
-      processedData.completionMetrics.sectionCompletion = {};
+      const sectionCompletion: any = {};
       
       Object.keys(processedData.subjectWise).forEach(subject => {
         const subjectData = processedData.subjectWise[subject];
         
         if (subjectData && typeof subjectData === 'object') {
-          processedData.completionMetrics.sectionCompletion[subject] = {
+          sectionCompletion[subject] = {
             completionRate: subjectData.total > 0 ? 
               subjectData.attempted / subjectData.total : 0,
             timeUtilization: 0.75, // Default value
@@ -280,6 +319,11 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
           };
         }
       });
+      
+      processedData.completionMetrics = {
+        ...processedData.completionMetrics,
+        sectionCompletion
+      };
     }
     
     return processedData;
@@ -364,25 +408,27 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
   const subjects = Object.keys(processedAnalysisData?.subjectWise || {});
 
   const getActiveComponent = () => {
+    // Simplified: Only show Overall Dashboard
     switch (activeTab) {
-      case 'Performance':
-        return PerformanceAnalysis;
       case 'Overall':
         return PerformanceAnalysis;
-      case 'Strategy':
-        return StrategyAnalysis;
-      case 'Questions':
-        return QuestionAnalysis;
-      case 'Time':
-        return QualityTimeSpent;
-      case 'SubjectTime':
-        return SubjectWiseTime;
-      case 'Error':
-        return ErrorAnalysis;
-      case 'Behavioral':
-        return BehavioralAnalysis;
+      // Commented out other tabs for simplified dashboard
+      // case 'Performance':
+      //   return PerformanceAnalysis;
+      // case 'Strategy':
+      //   return StrategyAnalysis;
+      // case 'Questions':
+      //   return QuestionAnalysis;
+      // case 'Time':
+      //   return QualityTimeSpent;
+      // case 'SubjectTime':
+      //   return SubjectWiseTime;
+      // case 'Error':
+      //   return ErrorAnalysis;
+      // case 'Behavioral':
+      //   return BehavioralAnalysis;
       default:
-        return SubjectAnalysis;
+        return PerformanceAnalysis; // Default to Overall Dashboard
     }
   };
 
@@ -404,6 +450,8 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
       />
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="bg-white shadow rounded-lg">
+          {/* Simplified: Hide navigation tabs, only show Overall Dashboard */}
+          {/* 
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8 px-6 overflow-x-auto" aria-label="Tabs">
               <button
@@ -501,7 +549,13 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
               </button>
             </nav>
           </div>
+          */}
           <div className="p-6">
+            {/* Simplified: Only show Overall Dashboard (PerformanceAnalysis) */}
+            <PerformanceAnalysis data={processedAnalysisData as any} />
+            
+            {/* Commented out other components for simplified dashboard */}
+            {/*
             {(() => {
               switch (ActiveComponent) {
                 case SubjectAnalysis:
@@ -524,6 +578,7 @@ const AnalysisWindow: React.FC<AnalysisWindowProps> = ({
                   return null;
               }
             })()}
+            */}
           </div>
         </div>
       </div>

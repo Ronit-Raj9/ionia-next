@@ -42,17 +42,8 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
     return <div className="text-center p-8">No performance data available</div>;
   }
 
-  // Add detailed debugging to track the issue with performance data
-  console.log("🔍 Raw performance data received:", (data as any).performance);
-  console.log("🧮 Performance calculations:", {
-    totalCorrect: (data as any).performance?.totalCorrectAnswers,
-    totalWrong: (data as any).performance?.totalWrongAnswers,
-    score: (data as any).performance?.score,
-    totalQuestions: (data as any).performance?.totalQuestions,
-    calculatedAccuracy: (data as any).performance?.totalCorrectAnswers > 0 ? 
-      ((data as any).performance.totalCorrectAnswers / 
-        ((data as any).performance.totalCorrectAnswers + (data as any).performance.totalWrongAnswers)) * 100 : 0
-  });
+  // Use the performance data directly (it's already been processed in AnalysisWindow)
+  const performanceData = (data as any).performance;
   
   // Add marking scheme details
   const markingScheme = (data as any)?.testInfo?.markingScheme || {
@@ -61,71 +52,24 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
     unattempted: 0
   };
 
-  console.log("🎯 Performance Data:", (data as any).performance);
+  console.log("🎯 Performance Data:", performanceData);
   console.log("📊 Marking Scheme:", markingScheme);
 
   // Calculate scores based on marking scheme with null checks
-  const correctScore = ((data as any).performance.totalCorrectAnswers || 0) * (markingScheme.correct || 5) || 0;
-  const incorrectScore = ((data as any).performance.totalWrongAnswers || 0) * (markingScheme.incorrect || 0) || 0;
-  const unattemptedScore = (((data as any).performance.unattempted || (data as any).performance.totalUnattempted || 0) * (markingScheme.unattempted || 0)) || 0;
+  const correctScore = (performanceData.totalCorrectAnswers || 0) * (markingScheme.correct || 5) || 0;
+  const incorrectScore = (performanceData.totalWrongAnswers || 0) * (markingScheme.incorrect || 0) || 0;
+  const unattemptedScore = ((performanceData.unattempted || performanceData.totalUnattempted || 0) * (markingScheme.unattempted || 0)) || 0;
   
   // Total score calculated or from API
-  const totalScore = (data as any).performance.score !== undefined ? (data as any).performance.score : correctScore + incorrectScore + unattemptedScore;
+  const totalScore = performanceData.score !== undefined ? performanceData.score : correctScore + incorrectScore + unattemptedScore;
   
   console.log("🧮 Score Breakdown:", {
     correctScore,
     incorrectScore,
     unattemptedScore,
     totalScore,
-    apiScore: (data as any).performance.score
+    apiScore: performanceData.score
   });
-  
-  // CRITICAL FIX: Self-check the performance data to ensure it's valid
-  // In case we detect incorrect data (e.g., 0 correct answers when there should be some)
-  // we can fix it directly here
-  const fixedPerformanceData = {...(data as any).performance};
-  let dataWasFixed = false;
-  
-  // Check if we have answers array to validate against
-  if (Array.isArray((data as any).answers) && (data as any).answers.length > 0) {
-    // Count correct answers directly from answers
-    const actualCorrectAnswers = (data as any).answers.filter((a: any) => a.isCorrect === true).length;
-    const reportedCorrectAnswers = (data as any).performance?.totalCorrectAnswers || 0;
-    
-    // If there's a discrepancy, update with the accurate count
-    if (actualCorrectAnswers > 0 && reportedCorrectAnswers !== actualCorrectAnswers) {
-      console.log(`🛠️ Fixing correct answers count: ${reportedCorrectAnswers} → ${actualCorrectAnswers}`);
-      fixedPerformanceData.totalCorrectAnswers = actualCorrectAnswers;
-      dataWasFixed = true;
-    }
-    
-    // Calculate attempted questions - answers with a selectedOption
-    const actualAttemptedAnswers = (data as any).answers.filter((a: any) => a.selectedOption !== undefined && a.selectedOption !== null).length;
-    
-    // Correct wrong answers should be attempted minus correct
-    const actualWrongAnswers = actualAttemptedAnswers - actualCorrectAnswers;
-    
-    // Also validate wrong answers if needed
-    if (fixedPerformanceData.totalWrongAnswers !== actualWrongAnswers) {
-      console.log(`🛠️ Fixing wrong answers count: ${fixedPerformanceData.totalWrongAnswers} → ${actualWrongAnswers}`);
-      fixedPerformanceData.totalWrongAnswers = actualWrongAnswers;
-      dataWasFixed = true;
-    }
-    
-    // Fix unattempted count
-    const actualUnattempted = fixedPerformanceData.totalQuestions - actualAttemptedAnswers;
-    if ((fixedPerformanceData.unattempted !== actualUnattempted) || (fixedPerformanceData.totalUnattempted !== actualUnattempted)) {
-      console.log(`🛠️ Fixing unattempted count: ${fixedPerformanceData.unattempted || fixedPerformanceData.totalUnattempted} → ${actualUnattempted}`);
-      fixedPerformanceData.unattempted = actualUnattempted;
-      // Also set totalUnattempted for backward compatibility
-      fixedPerformanceData.totalUnattempted = actualUnattempted;
-      dataWasFixed = true;
-    }
-  }
-  
-  if (dataWasFixed) {
-    console.log("🔄 Using fixed performance data:", fixedPerformanceData);
-  }
 
   // Normalize time values to seconds - always convert from ms to seconds if value > 100
   const normalizeTimeValue = (time: number) => {
@@ -194,20 +138,20 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
   };
 
   console.log("⏱️ Performance time values:", {
-    rawTotalTime: fixedPerformanceData?.totalTimeTaken,
+    rawTotalTime: performanceData?.totalTimeTaken,
     rawAvgTime: (data as any).timeAnalytics?.averageTimePerQuestion,
-    normalizedTotalTime: normalizeTimeValue(fixedPerformanceData?.totalTimeTaken || (data as any).timeAnalytics?.totalTimeSpent || 0),
+    normalizedTotalTime: normalizeTimeValue(performanceData?.totalTimeTaken || (data as any).timeAnalytics?.totalTimeSpent || 0),
     normalizedAvgTime: normalizeTimeValue((data as any).timeAnalytics?.averageTimePerQuestion || 
-      (fixedPerformanceData?.totalTimeTaken && fixedPerformanceData?.totalQuestions ? 
-      fixedPerformanceData.totalTimeTaken / fixedPerformanceData.totalQuestions : 0))
+      (performanceData?.totalTimeTaken && performanceData?.totalQuestions ? 
+      performanceData.totalTimeTaken / performanceData.totalQuestions : 0))
   });
 
   // Add debugging information to help diagnose the issue
   console.log("⭐ Performance Data:", {
-    totalCorrect: fixedPerformanceData?.totalCorrectAnswers || 0,
-    totalWrong: fixedPerformanceData?.totalWrongAnswers || 0,
-    totalUnattempted: fixedPerformanceData?.totalUnattempted || 0,
-    score: fixedPerformanceData?.score || 0
+    totalCorrect: performanceData?.totalCorrectAnswers || 0,
+    totalWrong: performanceData?.totalWrongAnswers || 0,
+    totalUnattempted: performanceData?.totalUnattempted || 0,
+    score: performanceData?.score || 0
   });
 
   // 2. Subject-wise Performance Data
@@ -274,19 +218,19 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
   // 7. Generate accuracy progression data
   // If we don't have question-by-question data, simulate it
   const accuracyProgressionData = [];
-  const totalAnswers = fixedPerformanceData?.totalCorrectAnswers + fixedPerformanceData?.totalWrongAnswers || 0;
+  const totalAnswers = performanceData?.totalCorrectAnswers + performanceData?.totalWrongAnswers || 0;
   
   if (totalAnswers > 0) {
     // FIXED: Distribute correct answers evenly throughout the sequence
     // instead of putting them all at the beginning
-    const correctProbability = fixedPerformanceData?.totalCorrectAnswers / totalAnswers;
+    const correctProbability = performanceData?.totalCorrectAnswers / totalAnswers;
     let cumulativeCorrect = 0;
     
     // For consistent results, use the existing correct answers count directly
     for (let i = 0; i < totalAnswers; i++) {
       // More realistic simulation - distribute correct answers throughout sequence
       // Use fixed distribution where isCorrect is only true for i < totalCorrectAnswers
-      const isCorrect = i < fixedPerformanceData?.totalCorrectAnswers;
+      const isCorrect = i < performanceData?.totalCorrectAnswers;
       if (isCorrect) cumulativeCorrect++;
       
       accuracyProgressionData.push({
@@ -299,11 +243,11 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   // 8. Calculate performance metrics
   function calculateOverallAccuracy() {
-    return (fixedPerformanceData?.score !== undefined && fixedPerformanceData.score > 0) ? 
-      (fixedPerformanceData.score / (fixedPerformanceData.totalQuestions || 1)) * 100 : 
-      ((fixedPerformanceData?.totalCorrectAnswers || 0) > 0 ? 
-        ((fixedPerformanceData.totalCorrectAnswers || 0) / 
-          ((fixedPerformanceData.totalCorrectAnswers || 0) + (fixedPerformanceData.totalWrongAnswers || 0))) * 100 : 0);
+    return (performanceData?.score !== undefined && performanceData.score > 0) ? 
+      (performanceData.score / (performanceData.totalQuestions || 1)) * 100 : 
+      ((performanceData?.totalCorrectAnswers || 0) > 0 ? 
+        ((performanceData.totalCorrectAnswers || 0) / 
+          ((performanceData.totalCorrectAnswers || 0) + (performanceData.totalWrongAnswers || 0))) * 100 : 0);
   }
 
   function calculateSpeedScore() {
@@ -334,7 +278,7 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
     // Look at time spent vs. questions attempted ratio
     const totalTimeInMinutes = normalizeTimeValue((data as any).timeAnalytics?.totalTimeSpent || 0) / 60;
     const questionsPerMinute = totalTimeInMinutes > 0 ? 
-      fixedPerformanceData?.totalCorrectAnswers / totalTimeInMinutes : 0;
+      performanceData?.totalCorrectAnswers / totalTimeInMinutes : 0;
     
     // Assume 0.5 questions per minute is slow (score 0) and 3 questions per minute is fast (score 100)
     return Math.min(100, Math.max(0, (questionsPerMinute - 0.5) / 2.5 * 100));
@@ -378,9 +322,9 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
     const barChartData = [
       {
         name: 'Performance',
-        correct: fixedPerformanceData?.totalCorrectAnswers || 0,
-        wrong: fixedPerformanceData?.totalWrongAnswers || 0,
-        unattempted: fixedPerformanceData?.totalUnattempted || 0,
+        correct: performanceData?.totalCorrectAnswers || 0,
+        wrong: performanceData?.totalWrongAnswers || 0,
+        unattempted: performanceData?.totalUnattempted || 0,
       }
     ];
 
@@ -392,9 +336,9 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
         
         {/* Debug section */}
         <div className="bg-amber-100 p-2 mb-4 text-xs">
-          Debug: totalCorrect={fixedPerformanceData?.totalCorrectAnswers} | 
-          totalWrong={fixedPerformanceData?.totalWrongAnswers} | 
-          totalUnattempted={fixedPerformanceData?.totalUnattempted}
+          Debug: totalCorrect={performanceData?.totalCorrectAnswers} | 
+          totalWrong={performanceData?.totalWrongAnswers} | 
+          totalUnattempted={performanceData?.totalUnattempted}
         </div>
         
         {/* Actual bar chart */}
@@ -505,17 +449,17 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
               <div>
                 <div className="text-xs text-gray-500">Correct ({markingScheme.correct > 0 ? '+' : ''}{markingScheme.correct})</div>
                 <div className="text-lg font-bold text-green-600">+{scoreData.correctScore}</div>
-                <div className="text-xs text-gray-500">{fixedPerformanceData?.totalCorrectAnswers} questions</div>
+                <div className="text-xs text-gray-500">{performanceData?.totalCorrectAnswers} questions</div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">Incorrect ({markingScheme.incorrect >= 0 ? '+' : ''}{markingScheme.incorrect})</div>
                 <div className="text-lg font-bold text-red-600">{scoreData.incorrectScore}</div>
-                <div className="text-xs text-gray-500">{fixedPerformanceData?.totalWrongAnswers} questions</div>
+                <div className="text-xs text-gray-500">{performanceData?.totalWrongAnswers} questions</div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">Unattempted ({markingScheme.unattempted >= 0 ? '+' : ''}{markingScheme.unattempted})</div>
                 <div className="text-lg font-bold text-gray-600">{scoreData.unattemptedScore}</div>
-                <div className="text-xs text-gray-500">{fixedPerformanceData?.totalUnattempted} questions</div>
+                <div className="text-xs text-gray-500">{performanceData?.totalUnattempted} questions</div>
               </div>
             </div>
           </div>
@@ -565,6 +509,8 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
 
   return (
     <div className="space-y-8">
+      {/* Simplified: Hide view selection buttons, only show Overall Dashboard */}
+      {/* 
       <div className="flex space-x-4 mb-4">
         <button
           onClick={() => setSelectedView('overall')}
@@ -627,18 +573,11 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
           Marks Analysis
             </button>
       </div>
+      */}
 
       {/* Overall Performance View - This is now a summary dashboard */}
       {selectedView === 'overall' && (
         <>
-          {/* Debug information for answer counts */}
-          <div className="bg-yellow-100 text-xs p-2 mb-2">
-            Debug: totalCorrect={fixedPerformanceData.totalCorrectAnswers} | 
-            totalWrong={fixedPerformanceData.totalWrongAnswers} | 
-            totalAttempted={fixedPerformanceData.totalCorrectAnswers + fixedPerformanceData.totalWrongAnswers} | 
-            totalUnattempted={fixedPerformanceData.unattempted} | 
-            totalQuestions={fixedPerformanceData.totalQuestions}
-          </div>
 
           {/* 1. Performance Summary */}
           <div className="bg-white rounded-lg shadow p-6">
@@ -659,9 +598,9 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
               </div>
               <div className="bg-purple-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Completion</div>
-                <div className="text-2xl font-bold">{fixedPerformanceData?.totalQuestions > 0 ? 
-                  ((fixedPerformanceData.totalCorrectAnswers + fixedPerformanceData.totalWrongAnswers) / 
-                    fixedPerformanceData.totalQuestions) * 100 : 0}%</div>
+                <div className="text-2xl font-bold">{performanceData?.totalQuestions > 0 ? 
+                  ((performanceData.totalCorrectAnswers + performanceData.totalWrongAnswers) / 
+                    performanceData.totalQuestions) * 100 : 0}%</div>
               </div>
               <div className="bg-amber-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Avg Time/Question</div>
@@ -676,25 +615,24 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-green-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Correct Answers</div>
-                <div className="text-3xl font-bold text-green-600">{fixedPerformanceData.totalCorrectAnswers}</div>
-                <div className="text-xs text-gray-500 mt-1">of {fixedPerformanceData.totalQuestions} questions</div>
+                <div className="text-3xl font-bold text-green-600">{performanceData.totalCorrectAnswers}</div>
+                <div className="text-xs text-gray-500 mt-1">of {performanceData.totalQuestions} questions</div>
               </div>
               <div className="bg-red-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Wrong Answers</div>
-                <div className="text-3xl font-bold text-red-600">{fixedPerformanceData.totalWrongAnswers}</div>
-                <div className="text-xs text-gray-500 mt-1">of {fixedPerformanceData.totalQuestions} questions</div>
+                <div className="text-3xl font-bold text-red-600">{performanceData.totalWrongAnswers}</div>
+                <div className="text-xs text-gray-500 mt-1">of {performanceData.totalQuestions} questions</div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg text-center">
                 <div className="text-sm text-gray-500">Unattempted</div>
-                <div className="text-3xl font-bold text-gray-600">{fixedPerformanceData.unattempted}</div>
-                <div className="text-xs text-gray-500 mt-1">of {fixedPerformanceData.totalQuestions} questions</div>
+                <div className="text-3xl font-bold text-gray-600">{performanceData.unattempted}</div>
+                <div className="text-xs text-gray-500 mt-1">of {performanceData.totalQuestions} questions</div>
               </div>
             </div>
           </div>
           
           {/* Performance Metrics Radar */}
           <div className="bg-white rounded-lg shadow p-6 mt-6">
-            <h2 className="text-xl font-bold mb-4">Performance Overview</h2>
           <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceScores}>
@@ -714,360 +652,14 @@ const PerformanceAnalysis: React.FC<PerformanceAnalysisProps> = ({ data }) => {
             </div>
           </div>
 
-          {/* Top Strengths and Weaknesses */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Your Strengths</h2>
-              <ul className="space-y-2">
-                {findTopSubjects().slice(0, 3).map((subject, index) => (
-                  <li key={index} className="flex items-center text-green-700">
-                    <span className="mr-2">✅</span>
-                    <span>{subject}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Areas for Improvement</h2>
-              <ul className="space-y-2">
-                {findWeakestSubjects().slice(0, 3).map((subject, index) => (
-                  <li key={index} className="flex items-center text-red-700">
-                    <span className="mr-2">⚠️</span>
-                    <span>{subject}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
         </>
       )}
 
-      {/* Detailed Performance View - Previously 'overall' */}
-      {selectedView === 'performance' && (
-        <>
-          {/* Debug information for answer counts */}
-          <div className="bg-yellow-100 text-xs p-2 mb-2">
-            Debug: totalCorrect={fixedPerformanceData.totalCorrectAnswers} | 
-            totalWrong={fixedPerformanceData.totalWrongAnswers} | 
-            totalAttempted={fixedPerformanceData.totalCorrectAnswers + fixedPerformanceData.totalWrongAnswers} | 
-            totalUnattempted={fixedPerformanceData.unattempted} | 
-            totalQuestions={fixedPerformanceData.totalQuestions}
-          </div>
+      {/* Simplified: Other views commented out for cleaner dashboard */}
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Detailed Performance Analysis</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-500">Total Questions</div>
-                <div className="text-2xl font-bold">{fixedPerformanceData.totalQuestions}</div>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-500">Attempted</div>
-                <div className="text-2xl font-bold">{fixedPerformanceData.totalCorrectAnswers + fixedPerformanceData.totalWrongAnswers}</div>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-500">Total Time</div>
-                <div className="text-2xl font-bold">{formatTime(normalizeTimeValue((data as any).timeAnalytics?.totalTimeSpent || 0))}</div>
-              </div>
-              <div className="bg-amber-50 p-4 rounded-lg text-center">
-                <div className="text-sm text-gray-500">Avg Score</div>
-                <div className="text-2xl font-bold">{(totalScore / fixedPerformanceData.totalQuestions).toFixed(1)}</div>
-              </div>
-            </div>
-          </div>
-          
-          {/* 2. Performance Metrics Visualization */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-            {/* Performance Breakdown Bar Chart */}
-            {renderPerformanceBreakdown()}
 
-            {/* Performance Scores Visualization */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Performance Metrics</h2>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceScores}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="name" />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                    <Radar
-                      name="Performance"
-                      dataKey="score"
-                      stroke="#8884d8"
-                      fill="#8884d8"
-                      fillOpacity={0.6}
-                    />
-                    <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-          
-          {/* Display marks distribution in Performance view */}
-          {renderMarksDistribution()}
-        </>
-      )}
 
-      {/* Subject Analysis View */}
-      {selectedView === 'subjects' && (
-        <>
-          {/* Subject-wise Performance Analysis */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Subject Performance</h2>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sortedSubjectData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="subject" />
-                  <YAxis yAxisId="left" label={{ value: 'Accuracy (%)', angle: -90, position: 'insideLeft' }} />
-                  <YAxis yAxisId="right" orientation="right" label={{ value: 'Questions', angle: 90, position: 'insideRight' }} />
-                  <Tooltip formatter={(value, name) => {
-                    if (name === 'accuracy') return `${Number(value).toFixed(1)}%`;
-                    if (name === 'avgTime') return formatTime(Number(value));
-                    return value;
-                  }} />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="accuracy" name="Accuracy %" fill="#8884d8" />
-                  <Bar yAxisId="right" dataKey="totalQuestions" name="Total Questions" fill="#82ca9d" />
-                  <Bar yAxisId="right" dataKey="attempted" name="Attempted" fill="#ffc658" />
-                  <Bar yAxisId="right" dataKey="correct" name="Correct" fill="#4ade80" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-            
-          {/* Subject Progression Radar Chart */}
-          <div className="bg-white rounded-lg shadow p-6 mt-6">
-            <h2 className="text-xl font-bold mb-4">Subject Performance Radar</h2>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="subject" />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} />
-                  <Radar name="Accuracy" dataKey="accuracy" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                  <Radar name="Completion" dataKey="completion" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
-                  <Radar name="Speed" dataKey="speed" stroke="#ffc658" fill="#ffc658" fillOpacity={0.6} />
-                  <Legend />
-                  <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>
-      )}
 
-      {/* Accuracy Progression View */}
-      {selectedView === 'accuracy' && (
-        <>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Accuracy Progression</h2>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={accuracyProgressionData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="question" tick={{fontSize: 12}} />
-                  <YAxis domain={[0, 100]} label={{ value: 'Cumulative Accuracy (%)', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip formatter={(value) => [`${Number(value).toFixed(1)}%`, 'Cumulative Accuracy']} />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="cumulativeAccuracy"
-                    stroke="#8884d8"
-                    activeDot={{ r: 8 }}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-4 text-sm text-gray-600">
-              This chart shows how your accuracy progressed as you answered questions in sequence. 
-              It highlights whether you improved or maintained consistent performance throughout the test.
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Speed Analysis View */}
-      {selectedView === 'speed' && (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Speed Analysis Line Chart */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Speed vs Accuracy Analysis</h2>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={speedData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis yAxisId="left" label={{ value: 'Time (seconds)', angle: -90, position: 'insideLeft' }} />
-                    <YAxis yAxisId="right" orientation="right" label={{ value: 'Accuracy (%)', angle: 90, position: 'insideRight' }} />
-                    <Tooltip formatter={(value, name) => {
-                      if (name === 'avgTimePerQuestion') return formatTime(Number(value));
-                      if (name === 'accuracy') return `${Number(value).toFixed(1)}%`;
-                      return value;
-                    }} />
-                    <Legend />
-                    <Line yAxisId="left" type="monotone" dataKey="avgTimePerQuestion" name="Avg Time per Question" stroke="#8884d8" />
-                    <Line yAxisId="right" type="monotone" dataKey="accuracy" name="Accuracy" stroke="#82ca9d" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Time Distribution Pie Chart */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">Time Distribution by Subject</h2>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={timeDistributionData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {timeDistributionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatTime(Number(value))} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-          {/* Performance vs Time Scatter Plot */}
-          <div className="bg-white rounded-lg shadow p-6 mt-6">
-            <h2 className="text-xl font-bold mb-4">Performance vs Time</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              This chart shows the relationship between time spent per question (x-axis) and accuracy (y-axis). 
-              The size of each bubble represents the number of questions in that subject.
-            </p>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                  <CartesianGrid />
-                  <XAxis 
-                    type="number" 
-                    dataKey="x" 
-                    name="Time per Question" 
-                    unit="s"
-                    label={{ value: 'Time per Question (s)', position: 'bottom' }} 
-                  />
-                  <YAxis 
-                    type="number" 
-                    dataKey="y" 
-                    name="Accuracy" 
-                    unit="%" 
-                    domain={[0, 100]}
-                    label={{ value: 'Accuracy (%)', angle: -90, position: 'insideLeft' }}
-                  />
-                  <ZAxis 
-                    type="number" 
-                    dataKey="z" 
-                    range={[60, 400]} 
-                    name="Total Questions" 
-                  />
-                  <Tooltip 
-                    cursor={{ strokeDasharray: '3 3' }}
-                    formatter={(value, name) => {
-                      if (name === 'Time per Question') return formatTime(Number(value));
-                      if (name === 'Accuracy') return `${Number(value).toFixed(1)}%`;
-                      return value;
-                    }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const accuracyValue = payload[1]?.value ? Number(payload[1].value).toFixed(1) : '0.0';
-                        return (
-                          <div className="bg-white p-2 border border-gray-200 shadow-sm">
-                            <p className="font-bold">{payload[0]?.payload?.name || 'Unknown'}</p>
-                            <p>{`Time: ${formatTime(Number(payload[0]?.value ?? 0))}`}</p>
-                            <p>{`Accuracy: ${accuracyValue}%`}</p>
-                            <p>{`Questions: ${payload[2]?.value ?? 0}`}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend />
-                  <Scatter 
-                    name="Subject Performance" 
-                    data={performanceVsTimeData} 
-                    fill="#8884d8" 
-                    shape="circle"
-                  />
-                </ScatterChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Marks Analysis View */}
-      {selectedView === 'marks' && (
-        <>
-          {renderMarksDistribution()}
-          
-          {/* Subject-wise Marks Distribution if available */}
-          {subjectData.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6 mt-6">
-              <h2 className="text-xl font-bold mb-4">Subject-wise Marks</h2>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={subjectData.map(subject => {
-                    const markingScheme = (data as any).testInfo?.markingScheme || {
-                      correct: 5,
-                      incorrect: 0,
-                      unattempted: 0
-                    };
-                    
-                    return {
-                      subject: subject.subject,
-                      correctMarks: subject.correct * markingScheme.correct,
-                      incorrectMarks: subject.attempted - subject.correct > 0 ? 
-                        (subject.attempted - subject.correct) * markingScheme.incorrect : 0,
-                      unattemptedMarks: (subject.totalQuestions - subject.attempted) * markingScheme.unattempted,
-                      totalMarks: (subject.correct * markingScheme.correct) +
-                        ((subject.attempted - subject.correct) * markingScheme.incorrect) +
-                        ((subject.totalQuestions - subject.attempted) * markingScheme.unattempted),
-                      maxPossibleMarks: subject.totalQuestions * markingScheme.correct
-                    };
-                  })}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="subject" />
-                    <YAxis 
-                      label={{ value: 'Marks', angle: -90, position: 'insideLeft' }} 
-                    />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="correctMarks" name="Correct" fill="#4ade80" />
-                    <Bar dataKey="incorrectMarks" name="Incorrect" fill="#f87171" />
-                    <Bar dataKey="unattemptedMarks" name="Unattempted" fill="#cbd5e1" />
-                    <Bar dataKey="maxPossibleMarks" name="Maximum Possible" fill="#94a3b8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="mt-4 text-sm text-gray-600">
-                This chart shows the marks distribution across different subjects based on the marking scheme.
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {renderAccuracyChart()}
     </div>
   );
 };
