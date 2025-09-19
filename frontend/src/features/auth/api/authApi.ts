@@ -26,7 +26,7 @@ const getCSRFToken = (): string | null => {
 const refreshCSRFToken = async (): Promise<string | null> => {
   try {
     const response = await fetch(`${API_BASE}/users/refresh-csrf`, {
-      method: 'POST',
+      method: 'GET',
       credentials: 'include',
     });
     
