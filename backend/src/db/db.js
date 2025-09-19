@@ -4,16 +4,23 @@ import { DB_NAME} from "../constants.js";
 const connectDB = async (retries = 5) => {
     const dbUri = process.env.DATABASE_ATLAS.replace("<DB_NAME>", DB_NAME);
     
+    // Log connection details (without sensitive info)
+    console.log(`🔗 Connecting to MongoDB Atlas...`);
+    console.log(`📊 Database: ${DB_NAME}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    
     for (let i = 0; i < retries; i++) {
         try {
-            console.log(`MongoDB connection attempt ${i + 1}/${retries}: ${dbUri}`);
+            console.log(`MongoDB connection attempt ${i + 1}/${retries}`);
             
             const connectionInstance = await mongoose.connect(dbUri, {
                 maxPoolSize: 10,
                 serverSelectionTimeoutMS: 5000,
                 socketTimeoutMS: 45000,
                 bufferCommands: false,
-                bufferMaxEntries: 0
+                // Modern MongoDB options
+                retryWrites: true,
+                w: 'majority'
             });
             
             console.log(`✅ MongoDB connected successfully! DB HOST: ${connectionInstance.connection.host}`);
