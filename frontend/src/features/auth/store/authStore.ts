@@ -514,6 +514,26 @@ export const useAuthStore = create<AuthState>()((set, get) => {
     try {
       authLogger.debug('Initializing auth', {}, 'AUTH');
       
+      // 🔥 GET CSRF TOKEN FIRST
+      try {
+        // Use same logic as authApi.ts to construct API base URL
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+        const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+        const apiBase = cleanBaseUrl.endsWith('/v1') ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
+        
+        const response = await fetch(`${apiBase}/users/refresh-csrf`, {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          authLogger.debug('CSRF token obtained successfully', {}, 'CSRF');
+        } else {
+          authLogger.warn('CSRF token request failed', { status: response.status }, 'CSRF');
+        }
+      } catch (error: any) {
+        authLogger.warn('Failed to get initial CSRF token', { error: error.message }, 'CSRF');
+      }
+      
       // Check cached user first for instant UI rehydration
       const cachedUser = getUserFromStorage();
       if (cachedUser) {
