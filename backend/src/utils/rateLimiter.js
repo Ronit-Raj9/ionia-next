@@ -23,6 +23,11 @@ class RateLimiter {
    * @returns {object} - { allowed: boolean, retryAfter?: number }
    */
   checkRateLimit(identifier, type = 'login', accountIdentifier = null) {
+    // DEVELOPMENT MODE: Disable rate limiting
+    if (process.env.NODE_ENV === 'development') {
+      return { allowed: true };
+    }
+    
     const now = Date.now();
     const limits = this.getLimitsForType(type);
     
