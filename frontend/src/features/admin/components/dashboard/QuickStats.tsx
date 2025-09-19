@@ -11,6 +11,7 @@ import {
   ArrowRightIcon
 } from "@heroicons/react/24/outline";
 import { useAdminStore } from '../../store/adminStore';
+import { useAnalyticsCache } from '../../hooks/useAnalyticsCache';
 
 interface QuickStatItem {
   name: string;
@@ -26,6 +27,7 @@ interface QuickStatsProps {
 
 const QuickStats: React.FC<QuickStatsProps> = ({ className = '' }) => {
   const { analytics, loading } = useAdminStore();
+  const { hasCachedData } = useAnalyticsCache();
   
   const formatValue = (value: number | undefined): string => {
     if (value === undefined || value === null) return '0';

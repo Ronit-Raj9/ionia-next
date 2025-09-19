@@ -16,6 +16,7 @@ import {
   ArrowTrendingUpIcon
 } from "@heroicons/react/24/outline";
 import { useAdminStore } from '../../store/adminStore';
+import { useAnalyticsCache } from '../../hooks/useAnalyticsCache';
 
 interface AdminDashboardProps {
   className?: string;
@@ -106,9 +107,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ className = '' }) => {
     fetchAdminAnalytics 
   } = useAdminStore();
 
+  // Use cache hook for smart data management
+  const { 
+    hasCachedData, 
+    shouldRefresh,
+    getCacheInfo
+  } = useAnalyticsCache();
+
   useEffect(() => {
-    fetchAdminAnalytics();
-  }, [fetchAdminAnalytics]);
+    // Only fetch if we don't have cached data or it's stale
+    if (!hasCachedData || shouldRefresh) {
+      console.log('📊 Admin Dashboard: Fetching data - cache status:', getCacheInfo());
+      fetchAdminAnalytics();
+    } else {
+      console.log('📊 Admin Dashboard: Using cached data - cache status:', getCacheInfo());
+    }
+  }, []); // Empty dependency array - only run once on mount
 
   const isLoading = loading.has('analytics');
   const hasError = error.analytics;
