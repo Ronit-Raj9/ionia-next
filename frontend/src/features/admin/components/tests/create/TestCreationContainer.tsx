@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { useAdminStore } from '../../../store/adminStore';
@@ -382,8 +382,8 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
     }
   };
 
-  // Handle Input Changes
-  const handleDetailChange = (field: keyof TestDetails, value: any) => {
+  // Handle Input Changes - Memoized for better performance
+  const handleDetailChange = useCallback((field: keyof TestDetails, value: any) => {
      if (value === 'placeholder') {
         value = '';
      }
@@ -403,9 +403,9 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
      } else {
          setTestDetails(prev => ({ ...prev, [field]: value }));
      }
-  };
+  }, []);
 
-  const handleNestedDetailChange = (parentField: keyof TestDetails, childField: string, value: any) => {
+  const handleNestedDetailChange = useCallback((parentField: keyof TestDetails, childField: string, value: any) => {
     setTestDetails(prev => ({
       ...prev,
       [parentField]: {
@@ -413,38 +413,40 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
         [childField]: value === '' ? undefined : value,
       }
     }));
-  };
+  }, []);
 
-  // Handle Question Selection
-  const handleQuestionSelect = (questionId: string) => {
+  // Handle Question Selection - Memoized for better performance
+  const handleQuestionSelect = useCallback((questionId: string) => {
     setSelectedQuestions(prev => 
       prev.includes(questionId) 
         ? prev.filter(id => id !== questionId)
         : [...prev, questionId]
     );
-  };
+  }, []);
 
-  // Handle Toggle Expand
-  const handleToggleExpand = (questionId: string) => {
-    const newExpandedQuestions = new Set(expandedQuestions);
-    if (newExpandedQuestions.has(questionId)) {
-      newExpandedQuestions.delete(questionId);
-    } else {
-      newExpandedQuestions.add(questionId);
-    }
-    setExpandedQuestions(newExpandedQuestions);
-  };
+  // Handle Toggle Expand - Memoized for better performance
+  const handleToggleExpand = useCallback((questionId: string) => {
+    setExpandedQuestions(prev => {
+      const newExpandedQuestions = new Set(prev);
+      if (newExpandedQuestions.has(questionId)) {
+        newExpandedQuestions.delete(questionId);
+      } else {
+        newExpandedQuestions.add(questionId);
+      }
+      return newExpandedQuestions;
+    });
+  }, []);
 
-  // Handle Expand/Collapse All
-  const handleExpandAll = () => {
+  // Handle Expand/Collapse All - Memoized for better performance
+  const handleExpandAll = useCallback(() => {
     const newExpandedSet = new Set<string>();
     filteredQuestions.forEach(q => newExpandedSet.add(q._id));
     setExpandedQuestions(newExpandedSet);
-  };
+  }, [filteredQuestions]);
 
-  const handleCollapseAll = () => {
+  const handleCollapseAll = useCallback(() => {
     setExpandedQuestions(new Set());
-  };
+  }, []);
 
   // Handle Create Test Submission
   const handleCreateTest = async () => {
@@ -474,18 +476,19 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
     setError("");
 
     try {
-      // Map solutionsVisibility from TestDetails format to CreateTestData format
-      const mapSolutionsVisibility = (visibility: string): 'always' | 'after_completion' | 'never' => {
+      // Map solutionsVisibility from TestDetails format to backend format
+      const mapSolutionsVisibility = (visibility: string): 'immediate' | 'after_submission' | 'after_deadline' | 'manual' => {
         switch (visibility) {
           case 'immediate':
-            return 'always';
+            return 'immediate';
           case 'after_submission':
+            return 'after_submission';
           case 'after_deadline':
-            return 'after_completion';
+            return 'after_deadline';
           case 'manual':
-            return 'never';
+            return 'manual';
           default:
-            return 'after_completion';
+            return 'after_submission';
         }
       };
 
@@ -522,7 +525,7 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
         isPremium: testDetails.testCategory === 'Platform' ? !!testDetails.isPremium : undefined,
         description: testDetails.description || undefined,
         instructions: testDetails.instructions || undefined,
-        syllabus: testDetails.syllabus ? [testDetails.syllabus] : undefined,
+        syllabus: testDetails.syllabus || undefined,
         session: testDetails.session || undefined,
       };
       
@@ -539,7 +542,7 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
         delete payload.syllabus;
       }
 
-      await createTest(payload);
+      await createTest(payload as any);
       toast.success("Test created successfully!");
       router.push("/admin/tests");
     } catch (err: any) {
@@ -551,8 +554,8 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
     }
   };
 
-  // Reset all filters
-  const handleResetFilters = () => {
+  // Reset all filters - Memoized for better performance
+  const handleResetFilters = useCallback(() => {
     setCurrentPage(1);
     setFilters({ 
       examType: [], 
@@ -572,17 +575,17 @@ const TestCreationContainer: React.FC<TestCreationContainerProps> = ({ children 
       class: [],
       searchTerm: "" 
     });
-  };
+  }, []);
 
-  // Handle showing more questions
-  const handleShowMore = () => {
+  // Handle showing more questions - Memoized for better performance
+  const handleShowMore = useCallback(() => {
     setQuestionsPerPage(prevValue => prevValue + 30);
-  };
+  }, []);
 
-  // Retry loading questions
-  const retryLoadQuestions = () => {
+  // Retry loading questions - Memoized for better performance
+  const retryLoadQuestions = useCallback(() => {
     loadQuestions();
-  };
+  }, []);
 
   const contextProps: TestCreationContextProps = {
     testDetails,
