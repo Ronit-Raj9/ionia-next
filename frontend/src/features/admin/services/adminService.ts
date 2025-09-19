@@ -52,7 +52,7 @@ export class AdminService {
     console.log('📊 Analytics: Fetching fresh data from API');
     
     // Create the request promise and store it
-    analyticsRequestPromise = this.fetchAnalyticsFromAPI();
+    analyticsRequestPromise = AdminService.fetchAnalyticsFromAPI();
     
     try {
       const result = await analyticsRequestPromise;
