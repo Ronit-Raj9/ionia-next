@@ -34,35 +34,38 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
     usersPagination,
     loading,
     error,
+    currentFilters,
     fetchUsers,
     updateUserRole,
+    goToNextPage,
+    goToPreviousPage,
+    goToPage,
+    setFilters,
     clearError
   } = useUserManagementStore();
-
-  const [filters, setFilters] = useState<UserFilters>({
-    search: '',
-    role: '',
-    status: ''
-  });
 
   const [showFilters, setShowFilters] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  // Load users on component mount
   useEffect(() => {
-    loadUsers();
-  }, [filters]);
+    fetchUsers();
+  }, []);
 
-  const loadUsers = () => {
-    const queryParams = new URLSearchParams();
-    
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        queryParams.append(key, value);
-      }
+  // Update filters in store when local filters change
+  const updateFilter = (key: keyof UserFilters, value: string) => {
+    setFilters({
+      [key]: value
     });
+  };
 
-    fetchUsers(queryParams.toString());
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      role: '',
+      status: ''
+    });
   };
 
   const handleRoleUpdate = async (userId: string, newRole: 'user' | 'admin') => {
@@ -75,17 +78,6 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
     }
   };
 
-  const updateFilter = (key: keyof UserFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      search: '',
-      role: '',
-      status: ''
-    });
-  };
 
   const getRoleColor = (role: string) => {
     switch (role.toLowerCase()) {
@@ -124,7 +116,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
     return (
       <ErrorMessage 
         message={hasError}
-        onRetry={loadUsers}
+        onRetry={() => fetchUsers()}
       />
     );
   }
@@ -140,7 +132,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
               <input
                 type="text"
                 placeholder="Search users..."
-                value={filters.search}
+                value={currentFilters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -170,7 +162,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
                   Role
                 </label>
                 <select
-                  value={filters.role}
+                  value={currentFilters.role}
                   onChange={(e) => updateFilter('role', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -186,7 +178,7 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
                   Status
                 </label>
                 <select
-                  value={filters.status}
+                  value={currentFilters.status}
                   onChange={(e) => updateFilter('status', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -326,19 +318,58 @@ const UserList: React.FC<UserListProps> = ({ className = '' }) => {
               {usersPagination.totalDocs} results
             </div>
             
-            <div className="flex space-x-2">
-              <button
-                disabled={!usersPagination.hasPrevPage}
-                className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                disabled={!usersPagination.hasNextPage}
-                className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50"
-              >
-                Next
-              </button>
+            <div className="flex items-center space-x-4">
+              {/* Page Numbers */}
+              <div className="flex space-x-1">
+                {Array.from({ length: Math.min(5, usersPagination.totalPages) }, (_, i) => {
+                  const page = i + 1;
+                  const isCurrentPage = page === usersPagination.page;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      disabled={isCurrentPage || loading.has('users')}
+                      className={`px-3 py-1 text-sm border rounded ${
+                        isCurrentPage
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'border-gray-300 hover:bg-gray-50 disabled:opacity-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                {usersPagination.totalPages > 5 && (
+                  <>
+                    <span className="px-2 py-1 text-sm text-gray-500">...</span>
+                    <button
+                      onClick={() => goToPage(usersPagination.totalPages)}
+                      disabled={loading.has('users')}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      {usersPagination.totalPages}
+                    </button>
+                  </>
+                )}
+              </div>
+              
+              {/* Navigation Buttons */}
+              <div className="flex space-x-2">
+                <button
+                  onClick={goToPreviousPage}
+                  disabled={!usersPagination.hasPrevPage || loading.has('users')}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading.has('users') ? 'Loading...' : 'Previous'}
+                </button>
+                <button
+                  onClick={goToNextPage}
+                  disabled={!usersPagination.hasNextPage || loading.has('users')}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading.has('users') ? 'Loading...' : 'Next'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
