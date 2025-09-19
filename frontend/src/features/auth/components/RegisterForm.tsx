@@ -110,58 +110,23 @@ export default function RegisterForm() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Animated background elements */}
+      {/* Subtle background elements */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <motion.div 
-          className="absolute left-[-150px] top-[-100px] w-[450px] h-[450px] bg-blue-200 opacity-20 rounded-full blur-3xl"
-          animate={{ 
-            x: [0, 40, 0],
-            y: [0, -30, 0],
-            scale: [1, 1.2, 1]
-          }}
-          transition={{ 
-            duration: 22,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div 
-          className="absolute right-[-100px] bottom-[-200px] w-[550px] h-[550px] bg-purple-200 opacity-15 rounded-full blur-3xl"
-          animate={{ 
-            x: [0, -50, 0],
-            y: [0, 40, 0],
-            scale: [1, 1.3, 1]
-          }}
-          transition={{ 
-            duration: 28,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div 
-          className="absolute top-1/3 right-1/4 w-[250px] h-[250px] bg-gradient-to-br from-cyan-300 to-teal-300 opacity-12 rounded-full blur-2xl"
-          animate={{ 
-            rotate: [0, -360],
-            scale: [1, 1.4, 1]
-          }}
-          transition={{ 
-            duration: 35,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-        />
+        <div className="absolute left-[-100px] top-[-150px] w-[400px] h-[400px] bg-emerald-100 opacity-30 rounded-full blur-3xl" />
+        <div className="absolute right-[-120px] bottom-[-150px] w-[500px] h-[500px] bg-purple-100 opacity-20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-[200px] h-[200px] bg-rose-100 opacity-15 rounded-full blur-2xl" />
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+        initial={{ opacity: 0, y: 40, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ 
-          duration: 0.7,
+          duration: 0.6,
           ease: "easeOut",
           type: "spring",
-          stiffness: 80
+          stiffness: 100
         }}
-        className="relative max-w-md w-full space-y-6 bg-white/85 dark:bg-gray-800/85 backdrop-blur-xl border border-white/50 dark:border-gray-700/50 rounded-2xl shadow-2xl shadow-black/10 p-8 md:p-10"
+        className="relative max-w-md w-full space-y-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl shadow-black/10 p-8 md:p-10"
       >
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -173,7 +138,7 @@ export default function RegisterForm() {
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20"
+            className="mx-auto w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20"
           >
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -193,7 +158,7 @@ export default function RegisterForm() {
             <span className="text-gray-500 dark:text-gray-400">Already have an account?</span>
             <Link
               href="/login"
-              className="font-semibold text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-300"
+              className="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-300"
             >
               Sign in
             </Link>
@@ -272,14 +237,14 @@ export default function RegisterForm() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineUser className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                  <HiOutlineUser className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
                 </div>
                 <input
                   id="fullName"
                   name="fullName"
                   type="text"
                   required
-                  className="block w-full pl-10 pr-3 py-3.5 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
                   placeholder="Enter your full name"
                   value={formData.fullName || ''}
                   onChange={handleChange}
@@ -299,19 +264,19 @@ export default function RegisterForm() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineUser className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                  <HiOutlineUser className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
                 </div>
                 <input
                   id="username"
                   name="username"
                   type="text"
                   required
-                  className={`block w-full pl-10 pr-12 py-3.5 border rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                  className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
                     formData.username && isUsernameAvailable === true
                       ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/40'
                       : formData.username && isUsernameAvailable === false
                       ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40'
-                      : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500/20 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      : 'border-gray-300 dark:border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20 bg-white dark:bg-gray-800'
                   } placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white`}
                   placeholder="Choose a unique username"
                   value={formData.username || ''}
@@ -383,7 +348,7 @@ export default function RegisterForm() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineMail className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                  <HiOutlineMail className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
                 </div>
                 <input
                   id="email"
@@ -391,10 +356,10 @@ export default function RegisterForm() {
                   type="email"
                   autoComplete="email"
                   required
-                  className={`block w-full pl-10 pr-3 py-3.5 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                  className={`block w-full pl-10 pr-3 py-3 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
                     validation.errors.length > 0 && isTouched
                       ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500/20 focus:border-blue-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500/20 focus:border-emerald-500'
                   }`}
                   placeholder="Enter your email address"
                   value={formData.email || ''}
@@ -419,7 +384,7 @@ export default function RegisterForm() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineLockClosed className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                  <HiOutlineLockClosed className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
                 </div>
                 <input
                   id="password"
@@ -427,10 +392,10 @@ export default function RegisterForm() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className={`block w-full pl-10 pr-12 py-3.5 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                  className={`block w-full pl-10 pr-12 py-3 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
                     validation.errors.length > 0 && isTouched
                       ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500/20 focus:border-blue-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500/20 focus:border-emerald-500'
                   }`}
                   placeholder="Create a strong password"
                   value={formData.password || ''}
@@ -464,7 +429,7 @@ export default function RegisterForm() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineLockClosed className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-200" />
+                  <HiOutlineLockClosed className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
                 </div>
                 <input
                   id="confirm-password"
@@ -472,10 +437,10 @@ export default function RegisterForm() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  className={`block w-full pl-10 pr-12 py-3.5 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                  className={`block w-full pl-10 pr-12 py-3 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
                     validation.errors.length > 0 && isTouched
                       ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500/20 focus:border-blue-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500/20 focus:border-emerald-500'
                   }`}
                   placeholder="Confirm your password"
                   value={formData.confirmPassword || ''}
@@ -510,7 +475,7 @@ export default function RegisterForm() {
                 checked={formData.acceptTerms || false}
                 onChange={handleChange}
                 onBlur={() => setTouched('acceptTerms')}
-                className={`mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 border-gray-300 rounded transition-colors ${
+                className={`mt-1 h-4 w-4 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 border-gray-300 rounded transition-colors ${
                   validation.errors.length > 0 && isTouched
                     ? 'border-red-500 focus:ring-red-500'
                     : ''
@@ -521,11 +486,11 @@ export default function RegisterForm() {
               )}
               <label htmlFor="acceptTerms" className="text-sm text-gray-600 dark:text-gray-400 leading-5">
                 I agree to the{' '}
-                <Link href="/terms" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-300">
+                <Link href="/terms" className="font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-300">
                   Terms of Service
                 </Link>{' '}
                 and{' '}
-                <Link href="/privacy" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-300">
+                <Link href="/privacy" className="font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-300">
                   Privacy Policy
                 </Link>
               </label>
@@ -542,10 +507,10 @@ export default function RegisterForm() {
               disabled={isLoading || !isFormValid}
               whileHover={(!isLoading && isFormValid) ? { scale: 1.02 } : {}}
               whileTap={(!isLoading && isFormValid) ? { scale: 0.98 } : {}}
-              className={`group relative w-full flex justify-center items-center py-3.5 px-6 border-0 text-sm font-semibold rounded-xl text-white transition-all duration-300 ${
+              className={`group relative w-full flex justify-center items-center py-3 px-6 border-0 text-sm font-semibold rounded-lg text-white transition-all duration-300 ${
                 (isLoading || !isFormValid)
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-2 shadow-lg hover:shadow-xl'
+                  : 'bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:ring-offset-2 shadow-lg hover:shadow-xl'
               }`}
             >
               {isLoading ? (
@@ -593,10 +558,10 @@ export default function RegisterForm() {
           className="text-center space-y-4"
         >
           <div className="flex items-center justify-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-            <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
-            <span>Your data is protected with end-to-end encryption</span>
+            <span>Secured with industry-standard encryption</span>
           </div>
 
         </motion.div>
