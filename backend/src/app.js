@@ -17,109 +17,49 @@ const app = express();
 // ✅ Initialize Security Systems
 Logger.info("Initializing authentication security systems...");
 
-// Validate environment configuration
-const validateProductionConfig = () => {
-  const required = [
-    'ACCESS_TOKEN_SECRET',
-    'REFRESH_TOKEN_SECRET',
-    'JWT_SECRET',
-    'DATABASE_ATLAS',
-    'CLOUDINARY_CLOUD_NAME',
-    'CLOUDINARY_API_KEY',
-    'CLOUDINARY_API_SECRET',
-    'FRONTEND_URL',
-    'COOKIE_DOMAIN',
-    'HTTPS_ENABLED',
-    'PORT'
+// ✅ Consolidated Environment Validation
+const validateEnvironmentConfig = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const environment = process.env.NODE_ENV || 'development';
+  
+  // Define required variables based on environment
+  const baseRequired = [
+    'ACCESS_TOKEN_SECRET', 'REFRESH_TOKEN_SECRET', 'JWT_SECRET',
+    'DATABASE_ATLAS', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+    'FRONTEND_URL', 'COOKIE_DOMAIN', 'HTTPS_ENABLED', 'PORT'
   ];
   
-  // PRODUCTION FIX: Add optional but recommended variables
-  const recommended = [
-    'NODE_ENV',
-    'SESSION_SECRET',
-    'ENCRYPTION_KEY'
-  ];
+  const productionRequired = ['NODE_ENV', 'HTTPS_ENABLED', 'COOKIE_DOMAIN', 'FRONTEND_URL'];
+  const recommended = ['NODE_ENV', 'SESSION_SECRET', 'ENCRYPTION_KEY'];
   
-  // Add production-specific validation
-  if (process.env.NODE_ENV === 'production') {
-    const productionRequired = [
-      'NODE_ENV',
-      'HTTPS_ENABLED',
-      'COOKIE_DOMAIN',
-      'FRONTEND_URL'
-    ];
-    
-    const missing = [...required, ...productionRequired].filter(key => !process.env[key]);
-    
-    if (missing.length > 0) {
-      Logger.error('Missing required environment variables for production', { 
-        missing,
-        environment: process.env.NODE_ENV
-      });
-      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-    }
-  } else {
-    const missing = required.filter(key => !process.env[key]);
-    
-    if (missing.length > 0) {
-      Logger.error('Missing required environment variables', { 
-        missing,
-        environment: process.env.NODE_ENV || 'development'
-      });
-      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-    }
+  const required = isProduction ? [...baseRequired, ...productionRequired] : baseRequired;
+  
+  // Check missing required variables
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    Logger.error(`Missing required environment variables for ${environment}`, { missing, environment });
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
   
-  // PRODUCTION FIX: Warn about missing recommended variables
+  // Warn about missing recommended variables
   const missingRecommended = recommended.filter(key => !process.env[key]);
   if (missingRecommended.length > 0) {
-    Logger.warn('Missing recommended environment variables', { 
-      missing: missingRecommended,
-      environment: process.env.NODE_ENV || 'development'
-    });
+    Logger.warn('Missing recommended environment variables', { missing: missingRecommended, environment });
   }
   
   // Validate specific values
   const validations = [
-    {
-      key: 'ACCESS_TOKEN_SECRET',
-      condition: process.env.ACCESS_TOKEN_SECRET && process.env.ACCESS_TOKEN_SECRET.length >= 32,
-      message: 'ACCESS_TOKEN_SECRET must be at least 32 characters'
-    },
-    {
-      key: 'REFRESH_TOKEN_SECRET', 
-      condition: process.env.REFRESH_TOKEN_SECRET && process.env.REFRESH_TOKEN_SECRET.length >= 32,
-      message: 'REFRESH_TOKEN_SECRET must be at least 32 characters'
-    },
-    {
-      key: 'PORT',
-      condition: !isNaN(parseInt(process.env.PORT)) && parseInt(process.env.PORT) > 0,
-      message: 'PORT must be a valid positive number'
-    },
-    {
-      key: 'HTTPS_ENABLED',
-      condition: ['true', 'false'].includes(process.env.HTTPS_ENABLED),
-      message: 'HTTPS_ENABLED must be "true" or "false"'
-    },
-    {
-      key: 'SESSION_SECRET',
-      condition: !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length >= 32,
-      message: 'SESSION_SECRET must be at least 32 characters (recommended)'
-    },
-    {
-      key: 'ENCRYPTION_KEY',
-      condition: !process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length >= 32,
-      message: 'ENCRYPTION_KEY must be at least 32 characters (recommended)'
-    }
+    { key: 'ACCESS_TOKEN_SECRET', condition: process.env.ACCESS_TOKEN_SECRET?.length >= 32, message: 'ACCESS_TOKEN_SECRET must be at least 32 characters' },
+    { key: 'REFRESH_TOKEN_SECRET', condition: process.env.REFRESH_TOKEN_SECRET?.length >= 32, message: 'REFRESH_TOKEN_SECRET must be at least 32 characters' },
+    { key: 'PORT', condition: !isNaN(parseInt(process.env.PORT)) && parseInt(process.env.PORT) > 0, message: 'PORT must be a valid positive number' },
+    { key: 'HTTPS_ENABLED', condition: ['true', 'false'].includes(process.env.HTTPS_ENABLED), message: 'HTTPS_ENABLED must be "true" or "false"' },
+    { key: 'SESSION_SECRET', condition: !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length >= 32, message: 'SESSION_SECRET must be at least 32 characters (recommended)' },
+    { key: 'ENCRYPTION_KEY', condition: !process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length >= 32, message: 'ENCRYPTION_KEY must be at least 32 characters (recommended)' }
   ];
   
   for (const validation of validations) {
     if (!validation.condition) {
-      Logger.error('Invalid environment variable', { 
-        key: validation.key,
-        value: process.env[validation.key],
-        message: validation.message
-      });
+      Logger.error('Invalid environment variable', { key: validation.key, value: process.env[validation.key], message: validation.message });
       throw new Error(validation.message);
     }
   }
@@ -128,9 +68,9 @@ const validateProductionConfig = () => {
   return true;
 };
 
-// Validate production configuration
+// Validate environment configuration
 try {
-  validateProductionConfig();
+  validateEnvironmentConfig();
 } catch (error) {
   Logger.error('Environment validation failed', { error: error.message });
   process.exit(1);
@@ -156,10 +96,32 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "'unsafe-eval'",
+        "https://www.googletagmanager.com",
+        "https://www.google-analytics.com"
+      ],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
+      imgSrc: [
+        "'self'", 
+        "data:", 
+        "https:",
+        "https://www.google-analytics.com",
+        "https://www.googletagmanager.com"
+      ],
+      connectSrc: [
+        "'self'",
+        "https://www.google-analytics.com",
+        "https://analytics.google.com",
+        "https://apii.ionia.sbs",
+        "https://www.ionia.sbs",
+        "http://localhost:*",
+        "https://localhost:*",
+        "http://127.0.0.1:*",
+        "https://127.0.0.1:*"
+      ],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -205,41 +167,24 @@ app.use(validateRequestSize('50mb')); // Increase for file uploads and large que
 // 6. Content type validation (allow multipart for file uploads)
 app.use(validateContentType(['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded']));
 
-// Add a pre-flight handler that responds to all OPTIONS requests
-app.options('*', (req, res) => {
-  // Accept any origin that sends a request
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, access-control-allow-credentials, Access-Control-Allow-Credentials');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
-});
+// Note: OPTIONS handler removed - handled by CORS middleware below
 
-// ✅ Define Allowed Origins - using environment variables for production
-const getAllowedOrigins = () => {
-  const baseOrigins = [
-    'http://localhost:3000',
-    'http://localhost:3001', 
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
-  ];
-  
-  // Add production origins from environment variables
-  const productionOrigins = [
-    process.env.FRONTEND_URL,
-    process.env.ADMIN_URL,
-    process.env.API_URL
-  ].filter(Boolean);
-  
-  return [...baseOrigins, ...productionOrigins];
-};
-
+// ✅ Consolidated Origin Validation
 const isOriginAllowed = (origin) => {
   // Allow requests with no origin (like mobile apps or curl requests)
   if (!origin) return true;
   
-  // Get allowed origins from environment
-  const allowedOrigins = getAllowedOrigins();
+  // Define allowed origins
+  const baseOrigins = [
+    'http://localhost:3000', 'http://localhost:3001', 
+    'http://127.0.0.1:3000', 'http://127.0.0.1:3001'
+  ];
+  
+  const productionOrigins = [
+    process.env.FRONTEND_URL, process.env.ADMIN_URL, process.env.API_URL
+  ].filter(Boolean);
+  
+  const allowedOrigins = [...baseOrigins, ...productionOrigins];
   
   // Check exact matches first
   if (allowedOrigins.includes(origin)) return true;
@@ -250,22 +195,16 @@ const isOriginAllowed = (origin) => {
   // Allow all localhost origins
   if (origin.match(/https?:\/\/localhost(:\d+)?$/)) return true;
   
-  // Allow specific IP addresses (remove hardcoded IPs in production)
+  // Allow specific IP addresses (development only)
   if (process.env.NODE_ENV === 'development') {
-    const allowedIPs = [
-      'http://3.110.43.68',
-      'http://3.110.43.68/',
-      'https://3.110.43.68',
-      'https://3.110.43.68/'
-    ];
+    const allowedIPs = ['http://3.110.43.68', 'http://3.110.43.68/', 'https://3.110.43.68', 'https://3.110.43.68/'];
     if (allowedIPs.includes(origin)) return true;
   }
   
-  // Reject all other origins
   return false;
 };
 
-// ✅ Setup CORS Middleware with maximum flexibility
+// ✅ Consolidated CORS Middleware with Security Headers
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -280,46 +219,15 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Cookie", "access-control-allow-credentials", "Access-Control-Allow-Credentials"],
+    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Cookie", "access-control-allow-credentials", "Access-Control-Allow-Credentials", "X-CSRF-Token", "x-csrf-token"],
     exposedHeaders: ["Set-Cookie", "Authorization", "X-Request-ID"]
   })
 );
 
-// ✅ Enhanced Security and CORS Headers for all responses
+// ✅ Additional Security Headers (complementing Helmet)
 app.use((req, res, next) => {
-  // Set the origin based on the request's origin header
-  const origin = req.headers.origin;
-  if (origin && isOriginAllowed(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  
-  // Always set these headers for every response
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, access-control-allow-credentials, Access-Control-Allow-Credentials');
-  
-  // Enhanced Security Headers
-  res.header('X-Content-Type-Options', 'nosniff');
-  res.header('X-Frame-Options', 'DENY');
-  res.header('X-XSS-Protection', '1; mode=block');
-  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Additional security headers not covered by Helmet
   res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  
-  // Add CSP header with enhanced security
-  const cspPolicy = [
-    "default-src 'self'",
-    "connect-src 'self' http://3.110.43.68/ https://ionia.sbs https://www.ionia.sbs https://api.ionia.sbs http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "img-src 'self' data: blob: https: http: https://res.cloudinary.com",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'"
-  ].join('; ');
-  
-  res.header('Content-Security-Policy', cspPolicy);
-  
   next();
 });
 
@@ -327,15 +235,26 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static("public"));
 
+// ✅ Consolidated Middleware for File Upload Routes
+const isFileUploadRoute = (req) => {
+  return req.originalUrl.includes('/questions/upload') || 
+         (req.originalUrl.includes('/questions') && req.method === 'PATCH' && req.originalUrl.match(/\/questions\/[^\/]+$/));
+};
+
 // ✅ Input Sanitization (skip for multipart uploads)
 app.use((req, res, next) => {
-  // Skip sanitization for file upload routes to avoid processing multipart data
-  if (req.originalUrl.includes('/questions/upload') || 
-      req.originalUrl.includes('/questions') && req.method === 'PATCH' && req.originalUrl.match(/\/questions\/[^\/]+$/)) {
+  if (isFileUploadRoute(req)) {
     return next();
   }
-  // Apply sanitization for other requests
   sanitizeInput(req, res, next);
+});
+
+// ✅ JSON Parsing Middleware (skip for multipart uploads)
+app.use((req, res, next) => {
+  if (isFileUploadRoute(req)) {
+    return next();
+  }
+  express.json({ limit: "50mb" })(req, res, next);
 });
 
 // ✅ Request Completion Logging
@@ -387,17 +306,6 @@ app.get('/api/security/status', (req, res) => {
       }
     });
   }
-});
-
-// ✅ Apply JSON parsing middleware, but skip for multipart upload routes
-app.use((req, res, next) => {
-  // Skip JSON parsing for specific file upload endpoints
-  if (req.originalUrl.includes('/questions/upload') || 
-      req.originalUrl.includes('/questions') && req.method === 'PATCH' && req.originalUrl.match(/\/questions\/[^\/]+$/)) {
-    return next();
-  }
-  // Apply JSON parsing for other requests
-  express.json({ limit: "50mb" })(req, res, next);
 });
 
 // ✅ Routes Declaration
