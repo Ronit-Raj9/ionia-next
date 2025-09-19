@@ -2,13 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AnalysisWindow from '@/components/analysis/AnalysisWindow';
+import AnalysisWindow from '@/features/analysis/components/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
-import { Provider } from 'react-redux';
-import { store } from '@/redux/store';
-import { setAnalysisData, setLoading } from '@/redux/slices/analysisSlice';
-import { AnalysisProvider } from '@/context/AnalysisContext';
-
+import { useAnalysisStore } from '@/features/analysis/store/analysisStore';
 interface AnalysisClientComponentProps {
   examType: string;
   paperId: string;
@@ -23,7 +19,7 @@ export default function AnalysisClientComponent({ examType, paperId }: AnalysisC
     // Initialize analysis data
     const initializeAnalysis = async () => {
       try {
-        // Simulate loading time to allow Redux to initialize
+        // Simulate loading time to allow stores to initialize
         setTimeout(() => {
           setIsLoading(false);
         }, 500);
@@ -74,10 +70,6 @@ export default function AnalysisClientComponent({ examType, paperId }: AnalysisC
   }
 
   return (
-    <Provider store={store}>
-      <AnalysisProvider>
-        <AnalysisWindow examType={examType} paperId={paperId} />
-      </AnalysisProvider>
-    </Provider>
+    <AnalysisWindow examType={examType} paperId={paperId} />
   );
 } 

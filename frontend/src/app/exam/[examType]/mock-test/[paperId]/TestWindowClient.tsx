@@ -3,10 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import TestWindow from '@/components/test/TestWindow';
+import TestWindow from '@/features/tests/components/TestWindow';
 import { ClipLoader } from 'react-spinners';
-import { Provider } from 'react-redux';
-import { store } from '@/redux/store';
 
 interface TestWindowClientProps {
   examType: string;
@@ -73,8 +71,8 @@ export default function TestWindowClient({ examType, paperId }: TestWindowClient
   }
 
   return (
-    <Provider store={store}>
+    
       <TestWindow examType={examType} paperId={paperId} />
-    </Provider>
+    
   );
 } 

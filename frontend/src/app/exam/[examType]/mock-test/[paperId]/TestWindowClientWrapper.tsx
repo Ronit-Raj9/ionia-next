@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Provider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
-import { store, persistor } from '@/redux/store';
-import TestWindow from '@/components/test/TestWindow';
+
+import TestWindow from '@/features/tests/components/TestWindow';
 import { ClipLoader } from 'react-spinners';
 import { checkEnvironment } from '@/utils/environmentCheck';
 
@@ -76,10 +74,10 @@ export default function TestWindowClientWrapper({
   }
 
   return (
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
+    
+      
         <TestWindow examType={examType} paperId={paperId} />
-      </PersistGate>
-    </Provider>
+      
+    
   );
 } 

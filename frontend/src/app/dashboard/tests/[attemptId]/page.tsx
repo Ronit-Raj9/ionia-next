@@ -1,10 +1,7 @@
 "use client";
 
 import React from 'react';
-import AnalysisWindow from '@/components/analysis/AnalysisWindow';
-import { Provider } from 'react-redux';
-import { store } from '@/redux/store';
-import { AnalysisProvider } from '@/context/AnalysisContext';
+import AnalysisWindow from '@/features/analysis/components/AnalysisWindow';
 
 interface AnalysisPageProps {
   params: {
@@ -14,14 +11,10 @@ interface AnalysisPageProps {
 
 const AnalysisPage: React.FC<AnalysisPageProps> = ({ params }) => {
   return (
-    <Provider store={store}>
-      <AnalysisProvider>
-        <AnalysisWindow 
-          paperId={params.attemptId} 
-          examType="cuet" // Default exam type
-        />
-      </AnalysisProvider>
-    </Provider>
+    <AnalysisWindow 
+      paperId={params.attemptId} 
+      examType="cuet" // Default exam type
+    />
   );
 };
 

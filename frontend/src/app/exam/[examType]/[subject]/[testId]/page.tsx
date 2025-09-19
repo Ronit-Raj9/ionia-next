@@ -1,46 +1,33 @@
 "use client";
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
-import { fetchTest, resetTest, startTest } from "@/redux/slices/testSlice";
-import { RootState } from "@/redux/store";
-import TestWindow from "@/components/test/TestWindow";
-import { addNotification } from "@/redux/slices/uiSlice";
-import { checkAuth, setRedirectTo } from "@/redux/slices/authSlice";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { useTestStore } from "@/features/tests/store/testStore";
+import { useUIStore } from "@/stores/uiStore";
+import TestWindow from "@/features/tests/components/TestWindow";
 
 export default function TestPage() {
   const params = useParams();
   const { examType, subject, testId: paperId } = params || {};
-  const dispatch = useAppDispatch();
+  
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { currentTest, loading, error } = useAppSelector((state: RootState) => state.test);
+  const { isAuthenticated, isLoading: authLoading, initializeAuth } = useAuthStore();
+  const { currentTest, loading, error, fetchTest, resetTest } = useTestStore();
+  const { addNotification } = useUIStore();
 
   // Check authentication and fetch test data
   useEffect(() => {
-    dispatch(checkAuth());
-    
-    if (paperId && typeof paperId === 'string') {
-      dispatch(fetchTest(paperId));
-    }
-    
-    // Cleanup on unmount
-    return () => {
-      dispatch(resetTest());
-    };
-  }, [dispatch, paperId]);
-
-  // Handle authentication redirect
-  useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      dispatch(setRedirectTo(`/exam/${examType}/${subject}/${paperId}`));
-      dispatch(addNotification({
-        message: "Please login to access the test",
-        type: "warning"
-      }));
-      router.push("/login");
+      router.push('/login');
+      return;
     }
-  }, [isAuthenticated, authLoading, router, dispatch, examType, subject, paperId]);
+
+    if (isAuthenticated && paperId) {
+      initializeAuth();
+      fetchTest(Array.isArray(paperId) ? paperId[0] : paperId);
+      resetTest();
+    }
+  }, [initializeAuth, fetchTest, resetTest, paperId, isAuthenticated, authLoading, router]);
 
   if (authLoading || loading) {
     return (
@@ -78,9 +65,9 @@ export default function TestPage() {
   return (
     <div className="container mx-auto p-0 md:p-4 min-h-screen">
       <TestWindow 
-        examType={examType as string} 
-        paperId={paperId as string} 
-        subject={subject as string}
+        examType={Array.isArray(examType) ? examType[0] : examType} 
+        paperId={Array.isArray(paperId) ? paperId[0] : paperId} 
+        subject={Array.isArray(subject) ? subject[0] : subject}
       />
     </div>
   );

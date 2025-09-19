@@ -1,7 +1,24 @@
 "use client";
 
-import QuestionForm from '@/components/questions/form/QuestionForm';
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { AddQuestionLayout } from '@/features/admin/components/questions';
 
-export default function AddQuestion() {
-  return <QuestionForm />;
+export default function AddQuestionPage() {
+  const router = useRouter();
+
+  const handleSuccess = () => {
+    router.push('/admin/questions');
+  };
+
+  const handleCancel = () => {
+    router.back();
+  };
+
+  return (
+    <AddQuestionLayout 
+      onSuccess={handleSuccess}
+      onCancel={handleCancel}
+    />
+  );
 }

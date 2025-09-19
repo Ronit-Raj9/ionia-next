@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useSearchParams } from 'next/navigation';
-import SolutionViewer from '@/components/solution';
+import SolutionViewer from '@/features/solution/components';
 
 interface SolutionPageProps {
   params: {

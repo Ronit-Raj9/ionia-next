@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Provider } from 'react-redux';
-import { store } from '@/redux/store';
-import AnalysisWindow from '@/components/analysis/AnalysisWindow';
+import AnalysisWindow from '@/features/analysis/components/AnalysisWindow';
 import { ClipLoader } from 'react-spinners';
 import { useRouter } from 'next/navigation';
 
@@ -52,9 +50,9 @@ const Client: React.FC<ClientProps> = ({ attemptId }) => {
   }
   
   return (
-    <Provider store={store}>
+    
       <AnalysisWindow examType="cuet" paperId={attemptId} />
-    </Provider>
+    
   );
 };
 

@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
-import { RootState } from "@/redux/store";
-import { fetchTestHistory } from "@/redux/slices/testSlice";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { useTestStore } from "@/features/tests/store/testStore";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { FiBarChart2, FiClock, FiCalendar, FiChevronRight } from "react-icons/fi";
 import { ClipLoader } from "react-spinners";
 import { motion } from "framer-motion";
@@ -39,21 +38,15 @@ const mockTestData = {
 };
 
 export default function MyTests() {
-  const dispatch = useAppDispatch();
   const router = useRouter();
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { testHistory, loading: testHistoryLoading } = useAppSelector((state: RootState) => state.test);
+  const { isAuthenticated } = useAuthStore();
+  const { testHistory, loading: testHistoryLoading, fetchTestHistory } = useTestStore();
   const [isLoaded, setIsLoaded] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated && !authLoading) {
-      router.push('/auth/login');
-      return;
-    }
-
     if (isAuthenticated) {
-      dispatch(fetchTestHistory())
+      fetchTestHistory()
         .then(() => {
           setIsLoaded(true);
           // If no test history is found, use mock data for development
@@ -68,7 +61,7 @@ export default function MyTests() {
           setUseMockData(true);
         });
     }
-  }, [isAuthenticated, authLoading, dispatch, router, testHistory]);
+  }, [isAuthenticated, fetchTestHistory, testHistory]);
 
   // Calculate and format time
   const formatTime = (seconds: number) => {
@@ -103,7 +96,7 @@ export default function MyTests() {
     router.push(`/dashboard/tests/${testId}`);
   };
 
-  if (authLoading || testHistoryLoading) {
+  if (testHistoryLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <ClipLoader color="#10B981" size={40} />

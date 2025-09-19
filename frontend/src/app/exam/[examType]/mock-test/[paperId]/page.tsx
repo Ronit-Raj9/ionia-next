@@ -3,11 +3,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import { getTestById } from "@/features/tests/api/testsApi";
 
 interface TestDetails {
   _id: string;
   title: string;
-  description: string;
+  description?: string; // Make optional to match Test interface
   duration?: number;
   totalMarks?: number;
   testCategory?: string;
@@ -16,10 +17,18 @@ interface TestDetails {
   difficulty?: string;
   platformTestType?: string;
   questionCount?: number;
+  totalQuestions?: number; // Add this to match Test interface
   tags?: string[];
   instructions?: string;
   solutionsVisibility?: string;
   attemptsAllowed?: number;
+  examType?: string; // Add this to match Test interface
+  class?: string; // Add this to match Test interface
+  markingScheme?: {
+    correct: number;
+    incorrect: number;
+    unattempted: number;
+  };
 }
 
 const TestDetailsPage = () => {
@@ -39,26 +48,26 @@ const TestDetailsPage = () => {
     return formats[type] || type;
   };
 
+  // Map URL param to backend examType value
+  const getExamTypeParam = (urlExamType: string) => {
+    const mapping: Record<string, string> = {
+      'cuet': 'cuet', // Based on the API response, CUET tests have examType: "cuet" (lowercase)
+      'jee-mains': 'jee_main',
+      'jee-advanced': 'jee_adv'
+    };
+    return mapping[urlExamType] || urlExamType;
+  };
+
   useEffect(() => {
     const fetchTestDetails = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${paperId}`, {
-          credentials: 'include',
-          headers: { 
-           'Content-Type': 'application/json',
-          }
-        });
-        if (!res.ok) {
-          throw new Error("Failed to fetch test details");
-        }
-        const responseData = await res.json();
-        console.log('Test details:', responseData);
+        // Get the correct examType value for the API
+        const apiExamType = getExamTypeParam(examType);
+        // Use the API method to fetch test details
+        const response = await getTestById(paperId, apiExamType);
+        console.log('Test details:', response);
         
-        if (responseData.success && responseData.data) {
-          setTestDetails(responseData.data);
-        } else {
-          throw new Error("Invalid response format");
-        }
+        setTestDetails(response);
       } catch (err: unknown) {
         console.error(err);
         if (err instanceof Error) {
@@ -135,7 +144,7 @@ const TestDetailsPage = () => {
         <div>
           <p className="text-sm text-gray-500 mb-2">{formatExamType(examType)} Mock Test</p>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800">{testDetails.title}</h1>
-          {testDetails.description && (
+          {testDetails.description && testDetails.description.trim() && (
             <p className="mt-3 text-gray-600 max-w-2xl">{testDetails.description}</p>
           )}
         </div>
@@ -183,10 +192,10 @@ const TestDetailsPage = () => {
                     </div>
                   )}
                   
-                  {testDetails.questionCount !== undefined && (
+                  {(testDetails.questionCount !== undefined || testDetails.totalQuestions !== undefined) && (
                     <div>
                       <h4 className="text-gray-500 text-sm font-medium">Number of Questions</h4>
-                      <p className="text-gray-800">{testDetails.questionCount}</p>
+                      <p className="text-gray-800">{testDetails.questionCount || testDetails.totalQuestions}</p>
                     </div>
                   )}
                   
@@ -245,8 +254,8 @@ const TestDetailsPage = () => {
             
             <div className="space-y-4">
               <div className="flex items-center">
-                <div className="bg-emerald-100 p-3 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -269,14 +278,14 @@ const TestDetailsPage = () => {
               </div>
               
               <div className="flex items-center">
-                <div className="bg-emerald-100 p-3 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="bg-purple-100 p-3 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div className="ml-4">
                   <p className="text-sm text-gray-500">Questions</p>
-                  <p className="font-medium">{testDetails.questionCount || 'N/A'}</p>
+                  <p className="font-medium">{testDetails.questionCount || testDetails.totalQuestions || 'N/A'}</p>
                 </div>
               </div>
               

@@ -13,25 +13,25 @@ if (!fs.existsSync(tempDir)) {
 }
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+    destination: function (req, file, cb) {
     // Double-check the directory exists before trying to save files
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
       console.log("Re-created temp directory for file uploads:", tempDir);
     }
-    cb(null, tempDir);
-  },
-  filename: function (req, file, cb) {
-    // Generate unique filename with no spaces
-    const sanitizedName = file.originalname.replace(/\s+/g, '_');
-    const uniqueFilename = `${uuidv4()}-${sanitizedName}`;
-    
-    console.log("File received:", file.originalname);
-    console.log("File saved as:", uniqueFilename);
-    
-    cb(null, uniqueFilename);
-  }
-});
+      cb(null, tempDir);
+    },
+    filename: function (req, file, cb) {
+      // Generate unique filename with no spaces
+      const sanitizedName = file.originalname.replace(/\s+/g, '_');
+      const uniqueFilename = `${uuidv4()}-${sanitizedName}`;
+      
+      console.log("File received:", file.originalname);
+      console.log("File saved as:", uniqueFilename);
+      
+      cb(null, uniqueFilename);
+    }
+  });
 
 // Add a fileFilter to validate images
 const fileFilter = (req, file, cb) => {
@@ -43,7 +43,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 export const upload = multer({ 
-  storage,
+    storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter
 });

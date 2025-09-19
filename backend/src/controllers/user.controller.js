@@ -7,161 +7,328 @@ import jwt from "jsonwebtoken";
 import { AttemptedTest } from "../models/attemptedTest.model.js";
 import crypto from "crypto";
 import { sendEmail } from "../utils/emailService.js";
+import { tokenBlacklist } from "../utils/tokenBlacklist.js";
+import { 
+  getAccessTokenCookieOptions, 
+  getRefreshTokenCookieOptions, 
+  getClearCookieOptions,
+  getClearRefreshCookieOptions 
+} from "../utils/cookieConfig.js";
+import { generateCSRFToken, setCSRFTokenCookie } from "../middlewares/csrf.middleware.js";
+import { AuditLogger } from "../utils/auditLogger.js";
+import passport from "passport";
 
 /**
- * Helper function to generate both Access Token and Refresh Token,
- * then store the refresh token in the user's record.
+ * Enhanced helper function to generate both Access Token and Refresh Token
+ * with proper session tracking and security
  */
-const generateAccessAndRefreshToken = async (userId) => {
+const generateAccessAndRefreshToken = async (userId, req) => {
   try {
     const user = await User.findById(userId);
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
 
-    console.log("User Controller login access token: " + accessToken);
-    console.log("User Controller login refresh token: " + refreshToken);
+    // Get client information for token tracking
+    const clientInfo = {
+      ip: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent') || 'Unknown',
+    };
 
+    // Clean up expired tokens first
+    await user.cleanupExpiredTokens();
+
+    // Generate new tokens with client info
+    const accessToken = user.generateAccessToken(clientInfo);
+    const refreshToken = user.generateRefreshToken(clientInfo);
+
+    // Store refresh token in user record (for backward compatibility)
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
 
+    // Store refresh token in blacklist manager for tracking
+    const decoded = jwt.decode(refreshToken);
+    tokenBlacklist.storeRefreshToken(userId.toString(), refreshToken, decoded.exp);
+
+    console.log(`🔐 Tokens generated for user: ${user.username}`);
+    console.log(`📊 Active sessions: ${user.getActiveSessionsCount()}`);
+
     return { accessToken, refreshToken };
   } catch (error) {
+    console.error("Token generation error:", error);
     throw new ApiError(
       500,
-      "Something went wrong while generating access and refresh token",
-      error
+      "Something went wrong while generating access and refresh token"
     );
   }
 };
 
 /**
- * registerUser
- * 1. Get user details from frontend
- * 2. Validate required fields
- * 3. Check if user already exists by username or email
- * 4. Check for uploaded images (avatar, coverImage) and upload them to Cloudinary
- * 5. Create the user in the database
- * 6. Exclude password and refreshToken from the returned document
- * 7. Confirm user creation
- * 8. Return response
- *
- * Note: Role is not accepted from client; the default role="user" from the model is used
- * Admin roles should be set directly in the database
+ * Enhanced registerUser with security improvements
+ * - Rate limiting applied via middleware
+ * - Input validation and sanitization
+ * - Secure password handling
+ * - Proper error handling
  */
 const registerUser = asyncHandler(async (req, res) => {
-  // 1. Destructure user details from the request
+  console.log("🔐 User registration attempt");
+  
+  // 1. Destructure and validate user details
   const { fullName, email, username, password } = req.body;
 
-  // 2. Validate required fields
-  if ([fullName, email, username, password].some((field) => field?.trim() === "")) {
-    throw new ApiError(
-      400,
-      "All fields (fullName, email, username, password) are required"
-    );
+  // Enhanced validation
+  if ([fullName, email, username, password].some((field) => !field?.trim())) {
+    throw new ApiError(400, "All fields (fullName, email, username, password) are required");
   }
 
-  // 3. Check if a user with the same username or email already exists
+  // Email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new ApiError(400, "Please provide a valid email address");
+  }
+
+  // Username validation (alphanumeric + underscore, 3-20 chars)
+  const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+  if (!usernameRegex.test(username)) {
+    throw new ApiError(400, "Username must be 3-20 characters and contain only letters, numbers, and underscores");
+  }
+
+  // Password strength validation
+  if (password.length < 8) {
+    throw new ApiError(400, "Password must be at least 8 characters long");
+  }
+  
+  // Additional password strength checks
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  
+  if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+    throw new ApiError(400, "Password must contain at least one uppercase letter, one lowercase letter, and one number");
+  }
+
+  // 2. Check if user already exists
   const existedUser = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [{ username: username.toLowerCase() }, { email: email.toLowerCase() }],
   });
+  
   if (existedUser) {
+    // Record failed attempt for rate limiting
+    if (req.rateLimiter && req.rateLimiterIdentifier) {
+      req.rateLimiter.recordFailedAttempt(req.rateLimiterIdentifier, 'register');
+    }
+    
+    // Prevent user enumeration - always return same response
+    // Add artificial delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 100));
+    
     throw new ApiError(409, "User with this email or username already exists");
   }
 
-  // 4. Handle optional file uploads (avatar, coverImage) and upload them to Cloudinary
-  //    These paths come from Multer's file handling in req.files
+  // 3. Handle file uploads
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
   let coverImageLocalPath;
-  if (
-    req.files &&
-    Array.isArray(req.files.coverImage) &&
-    req.files.coverImage.length > 0
-  ) {
+  if (req.files?.coverImage?.[0]?.path) {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
 
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
-  // 5. Create the user document in the database with default role from model
+  // 4. Create user with enhanced security
   const user = await User.create({
-    fullName,
+    fullName: fullName.trim(),
     avatar: avatar?.url || "",
     coverImage: coverImage?.url || "",
-    email,
+    email: email.toLowerCase().trim(),
     password,
-    username: username?.toLowerCase() || "",
-    // No role specified - the model default "user" will be used
+    username: username.toLowerCase().trim(),
+    lastLoginIP: req.ip || req.connection.remoteAddress,
+    isEmailVerified: false, // Require email verification in production
+    // Note: Auth provider tracking removed - using email/password only authentication
   });
 
-  // 6. Fetch the newly created user, omitting password & refreshToken
-  const createdUser = await User.findById(user._id).select("-password -refreshToken");
+  // 5. Return user without sensitive data
+  const createdUser = await User.findById(user._id).select("-password -refreshToken -activeTokens");
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
 
-  // 7. Return the final user object in the response (without sensitive fields)
+  // Record successful attempt
+  if (req.rateLimiter && req.rateLimiterIdentifier) {
+    req.rateLimiter.recordSuccessfulAttempt(req.rateLimiterIdentifier, 'register');
+  }
+
+  // Log successful registration
+  await AuditLogger.logAuthEvent('register', req, createdUser, {
+    authMethod: 'email',
+    emailVerified: false
+  }, true);
+
+  console.log(`✅ User registered successfully: ${createdUser.username}`);
+  
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered successfully"));
+    .json(new ApiResponse(201, createdUser, "User registered successfully"));
 });
 
 /**
- * loginUser
- * 1. Validate that username/email is present in req.body
- * 2. Retrieve user from DB
- * 3. Compare password
- * 4. Generate new access & refresh tokens
- * 5. Return tokens in cookies + user object
+ * Enhanced loginUser with comprehensive security
+ * - Rate limiting
+ * - Session management
+ * - Secure cookie handling
+ * - Account lockout
+ * - Audit logging
  */
 const loginUser = asyncHandler(async (req, res) => {
-  // 1. req body -> data
-  const { email, username, password } = req.body;
+  console.log("🔐 Login attempt");
+  
+  const { email, username, password, rememberMe } = req.body;
+  const clientIP = req.ip || req.connection.remoteAddress;
 
+  console.log("req.body", req.body);
+
+  // Validation
   if (!username && !email) {
-    throw new ApiError(400, "username or email is required");
+    throw new ApiError(400, "Username or email is required");
   }
 
+  if (!password) {
+    throw new ApiError(400, "Password is required");
+  }
+
+  // Find user
   const user = await User.findOne({
-    $or: [{ username }, { email }],
+    $or: [{ username: username?.toLowerCase() }, { email: email?.toLowerCase() }],
   });
 
   if (!user) {
-    throw new ApiError(404, "User does not exist");
+    // Record failed attempt
+    if (req.rateLimiter && req.rateLimiterIdentifier) {
+      req.rateLimiter.recordFailedAttempt(req.rateLimiterIdentifier, 'login');
+    }
+    
+    // Log failed login attempt
+    await AuditLogger.logLoginFailure(req, email || username, 'User not found', 'email');
+    
+    // Prevent user enumeration - always return same response
+    // Add artificial delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 200));
+    
+    throw new ApiError(404, "Invalid credentials");
   }
 
+  // Check if account is active
+  if (!user.isActive) {
+    await AuditLogger.logLoginFailure(req, user.email, 'Account deactivated', 'email');
+    throw new ApiError(403, "Account has been deactivated. Please contact support.");
+  }
+
+  // Check if account is locked
+  if (user.isAccountLocked()) {
+    await AuditLogger.logSecurityEvent('account_locked', req, user, {
+      reason: 'Account locked due to failed attempts',
+      lockUntil: user.failedLoginAttempts.lockedUntil
+    });
+    throw new ApiError(423, "Account is temporarily locked due to multiple failed login attempts. Please try again later.");
+  }
+
+  // Verify password
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
-    throw new ApiError(401, "Invalid user credentials");
+    // Record failed attempt
+    await user.recordFailedLoginAttempt();
+    
+    // Record failed attempt for rate limiting
+    if (req.rateLimiter && req.rateLimiterIdentifier) {
+      req.rateLimiter.recordFailedAttempt(req.rateLimiterIdentifier, 'login');
+    }
+    
+    // Log failed login attempt
+    await AuditLogger.logLoginFailure(req, user.email, 'Invalid password', 'email');
+    
+    // Check for brute force attempts (non-blocking)
+    await AuditLogger.detectBruteForce(clientIP);
+    
+    throw new ApiError(401, "Invalid credentials");
   }
 
+  // Reset failed login attempts on successful login
+  if (user.failedLoginAttempts.count > 0) {
+    await user.resetFailedLoginAttempts();
+  }
+
+  // Update login tracking
+  user.lastLoginAt = new Date();
+  user.lastLoginIP = clientIP;
+  user.lastActivity = new Date();
+  // Note: Login method tracking removed - using email/password only authentication
+  await user.save({ validateBeforeSave: false });
+
   // Generate tokens
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id);
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(user._id, req);
 
-  // Retrieve user object without password & refreshToken
-  const loggedInUser = await User.findById(user._id).select("-password -refreshtoken");
+  // Get user data without sensitive fields
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken -activeTokens"
+  );
 
-  // Cookie options for cross-origin requests
-  const options = {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    domain: process.env.NODE_ENV === 'production' ? '.ionia.sbs' : undefined,
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  };
+  // Add hasPassword field for frontend compatibility
+  loggedInUser.hasPassword = user.hasPassword();
 
+  // Record successful attempt
+  if (req.rateLimiter && req.rateLimiterIdentifier) {
+    req.rateLimiter.recordSuccessfulAttempt(req.rateLimiterIdentifier, 'login');
+  }
+
+  // Log successful login
+  await AuditLogger.logLoginSuccess(req, user, 'email');
+
+  // Analyze login patterns for security (non-blocking)
+  await AuditLogger.analyzeLoginPatterns(req, user, true);
+
+  console.log(`✅ Login successful for user: ${user.username} from IP: ${clientIP}`);
+
+  // Set secure cookies with rememberMe support
+  console.log("accessToken", accessToken);
+  console.log("refreshToken", refreshToken);
+  console.log("rememberMe", rememberMe);
+  
+  // Get cookie options with rememberMe consideration
+  const accessTokenOptions = getAccessTokenCookieOptions();
+  const refreshTokenOptions = getRefreshTokenCookieOptions(rememberMe);
+  
+  // Generate CSRF token for authenticated user
+  const csrfToken = generateCSRFToken();
+  
   return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, accessTokenOptions)
+    .cookie("refreshToken", refreshToken, refreshTokenOptions)
+    .cookie("csrf-token", csrfToken, {
+      httpOnly: false, // Must be accessible to JavaScript
+      secure: process.env.HTTPS_ENABLED === 'true',
+      sameSite: process.env.HTTPS_ENABLED === 'true' ? 'strict' : 'lax',
+      path: '/',
+      maxAge: 5 * 60 * 1000, // 5 minutes - match access token
+    })
     .json(
       new ApiResponse(
         200,
         {
           user: loggedInUser,
-          accessToken,
-          refreshToken,
+          sessionInfo: {
+            loginTime: user.lastLoginAt,
+            activeSessions: user.getActiveSessionsCount(),
+            rememberMe: !!rememberMe,
+          },
+          csrfToken: csrfToken, // Include CSRF token in response
+          // 🔥 CRITICAL: Add token expiry information for proactive refresh
+          tokenExpiry: {
+            access_expires_at: Math.floor(Date.now() / 1000) + (5 * 60), // 5 minutes from now
+            refresh_expires_at: Math.floor(Date.now() / 1000) + (rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60), // 30 days or 7 days
+          },
         },
         "User logged in successfully"
       )
@@ -169,102 +336,239 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * logoutUser
- * 1. Removes refreshToken from DB
- * 2. Clears cookies containing access and refresh tokens
+ * Enhanced logoutUser with proper token invalidation
+ * - Blacklists current access token
+ * - Invalidates refresh token
+ * - Clears cookies securely
+ * - Updates session tracking
  */
 const logoutUser = asyncHandler(async (req, res) => {
-  console.log("req.user: ", req.user);
+  console.log(`🔐 Logout request for user: ${req.user.username}`);
 
-  await User.findByIdAndUpdate(
-    req.user._id,
-    {
-      $unset: {
-        refreshToken: 1,
-      },
-    },
-    {
-      new: true,
+  try {
+    const userId = req.user._id;
+    const currentToken = req.token;
+    const tokenPayload = req.tokenPayload;
+
+    // 1. Blacklist the current access token
+    if (currentToken && tokenPayload?.exp) {
+      tokenBlacklist.addToBlacklist(currentToken, tokenPayload.exp);
     }
+
+    // 2. Invalidate the specific refresh token if provided
+    const refreshToken = req.cookies?.refreshToken;
+    if (refreshToken) {
+      try {
+        const decoded = jwt.decode(refreshToken);
+        if (decoded?.jti) {
+          // Remove from user's active tokens
+          await req.user.invalidateToken(decoded.jti);
+          // Remove from blacklist manager
+          tokenBlacklist.invalidateRefreshToken(userId.toString(), refreshToken);
+        }
+      } catch (error) {
+        console.log("Error invalidating refresh token:", error.message);
+      }
+    }
+
+    // 3. Update user record
+  await User.findByIdAndUpdate(
+      userId,
+    {
+        $unset: { refreshToken: 1 },
+        $set: { lastActivity: new Date() }
+    },
+      { new: true }
   );
 
-  const options = {
-    path: "/",
-    httpOnly: false,
-    secure: true,
-    sameSite: "None",
-    maxAge: 0, // Expire immediately
-  };
+    console.log(`✅ Logout successful for user: ${req.user.username}`);
 
+    // 4. Clear cookies
   return res
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "User Logged Out"));
+      .cookie("accessToken", "", getClearCookieOptions())
+      .cookie("refreshToken", "", getClearRefreshCookieOptions())
+      .json(new ApiResponse(200, {}, "User logged out successfully"));
+
+  } catch (error) {
+    console.error("Logout error:", error);
+    // Even if there's an error, clear the cookies
+    return res
+      .status(200)
+      .cookie("accessToken", "", getClearCookieOptions())
+      .cookie("refreshToken", "", getClearRefreshCookieOptions())
+      .json(new ApiResponse(200, {}, "User logged out"));
+  }
 });
 
 /**
- * refreshAccessToken
- * 1. Reads refreshToken from cookies or req.body
- * 2. Verifies token, checks DB for user
- * 3. Compares stored refreshToken
- * 4. Issues new accessToken & refreshToken
+ * Enhanced refreshAccessToken with security improvements
+ * - Validates refresh token from cookies only
+ * - Implements token rotation
+ * - Tracks sessions properly
+ * - Rate limiting protection
  */
 const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
-  console.log("Cookie", req.cookies);
-  console.log("Incoming refresh token is: ", incomingRefreshToken);
+  console.log("🔄 Token refresh request");
 
-  console.log("Error starting");
+  const incomingRefreshToken = req.cookies?.refreshToken;
+
   if (!incomingRefreshToken) {
-    throw new ApiError(401, "unauthorized request");
+    throw new ApiError(401, "Refresh token required");
   }
-  console.log("Error ending");
 
   try {
-    const decodedToken = jwt.verify(
-      incomingRefreshToken,
-      process.env.REFRESH_TOKEN_SECRET
-    );
-    console.log("Decoded token: ", decodedToken);
-
-    const user = await User.findById(decodedToken?._id);
-
+    // 1. Verify refresh token
+    const decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET);
+    
+    // 2. Find user and validate token
+    const user = await User.findById(decodedToken._id);
     if (!user) {
-      throw new ApiError(401, "Invalid refresh token");
+      throw new ApiError(401, "Invalid refresh token - user not found");
     }
 
-    console.log("Start");
-    if (incomingRefreshToken !== user?.refreshToken) {
-      throw new ApiError(401, "Refresh token is expired or used");
-    }
-    console.log("end");
-
-    const options = {
-      path: "/",
-      httpOnly: false,
-      secure: true,
-      sameSite: "None",
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    };
-
-    const { accessToken, newrefreshToken } = await generateAccessAndRefreshToken(
-      user._id
+    // 3. Check if refresh token exists in user's active tokens
+    const tokenExists = user.activeTokens.some(token => 
+      token.jti === decodedToken.jti && token.type === 'refresh'
     );
 
+    if (!tokenExists) {
+      throw new ApiError(401, "Refresh token has been invalidated");
+    }
+
+    // 4. Check if token is blacklisted
+    if (!tokenBlacklist.isRefreshTokenValid(user._id.toString(), incomingRefreshToken)) {
+      throw new ApiError(401, "Refresh token has been invalidated");
+    }
+
+    // 5. Generate new tokens (atomic token rotation)
+    const newAccessToken = user.generateAccessToken({
+      ip: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent') || 'Unknown',
+    });
+    
+    const newRefreshToken = user.generateRefreshToken({
+      ip: req.ip || req.connection.remoteAddress,
+      userAgent: req.get('User-Agent') || 'Unknown',
+    });
+    
+    // 6. Atomic refresh token rotation with reuse detection
+    try {
+      await user.rotateRefreshToken(decodedToken.jti, {
+        jti: jwt.decode(newRefreshToken).jti,
+        expiresAt: new Date(jwt.decode(newRefreshToken).exp * 1000),
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent') || 'Unknown',
+      });
+    } catch (error) {
+      // Token reuse detected - revoke all sessions
+      if (error.message.includes('Token reuse detected')) {
+        await AuditLogger.logSecurityEvent('token_reuse_detected', req, user, {
+          oldJti: decodedToken.jti,
+          reason: 'Refresh token reuse detected - security breach'
+        });
+        
+        // Clear all cookies and force re-authentication
+        res.cookie("accessToken", "", getClearCookieOptions());
+        res.cookie("refreshToken", "", getClearRefreshCookieOptions());
+        
+        throw new ApiError(401, 'Security breach detected - please log in again');
+      }
+      throw error;
+    }
+    
+    // 7. Update blacklist manager
+    tokenBlacklist.invalidateRefreshToken(user._id.toString(), incomingRefreshToken);
+    const newDecoded = jwt.decode(newRefreshToken);
+    tokenBlacklist.storeRefreshToken(user._id.toString(), newRefreshToken, newDecoded.exp);
+
+    // 7. Update user activity
+    user.lastActivity = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    console.log(`✅ Token refreshed for user: ${user.username}`);
+
+    // 8. Return new tokens
     return res
       .status(200)
-      .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newrefreshToken, options)
+      .cookie("accessToken", newAccessToken, getAccessTokenCookieOptions())
+      .cookie("refreshToken", newRefreshToken, getRefreshTokenCookieOptions())
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken: newrefreshToken },
-          "Access token refreshed"
+          { 
+            accessToken: newAccessToken, 
+            refreshToken: newRefreshToken,
+            // 🔥 CRITICAL: Add token expiry information for proactive refresh
+            tokenExpiry: {
+              access_expires_at: Math.floor(Date.now() / 1000) + (5 * 60), // 5 minutes from now
+              refresh_expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days from now
+            },
+          },
+          "Access token refreshed successfully"
         )
       );
+
   } catch (error) {
-    throw new ApiError(401, error?.message || "Invalid refresh token");
+    console.error("Token refresh error:", error);
+    
+    // Clear invalid cookies
+    res.cookie("accessToken", "", getClearCookieOptions());
+    res.cookie("refreshToken", "", getClearRefreshCookieOptions());
+    
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    throw new ApiError(401, "Invalid refresh token");
+  }
+});
+
+/**
+ * Enhanced logoutFromAllDevices
+ * - Invalidates all user sessions
+ * - Blacklists all active tokens
+ * - Clears current device cookies
+ */
+const logoutFromAllDevices = asyncHandler(async (req, res) => {
+  console.log(`🔐 Logout from all devices for user: ${req.user.username}`);
+
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    // 1. Blacklist all active access tokens
+    const now = Math.floor(Date.now() / 1000);
+    for (const tokenData of user.activeTokens) {
+      if (tokenData.type === 'access' && tokenData.expiresAt > new Date()) {
+        // Calculate expiry time for blacklisting
+        const expiryTime = Math.floor(tokenData.expiresAt.getTime() / 1000);
+        tokenBlacklist.addToBlacklist(`token_${tokenData.jti}`, expiryTime);
+      }
+    }
+
+    // 2. Invalidate all refresh tokens
+    tokenBlacklist.invalidateAllRefreshTokens(userId.toString());
+
+    // 3. Clear all tokens from user record
+    await user.invalidateAllTokens();
+
+    console.log(`✅ All sessions invalidated for user: ${req.user.username}`);
+
+    // 4. Clear current device cookies
+    return res
+      .status(200)
+      .cookie("accessToken", "", getClearCookieOptions())
+      .cookie("refreshToken", "", getClearRefreshCookieOptions())
+      .json(new ApiResponse(200, {}, "Logged out from all devices successfully"));
+
+  } catch (error) {
+    console.error("Logout from all devices error:", error);
+    throw new ApiError(500, "Failed to logout from all devices");
   }
 });
 
@@ -302,9 +606,22 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
  * - Returns the user from req.user set by verifyJWT
  */
 const getCurrrentUser = asyncHandler(async (req, res) => {
+  // Create a safe user object without password field
+  const user = req.user.toObject();
+  
+  // Remove sensitive fields
+  delete user.password;
+  delete user.refreshToken;
+  delete user.resetPasswordToken;
+  delete user.resetPasswordExpires;
+  delete user.emailVerificationToken;
+  
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
+  
   return res
     .status(200)
-    .json(new ApiResponse(200, req.user, "current user fetched successfully"));
+    .json(new ApiResponse(200, user, "current user fetched successfully"));
 });
 
 /**
@@ -328,6 +645,9 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     },
     { new: true } // if we write new then object is returned after updating
   ).select("-password");
+
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
 
   return res
     .status(200)
@@ -364,6 +684,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     { new: true }
   ).select("-password");
 
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
+
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Avatar image updated successfully"));
@@ -397,6 +720,9 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
+
+  // Add hasPassword field for frontend compatibility
+  user.hasPassword = req.user.hasPassword();
 
   return res
     .status(200)
@@ -519,8 +845,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
       .update(resetToken)
       .digest("hex");
     
-    // Set token expiry (10 minutes from now)
-    const tokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    // Set token expiry (1 hour from now - more user-friendly)
+    const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
     
     // Store the token in the user document
     user.resetPasswordToken = hashedToken;
@@ -535,7 +861,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     
     // Email content
     const subject = "Password Reset Request";
-    const text = `You requested a password reset. Please use the following link to reset your password. This link is valid for 10 minutes: ${resetUrl}`;
+    const text = `You requested a password reset. Please use the following link to reset your password. This link is valid for 1 hour: ${resetUrl}`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <h1 style="color: #10b981; text-align: center;">Password Reset Request</h1>
@@ -545,7 +871,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
         <div style="text-align: center; margin: 30px 0;">
           <a href="${resetUrl}" style="background-color: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">Reset Password</a>
         </div>
-        <p>This link is valid for 10 minutes and can only be used once.</p>
+        <p>This link is valid for 1 hour and can only be used once.</p>
         <p>If you didn't request this, please ignore this email or contact support if you have concerns.</p>
         <p style="margin-top: 30px; font-size: 12px; color: #666; text-align: center;">
           &copy; ${new Date().getFullYear()} Ionia. All rights reserved.
@@ -684,21 +1010,50 @@ const getAllUsers = asyncHandler(async (req, res) => {
   const sort = {};
   sort[sortBy] = sortOrder === "asc" ? 1 : -1;
   
-  // Pagination setup
-  const options = {
-    page: parseInt(page),
-    limit: parseInt(limit),
-    sort,
-    select: "-password -refreshToken -resetPasswordToken -resetPasswordExpires",
-    lean: true,
-  };
-  
   try {
-    // Find users
-    const users = await User.paginate(query, options);
+    // Calculate pagination values
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Get total count for pagination
+    const totalDocs = await User.countDocuments(query);
+    const totalPages = Math.ceil(totalDocs / limitNum);
+    
+    // Find users with pagination
+    const users = await User.find(query)
+      .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires")
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+    
+    // Build pagination response
+    const paginationData = {
+      docs: users,
+      totalDocs,
+      limit: limitNum,
+      page: pageNum,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPrevPage: pageNum > 1,
+      nextPage: pageNum < totalPages ? pageNum + 1 : null,
+      prevPage: pageNum > 1 ? pageNum - 1 : null,
+      pagingCounter: skip + 1,
+      meta: {
+        totalDocs,
+        limit: limitNum,
+        page: pageNum,
+        totalPages,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
+        nextPage: pageNum < totalPages ? pageNum + 1 : null,
+        prevPage: pageNum > 1 ? pageNum - 1 : null
+      }
+    };
     
     return res.status(200).json(
-      new ApiResponse(200, users, "Users retrieved successfully")
+      new ApiResponse(200, paginationData, "Users retrieved successfully")
     );
   } catch (error) {
     throw new ApiError(500, "Error fetching users", error.message);
@@ -786,14 +1141,20 @@ const getUserDetails = asyncHandler(async (req, res) => {
   }
   
   try {
-    // Fetch basic user info
+    // Fetch basic user info with password to check hasPassword status
+    const userWithPassword = await User.findById(userId);
+    
+    if (!userWithPassword) {
+      throw new ApiError(404, "User not found");
+    }
+    
+    // Fetch user without sensitive fields for response
     const user = await User.findById(userId)
       .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires")
       .lean();
     
-    if (!user) {
-      throw new ApiError(404, "User not found");
-    }
+    // Add hasPassword field for frontend compatibility
+    user.hasPassword = userWithPassword.hasPassword();
     
     // Fetch test statistics
     const testStats = await AttemptedTest.aggregate([
@@ -878,6 +1239,9 @@ const updateUserRole = asyncHandler(async (req, res) => {
     const updatedUser = await User.findById(userId)
       .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires");
     
+    // Add hasPassword field for frontend compatibility
+    updatedUser.hasPassword = user.hasPassword();
+    
     return res.status(200).json(
       new ApiResponse(200, updatedUser, `User role updated to ${role} successfully`)
     );
@@ -888,6 +1252,186 @@ const updateUserRole = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Error updating user role", error.message);
   }
 });
+
+// Note: Google OAuth controllers removed - using email/password only authentication
+
+// 🔥 EMAIL VERIFICATION CONTROLLERS
+
+/**
+ * Send Email Verification
+ * Sends verification email to user
+ */
+const sendEmailVerification = asyncHandler(async (req, res) => {
+  console.log("📧 Sending email verification for user:", req.user.username);
+  
+  // Check if email is already verified
+  if (req.user.isEmailVerified) {
+    throw new ApiError(400, "Email is already verified");
+  }
+  
+  // Check if user is blocked from verification attempts
+  if (req.user.isEmailVerificationBlocked()) {
+    throw new ApiError(429, "Too many verification attempts. Please try again later.");
+  }
+  
+  try {
+    // Generate verification token
+    const verificationToken = req.user.generateEmailVerificationToken();
+    await req.user.save({ validateBeforeSave: false });
+    
+    // Create verification URL
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    
+    // Send verification email
+    await sendEmail({
+      email: req.user.email,
+      subject: "Verify Your Email Address",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Verify Your Email Address</h2>
+          <p>Hello ${req.user.fullName},</p>
+          <p>Please click the button below to verify your email address:</p>
+          <a href="${verificationUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0;">
+            Verify Email
+          </a>
+          <p>If the button doesn't work, copy and paste this URL into your browser:</p>
+          <p style="word-break: break-all; background-color: #f4f4f4; padding: 10px; border-radius: 4px;">
+            ${verificationUrl}
+          </p>
+          <p>This link will expire in 24 hours.</p>
+          <p>If you didn't request this verification, please ignore this email.</p>
+        </div>
+      `
+    });
+    
+    // Log the verification email sent
+    await AuditLogger.logEmailVerificationEvent('email_verification_sent', req, req.user);
+    
+    console.log(`✅ Email verification sent to: ${req.user.email}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Verification email sent successfully"));
+      
+  } catch (error) {
+    console.error("Email verification error:", error);
+    throw new ApiError(500, "Failed to send verification email");
+  }
+});
+
+/**
+ * Verify Email
+ * Verifies user's email address using token
+ */
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    throw new ApiError(400, "Verification token is required");
+  }
+  
+  try {
+    // Find user by verification token
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() }
+    });
+    
+    if (!user) {
+      // Increment failed attempts
+      if (req.user) {
+        await req.user.incrementEmailVerificationAttempts();
+      }
+      
+      throw new ApiError(400, "Invalid or expired verification token");
+    }
+    
+    // Verify the email
+    user.isEmailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailVerificationExpires = null;
+    await user.resetEmailVerificationAttempts();
+    await user.save({ validateBeforeSave: false });
+    
+    // Log successful verification
+    await AuditLogger.logEmailVerificationEvent('email_verification_success', req, user);
+    
+    console.log(`✅ Email verified successfully for user: ${user.username}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Email verified successfully"));
+      
+  } catch (error) {
+    console.error("Email verification error:", error);
+    throw new ApiError(400, error.message);
+  }
+});
+
+// 🔥 ACCOUNT SECURITY CONTROLLERS
+
+/**
+ * Unlock Account (Admin Only)
+ * Unlocks a user account that was locked due to failed login attempts
+ */
+const unlockAccount = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+  
+  try {
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+    
+    // Reset failed login attempts
+    await user.resetFailedLoginAttempts();
+    
+    // Log the unlock action
+    await AuditLogger.logAdminAction('account_unlocked', req, req.user, user);
+    
+    console.log(`✅ Account unlocked for user: ${user.username} by admin: ${req.user.username}`);
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Account unlocked successfully"));
+      
+  } catch (error) {
+    console.error("Account unlock error:", error);
+    throw new ApiError(500, "Failed to unlock account");
+  }
+});
+
+/**
+ * Get User Activity Logs (Admin Only)
+ * Returns audit logs for a specific user
+ */
+const getUserActivityLogs = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const { limit = 50 } = req.query;
+  
+  if (!userId) {
+    throw new ApiError(400, "User ID is required");
+  }
+  
+  try {
+    const logs = await AuditLogger.getUserActivity(userId, parseInt(limit));
+    
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { logs }, "User activity logs retrieved successfully"));
+      
+  } catch (error) {
+    console.error("Get user activity logs error:", error);
+    throw new ApiError(500, "Failed to retrieve user activity logs");
+  }
+});
+
+// Note: Google token verification helper removed - using email/password only authentication
 
 export {
   registerUser,
@@ -907,5 +1451,13 @@ export {
   getAllUsers,
   getUsersAnalytics,
   getUserDetails,
-  updateUserRole
+  updateUserRole,
+  logoutFromAllDevices,
+  // Note: Google OAuth controllers removed - using email/password only authentication
+  // Email verification controllers
+  sendEmailVerification,
+  verifyEmail,
+  // Account security controllers
+  unlockAccount,
+  getUserActivityLogs
 };

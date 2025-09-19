@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { getMockTests } from "@/features/tests/api/testsApi";
 
 interface Paper {
   _id: string;
@@ -34,7 +35,7 @@ const MockTests = () => {
   // Map URL param to backend examType value
   const getExamTypeParam = (urlExamType: string) => {
     const mapping: Record<string, string> = {
-      'cuet': 'cuet',
+      'cuet': 'cuet', // Based on the API response, CUET tests have examType: "cuet" (lowercase)
       'jee-mains': 'jee_main',
       'jee-advanced': 'jee_adv'
     };
@@ -42,73 +43,61 @@ const MockTests = () => {
   };
 
   const fetchPapers = async (page: number, isLoadMore = false) => {
-      try {
+    try {
       if (isLoadMore) {
         setLoadingMore(true);
       } else {
         setLoading(true);
       }
       
-        // Get the correct examType value for the API
-        const apiExamType = getExamTypeParam(examType);
-        
-      // Fetch specifically mock tests for the current exam type with pagination
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/tests?testCategory=Platform&platformTestType=Mock&examType=${apiExamType}&page=${page}&limit=${testsPerPage}`;
-        console.log('Fetching from URL:', apiUrl);
-        
-        const res = await fetch(apiUrl, {
-          credentials: 'include',
-          headers: {
-            'Content-Type' : 'application/json'
-          }
-        });
-        console.log('Response:', res);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch ${examType} mock tests`);
-        }
-        
-        const responseData = await res.json();
-        console.log('API Response:', responseData);
-        
-        // The API response structure has tests in responseData.data.docs
-        if (responseData.success && responseData.data && responseData.data.docs) {
-          console.log('Parsed Mock Tests:', responseData.data.docs);
-        
+      // Get the correct examType value for the API
+      const apiExamType = getExamTypeParam(examType);
+      
+      // Use the new API method to fetch mock tests
+      console.log('Fetching mock tests with params:', { apiExamType, page, testsPerPage });
+      const response = await getMockTests(apiExamType, page, testsPerPage);
+      console.log('API Response:', response);
+      
+      // The API response structure has tests in response.data.docs
+      if (response.success && response.data && response.data.docs) {
+        console.log('Parsed Mock Tests:', response.data.docs);
+        console.log('Number of tests found:', response.data.docs.length);
+      
         // If loading more, append to existing papers
         if (isLoadMore) {
-          setPapers(prevPapers => [...prevPapers, ...responseData.data.docs]);
+          setPapers(prevPapers => [...prevPapers, ...response.data.docs]);
         } else {
-          setPapers(responseData.data.docs);
+          setPapers(response.data.docs);
         }
         
         // Set pagination data
         setPagination({
-          currentPage: responseData.data.page,
-          totalPages: responseData.data.totalPages,
-          totalDocs: responseData.data.totalDocs,
-          hasNextPage: responseData.data.hasNextPage
+          currentPage: response.data.page,
+          totalPages: response.data.totalPages,
+          totalDocs: response.data.totalDocs,
+          hasNextPage: response.data.hasNextPage
         });
-        } else {
-          console.log('No data found in response');
+      } else {
+        console.log('No data found in response');
         if (!isLoadMore) {
           setPapers([]);
         }
-        }
-      } catch (err: unknown) {
-        console.error(err);
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError(`Error fetching ${examType} mock tests.`);
-        }
-      } finally {
+      }
+    } catch (err: unknown) {
+      console.error(err);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(`Error fetching ${examType} mock tests.`);
+      }
+    } finally {
       if (isLoadMore) {
         setLoadingMore(false);
       } else {
         setLoading(false);
       }
-      }
-    };
+    }
+  };
 
   useEffect(() => {
     // Reset page to 1 when exam type changes
@@ -178,8 +167,6 @@ const MockTests = () => {
                   )}
                   {paper.testCategory && (
                     <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-green-50 text-green-700">
-<!--                     <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-emerald-50 text-emerald-700"> -->
-
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                       </svg>

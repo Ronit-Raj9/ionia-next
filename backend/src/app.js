@@ -1,120 +1,327 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { errorHandler } from './middlewares/error.middleware.js';
+import helmet from "helmet";
+
+// Enhanced middleware imports
+import { errorHandler, requestIdMiddleware, requestCompletionLogger, enhancedAuthLogging, Logger } from './middlewares/error.middleware.js';
+import { sanitizeInput, validateRequestSize, validateContentType } from './middlewares/validation.middleware.js';
+import { performanceMonitoring, healthCheck, getMetrics, errorTracking } from './middlewares/monitoring.middleware.js';
+
+import { logCookieConfig, validateCookieConfig } from './utils/cookieConfig.js';
+
+// Note: Passport removed - using JWT-only authentication for educational platform
 
 const app = express();
 
-// ✅ Use Cookie Parser Middleware
+// ✅ Initialize Security Systems
+Logger.info("Initializing authentication security systems...");
+
+// ✅ Consolidated Environment Validation
+const validateEnvironmentConfig = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const environment = process.env.NODE_ENV || 'development';
+  
+  // Define required variables based on environment
+  const baseRequired = [
+    'ACCESS_TOKEN_SECRET', 'REFRESH_TOKEN_SECRET', 'JWT_SECRET',
+    'DATABASE_ATLAS', 'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+    'FRONTEND_URL', 'COOKIE_DOMAIN', 'HTTPS_ENABLED', 'PORT'
+  ];
+  
+  const productionRequired = ['NODE_ENV', 'HTTPS_ENABLED', 'COOKIE_DOMAIN', 'FRONTEND_URL'];
+  const recommended = ['NODE_ENV', 'SESSION_SECRET', 'ENCRYPTION_KEY'];
+  
+  const required = isProduction ? [...baseRequired, ...productionRequired] : baseRequired;
+  
+  // Check missing required variables
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length > 0) {
+    Logger.error(`Missing required environment variables for ${environment}`, { missing, environment });
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+  
+  // Warn about missing recommended variables
+  const missingRecommended = recommended.filter(key => !process.env[key]);
+  if (missingRecommended.length > 0) {
+    Logger.warn('Missing recommended environment variables', { missing: missingRecommended, environment });
+  }
+  
+  // Validate specific values
+  const validations = [
+    { key: 'ACCESS_TOKEN_SECRET', condition: process.env.ACCESS_TOKEN_SECRET?.length >= 32, message: 'ACCESS_TOKEN_SECRET must be at least 32 characters' },
+    { key: 'REFRESH_TOKEN_SECRET', condition: process.env.REFRESH_TOKEN_SECRET?.length >= 32, message: 'REFRESH_TOKEN_SECRET must be at least 32 characters' },
+    { key: 'PORT', condition: !isNaN(parseInt(process.env.PORT)) && parseInt(process.env.PORT) > 0, message: 'PORT must be a valid positive number' },
+    { key: 'HTTPS_ENABLED', condition: ['true', 'false'].includes(process.env.HTTPS_ENABLED), message: 'HTTPS_ENABLED must be "true" or "false"' },
+    { key: 'SESSION_SECRET', condition: !process.env.SESSION_SECRET || process.env.SESSION_SECRET.length >= 32, message: 'SESSION_SECRET must be at least 32 characters (recommended)' },
+    { key: 'ENCRYPTION_KEY', condition: !process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY.length >= 32, message: 'ENCRYPTION_KEY must be at least 32 characters (recommended)' }
+  ];
+  
+  for (const validation of validations) {
+    if (!validation.condition) {
+      Logger.error('Invalid environment variable', { key: validation.key, value: process.env[validation.key], message: validation.message });
+      throw new Error(validation.message);
+    }
+  }
+  
+  Logger.info('✅ All required environment variables are set and valid');
+  return true;
+};
+
+// Validate environment configuration
+try {
+  validateEnvironmentConfig();
+} catch (error) {
+  Logger.error('Environment validation failed', { error: error.message });
+  process.exit(1);
+}
+
+// Validate cookie configuration
+validateCookieConfig();
+logCookieConfig();
+
+// Import security utilities (this initializes them)
+import { tokenBlacklist } from './utils/tokenBlacklist.js';
+import { rateLimiter } from './utils/rateLimiter.js';
+
+Logger.info("Security systems initialized");
+
+// ✅ Enhanced Middleware Stack (Order is important!)
+
+// 1. Request ID tracking (must be first)
+app.use(requestIdMiddleware);
+
+// 2. Security headers with Helmet (must be early in the stack)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "'unsafe-eval'",
+        "https://www.googletagmanager.com",
+        "https://www.google-analytics.com"
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: [
+        "'self'", 
+        "data:", 
+        "https:",
+        "https://www.google-analytics.com",
+        "https://www.googletagmanager.com"
+      ],
+      connectSrc: [
+        "'self'",
+        "https://www.google-analytics.com",
+        "https://analytics.google.com",
+        "https://apii.ionia.sbs",
+        "https://www.ionia.sbs",
+        "http://localhost:*",
+        "https://localhost:*",
+        "http://127.0.0.1:*",
+        "https://127.0.0.1:*"
+      ],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  xssFilter: true,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
+}));
+
+// 3. Trust proxy for accurate IP addresses (important for rate limiting)
+app.set('trust proxy', 1);
+
+// 2.5. HTTPS Enforcement for Production
+if (process.env.NODE_ENV === 'production' && process.env.HTTPS_ENABLED === 'true') {
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect(`https://${req.header('host')}${req.url}`);
+    } else {
+      next();
+    }
+  });
+}
+
+// 3. Performance monitoring
+app.use(performanceMonitoring);
+
+// 4. Cookie Parser Middleware
 app.use(cookieParser());
 
-// Add a pre-flight handler that responds to all OPTIONS requests
-app.options('*', (req, res) => {
-  // Accept any origin that sends a request
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, access-control-allow-credentials, Access-Control-Allow-Credentials');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
-});
+// Note: Sessions removed - using JWT-only authentication for educational platform
+// This allows users to stay logged in for months without server dependencies
 
-// ✅ Define Allowed Origins - using function instead of array for more flexibility
+// 5. Request size validation
+app.use(validateRequestSize('50mb')); // Increase for file uploads and large questions
+
+// 6. Content type validation (allow multipart for file uploads)
+app.use(validateContentType(['application/json', 'multipart/form-data', 'application/x-www-form-urlencoded']));
+
+// Note: OPTIONS handler removed - handled by CORS middleware below
+
+// ✅ Consolidated Origin Validation
 const isOriginAllowed = (origin) => {
   // Allow requests with no origin (like mobile apps or curl requests)
   if (!origin) return true;
+  
+  // Define allowed origins
+  const baseOrigins = [
+    'http://localhost:3000', 'http://localhost:3001', 
+    'http://127.0.0.1:3000', 'http://127.0.0.1:3001'
+  ];
+  
+  const productionOrigins = [
+    process.env.FRONTEND_URL, process.env.ADMIN_URL, process.env.API_URL
+  ].filter(Boolean);
+  
+  const allowedOrigins = [...baseOrigins, ...productionOrigins];
+  
+  // Check exact matches first
+  if (allowedOrigins.includes(origin)) return true;
   
   // Allow any subdomain of ionia.sbs
   if (origin.endsWith('.ionia.sbs') || origin === 'https://ionia.sbs') return true;
   
   // Allow all localhost origins
-  if (origin.match(/http?:\/\/localhost(:\d+)?$/)) return true;
+  if (origin.match(/https?:\/\/localhost(:\d+)?$/)) return true;
   
-  // Allow specific IP addresses
-  const allowedIPs = [
-    'http://3.110.43.68',
-    'http://3.110.43.68/',
-    'https://3.110.43.68',
-    'https://3.110.43.68/'
-  ];
-  if (allowedIPs.includes(origin)) return true;
+  // Allow specific IP addresses (development only)
+  if (process.env.NODE_ENV === 'development') {
+    const allowedIPs = ['http://3.110.43.68', 'http://3.110.43.68/', 'https://3.110.43.68', 'https://3.110.43.68/'];
+    if (allowedIPs.includes(origin)) return true;
+  }
   
-  // Reject all other origins
   return false;
 };
 
-// ✅ Setup CORS Middleware with maximum flexibility
+// ✅ Consolidated CORS Middleware with Security Headers
 app.use(
   cors({
     origin: function (origin, callback) {
-      console.log("Request Origin:", origin);
+      Logger.debug("Request Origin", { origin });
       
       if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        console.log(`Origin ${origin} not allowed by CORS`);
+        Logger.warn(`Origin not allowed by CORS`, { origin });
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Cookie", "access-control-allow-credentials", "Access-Control-Allow-Credentials"],
-    exposedHeaders: ["Set-Cookie", "Authorization"]
+    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Cookie", "access-control-allow-credentials", "Access-Control-Allow-Credentials", "X-CSRF-Token", "x-csrf-token"],
+    exposedHeaders: ["Set-Cookie", "Authorization", "X-Request-ID"]
   })
 );
 
-// ✅ Additional Security and CORS Headers for all responses
+// ✅ Additional Security Headers (complementing Helmet)
 app.use((req, res, next) => {
-  // Set the origin based on the request's origin header
-  const origin = req.headers.origin;
-  if (origin && isOriginAllowed(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  
-  // Always set these headers for every response
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie, access-control-allow-credentials, Access-Control-Allow-Credentials');
-  
-  // Add CSP header with WebSocket support
-  const cspDirectives = [
-    "default-src 'self'",
-    "connect-src 'self' ws: wss: http://3.110.43.68/ http://3.7.73.172/ https://ionia.sbs https://www.ionia.sbs https://api.ionia.sbs http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* https://127.0.0.1:3000",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "img-src 'self' data: blob: https: http: https://res.cloudinary.com"
-  ].join('; ');
-  
-  res.header('Content-Security-Policy', cspDirectives);
-  
+  // Additional security headers not covered by Helmet
+  res.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   next();
 });
 
-// ✅ Body Parsing Middleware
-app.use(express.json({ limit: "16kb" }));
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+// ✅ Body Parsing Middleware - Apply URL encoding for all requests
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(express.static("public"));
+
+// ✅ Consolidated Middleware for File Upload Routes
+const isFileUploadRoute = (req) => {
+  return req.originalUrl.includes('/questions/upload') || 
+         (req.originalUrl.includes('/questions') && req.method === 'PATCH' && req.originalUrl.match(/\/questions\/[^\/]+$/));
+};
+
+// ✅ Input Sanitization (skip for multipart uploads)
+app.use((req, res, next) => {
+  if (isFileUploadRoute(req)) {
+    return next();
+  }
+  sanitizeInput(req, res, next);
+});
+
+// ✅ JSON Parsing Middleware (skip for multipart uploads)
+app.use((req, res, next) => {
+  if (isFileUploadRoute(req)) {
+    return next();
+  }
+  express.json({ limit: "50mb" })(req, res, next);
+});
+
+// ✅ Request Completion Logging
+app.use(requestCompletionLogger);
+
+// ✅ Enhanced Auth Logging
+app.use(enhancedAuthLogging);
 
 // ✅ Routes Import
 import userRouter from "./routes/user.routes.js";
 import questionRouter from "./routes/question.routes.js";
-// import previousYearPaperRouter from "./routes/previousYearPaper.routes.js"; // REMOVE: No longer needed
 import attemptedTestRouter from "./routes/attemptedTest.routes.js";  
 import analyticsRouter from './routes/analytics.routes.js';
-import testRouter from './routes/test.routes.js'; // Use this for ALL test types, including PYQ
+import testRouter from './routes/test.routes.js';
+
+// ✅ Enhanced Health and Monitoring Endpoints
+app.get('/health', healthCheck);
+app.get('/metrics', getMetrics);
+
+// ✅ Security Status Endpoint (for monitoring)
+app.get('/api/security/status', (req, res) => {
+  try {
+    const stats = {
+      tokenBlacklist: tokenBlacklist.getStats(),
+      rateLimiter: rateLimiter.getStats(),
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development'
+    };
+    
+    res.json({
+      success: true,
+      data: stats,
+      message: 'Security system status',
+      meta: {
+        requestId: req.requestId
+      }
+    });
+  } catch (error) {
+    Logger.error('Security status error', { 
+      requestId: req.requestId, 
+      error: error.message 
+    });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to get security status',
+      meta: {
+        requestId: req.requestId
+      }
+    });
+  }
+});
 
 // ✅ Routes Declaration
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/questions", questionRouter);
 app.use("/api/v1/attempted-tests", attemptedTestRouter);  
 app.use('/api', analyticsRouter); 
-app.use('/api/v1/tests', testRouter); // Use this router for fetching/managing PYQs as well
+app.use('/api/v1/tests', testRouter);
 
 // ✅ Add direct debug endpoint for admin analytics
 app.get('/api/debug-analytics', async (req, res) => {
   try {
-    console.log('Debug analytics endpoint accessed');
+    Logger.debug('Debug analytics endpoint accessed', { requestId: req.requestId });
     res.json({
+      success: true,
+      data: {
       totalTests: 5,
       totalQuestions: 150,
       activeUsers: 25,
@@ -145,26 +352,39 @@ app.get('/api/debug-analytics', async (req, res) => {
           createdAt: new Date().toISOString()
         }
       ]
+      },
+      meta: {
+        requestId: req.requestId
+      }
     });
   } catch (error) {
-    console.error('Debug endpoint error:', error);
-    res.status(500).json({ error: 'Debug endpoint failed' });
+    Logger.error('Debug endpoint error', { 
+      requestId: req.requestId, 
+      error: error.message 
+    });
+    res.status(500).json({ 
+      success: false,
+      error: 'Debug endpoint failed',
+      meta: {
+        requestId: req.requestId
+      }
+    });
   }
 });
 
-// Log all incoming requests for debugging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-  next();
-});
-
-// ✅ Example Endpoint
+// ✅ Root Endpoint
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.json({
+    success: true,
+    message: "API is running with enhanced security and monitoring...",
+    timestamp: new Date().toISOString(),
+    requestId: req.requestId
+  });
 });
 
-// Error handling middleware
-app.use(errorHandler);
+// ✅ Enhanced Error Handling Middleware Stack (Order is important!)
+app.use(errorTracking); // Track errors in metrics
+app.use(errorHandler);  // Handle and format errors
 
 // ✅ Export the App
 export { app };

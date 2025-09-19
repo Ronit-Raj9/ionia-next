@@ -2,48 +2,50 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAppSelector, useAppDispatch } from "@/redux/hooks/hooks";
-import { RootState } from "@/redux/store";
-import AnalysisWindow from "@/components/analysis/AnalysisWindow";
-import { addNotification } from "@/redux/slices/uiSlice";
-import { checkAuth, setRedirectTo } from "@/redux/slices/authSlice";
+import { useAuthStore } from "@/features/auth/store/authStore";
+import { useTestStore } from "@/features/tests/store/testStore";
+import { useUIStore } from "@/stores/uiStore";
+import AnalysisWindow from "@/features/analysis/components/AnalysisWindow";
 
 export default function ResultsPage() {
   const params = useParams();
   const { examType, subject, testId: paperId } = params || {};
   const router = useRouter();
-  const dispatch = useAppDispatch();
   
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { results, isTestCompleted } = useAppSelector((state: RootState) => state.test);
+  const { isAuthenticated, isLoading: authLoading, initializeAuth } = useAuthStore();
+  const { results, isTestCompleted } = useTestStore();
+  const { addNotification } = useUIStore();
 
   // Check authentication
   useEffect(() => {
-    dispatch(checkAuth());
-  }, [dispatch]);
+    if (isAuthenticated) {
+      initializeAuth();
+    }
+  }, [initializeAuth, isAuthenticated]);
 
   // Handle authentication redirect
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      dispatch(setRedirectTo(`/exam/${examType}/${subject}/${paperId}/results`));
-      dispatch(addNotification({
+      addNotification({
+        title: "Authentication Required",
         message: "Please login to view test results",
         type: "warning"
-      }));
+      });
       router.push("/login");
     }
-  }, [isAuthenticated, authLoading, router, dispatch, examType, subject, paperId]);
+  }, [isAuthenticated, authLoading, router, addNotification, examType, subject, paperId]);
 
   // Redirect to test page if no results
   useEffect(() => {
     if (!authLoading && isAuthenticated && !isTestCompleted && !results) {
-      dispatch(addNotification({
+      addNotification({
+        title: "Test Not Complete",
         message: "No test results found. Please complete the test first.",
         type: "warning"
-      }));
-      router.push(`/exam/${examType}/${subject}/${paperId}`);
+      });
+      router.push(`/exam/${Array.isArray(examType) ? examType[0] : examType}/${Array.isArray(subject) ? subject[0] : subject}/${Array.isArray(paperId) ? paperId[0] : paperId}`);
     }
-  }, [isTestCompleted, results, router, authLoading, isAuthenticated, examType, subject, paperId, dispatch]);
+  }, [isTestCompleted, results, router, authLoading, isAuthenticated, examType, subject, paperId, addNotification]);
 
   if (authLoading) {
     return (
@@ -64,7 +66,7 @@ export default function ResultsPage() {
           <h2 className="text-xl font-semibold mb-4">No Results Found</h2>
           <p className="text-gray-600 mb-4">We couldn't find any results for this test.</p>
           <button 
-            onClick={() => router.push(`/exam/${examType}/${subject}/${paperId}`)}
+            onClick={() => router.push(`/exam/${Array.isArray(examType) ? examType[0] : examType}/${Array.isArray(subject) ? subject[0] : subject}/${Array.isArray(paperId) ? paperId[0] : paperId}`)}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             Take Test
@@ -77,9 +79,9 @@ export default function ResultsPage() {
   return (
     <div className="container mx-auto p-4 pt-20">
       <AnalysisWindow 
-        paperId={paperId as string} 
-        examType={examType as string} 
-        subject={subject as string} 
+        paperId={Array.isArray(paperId) ? paperId[0] : paperId} 
+        examType={Array.isArray(examType) ? examType[0] : examType} 
+        subject={Array.isArray(subject) ? subject[0] : subject} 
       />
     </div>
   );

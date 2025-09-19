@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { Test } from "../models/test.model.js";
 import { Question } from "../models/question.model.js"; // Needed for calculating marks on update
+import { AttemptedTest } from "../models/attemptedTest.model.js"; // Needed for cleanup operations
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -212,7 +213,7 @@ const getTests = asyncHandler(async (req, res) => {
 
     try {
         const result = await Test.aggregatePaginate(aggregate, options);
-        // console.log("Pagination result:", result);
+        console.log("Pagination result:", result);
 
         if (!result) {
             throw new ApiError(500, "Failed to retrieve tests");
@@ -243,11 +244,15 @@ const getTestById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid Test ID format");
     }
 
-    // Find test and populate creator info and revision history users
+    // Find test and populate creator info, revision history users, and questions
     const test = await Test.findById(id)
         .populate('createdBy', 'username email')
         .populate('lastModifiedBy', 'username email')
-        .populate('revisionHistory.modifiedBy', 'username email');
+        .populate('revisionHistory.modifiedBy', 'username email')
+        .populate({
+            path: 'questions',
+            select: 'question options correctOption correctOptions marks subject examType class difficulty year chapter section negativeMarks isVerified isActive questionType image'
+        });
 
     if (!test) {
         throw new ApiError(404, "Test not found");
@@ -281,6 +286,45 @@ const getTestById = asyncHandler(async (req, res) => {
     console.log(`Found test: ${test.title} - Access granted`);
     return res.status(200).json(
         new ApiResponse(200, test, "Test retrieved successfully")
+    );
+});
+
+// --- Get Test with Populated Questions ---
+const getTestWithQuestions = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    console.log(`Fetching test with populated questions by ID: ${id}`);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new ApiError(400, "Invalid Test ID format");
+    }
+
+    // Find test and populate all related data including questions
+    const test = await Test.findById(id)
+        .populate('createdBy', 'username email')
+        .populate('lastModifiedBy', 'username email')
+        .populate('revisionHistory.modifiedBy', 'username email')
+        .populate({
+            path: 'questions',
+            select: 'question options correctOption correctOptions marks subject examType class difficulty year chapter section negativeMarks isVerified isActive questionType image'
+        });
+
+    if (!test) {
+        throw new ApiError(404, "Test not found");
+    }
+
+    // Check user role for access control
+    const isAdmin = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    console.log(`User role check: isAdmin=${isAdmin}, user role=${req.user?.role}, test status=${test.status}`);
+    
+    // Only apply status check for non-admin users
+    if (!isAdmin && test.status !== 'published') {
+        console.log(`Access denied: non-admin user trying to access ${test.status} test`);
+        throw new ApiError(403, "You do not have permission to view this test");
+    }
+
+    console.log(`Found test with ${test.questions?.length || 0} populated questions: ${test.title}`);
+    return res.status(200).json(
+        new ApiResponse(200, test, "Test with questions retrieved successfully")
     );
 });
 
@@ -409,14 +453,40 @@ const deleteTest = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Test not found or already deleted");
     }
 
-    // TODO: Consider cleanup tasks? 
-    // - Delete associated AttemptedTest records? (Or keep for history?)
-    // - Remove test reference from user profiles/schedules?
+    // Cleanup tasks
+    try {
+        // 1. Handle associated AttemptedTest records
+        // Keep for historical data but mark as orphaned
+        const attemptedTestsCount = await AttemptedTest.countDocuments({ testId: id });
+        if (attemptedTestsCount > 0) {
+            console.log(`Found ${attemptedTestsCount} attempted test records for deleted test`);
+            // Mark them as orphaned instead of deleting for historical purposes
+            await AttemptedTest.updateMany(
+                { testId: id },
+                { 
+                    $set: { 
+                        isOrphaned: true,
+                        orphanedAt: new Date(),
+                        orphanReason: 'Original test deleted'
+                    }
+                }
+            );
+            console.log(`Marked ${attemptedTestsCount} attempted test records as orphaned`);
+        }
+
+        // 2. Log cleanup summary
+        console.log(`Cleanup completed for test ID: ${id}`);
+        console.log(`- Attempted tests marked as orphaned: ${attemptedTestsCount}`);
+        
+    } catch (cleanupError) {
+        console.error(`Cleanup error for test ID ${id}:`, cleanupError);
+        // Don't throw error as the main deletion was successful
+        // Just log the cleanup issue
+    }
 
     console.log(`Test ID: ${id} deleted successfully.`);
     return res.status(200).json(
         new ApiResponse(200, { deletedId: id }, "Test deleted successfully")
-        // Or return 204 No Content: return res.status(204).send();
     );
 });
 
@@ -576,7 +646,8 @@ export {
     createTest,
     getTests,
     getTestById,
+    getTestWithQuestions,
     updateTest,
     deleteTest,
     getTestForAttempt
-}; 
+};

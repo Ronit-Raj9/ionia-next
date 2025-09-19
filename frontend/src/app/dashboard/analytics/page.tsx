@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAppSelector, useAppDispatch } from '@/redux/hooks/hooks';
-import { RootState } from '@/redux/store';
-import { fetchTestHistory } from '@/redux/slices/testSlice';
-import { Card } from '@/components/dashboard/card';
+import { useAuthStore } from '@/features/auth/store/authStore';
+import { useTestStore } from '@/features/tests/store/testStore';
+import { Card } from '@/features/dashboard/components/card';
 import { ClipLoader } from 'react-spinners';
 import { 
   FiCalendar, 
@@ -35,9 +34,9 @@ import {
 export default function AnalyticsPage() {
   console.log('Analytics page rendering');
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { isAuthenticated, loading: authLoading } = useAppSelector((state: RootState) => state.auth);
-  const { testHistory, loading: testLoading } = useAppSelector((state: RootState) => state.test);
+  
+  const { isAuthenticated } = useAuthStore();
+  const { testHistory, loading: testLoading, fetchTestHistory } = useTestStore();
   
   const [timeData, setTimeData] = useState<any[]>([]);
   const [subjectData, setSubjectData] = useState<any[]>([]);
@@ -47,34 +46,26 @@ export default function AnalyticsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check authentication
-  useEffect(() => {
-    console.log('Auth check effect running', { isAuthenticated, authLoading });
-    if (!authLoading && !isAuthenticated) {
-      console.log('Not authenticated, redirecting to login');
-      router.push('/login');
+  // Memoize the fetch function to prevent infinite loops
+  const loadTestHistory = useCallback(async () => {
+    try {
+      await fetchTestHistory();
+    } catch (err) {
+      console.error("Failed to fetch test history:", err);
+      setError("Failed to load test data. Using sample data instead.");
+      createMockData();
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [fetchTestHistory]);
 
   // Fetch test history
   useEffect(() => {
     console.log('Fetch test history effect running', { isAuthenticated, testHistoryLength: Object.keys(testHistory).length });
     
-    const fetchData = async () => {
-      if (isAuthenticated) {
-        console.log('Dispatching fetchTestHistory');
-        try {
-          await dispatch(fetchTestHistory()).unwrap();
-        } catch (err) {
-          console.error("Failed to fetch test history:", err);
-          setError("Failed to load test data. Using sample data instead.");
-          createMockData();
-        }
-      }
-    };
-    
-    fetchData();
-  }, [isAuthenticated, dispatch]);
+    if (isAuthenticated) {
+      console.log('Fetching test history');
+      loadTestHistory();
+    }
+  }, [isAuthenticated, loadTestHistory]);
 
   // Process data for charts
   useEffect(() => {
@@ -92,7 +83,7 @@ export default function AnalyticsPage() {
         }
       }, 1000);
     }
-  }, [testHistory, testLoading, isAuthenticated]);
+  }, [testHistory, testLoading, isAuthenticated, isLoading]);
 
   const processChartData = () => {
     console.log('Processing chart data function called');
@@ -244,7 +235,7 @@ export default function AnalyticsPage() {
     setError(null);
     
     try {
-      await dispatch(fetchTestHistory()).unwrap();
+      await fetchTestHistory();
       console.log('Test history refreshed');
       processChartData();
       setIsRefreshing(false);
@@ -255,7 +246,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen">
         <ClipLoader size={50} color="#10b981" />
@@ -425,4 +416,4 @@ export default function AnalyticsPage() {
       </Card>
     </div>
   );
-} 
+}

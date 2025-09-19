@@ -1,7 +1,8 @@
 "use client";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { QuestionStatus } from "@/components/QuestionPaletteIcons";
+import { QuestionStatus } from "@/features/tests/components/QuestionPaletteIcons";
+import { getTestById } from "@/features/tests/api/testsApi";
 
 type QuestionStatusType = 'not-visited' | 'not-answered' | 'answered' | 'marked' | 'answered-marked';
 
@@ -21,19 +22,10 @@ const Instructions = () => {
     // Fetch test details if needed
     const fetchTestDetails = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tests/${paperId}`, {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        if (!res.ok) {
-          throw new Error("Failed to fetch test details");
-        }
-        const responseData = await res.json();
-        if (responseData.success && responseData.data) {
-          setTestDetails(responseData.data);
-        }
+        // Get the correct examType value for the API
+        const apiExamType = getExamTypeParam(Array.isArray(examType) ? examType[0] : examType);
+        const response = await getTestById(Array.isArray(paperId) ? paperId[0] : paperId, apiExamType);
+        setTestDetails(response);
       } catch (err) {
         console.error("Error fetching test details:", err);
       } finally {
@@ -46,7 +38,9 @@ const Instructions = () => {
 
   const handleProceed = () => {
     if (paperId && examType) {
-      router.push(`/exam/${examType}/mock-test/${paperId}/test`);
+      const examTypeStr = Array.isArray(examType) ? examType[0] : examType;
+      const paperIdStr = Array.isArray(paperId) ? paperId[0] : paperId;
+      router.push(`/exam/${examTypeStr}/mock-test/${paperIdStr}/test`);
     } else {
       console.error("Invalid paperId or examType");
     }
@@ -59,6 +53,16 @@ const Instructions = () => {
       'jee-advanced': 'JEE Advanced'
     };
     return formats[type as string] || type;
+  };
+
+  // Map URL param to backend examType value
+  const getExamTypeParam = (urlExamType: string) => {
+    const mapping: Record<string, string> = {
+      'cuet': 'cuet', // Based on the API response, CUET tests have examType: "cuet" (lowercase)
+      'jee-mains': 'jee_main',
+      'jee-advanced': 'jee_adv'
+    };
+    return mapping[urlExamType] || urlExamType;
   };
 
   const examDuration = testDetails?.duration || 45;
