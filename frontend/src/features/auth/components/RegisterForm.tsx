@@ -1,15 +1,26 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineUser } from 'react-icons/hi';
+import { motion } from 'framer-motion';
+import { HiOutlineMail, HiOutlineUser, HiOutlineLockClosed } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
 import { useFormValidation } from '../store/validationStore';
 import type { RegisterData } from '../types';
 import { toast } from 'react-hot-toast';
 import { authLogger } from '../utils/logger';
+import { InputWithIcon } from './InputWithIcon';
+import { PasswordInput } from './PasswordInput';
+
+interface FormData {
+  fullName: string;
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  acceptTerms: boolean;
+}
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -27,9 +38,6 @@ export default function RegisterForm() {
     isTouched
   } = useFormValidation('registration', 'registration');
   
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
   // Username validation state
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
@@ -37,7 +45,6 @@ export default function RegisterForm() {
   const [usernameError, setUsernameError] = useState('');
 
   useEffect(() => {
-    // Clear any existing errors when component mounts
     clearError();
   }, [clearError]);
 
@@ -108,207 +115,146 @@ export default function RegisterForm() {
     await handleRegister();
   };
 
-  return (
-    <div className="relative min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Subtle background elements */}
-      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute left-[-100px] top-[-150px] w-[400px] h-[400px] bg-emerald-100 opacity-30 rounded-full blur-3xl" />
-        <div className="absolute right-[-120px] bottom-[-150px] w-[500px] h-[500px] bg-purple-100 opacity-20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/4 w-[200px] h-[200px] bg-rose-100 opacity-15 rounded-full blur-2xl" />
-      </div>
+  // Get username validation error
+  const getUsernameError = () => {
+    if (usernameError) return usernameError;
+    if (formData.username && isUsernameAvailable === false) return usernameMessage;
+    return null;
+  };
 
-      <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.9 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ 
-          duration: 0.6,
-          ease: "easeOut",
-          type: "spring",
-          stiffness: 100
-        }}
-        className="relative max-w-md w-full space-y-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl shadow-black/10 p-8 md:p-10"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
+  // Get username validation state for styling
+  const getUsernameValidationState = () => {
+    if (isCheckingUsername) return 'checking';
+    if (formData.username && isUsernameAvailable === true) return 'success';
+    if (formData.username && isUsernameAvailable === false) return 'error';
+    return 'default';
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <motion.div 
+        initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-center space-y-4"
+        transition={{ duration: 0.5 }}
+        className="mx-auto max-w-md bg-white border border-gray-100 rounded-2xl shadow-lg p-6 sm:p-8"
         >
+        {/* Header */}
+        <div className="text-center mb-8">
           <motion.div
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mx-auto w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20"
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="mx-auto w-16 h-16 bg-gradient-to-br from-emerald-600 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-6"
           >
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
           </motion.div>
           
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2">
               Create your account
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+          </h1>
+          <p className="text-sm text-gray-600 mb-6">
               Join thousands of learners today
             </p>
-          </div>
           
           <div className="flex items-center justify-center space-x-2 text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Already have an account?</span>
+            <span className="text-gray-500">Already have an account?</span>
             <Link
               href="/login"
-              className="font-semibold text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-300"
+              className="font-semibold text-emerald-600 hover:text-emerald-500 transition-colors duration-300"
             >
               Sign in
             </Link>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.form
-          className="mt-8 space-y-6"
-          onSubmit={handleSubmit}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-        >
-          <AnimatePresence mode="wait">
+        {/* Error Message */}
             {error && (
               <motion.div
-                key="error"
-                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl shadow-sm"
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6"
+            role="alert"
               >
                 <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    {error.message?.includes('🌐') || error.message?.includes('network') || error.message?.includes('connect') ? (
-                      <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    ) : error.message?.includes('email') || error.message?.includes('exists') ? (
-                      <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                      </svg>
-                    ) : error.message?.includes('⏱️') || error.message?.includes('attempts') ? (
-                      <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    ) : error.message?.includes('CSRF') || error.message?.includes('csrf') ? (
-                      <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    ) : (
-                      <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                       </svg>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium leading-5">{error.message}</p>
-                    {(error.message?.includes('🌐') || error.message?.includes('network') || error.message?.includes('connect')) && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+              <div>
+                <p className="text-sm font-medium">{error.message}</p>
+                {error.message?.includes('🌐') && (
+                  <p className="mt-1 text-xs text-red-600">
                         Make sure the backend server is running on port 8000
-                      </p>
-                    )}
-                    {(error.message?.includes('CSRF') || error.message?.includes('csrf')) && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                        Please refresh the page and try again
                       </p>
                     )}
                   </div>
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
 
-          <div className="space-y-5">
-            {/* Full Name */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="group"
-            >
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineUser className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
-                </div>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  required
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
-                  placeholder="Enter your full name"
-                  value={formData.fullName || ''}
-                  onChange={handleChange}
-                  onBlur={() => setTouched('fullName')}
-                />
-              </div>
-            </motion.div>
-            {/* Username */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="group"
-            >
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Username
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineUser className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
-                </div>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
-                    formData.username && isUsernameAvailable === true
-                      ? 'border-green-400 focus:border-green-500 focus:ring-green-500/20 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/40'
-                      : formData.username && isUsernameAvailable === false
-                      ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40'
-                      : 'border-gray-300 dark:border-gray-600 focus:border-emerald-500 focus:ring-emerald-500/20 bg-white dark:bg-gray-800'
-                  } placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white`}
-                  placeholder="Choose a unique username"
-                  value={formData.username || ''}
-                  onChange={handleChange}
-                  onBlur={() => setTouched('username')}
-                />
-                
-                {/* Username validation indicator */}
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+        {/* Registration Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Full Name and Username Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputWithIcon
+              id="fullName"
+              name="fullName"
+              type="text"
+              label="Full Name"
+              placeholder="Enter your full name"
+              icon={<HiOutlineUser />}
+              value={formData.fullName || ''}
+              onChange={handleChange}
+              onBlur={() => setTouched('fullName')}
+              error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
+              required
+              autoComplete="name"
+            />
+            
+            <div className="relative">
+              <InputWithIcon
+                id="username"
+                name="username"
+                type="text"
+                label="Username"
+                placeholder="Choose a username"
+                icon={<HiOutlineUser />}
+                value={formData.username || ''}
+                onChange={handleChange}
+                onBlur={() => setTouched('username')}
+                error={getUsernameError()}
+                required
+                autoComplete="username"
+                className=""
+              />
+              
+              {/* Username validation indicator */}
+              {formData.username && (
+                <div className="absolute right-0 top-0 w-14 h-12 flex items-center justify-center">
                   {isCheckingUsername && (
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full"
+                      className="w-4 h-4 border-2 border-gray-300 border-t-emerald-600 rounded-full"
                     />
                   )}
-                  {!isCheckingUsername && formData.username && isUsernameAvailable === true && (
+                  {getUsernameValidationState() === 'success' && (
                     <motion.svg 
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="w-5 h-5 text-green-500" 
+                      className="w-4 h-4 text-emerald-500" 
                       fill="currentColor" 
                       viewBox="0 0 20 20"
                     >
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </motion.svg>
                   )}
-                  {!isCheckingUsername && formData.username && isUsernameAvailable === false && (
+                  {getUsernameValidationState() === 'error' && (
                     <motion.svg 
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="w-5 h-5 text-red-500" 
+                      className="w-4 h-4 text-red-500" 
                       fill="currentColor" 
                       viewBox="0 0 20 20"
                     >
@@ -316,255 +262,130 @@ export default function RegisterForm() {
                     </motion.svg>
                   )}
                 </div>
-                
-                {/* Username validation message */}
-                <AnimatePresence>
-                  {formData.username && (usernameMessage || usernameError) && (
-                    <motion.p 
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className={`mt-2 text-sm flex items-center space-x-1 ${
-                        isUsernameAvailable === true 
-                          ? 'text-green-600 dark:text-green-400' 
-                          : 'text-red-600 dark:text-red-400'
-                      }`}
-                    >
-                      <span>{usernameError || usernameMessage}</span>
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-            {/* Email */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-              className="group"
-            >
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineMail className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className={`block w-full pl-10 pr-3 py-3 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
-                    validation.errors.length > 0 && isTouched
-                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500/20 focus:border-emerald-500'
-                  }`}
-                  placeholder="Enter your email address"
-                  value={formData.email || ''}
-                  onChange={handleChange}
-                  onBlur={() => setTouched('email')}
-                />
-                {validation.errors.length > 0 && isTouched && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Password */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-              className="group"
-            >
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineLockClosed className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  required
-                  className={`block w-full pl-10 pr-12 py-3 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
-                    validation.errors.length > 0 && isTouched
-                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500/20 focus:border-emerald-500'
-                  }`}
-                  placeholder="Create a strong password"
-                  value={formData.password || ''}
-                  onChange={handleChange}
-                  onBlur={() => setTouched('password')}
-                />
-                {validation.errors.length > 0 && isTouched && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
-                )}
-                <motion.button 
-                  type="button" 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowPassword(prev=>!prev)} 
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-                >
-                  {showPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
-                </motion.button>
-              </div>
-            </motion.div>
-
-            {/* Confirm Password */}
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.7 }}
-              className="group"
-            >
-              <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineLockClosed className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
-                </div>
-                <input
-                  id="confirm-password"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  required
-                  className={`block w-full pl-10 pr-12 py-3 border placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200 ${
-                    validation.errors.length > 0 && isTouched
-                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500/20 focus:border-red-500'
-                      : 'border-gray-300 dark:border-gray-600 focus:ring-emerald-500/20 focus:border-emerald-500'
-                  }`}
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword || ''}
-                  onChange={handleChange}
-                  onBlur={() => setTouched('confirmPassword')}
-                />
-                {validation.errors.length > 0 && isTouched && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
-                )}
-                <motion.button 
-                  type="button" 
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowConfirmPassword(prev=>!prev)} 
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
-                >
-                  {showConfirmPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
-                </motion.button>
-              </div>
-            </motion.div>
-            {/* Accept Terms */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.8 }}
-              className="flex items-start space-x-3"
-            >
-              <input
-                type="checkbox"
-                id="acceptTerms"
-                name="acceptTerms"
-                checked={formData.acceptTerms || false}
-                onChange={handleChange}
-                onBlur={() => setTouched('acceptTerms')}
-                className={`mt-1 h-4 w-4 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 border-gray-300 rounded transition-colors ${
-                  validation.errors.length > 0 && isTouched
-                    ? 'border-red-500 focus:ring-red-500'
-                    : ''
-                }`}
-              />
-              {validation.errors.length > 0 && isTouched && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validation.errors[0]}</p>
               )}
-              <label htmlFor="acceptTerms" className="text-sm text-gray-600 dark:text-gray-400 leading-5">
-                I agree to the{' '}
-                <Link href="/terms" className="font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-300">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-300">
-                  Privacy Policy
-                </Link>
-              </label>
-            </motion.div>
+            </div>
+          </div>
+
+          {/* Email */}
+          <InputWithIcon
+            id="email"
+            name="email"
+            type="email"
+            label="Email address"
+            placeholder="Enter your email address"
+            icon={<HiOutlineMail />}
+            value={formData.email || ''}
+            onChange={handleChange}
+            onBlur={() => setTouched('email')}
+            error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
+            required
+            autoComplete="email"
+          />
+
+          {/* Password */}
+          <PasswordInput
+            id="password"
+            name="password"
+            label="Password"
+            placeholder="Create a strong password"
+            value={formData.password || ''}
+            onChange={handleChange}
+            onBlur={() => setTouched('password')}
+            error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
+            required
+            autoComplete="new-password"
+          />
+
+          {/* Confirm Password */}
+          <PasswordInput
+            id="confirmPassword"
+            name="confirmPassword"
+            label="Confirm password"
+            placeholder="Confirm your password"
+            value={formData.confirmPassword || ''}
+            onChange={handleChange}
+            onBlur={() => setTouched('confirmPassword')}
+            error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
+            required
+            autoComplete="new-password"
+          />
+
+          {/* Terms and Conditions */}
+          <div className="flex items-start space-x-3">
+            <input
+              type="checkbox"
+              id="acceptTerms"
+              name="acceptTerms"
+              checked={formData.acceptTerms || false}
+              onChange={handleChange}
+              onBlur={() => setTouched('acceptTerms')}
+              className="mt-1 h-4 w-4 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 border-gray-300 rounded transition-colors"
+              required
+            />
+            <label htmlFor="acceptTerms" className="text-sm text-gray-600 leading-5">
+              I agree to the{' '}
+              <Link href="/terms" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors duration-300">
+                Terms of Service
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="font-medium text-emerald-600 hover:text-emerald-500 transition-colors duration-300">
+                Privacy Policy
+              </Link>
+            </label>
           </div>
           
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
+          {/* Submit Button */}
+          <motion.button
+            type="submit"
+            disabled={isLoading || !isFormValid}
+            whileHover={(!isLoading && isFormValid) ? { scale: 1.02, y: -2 } : {}}
+            whileTap={(!isLoading && isFormValid) ? { scale: 0.98 } : {}}
+            className="mt-4 w-full inline-flex items-center justify-center gap-2 h-12 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:ring-2 focus:ring-green-200 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <motion.button
-              type="submit"
-              disabled={isLoading || !isFormValid}
-              whileHover={(!isLoading && isFormValid) ? { scale: 1.02 } : {}}
-              whileTap={(!isLoading && isFormValid) ? { scale: 0.98 } : {}}
-              className={`group relative w-full flex justify-center items-center py-3 px-6 border-0 text-sm font-semibold rounded-lg text-white transition-all duration-300 ${
-                (isLoading || !isFormValid)
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:ring-offset-2 shadow-lg hover:shadow-xl'
-              }`}
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span>Creating account...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                  </svg>
-                  <span>Create account</span>
-                </div>
-              )}
-            </motion.button>
-          </motion.div>
-          
-        </motion.form>
+            {isLoading ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span>Creating account...</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                <span>Create account</span>
+              </>
+            )}
+          </motion.button>
+        </form>
 
         {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.5 }}
-          className="text-center space-y-4"
-        >
-          <div className="flex items-center justify-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="mt-8 text-center">
+          <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
             <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
             <span>Secured with industry-standard encryption</span>
           </div>
-
-        </motion.div>
+          </div>
       </motion.div>
     </div>
   );
