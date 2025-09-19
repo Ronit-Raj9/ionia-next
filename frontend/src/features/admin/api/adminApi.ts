@@ -7,8 +7,24 @@ import { AdminService } from '../services/adminService';
 /**
  * Fetches the main analytics data for the admin dashboard.
  * Includes: totalQuestions, activeUsers, totalStudents, questionsBySubject, recentQuestions
+ * Uses smart caching to avoid unnecessary API calls.
  */
 export const getAdminAnalytics = AdminService.getAnalytics;
+
+/**
+ * Forces a refresh of analytics data, bypassing cache
+ */
+export const refreshAdminAnalytics = AdminService.refreshAnalytics;
+
+/**
+ * Clears the analytics cache
+ */
+export const clearAnalyticsCache = AdminService.clearAnalyticsCache;
+
+/**
+ * Marks analytics cache as stale (useful when data might be outdated)
+ */
+export const markAnalyticsStale = AdminService.markAnalyticsStale;
 
 
 

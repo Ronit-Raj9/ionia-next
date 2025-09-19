@@ -259,7 +259,7 @@ export interface Test {
   testCategory: 'PYQ' | 'Platform' | 'UserCustom';
   status: 'draft' | 'published' | 'archived';
   instructions?: string;
-  solutionsVisibility: 'always' | 'after_completion' | 'never';
+  solutionsVisibility: 'immediate' | 'after_submission' | 'after_deadline' | 'manual';
   attemptsAllowed: number;
   questions: string[];
   questionCount: number;
@@ -281,7 +281,7 @@ export interface Test {
   // Platform specific fields
   platformTestType?: string;
   isPremium?: boolean;
-  syllabus?: string[];
+  syllabus?: string;
   // UserCustom specific fields
   isPublic?: boolean;
   generationCriteria?: any;
@@ -296,7 +296,7 @@ export interface CreateTestData {
   testCategory: 'PYQ' | 'Platform' | 'UserCustom';
   status?: 'draft' | 'published' | 'archived';
   instructions?: string;
-  solutionsVisibility?: 'always' | 'after_completion' | 'never';
+  solutionsVisibility?: 'immediate' | 'after_submission' | 'after_deadline' | 'manual';
   attemptsAllowed?: number;
   questions: string[];
   duration: number;
@@ -313,7 +313,7 @@ export interface CreateTestData {
   // Platform specific fields
   platformTestType?: string;
   isPremium?: boolean;
-  syllabus?: string[];
+  syllabus?: string;
   // UserCustom specific fields
   isPublic?: boolean;
   generationCriteria?: any;

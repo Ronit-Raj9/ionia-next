@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { devtools } from 'zustand/middleware';
-import * as UserManagementAPI from '../api/userManagementApi';
+import { UserManagementService } from '../services/userManagementService';
 import { createErrorState } from '../utils/errorHandling';
 import type { 
   User, 
@@ -14,6 +14,15 @@ interface UserManagementState {
   users: User[];
   usersPagination: Omit<PaginatedUsers, 'docs'> | null;
   selectedUser: User | null;
+  
+  // Current filters and pagination state
+  currentFilters: {
+    search: string;
+    role: string;
+    status: string;
+    page: number;
+    limit: number;
+  };
   
   // Analytics
   userAnalytics: UserAnalytics | null;
@@ -32,6 +41,14 @@ interface UserManagementActions {
   fetchUsers: (queryParams?: string) => Promise<void>;
   fetchUserDetails: (userId: string) => Promise<void>;
   updateUserRole: (userId: string, role: 'user' | 'admin') => Promise<void>;
+  
+  // ==========================================
+  // 📄 PAGINATION ACTIONS
+  // ==========================================
+  goToNextPage: () => Promise<void>;
+  goToPreviousPage: () => Promise<void>;
+  goToPage: (page: number) => Promise<void>;
+  setFilters: (filters: Partial<UserManagementState['currentFilters']>) => void;
   
   // ==========================================
   // 📊 USER ANALYTICS ACTIONS
@@ -53,6 +70,13 @@ export const useUserManagementStore = create<UserManagementState & UserManagemen
       users: [],
       usersPagination: null,
       selectedUser: null,
+      currentFilters: {
+        search: '',
+        role: '',
+        status: '',
+        page: 1,
+        limit: 10
+      },
       userAnalytics: null,
       loading: new Set(),
       error: {},
@@ -61,13 +85,30 @@ export const useUserManagementStore = create<UserManagementState & UserManagemen
       // 👥 USER MANAGEMENT ACTIONS IMPLEMENTATION
       // ==========================================
 
-      fetchUsers: async (queryParams: string = '') => {
+      fetchUsers: async (queryParams?: string) => {
+        const state = get();
         set((state) => {
           state.loading.add('users');
           state.error['users'] = null;
         });
+        
         try {
-          const data = await UserManagementAPI.getUsers(queryParams);
+          // Use provided queryParams or build from current filters
+          let params = queryParams;
+          if (!params) {
+            const { search, role, status, page, limit } = state.currentFilters;
+            const urlParams = new URLSearchParams();
+            
+            if (search) urlParams.append('search', search);
+            if (role) urlParams.append('role', role);
+            if (status) urlParams.append('status', status);
+            urlParams.append('page', page.toString());
+            urlParams.append('limit', limit.toString());
+            
+            params = urlParams.toString();
+          }
+          
+          const data = await UserManagementService.getUsers(params);
           set((state) => {
             state.users = data.docs;
             const { docs, ...paginationInfo } = data;
@@ -90,7 +131,7 @@ export const useUserManagementStore = create<UserManagementState & UserManagemen
           state.error['userDetails'] = null;
         });
         try {
-          const data = await UserManagementAPI.getUserDetails(userId);
+          const data = await UserManagementService.getUserDetails(userId);
           set((state) => {
             state.selectedUser = data;
           });
@@ -111,7 +152,7 @@ export const useUserManagementStore = create<UserManagementState & UserManagemen
           state.error['updateUserRole'] = null;
         });
         try {
-          const updatedUser = await UserManagementAPI.updateUserRole(userId, role);
+          const updatedUser = await UserManagementService.updateUserRole(userId, role);
           set((state) => {
             // Update user in the list
             const userIndex = state.users.findIndex(u => u._id === userId);
@@ -135,6 +176,53 @@ export const useUserManagementStore = create<UserManagementState & UserManagemen
       },
 
       // ==========================================
+      // 📄 PAGINATION ACTIONS IMPLEMENTATION
+      // ==========================================
+
+      goToNextPage: async () => {
+        const state = get();
+        if (state.usersPagination?.hasNextPage) {
+          set((state) => {
+            state.currentFilters.page += 1;
+          });
+          await get().fetchUsers();
+        }
+      },
+
+      goToPreviousPage: async () => {
+        const state = get();
+        if (state.usersPagination?.hasPrevPage) {
+          set((state) => {
+            state.currentFilters.page = Math.max(1, state.currentFilters.page - 1);
+          });
+          await get().fetchUsers();
+        }
+      },
+
+      goToPage: async (page: number) => {
+        const state = get();
+        if (page >= 1 && page <= (state.usersPagination?.totalPages || 1)) {
+          set((state) => {
+            state.currentFilters.page = page;
+          });
+          await get().fetchUsers();
+        }
+      },
+
+      setFilters: (filters) => {
+        set((state) => {
+          // Reset page to 1 when filters change
+          state.currentFilters = {
+            ...state.currentFilters,
+            ...filters,
+            page: filters.page || 1
+          };
+        });
+        // Automatically fetch users with new filters
+        get().fetchUsers();
+      },
+
+      // ==========================================
       // 📊 USER ANALYTICS ACTIONS IMPLEMENTATION
       // ==========================================
 
@@ -144,7 +232,7 @@ export const useUserManagementStore = create<UserManagementState & UserManagemen
           state.error['userAnalytics'] = null;
         });
         try {
-          const data = await UserManagementAPI.getUsersAnalytics();
+          const data = await UserManagementService.getUsersAnalytics();
           set((state) => {
             state.userAnalytics = data;
           });

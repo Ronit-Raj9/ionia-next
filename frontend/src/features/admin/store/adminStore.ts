@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { devtools } from 'zustand/middleware';
 import * as AdminAPI from '../api/adminApi';
 import { createErrorState } from '../utils/errorHandling';
+import { useAnalyticsCacheStore } from '@/stores/analyticsCacheStore';
 import type { 
   AdminAnalytics, 
   Test,
@@ -31,7 +32,9 @@ interface AdminActions {
   // ==========================================
   // 📊 ANALYTICS ACTIONS
   // ==========================================
-  fetchAdminAnalytics: () => Promise<void>;
+  fetchAdminAnalytics: (forceRefresh?: boolean) => Promise<void>;
+  refreshAdminAnalytics: () => Promise<void>;
+  clearAnalyticsCache: () => void;
   
   // ==========================================
   // 📝 TEST MANAGEMENT ACTIONS
@@ -69,13 +72,14 @@ export const useAdminStore = create<AdminState & AdminActions>()(
       // 📊 ANALYTICS ACTIONS IMPLEMENTATION
       // ==========================================
 
-      fetchAdminAnalytics: async () => {
+      fetchAdminAnalytics: async (forceRefresh: boolean = false) => {
         set((state) => {
           state.loading.add('analytics');
           state.error['analytics'] = null;
         });
+        
         try {
-          const data = await AdminAPI.getAdminAnalytics();
+          const data = await AdminAPI.getAdminAnalytics(forceRefresh);
           set((state) => {
             state.analytics = data;
           });
@@ -98,6 +102,17 @@ export const useAdminStore = create<AdminState & AdminActions>()(
             state.loading.delete('analytics');
           });
         }
+      },
+
+      refreshAdminAnalytics: async () => {
+        return get().fetchAdminAnalytics(true);
+      },
+
+      clearAnalyticsCache: () => {
+        AdminAPI.clearAnalyticsCache();
+        set((state) => {
+          state.analytics = null;
+        });
       },
 
       // ==========================================
