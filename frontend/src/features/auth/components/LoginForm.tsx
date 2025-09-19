@@ -117,46 +117,11 @@ export default function LoginForm() {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
-      {/* Animated background elements */}
+      {/* Subtle background elements */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <motion.div 
-          className="absolute left-[-100px] top-[-150px] w-[400px] h-[400px] bg-emerald-200 opacity-20 rounded-full blur-3xl"
-          animate={{ 
-            x: [0, 30, 0],
-            y: [0, -20, 0],
-            scale: [1, 1.1, 1]
-          }}
-          transition={{ 
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div 
-          className="absolute right-[-120px] bottom-[-150px] w-[500px] h-[500px] bg-purple-200 opacity-15 rounded-full blur-3xl"
-          animate={{ 
-            x: [0, -40, 0],
-            y: [0, 30, 0],
-            scale: [1, 1.2, 1]
-          }}
-          transition={{ 
-            duration: 25,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div 
-          className="absolute top-1/2 left-1/4 w-[200px] h-[200px] bg-rose-200 opacity-10 rounded-full blur-2xl"
-          animate={{ 
-            rotate: [0, 360],
-            scale: [1, 1.3, 1]
-          }}
-          transition={{ 
-            duration: 30,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-        />
+        <div className="absolute left-[-100px] top-[-150px] w-[400px] h-[400px] bg-emerald-100 opacity-30 rounded-full blur-3xl" />
+        <div className="absolute right-[-120px] bottom-[-150px] w-[500px] h-[500px] bg-purple-100 opacity-20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-[200px] h-[200px] bg-rose-100 opacity-15 rounded-full blur-2xl" />
       </div>
 
       <motion.div
@@ -168,7 +133,7 @@ export default function LoginForm() {
           type: "spring",
           stiffness: 100
         }}
-        className="relative max-w-md w-full space-y-8 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-white/40 dark:border-gray-700/50 rounded-2xl shadow-2xl shadow-black/10 p-8 md:p-10"
+        className="relative max-w-md w-full space-y-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl shadow-black/10 p-8 md:p-10"
       >
         {/* Header */}
         <motion.div
@@ -281,16 +246,13 @@ export default function LoginForm() {
                 Email address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineMail className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
-                </div>
                 <input
                   id="email"
                   name="email"
                   type="email"
                   autoComplete="email"
                   required
-                  className="block w-full pl-10 pr-3 py-3.5 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="block w-full px-3 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -310,16 +272,13 @@ export default function LoginForm() {
                 Password
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <HiOutlineLockClosed className="h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors duration-200" />
-                </div>
                 <input
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
-                  className="block w-full pl-10 pr-12 py-3.5 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className="block w-full px-3 py-3 border border-gray-300 dark:border-gray-600 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -329,7 +288,7 @@ export default function LoginForm() {
                   type="button"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-200"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                 >
@@ -379,7 +338,7 @@ export default function LoginForm() {
               disabled={isLoading}
               whileHover={!isLoading ? { scale: 1.02 } : {}}
               whileTap={!isLoading ? { scale: 0.98 } : {}}
-              className={`group relative w-full flex justify-center items-center py-4 px-6 text-sm font-semibold rounded-xl transition-all duration-300 min-h-[48px] ${
+              className={`group relative w-full flex justify-center items-center py-3 px-6 text-sm font-semibold rounded-lg transition-all duration-300 ${
                 isLoading
                   ? 'bg-gray-400 text-white cursor-not-allowed'
                   : 'bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:ring-offset-2 shadow-lg hover:shadow-xl'
