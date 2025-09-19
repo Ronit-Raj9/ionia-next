@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -25,12 +25,12 @@ export function TestDetailsForm({
 }: TestDetailsFormProps) {
   const [tagInput, setTagInput] = useState("");
 
-  // Handle Tag Input
-  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Memoized handlers for better performance
+  const handleTagInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setTagInput(e.target.value);
-  };
+  }, []);
 
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleTagKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if ((e.key === ',' || e.key === 'Enter') && tagInput.trim()) {
       e.preventDefault();
       const newTag = tagInput.trim().toLowerCase();
@@ -42,11 +42,35 @@ export function TestDetailsForm({
       e.preventDefault();
       onDetailChange('tags', testDetails.tags.slice(0, -1)); // Remove last tag
     }
-  };
+  }, [tagInput, testDetails.tags, onDetailChange]);
   
-  const removeTag = (tagToRemove: string) => {
+  const removeTag = useCallback((tagToRemove: string) => {
     onDetailChange('tags', testDetails.tags.filter(tag => tag !== tagToRemove));
-  };
+  }, [testDetails.tags, onDetailChange]);
+
+  // Memoized input handlers for better performance
+  const handleInputChange = useCallback((field: keyof TestDetails) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.type === 'number' ? 
+      (e.target.value ? parseInt(e.target.value) : undefined) : 
+      e.target.value;
+    onDetailChange(field, value);
+  }, [onDetailChange]);
+
+  const handleTextareaChange = useCallback((field: keyof TestDetails) => (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onDetailChange(field, e.target.value);
+  }, [onDetailChange]);
+
+  const handleSelectChange = useCallback((field: keyof TestDetails) => (value: string) => {
+    onDetailChange(field, value === 'placeholder' ? '' : value);
+  }, [onDetailChange]);
+
+  const handleSwitchChange = useCallback((field: keyof TestDetails) => (checked: boolean) => {
+    onDetailChange(field, checked);
+  }, [onDetailChange]);
+
+  const handleNestedInputChange = useCallback((parentField: keyof TestDetails, childField: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    onNestedDetailChange(parentField, childField, e.target.value);
+  }, [onNestedDetailChange]);
 
   return (
     <Card className="shadow-md">
@@ -64,19 +88,22 @@ export function TestDetailsForm({
               <Input 
                 id="title" 
                 value={testDetails.title} 
-                onChange={(e) => onDetailChange('title', e.target.value)} 
+                onChange={handleInputChange('title')} 
                 placeholder="e.g., JEE Main Physics Mock Test 1" 
                 required 
+                className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             <div>
               <Label htmlFor="testCategory" className="font-medium">Test Category <span className="text-red-500">*</span></Label>
               <Select 
                 value={testDetails.testCategory || 'placeholder'} 
-                onValueChange={(value) => onDetailChange('testCategory', value)} 
+                onValueChange={handleSelectChange('testCategory')} 
                 required
               >
-                <SelectTrigger id="testCategory"><SelectValue placeholder="Select Category" /></SelectTrigger>
+                <SelectTrigger id="testCategory">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="placeholder" disabled>Select Category</SelectItem>
                   {testCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
@@ -89,17 +116,18 @@ export function TestDetailsForm({
             <Textarea 
               id="description" 
               value={testDetails.description} 
-              onChange={(e) => onDetailChange('description', e.target.value)} 
+              onChange={handleTextareaChange('description')} 
               placeholder="A brief description of the test content or purpose (optional)." 
+              className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="tags" className="font-medium">Tags (Comma or Enter separated)</Label>
-            <div className="flex flex-wrap gap-2 border border-input rounded-md p-2 min-h-[40px] items-center bg-background">
+            <div className="flex flex-wrap gap-2 border border-gray-300 rounded-lg p-3 min-h-[44px] items-center bg-white">
               {testDetails.tags.map(tag => (
-                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                <Badge key={tag} variant="secondary" className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200">
                   {tag}
-                  <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                  <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-blue-100 p-0.5 transition-colors">
                     <X className="w-3 h-3" />
                   </button>
                 </Badge>
@@ -110,10 +138,10 @@ export function TestDetailsForm({
                 onChange={handleTagInputChange} 
                 onKeyDown={handleTagKeyDown} 
                 placeholder={testDetails.tags.length === 0 ? "Add tags..." : ""}
-                className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto p-0 m-0 bg-transparent"
+                className="flex-1 border-none shadow-none focus-visible:ring-0 h-auto p-0 m-0 bg-transparent placeholder:text-gray-400"
               />
             </div>
-            <p className="text-xs text-muted-foreground">Helps in searching and organizing tests.</p>
+            <p className="text-xs text-gray-500">Helps in searching and organizing tests.</p>
           </div>
         </div>
 
@@ -125,10 +153,12 @@ export function TestDetailsForm({
               <Label htmlFor="subject" className="font-medium">Subject <span className="text-red-500">*</span></Label>
               <Select 
                 value={testDetails.subject || 'placeholder'} 
-                onValueChange={(value) => onDetailChange('subject', value)} 
+                onValueChange={handleSelectChange('subject')} 
                 required
               >
-                <SelectTrigger id="subject"><SelectValue placeholder="Select Subject" /></SelectTrigger>
+                <SelectTrigger id="subject">
+                  <SelectValue placeholder="Select Subject" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="placeholder" disabled>Select Subject</SelectItem>
                   {subjects.map(sub => <SelectItem key={sub} value={sub}>{sub.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}
@@ -139,10 +169,12 @@ export function TestDetailsForm({
               <Label htmlFor="examType" className="font-medium">Exam Type <span className="text-red-500">*</span></Label>
               <Select 
                 value={testDetails.examType || 'placeholder'} 
-                onValueChange={(value) => onDetailChange('examType', value)} 
+                onValueChange={handleSelectChange('examType')} 
                 required
               >
-                <SelectTrigger id="examType"><SelectValue placeholder="Select Exam Type" /></SelectTrigger>
+                <SelectTrigger id="examType">
+                  <SelectValue placeholder="Select Exam Type" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="placeholder" disabled>Select Exam Type</SelectItem>
                   {examTypes.map(type => <SelectItem key={type} value={type}>{type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>)}
@@ -153,10 +185,12 @@ export function TestDetailsForm({
               <Label htmlFor="class" className="font-medium">Class <span className="text-red-500">*</span></Label>
               <Select 
                 value={testDetails.class || 'placeholder'} 
-                onValueChange={(value) => onDetailChange('class', value)} 
+                onValueChange={handleSelectChange('class')} 
                 required
               >
-                <SelectTrigger id="class"><SelectValue placeholder="Select Class" /></SelectTrigger>
+                <SelectTrigger id="class">
+                  <SelectValue placeholder="Select Class" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="placeholder" disabled>Select Class</SelectItem>
                   {classes.map(cls => <SelectItem key={cls} value={cls}>{cls.replace('class_', 'Class ').replace('none', 'N/A')}</SelectItem>)}
@@ -167,9 +201,11 @@ export function TestDetailsForm({
               <Label htmlFor="difficulty" className="font-medium">Overall Difficulty</Label>
               <Select 
                 value={testDetails.difficulty || 'placeholder'} 
-                onValueChange={(value) => onDetailChange('difficulty', value)}
+                onValueChange={handleSelectChange('difficulty')}
               >
-                <SelectTrigger id="difficulty"><SelectValue placeholder="Select Difficulty (Optional)" /></SelectTrigger>
+                <SelectTrigger id="difficulty">
+                  <SelectValue placeholder="Select Difficulty (Optional)" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="placeholder">Select Difficulty (Optional)</SelectItem>
                   {difficulties.map(diff => <SelectItem key={diff} value={diff}>{diff.charAt(0).toUpperCase() + diff.slice(1)}</SelectItem>)}
@@ -191,11 +227,12 @@ export function TestDetailsForm({
                     id="year" 
                     type="number" 
                     value={testDetails.year ?? ''} 
-                    onChange={(e) => onDetailChange('year', e.target.value ? parseInt(e.target.value) : undefined)} 
+                    onChange={handleInputChange('year')} 
                     placeholder="YYYY" 
                     required 
                     min="1900" 
                     max={new Date().getFullYear() + 1}
+                    className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -206,8 +243,9 @@ export function TestDetailsForm({
                     min="1" 
                     max="12" 
                     value={testDetails.month ?? ''} 
-                    onChange={(e) => onDetailChange('month', e.target.value ? parseInt(e.target.value) : undefined)} 
+                    onChange={handleInputChange('month')} 
                     placeholder="MM (1-12)" 
+                    className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -218,8 +256,9 @@ export function TestDetailsForm({
                     min="1" 
                     max="31" 
                     value={testDetails.day ?? ''} 
-                    onChange={(e) => onDetailChange('day', e.target.value ? parseInt(e.target.value) : undefined)} 
+                    onChange={handleInputChange('day')} 
                     placeholder="DD (1-31)" 
+                    className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
                 <div>
@@ -227,8 +266,9 @@ export function TestDetailsForm({
                   <Input 
                     id="session" 
                     value={testDetails.session ?? ''} 
-                    onChange={(e) => onDetailChange('session', e.target.value)} 
+                    onChange={handleInputChange('session')} 
                     placeholder="e.g., Shift 1, Morning" 
+                    className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -240,10 +280,12 @@ export function TestDetailsForm({
                     <Label htmlFor="platformTestType" className="font-medium">Platform Test Type <span className="text-red-500">*</span></Label>
                     <Select 
                       value={testDetails.platformTestType || 'placeholder'} 
-                      onValueChange={(value) => onDetailChange('platformTestType', value)} 
+                      onValueChange={handleSelectChange('platformTestType')} 
                       required
                     >
-                      <SelectTrigger id="platformTestType"><SelectValue placeholder="Select Type" /></SelectTrigger>
+                      <SelectTrigger id="platformTestType">
+                        <SelectValue placeholder="Select Type" />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="placeholder" disabled>Select Type</SelectItem>
                         {platformTestTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
@@ -254,7 +296,7 @@ export function TestDetailsForm({
                     <Switch 
                       id="isPremium" 
                       checked={testDetails.isPremium ?? false} 
-                      onCheckedChange={(checked: boolean) => onDetailChange('isPremium', checked)} 
+                      onCheckedChange={handleSwitchChange('isPremium')} 
                     />
                     <Label htmlFor="isPremium" className="font-medium cursor-pointer">Premium Test</Label>
                   </div>
@@ -264,8 +306,9 @@ export function TestDetailsForm({
                   <Textarea 
                     id="syllabus" 
                     value={testDetails.syllabus ?? ''} 
-                    onChange={(e) => onDetailChange('syllabus', e.target.value)} 
+                    onChange={handleTextareaChange('syllabus')} 
                     placeholder="Describe the specific topics or chapters covered in this test (optional)." 
+                    className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -287,8 +330,9 @@ export function TestDetailsForm({
                 type="number" 
                 min="1" 
                 value={testDetails.duration} 
-                onChange={(e) => onDetailChange('duration', e.target.value ? parseInt(e.target.value) : 0)} 
+                onChange={handleInputChange('duration')} 
                 required
+                className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -298,18 +342,21 @@ export function TestDetailsForm({
                 type="number" 
                 min="1" 
                 value={testDetails.attemptsAllowed ?? ''} 
-                onChange={(e) => onDetailChange('attemptsAllowed', e.target.value ? parseInt(e.target.value) : null)} 
+                onChange={handleInputChange('attemptsAllowed')} 
                 placeholder="Unlimited" 
+                className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             <div>
               <Label htmlFor="status" className="font-medium">Initial Status <span className="text-red-500">*</span></Label>
               <Select 
                 value={testDetails.status} 
-                onValueChange={(value) => onDetailChange('status', value)} 
+                onValueChange={handleSelectChange('status')} 
                 required
               >
-                <SelectTrigger id="status"><SelectValue placeholder="Select Status" /></SelectTrigger>
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="placeholder" disabled>Select Status</SelectItem>
                   {statuses.map(s => <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>)}
@@ -322,10 +369,12 @@ export function TestDetailsForm({
               <Label htmlFor="solutionsVisibility" className="font-medium">Solutions Visibility <span className="text-red-500">*</span></Label>
               <Select 
                 value={testDetails.solutionsVisibility} 
-                onValueChange={(value) => onDetailChange('solutionsVisibility', value)} 
+                onValueChange={handleSelectChange('solutionsVisibility')} 
                 required
               >
-                <SelectTrigger id="solutionsVisibility"><SelectValue placeholder="Select When Solutions Show" /></SelectTrigger>
+                <SelectTrigger id="solutionsVisibility">
+                  <SelectValue placeholder="Select When Solutions Show" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="placeholder" disabled>Select Visibility</SelectItem>
                   {solutionsVisibilities.map(vis => <SelectItem key={vis} value={vis}>{vis.replace(/_/g, ' ').replace('after submission', 'After Submission').replace('after deadline', 'After Deadline').replace('manual','Manual').replace('immediate','Immediate')}</SelectItem>)}
@@ -338,15 +387,16 @@ export function TestDetailsForm({
             <Textarea 
               id="instructions" 
               value={testDetails.instructions} 
-              onChange={(e) => onDetailChange('instructions', e.target.value)} 
+              onChange={handleTextareaChange('instructions')} 
               placeholder="Provide any specific instructions for test takers (optional)." 
               rows={4}
+              className="rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
           {/* Optional Marking Scheme */}
           <details className="border rounded-lg p-4 bg-gray-50 shadow-inner">
             <summary className="cursor-pointer font-medium text-gray-700 hover:text-gray-900">Optional: Uniform Marking Scheme</summary>
-            <p className="text-xs text-muted-foreground mt-2 mb-3">Leave blank to use marks defined per question. Fill Correct & Incorrect marks to override.</p>
+            <p className="text-xs text-gray-500 mt-2 mb-3">Leave blank to use marks defined per question. Fill Correct & Incorrect marks to override.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="markingCorrect">Correct</Label>
@@ -355,8 +405,9 @@ export function TestDetailsForm({
                   type="number" 
                   step="any" 
                   value={testDetails.markingScheme?.correct ?? ''} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNestedDetailChange('markingScheme','correct', e.target.value)} 
+                  onChange={handleNestedInputChange('markingScheme','correct')} 
                   placeholder="e.g., 4" 
+                  className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -367,8 +418,9 @@ export function TestDetailsForm({
                   max="0" 
                   step="any" 
                   value={testDetails.markingScheme?.incorrect ?? ''} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNestedDetailChange('markingScheme','incorrect', e.target.value)} 
+                  onChange={handleNestedInputChange('markingScheme','incorrect')} 
                   placeholder="e.g., -1 or 0" 
+                  className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -379,8 +431,9 @@ export function TestDetailsForm({
                   max="0" 
                   step="any" 
                   value={testDetails.markingScheme?.unattempted ?? ''} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => onNestedDetailChange('markingScheme','unattempted', e.target.value)} 
+                  onChange={handleNestedInputChange('markingScheme','unattempted')} 
                   placeholder="Default: 0" 
+                  className="h-11 rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
             </div>
