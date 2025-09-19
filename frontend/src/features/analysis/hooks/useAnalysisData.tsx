@@ -43,8 +43,13 @@ export const useAnalysisData = ({ attemptId, paperId, testId }: UseAnalysisDataP
         console.log('📊 Fetching test analysis...');
         const rawData = await getTestAnalysis(attemptId || '', paperId);
         console.log('📊 Raw analysis data received:', rawData);
-        analysisData = transformAnalysisData(rawData);
-        console.log('📊 Transformed analysis data:', analysisData);
+        
+        // Store both raw and transformed data for different components
+        analysisData = {
+          ...rawData, // Keep raw data for components that expect it
+          transformedData: transformAnalysisData(rawData) // Add transformed data for components that need it
+        } as any;
+        console.log('📊 Combined analysis data:', analysisData);
       } else if (testId) {
         // Fetch from analysis data API
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
