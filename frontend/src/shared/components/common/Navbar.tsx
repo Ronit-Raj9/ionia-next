@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import Link from "next/link";
 import { Menu, X, User } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -12,22 +12,36 @@ interface NavbarProps {
   className?: string;
 }
 
-export default function Navbar({ className = "" }: NavbarProps) {
+const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
   const pathname = usePathname();
-  // Use selectors to avoid unnecessary rerenders
+  // Use optimized selectors to prevent unnecessary rerenders
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const user = useAuthStore(state => state.user);
+  const userRole = useAuthStore(state => state.user?.role);
   const { isNavbarOpen, toggleNavbar, setNavbarOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
 
-  console.log("isAuthenticated: ",isAuthenticated);
+  // Debug logging removed to prevent console spam
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
+      const newScrolled = window.scrollY > 10;
+      // Only update state if the value actually changed
+      setScrolled(prev => prev !== newScrolled ? newScrolled : prev);
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    
+    // Throttle scroll events to prevent excessive calls
+    let timeoutId: NodeJS.Timeout;
+    const throttledScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleScroll, 16); // ~60fps
+    };
+    
+    window.addEventListener("scroll", throttledScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", throttledScroll);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const navItems = [
@@ -39,8 +53,8 @@ export default function Navbar({ className = "" }: NavbarProps) {
   ];
 
   const displayName = user?.fullName || 'Guest';
-  const isSuperAdmin = user?.role === 'superadmin';
-  const isAdmin = user?.role === 'admin';
+  const isSuperAdmin = userRole === 'superadmin';
+  const isAdmin = userRole === 'admin';
   const hasAdminAccess = isAdmin || isSuperAdmin;
 
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
@@ -212,4 +226,6 @@ export default function Navbar({ className = "" }: NavbarProps) {
       <div className="absolute left-0 right-0 bottom-0 h-px bg-gray-200" />
     </nav>
   );
-}
+});
+
+export default Navbar;
