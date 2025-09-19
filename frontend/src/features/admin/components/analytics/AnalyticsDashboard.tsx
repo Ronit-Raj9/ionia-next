@@ -11,9 +11,14 @@ import {
   BookOpenIcon,
   ExclamationCircleIcon,
   ArrowTrendingUpIcon,
-  ClockIcon
+  ClockIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon
 } from "@heroicons/react/24/outline";
 import { useAdminStore } from '../../store/adminStore';
+import { useUserManagementStore } from '../../store/userManagementStore';
+import { useAnalyticsCache } from '../../hooks/useAnalyticsCache';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import StatCard from './StatCard';
@@ -29,22 +34,65 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ className = '' 
     analytics, 
     loading, 
     error, 
-    fetchAdminAnalytics
+    fetchAdminAnalytics,
+    refreshAdminAnalytics
   } = useAdminStore();
 
-  useEffect(() => {
-    fetchAdminAnalytics();
-  }, []);
+  const {
+    userAnalytics,
+    loading: userLoading,
+    error: userError,
+    fetchUserAnalytics
+  } = useUserManagementStore();
 
-  const isLoading = loading.has('analytics');
-  const hasError = error.analytics;
+  // Use cache hook for smart data management
+  const { 
+    hasCachedData, 
+    lastFetched, 
+    isStale,
+    shouldRefresh,
+    getCacheInfo
+  } = useAnalyticsCache();
+
+  useEffect(() => {
+    // Only fetch if we don't have cached data or it's stale
+    if (!hasCachedData || shouldRefresh) {
+      console.log('📊 Analytics: Fetching data - cache status:', getCacheInfo());
+      fetchAdminAnalytics();
+    } else {
+      console.log('📊 Analytics: Using cached data - cache status:', getCacheInfo());
+    }
+    
+    // Fetch user analytics separately to avoid blocking
+    fetchUserAnalytics();
+  }, []); // Empty dependency array - only run once on mount
+
+  const isLoading = loading.has('analytics') || userLoading.has('userAnalytics');
+  const hasError = error.analytics || userError.userAnalytics;
 
   const formatValue = (value: number | undefined): string => {
     if (value === undefined || value === null) return 'N/A';
     return value.toLocaleString();
   };
 
-  if (isLoading && !analytics) {
+  const formatCacheAge = (timestamp: number | null): string => {
+    if (!timestamp) return 'Unknown';
+    const age = Date.now() - timestamp;
+    const minutes = Math.floor(age / (1000 * 60));
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  const handleRefresh = () => {
+    refreshAdminAnalytics();
+  };
+
+  // Show loading only if we have no data at all (not even cached)
+  if (isLoading && !analytics && !hasCachedData) {
     return <LoadingSpinner message="Loading analytics data..." />;
   }
 
@@ -97,22 +145,52 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ className = '' 
     <div className={`p-6 space-y-8 ${className}`}>
       {/* Header */}
       <div className="text-center">
-        <motion.h1 
-          className="text-3xl font-bold text-gray-900"
+        <motion.div
+          className="flex items-center justify-center space-x-4 mb-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          Analytics Dashboard
-        </motion.h1>
-        <motion.p 
-          className="mt-2 text-sm text-gray-600"
+          <h1 className="text-3xl font-bold text-gray-900">
+            Analytics Dashboard
+          </h1>
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="p-2 rounded-lg text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh data"
+          >
+            <ArrowPathIcon className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </motion.div>
+        
+        <motion.div 
+          className="flex items-center justify-center space-x-4 text-sm text-gray-600"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          {hasError ? 'Showing cached data - Unable to fetch latest data' : 'Comprehensive overview of your platform\'s performance'}
-        </motion.p>
+          <span>
+            {hasError ? 'Showing cached data - Unable to fetch latest data' : 'Comprehensive overview of your platform\'s performance'}
+          </span>
+          {hasCachedData && (
+            <div className="flex items-center space-x-2">
+              <CheckCircleIcon className="h-4 w-4 text-green-500" />
+              <span className="text-xs">
+                Data cached {formatCacheAge(lastFetched)}
+              </span>
+            </div>
+          )}
+          {isStale && (
+            <div className="flex items-center space-x-2">
+              <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />
+              <span className="text-xs text-yellow-600">
+                Data may be outdated
+              </span>
+            </div>
+          )}
+        </motion.div>
+        
         {hasError && (
           <motion.div 
             className="mt-2 text-sm text-red-600"
@@ -120,7 +198,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ className = '' 
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            {error.analytics || error.userAnalytics}
+            {error.analytics || userError.userAnalytics}
           </motion.div>
         )}
       </div>
@@ -204,7 +282,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ className = '' 
             Users by Role
           </h3>
           <div className="space-y-4">
-            {loading.has('userAnalytics') ? (
+            {userLoading.has('userAnalytics') ? (
               Array(3).fill(0).map((_, i) => (
                 <div key={i} className="animate-pulse flex items-center">
                   <div className="w-24 h-4 bg-gray-200 rounded"></div>
@@ -212,11 +290,23 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ className = '' 
                   <div className="w-12 h-4 bg-gray-200 rounded"></div>
                 </div>
               ))
-            ) : (
+            ) : userError.userAnalytics || !userAnalytics || !userAnalytics.usersByRole ? (
               <div className="text-center py-6">
                 <ExclamationCircleIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">User role analytics not available</p>
+                <p className="text-sm text-gray-500">
+                  {userError.userAnalytics || 'User role analytics not available'}
+                </p>
               </div>
+            ) : (
+              Object.entries(userAnalytics.usersByRole).map(([role, count]) => (
+                <ProgressBar
+                  key={role}
+                  label={role.charAt(0).toUpperCase() + role.slice(1)}
+                  value={count}
+                  maxValue={userAnalytics.totalUsers || 1}
+                  color="green"
+                />
+              ))
             )}
           </div>
         </motion.div>
