@@ -5,3 +5,4 @@ export { default as ErrorMessage } from './ErrorMessage';
 export { default as StatCard } from './StatCard';
 export { default as ProgressBar } from './ProgressBar';
 export { default as RecentItems } from './RecentItems';
+export { default as CacheStatusBadge } from './CacheStatusBadge';
