@@ -896,7 +896,7 @@ const getSolutions = asyncHandler(async (req, res) => {
     // Get the original test with populated questions to access solutions
     const test = await Test.findById(attemptedTest.testId).populate({
       path: 'questions',
-      select: '_id content options correctOptions explanation subject topic difficulty'
+      select: '_id question options correctOptions explanation subject topic difficulty'
     });
 
     if (!test) {
@@ -916,7 +916,7 @@ const getSolutions = asyncHandler(async (req, res) => {
 
       return {
         questionId: answer.questionId,
-        content: question.content,
+        content: question.question?.text || "Question text not available",
         options: question.options,
         userSelected: answer.answerOptionIndex,
         correctOptions: question.correctOptions,
