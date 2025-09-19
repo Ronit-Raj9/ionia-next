@@ -138,12 +138,13 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
             {getDifficultyBadge(question.difficulty)}
           </div>
           
-          <div className="flex items-center gap-2">
+          {/* Time taken display - Commented out */}
+          {/* <div className="flex items-center gap-2">
             <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               Time taken: {formatTime(question.timeSpent)}
               {getTimeComparison(question.timeSpent, question.averageTime)}
             </span>
-          </div>
+          </div> */}
         </div>
 
         {/* Topic/Chapter Tags */}
@@ -163,19 +164,22 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
         {/* Question Content */}
         <div className={`${darkMode ? 'text-white' : 'text-gray-800'} font-medium`}>
           {/* Debug info */}
-          {(question.question === 'Question not available' || !question.question) && (
+          {(question.question === 'Question not available' || !question.question || question.question.trim() === '') && (
             <div className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-2 mb-4 rounded">
               <p className="text-sm font-bold">Question content missing</p>
               <p className="text-xs">Please check the API response format.</p>
+              <p className="text-xs">Debug: question.question = "{question.question}"</p>
             </div>
           )}
           
           {/* Render question content */}
           <div className="question-content">
-            {typeof question.question === 'string' ? (
+            {question.question && question.question !== 'Question not available' && question.question.trim() !== '' ? (
               <div dangerouslySetInnerHTML={{ __html: question.question }} />
             ) : (
-              <p>Question not available in the correct format.</p>
+              <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md">
+                <p className="text-gray-600 dark:text-gray-400 italic">Question content is not available for this question.</p>
+              </div>
             )}
           </div>
         </div>
@@ -311,34 +315,34 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
 
         {/* Confidence Meter */}
         <div className="mb-6">
-          <h4 className="text-sm font-semibold mb-2">Rate Your Confidence</h4>
-          <div className="flex gap-2">
+          <h4 className="text-sm font-semibold mb-3">Rate Your Confidence</h4>
+          <div className="flex gap-3">
             <button
               onClick={() => setConfidenceLevel('guessed')}
-              className={`px-3 py-1 text-sm rounded-md ${
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-md hover:scale-105 ${
                 confidenceLevel === 'guessed'
-                  ? (darkMode ? 'bg-red-700 text-white' : 'bg-red-500 text-white')
-                  : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')
+                  ? (darkMode ? 'bg-red-700 text-white shadow-md' : 'bg-red-500 text-white shadow-md')
+                  : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
               }`}
             >
               I Guessed
             </button>
             <button
               onClick={() => setConfidenceLevel('unsure')}
-              className={`px-3 py-1 text-sm rounded-md ${
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-md hover:scale-105 ${
                 confidenceLevel === 'unsure'
-                  ? (darkMode ? 'bg-yellow-700 text-white' : 'bg-yellow-500 text-white')
-                  : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')
+                  ? (darkMode ? 'bg-yellow-700 text-white shadow-md' : 'bg-yellow-500 text-white shadow-md')
+                  : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
               }`}
             >
               I Was Unsure
             </button>
             <button
               onClick={() => setConfidenceLevel('confident')}
-              className={`px-3 py-1 text-sm rounded-md ${
+              className={`px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 hover:shadow-md hover:scale-105 ${
                 confidenceLevel === 'confident'
-                  ? (darkMode ? 'bg-green-700 text-white' : 'bg-green-500 text-white')
-                  : (darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')
+                  ? (darkMode ? 'bg-green-700 text-white shadow-md' : 'bg-green-500 text-white shadow-md')
+                  : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
               }`}
             >
               I Was Confident
@@ -352,16 +356,16 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
         {/* Bookmark Button */}
         <button
           onClick={toggleBookmark}
-          className={`flex items-center px-3 py-2 rounded-md text-sm ${
+          className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-105 ${
             bookmarked
-              ? (darkMode ? 'bg-yellow-800 text-yellow-100' : 'bg-yellow-100 text-yellow-800')
-              : (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700')
+              ? (darkMode ? 'bg-yellow-800 text-yellow-100 shadow-md' : 'bg-yellow-100 text-yellow-800 shadow-md')
+              : (darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
           }`}
         >
           {bookmarked ? (
-            <BookmarkSolidIcon className="w-5 h-5 mr-1 text-yellow-500" />
+            <BookmarkSolidIcon className="w-6 h-6 mr-2 text-yellow-500" />
           ) : (
-            <BookmarkIcon className="w-5 h-5 mr-1" />
+            <BookmarkIcon className="w-6 h-6 mr-2" />
           )}
           {bookmarked ? 'Bookmarked' : 'Bookmark'}
         </button>
@@ -369,35 +373,35 @@ const SolutionCard: React.FC<SolutionCardProps> = ({
         {/* Notes Button */}
         <button
           onClick={() => setShowNoteEditor(!showNoteEditor)}
-          className={`flex items-center px-3 py-2 rounded-md text-sm ${
+          className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-105 ${
             note
-              ? (darkMode ? 'bg-blue-800 text-blue-100' : 'bg-blue-100 text-blue-800')
-              : (darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700')
+              ? (darkMode ? 'bg-blue-800 text-blue-100 shadow-md' : 'bg-blue-100 text-blue-800 shadow-md')
+              : (darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
           }`}
         >
-          <PencilIcon className="w-5 h-5 mr-1" />
+          <PencilIcon className="w-6 h-6 mr-2" />
           {note ? 'Edit Notes' : 'Add Notes'}
         </button>
 
         {/* Report Issue Button */}
         <button
           onClick={() => setShowReportModal(true)}
-          className={`flex items-center px-3 py-2 rounded-md text-sm ${
-            darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
+          className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-105 ${
+            darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
-          <ExclamationCircleIcon className="w-5 h-5 mr-1" />
+          <ExclamationCircleIcon className="w-6 h-6 mr-2" />
           Report Issue
         </button>
 
         {/* Similar Questions Button */}
         <button
           onClick={() => setShowSimilarQuestions(!showSimilarQuestions)}
-          className={`flex items-center px-3 py-2 rounded-md text-sm ${
-            darkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'
+          className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-105 ${
+            darkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
-          <ArrowPathIcon className="w-5 h-5 mr-1" />
+          <ArrowPathIcon className="w-6 h-6 mr-2" />
           Similar Questions
         </button>
       </div>

@@ -110,58 +110,61 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
           {showLeftArrow && (
             <button
               onClick={scrollLeft}
-              className={`mr-2 p-1 rounded-full ${
+              className={`mr-4 p-3 rounded-full hover:shadow-lg transition-all duration-300 ${
                 darkMode 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white hover:scale-110 shadow-md' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:scale-110 shadow-md'
               }`}
             >
-              <ChevronLeftIcon className="w-5 h-5" />
+              <ChevronLeftIcon className="w-7 h-7" />
             </button>
           )}
 
           {/* Question Buttons */}
           <div 
             ref={scrollRef}
-            className="flex-1 flex space-x-2 overflow-x-auto scrollbar-hide py-2"
+            className="flex-1 flex justify-between items-center overflow-x-auto scrollbar-hide py-4 px-3"
             onScroll={handleScroll}
           >
             {questions.map((question, index) => {
+
               let bgColor = '';
               let textColor = '';
               let borderColor = '';
               
               if (darkMode) {
-                // Dark mode colors
-                if (index === currentQuestionIndex) {
-                  bgColor = 'bg-blue-700';
+                // Dark mode colors - prioritize status over current question
+                if (question.isCorrect) {
+                  bgColor = 'bg-green-600';
                   textColor = 'text-white';
-                  borderColor = 'border-blue-500';
-                } else if (question.isCorrect) {
-                  bgColor = 'bg-green-900';
-                  textColor = 'text-green-100';
-                } else if (question.userAnswer !== undefined) {
-                  bgColor = 'bg-red-900';
-                  textColor = 'text-red-100';
-                } else {
-                  bgColor = 'bg-gray-700';
-                  textColor = 'text-gray-200';
-                }
-              } else {
-                // Light mode colors
-                if (index === currentQuestionIndex) {
-                  bgColor = 'bg-blue-600';
-                  textColor = 'text-white';
-                  borderColor = 'border-blue-400';
-                } else if (question.isCorrect) {
-                  bgColor = 'bg-green-500';
-                  textColor = 'text-white';
-                } else if (question.userAnswer !== undefined) {
+                  borderColor = index === currentQuestionIndex ? 'border-green-400' : 'border-transparent';
+                } else if (question.userAnswer !== undefined && question.userAnswer !== null) {
+                  // Wrong answer - very bright red
                   bgColor = 'bg-red-500';
                   textColor = 'text-white';
+                  borderColor = index === currentQuestionIndex ? 'border-red-400' : 'border-transparent';
                 } else {
-                  bgColor = 'bg-gray-300';
+                  // Unattempted - darker grey (null or undefined)
+                  bgColor = 'bg-gray-600';
+                  textColor = 'text-gray-200';
+                  borderColor = index === currentQuestionIndex ? 'border-gray-400' : 'border-transparent';
+                }
+              } else {
+                // Light mode colors - prioritize status over current question
+                if (question.isCorrect) {
+                  bgColor = 'bg-green-500';
+                  textColor = 'text-white';
+                  borderColor = index === currentQuestionIndex ? 'border-green-400' : 'border-transparent';
+                } else if (question.userAnswer !== undefined && question.userAnswer !== null) {
+                  // Wrong answer - very bright red
+                  bgColor = 'bg-red-600';
+                  textColor = 'text-white';
+                  borderColor = index === currentQuestionIndex ? 'border-red-400' : 'border-transparent';
+                } else {
+                  // Unattempted - darker grey (null or undefined)
+                  bgColor = 'bg-gray-500';
                   textColor = 'text-gray-700';
+                  borderColor = index === currentQuestionIndex ? 'border-gray-400' : 'border-transparent';
                 }
               }
 
@@ -173,16 +176,16 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
                   key={index}
                   data-index={index}
                   onClick={() => jumpToQuestion(index)}
-                  className={`min-w-[40px] h-10 flex items-center justify-center rounded-md text-sm font-medium border-2 ${
+                  className={`w-16 h-16 flex items-center justify-center rounded-full text-lg font-bold border-2 mx-1 aspect-square ${
                     index === currentQuestionIndex
-                      ? `${bgColor} ${textColor} ${borderColor} border-2`
-                      : `${bgColor} ${textColor} border-transparent`
-                  } transition-colors relative`}
+                      ? `${bgColor} ${textColor} ${borderColor} shadow-xl transform scale-110 ring-2 ring-blue-300 dark:ring-blue-600`
+                      : `${bgColor} ${textColor} ${borderColor} hover:shadow-lg hover:transform hover:scale-105`
+                  } transition-all duration-300 relative`}
                   title={`Question ${index + 1} - ${question.isCorrect ? 'Correct' : question.userAnswer !== undefined ? 'Incorrect' : 'Skipped'}`}
                 >
-                  {index + 1}
+                  <span className="font-bold text-lg">{index + 1}</span>
                   {isBookmarked && (
-                    <span className="absolute -top-1 -right-1 text-yellow-400 text-xs">★</span>
+                    <span className="absolute -top-1 -right-1 text-yellow-400 text-xl">★</span>
                   )}
                 </button>
               );
@@ -193,13 +196,13 @@ const QuestionNavigator: React.FC<QuestionNavigatorProps> = ({
           {showRightArrow && (
             <button
               onClick={scrollRight}
-              className={`ml-2 p-1 rounded-full ${
+              className={`ml-4 p-3 rounded-full hover:shadow-lg transition-all duration-300 ${
                 darkMode 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white hover:scale-110 shadow-md' 
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:scale-110 shadow-md'
               }`}
             >
-              <ChevronRightIcon className="w-5 h-5" />
+              <ChevronRightIcon className="w-7 h-7" />
             </button>
           )}
         </div>
