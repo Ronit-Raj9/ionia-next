@@ -122,7 +122,17 @@ router.route("/refresh-token").post(
   refreshAccessToken
 );
 
-// CSRF token refresh endpoint
+// CSRF token refresh endpoint (public - no auth required)
+router.route("/refresh-csrf").get(
+  (req, res) => {
+    const csrfToken = generateCSRFToken();
+    setCSRFTokenCookie(res, csrfToken);
+    
+    res.json(new ApiResponse(200, { csrfToken }, "CSRF token refreshed successfully"));
+  }
+);
+
+// CSRF token refresh endpoint (authenticated)
 router.route("/refresh-csrf").post(
   verifyJWT,
   (req, res) => {
