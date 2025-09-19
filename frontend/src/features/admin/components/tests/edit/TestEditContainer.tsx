@@ -500,17 +500,16 @@ const TestEditContainer: React.FC<TestEditContainerProps> = ({ children }) => {
 
     try {
       // Map solutionsVisibility from TestDetails format to UpdateTestData format
-      const mapSolutionsVisibility = (visibility: string): 'always' | 'after_completion' | 'never' => {
+      const mapSolutionsVisibility = (visibility: string): 'immediate' | 'after_submission' | 'after_deadline' | 'manual' => {
         switch (visibility) {
-          case 'immediate':
-            return 'always';
-          case 'after_submission':
-          case 'after_deadline':
-            return 'after_completion';
-          case 'manual':
-            return 'never';
+          case 'always':
+            return 'immediate';
+          case 'after_completion':
+            return 'after_submission';
+          case 'never':
+            return 'manual';
           default:
-            return 'after_completion';
+            return 'after_submission';
         }
       };
 
@@ -547,7 +546,7 @@ const TestEditContainer: React.FC<TestEditContainerProps> = ({ children }) => {
         isPremium: testDetails.testCategory === 'Platform' ? !!testDetails.isPremium : undefined,
         description: testDetails.description || undefined,
         instructions: testDetails.instructions || undefined,
-        syllabus: testDetails.syllabus ? [testDetails.syllabus] : undefined,
+        syllabus: testDetails.syllabus || undefined,
         session: testDetails.session || undefined,
       };
 
