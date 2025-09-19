@@ -362,19 +362,14 @@ const TestView: React.FC<TestViewProps> = ({ testId, className = '' }) => {
               <dt className="text-sm font-medium text-gray-500">Premium</dt>
               <dd className="text-sm text-gray-900">{test.isPremium ? 'Yes' : 'No'}</dd>
             </div>
-            {test.syllabus && test.syllabus.length > 0 && (
+            {test.syllabus && (
               <div>
                 <dt className="text-sm font-medium text-gray-500">Syllabus</dt>
                 <dd className="text-sm text-gray-900">
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {test.syllabus.map((item, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      >
-                        {item}
-                      </span>
-                    ))}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {test.syllabus}
+                    </span>
                   </div>
                 </dd>
               </div>
