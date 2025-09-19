@@ -1010,21 +1010,50 @@ const getAllUsers = asyncHandler(async (req, res) => {
   const sort = {};
   sort[sortBy] = sortOrder === "asc" ? 1 : -1;
   
-  // Pagination setup
-  const options = {
-    page: parseInt(page),
-    limit: parseInt(limit),
-    sort,
-    select: "-password -refreshToken -resetPasswordToken -resetPasswordExpires",
-    lean: true,
-  };
-  
   try {
-    // Find users
-    const users = await User.paginate(query, options);
+    // Calculate pagination values
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    
+    // Get total count for pagination
+    const totalDocs = await User.countDocuments(query);
+    const totalPages = Math.ceil(totalDocs / limitNum);
+    
+    // Find users with pagination
+    const users = await User.find(query)
+      .select("-password -refreshToken -resetPasswordToken -resetPasswordExpires")
+      .sort(sort)
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+    
+    // Build pagination response
+    const paginationData = {
+      docs: users,
+      totalDocs,
+      limit: limitNum,
+      page: pageNum,
+      totalPages,
+      hasNextPage: pageNum < totalPages,
+      hasPrevPage: pageNum > 1,
+      nextPage: pageNum < totalPages ? pageNum + 1 : null,
+      prevPage: pageNum > 1 ? pageNum - 1 : null,
+      pagingCounter: skip + 1,
+      meta: {
+        totalDocs,
+        limit: limitNum,
+        page: pageNum,
+        totalPages,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
+        nextPage: pageNum < totalPages ? pageNum + 1 : null,
+        prevPage: pageNum > 1 ? pageNum - 1 : null
+      }
+    };
     
     return res.status(200).json(
-      new ApiResponse(200, users, "Users retrieved successfully")
+      new ApiResponse(200, paginationData, "Users retrieved successfully")
     );
   } catch (error) {
     throw new ApiError(500, "Error fetching users", error.message);
