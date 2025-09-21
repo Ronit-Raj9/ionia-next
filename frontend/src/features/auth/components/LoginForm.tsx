@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { HiOutlineMail, HiOutlineLockClosed } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
 import { AuthErrorHandler } from '../utils/errorHandler';
 import { authLogger } from '../utils/logger';
@@ -197,7 +196,7 @@ export default function LoginForm() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mx-auto w-16 h-16 bg-gradient-to-br from-emerald-600 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-6"
           >
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </motion.div>
@@ -257,7 +256,6 @@ export default function LoginForm() {
             type="email"
             label="Email address"
             placeholder="Enter your email"
-            icon={<HiOutlineMail />}
             value={form.email}
             onChange={handleChange}
             error={errors.email}
@@ -332,7 +330,6 @@ export default function LoginForm() {
               </>
             ) : (
               <>
-                <HiOutlineLockClosed className="w-5 h-5" aria-hidden="true" />
                 Sign in
               </>
             )}
@@ -347,7 +344,7 @@ export default function LoginForm() {
           className="text-center mt-8"
         >
           <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
-            <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
             </svg>
             <span>Secured with industry-standard encryption</span>

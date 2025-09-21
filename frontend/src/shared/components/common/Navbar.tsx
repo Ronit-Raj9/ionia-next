@@ -2,6 +2,7 @@
 
 import { useEffect, useState, memo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu, X, User } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -68,9 +69,16 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 relative">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
+          <Link href="/" className="flex items-center space-x-3 group">
+            <Image
+              src="/ionia_logo.png"
+              alt="iONIA Logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-2xl font-extrabold text-black group-hover:text-gray-800 transition-colors duration-300">
-              Ionia
+              iONIA
             </span>
           </Link>
 

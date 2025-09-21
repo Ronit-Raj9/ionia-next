@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineMail, HiArrowLeft, HiCheckCircle } from 'react-icons/hi';
 import { authAPI } from '../api/authApi';
 import { useAuthStore } from '../store/authStore';
 
@@ -77,7 +76,6 @@ export default function ForgotPasswordForm() {
             className="flex flex-col items-center space-y-4"
           >
             <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900">
-              <HiCheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -103,7 +101,6 @@ export default function ForgotPasswordForm() {
               onClick={handleBackToLogin}
               className="w-full flex justify-center items-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-200"
             >
-              <HiArrowLeft className="h-4 w-4 mr-2" />
               Back to Login
             </button>
             
@@ -146,7 +143,6 @@ export default function ForgotPasswordForm() {
             onClick={handleBackToLogin}
             className="flex items-center text-sm text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-200 mb-6"
           >
-            <HiArrowLeft className="h-4 w-4 mr-1" />
             Back to Login
           </button>
           
@@ -190,7 +186,6 @@ export default function ForgotPasswordForm() {
               Email address
             </label>
             <div className="relative">
-              <HiOutlineMail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 id="email"
                 name="email"

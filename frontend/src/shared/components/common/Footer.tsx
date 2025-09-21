@@ -73,7 +73,7 @@ export default function Footer({ className = "" }: FooterProps) {
           >
             <div className="space-y-2">
               <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-200 bg-clip-text text-transparent">
-                IONIA
+                iONIA
               </h3>
               <p className="text-emerald-100 leading-relaxed text-sm sm:text-base max-w-lg">
                 We provide the perfect tools to personalise your own journey to achieve whatever you want.
@@ -109,7 +109,7 @@ export default function Footer({ className = "" }: FooterProps) {
                   <div className="p-1.5 rounded-full bg-emerald-400/20 group-hover:bg-emerald-400/30 transition-colors duration-300">
                     <Phone className="w-4 h-4 text-emerald-400" />
                   </div>
-                  <span className="text-sm">+91 123 456 7890</span>
+                  <span className="text-sm">+91 70610 76987</span>
                 </li>
                 <li className="flex items-center space-x-2 text-emerald-200 hover:text-white transition-colors duration-300 group">
                   <div className="p-1.5 rounded-full bg-emerald-400/20 group-hover:bg-emerald-400/30 transition-colors duration-300">

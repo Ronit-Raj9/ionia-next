@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { HiOutlineMail, HiOutlineUser, HiOutlineLockClosed } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
 import { useFormValidation } from '../store/validationStore';
 import type { RegisterData } from '../types';
@@ -203,7 +202,6 @@ export default function RegisterForm() {
               type="text"
               label="Full Name"
               placeholder="Enter your full name"
-              icon={<HiOutlineUser />}
               value={formData.fullName || ''}
               onChange={handleChange}
               onBlur={() => setTouched('fullName')}
@@ -219,7 +217,6 @@ export default function RegisterForm() {
                 type="text"
                 label="Username"
                 placeholder="Choose a username"
-                icon={<HiOutlineUser />}
                 value={formData.username || ''}
                 onChange={handleChange}
                 onBlur={() => setTouched('username')}
@@ -273,7 +270,6 @@ export default function RegisterForm() {
             type="email"
             label="Email address"
             placeholder="Enter your email address"
-            icon={<HiOutlineMail />}
             value={formData.email || ''}
             onChange={handleChange}
             onBlur={() => setTouched('email')}

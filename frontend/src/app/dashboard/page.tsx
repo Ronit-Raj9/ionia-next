@@ -49,11 +49,11 @@ export default function Dashboard() {
             <div className="p-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <div className="p-3 bg-emerald-100 rounded-full">
+                  <div className="p-3 bg-emerald-100 rounded-full flex items-center justify-center">
                     <FiActivity className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="text-sm font-medium text-emerald-600">
                     Total Tests
                   </p>
@@ -70,11 +70,11 @@ export default function Dashboard() {
             <div className="p-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <div className="p-3 bg-emerald-100 rounded-full">
+                  <div className="p-3 bg-emerald-100 rounded-full flex items-center justify-center">
                     <FiCheckCircle className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="text-sm font-medium text-emerald-600">
                     Average Score
                   </p>
@@ -91,11 +91,11 @@ export default function Dashboard() {
             <div className="p-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <div className="p-3 bg-emerald-100 rounded-full">
+                  <div className="p-3 bg-emerald-100 rounded-full flex items-center justify-center">
                     <FiTarget className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="text-sm font-medium text-emerald-600">
                     Best Score
                   </p>
@@ -112,11 +112,11 @@ export default function Dashboard() {
             <div className="p-6">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
-                  <div className="p-3 bg-emerald-100 rounded-full">
+                  <div className="p-3 bg-emerald-100 rounded-full flex items-center justify-center">
                     <FiCalendar className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
-                <div className="ml-4">
+                <div className="ml-4 flex-1">
                   <p className="text-sm font-medium text-emerald-600">
                     Last Test
                   </p>
@@ -178,7 +178,7 @@ export default function Dashboard() {
         <Card className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 hover:shadow-lg transition-shadow">
           <div className="p-6">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <h4 className="text-lg font-medium text-blue-900">
                   Take Practice Test
                 </h4>
@@ -186,7 +186,7 @@ export default function Dashboard() {
                   Start a new practice session
                 </p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-full">
+              <div className="p-3 bg-blue-100 rounded-full flex items-center justify-center">
                 <FiActivity className="w-6 h-6 text-blue-600" />
               </div>
             </div>
@@ -202,7 +202,7 @@ export default function Dashboard() {
         <Card className="bg-gradient-to-br from-purple-50 to-white border border-purple-100 hover:shadow-lg transition-shadow">
           <div className="p-6">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <h4 className="text-lg font-medium text-purple-900">
                   View Analytics
                 </h4>
@@ -210,7 +210,7 @@ export default function Dashboard() {
                   Detailed performance insights
                 </p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-full">
+              <div className="p-3 bg-purple-100 rounded-full flex items-center justify-center">
                 <FiTarget className="w-6 h-6 text-purple-600" />
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function Dashboard() {
         <Card className="bg-gradient-to-br from-green-50 to-white border border-green-100 hover:shadow-lg transition-shadow">
           <div className="p-6">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex-1">
                 <h4 className="text-lg font-medium text-green-900">
                   Test History
                 </h4>
@@ -234,7 +234,7 @@ export default function Dashboard() {
                   Review past attempts
                 </p>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
+              <div className="p-3 bg-green-100 rounded-full flex items-center justify-center">
                 <FiCalendar className="w-6 h-6 text-green-600" />
               </div>
             </div>

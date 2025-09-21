@@ -225,7 +225,7 @@ export default function Home() {
               transition={{ delay: 0.8, duration: 0.8 }}
             >
               <Link 
-                href="/auth/register"
+                href="/login"
                 className="group relative px-10 py-4 bg-white text-emerald-700 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-300 hover:bg-emerald-50 hover:scale-105 hover:shadow-2xl"
               >
                 <span>Start Free</span>

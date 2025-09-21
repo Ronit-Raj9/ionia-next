@@ -26,11 +26,11 @@ export default function StatsCard({ title, value, icon }: StatsCardProps) {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex-1">
           <p className="text-sm text-gray-600">{title}</p>
           <p className="text-2xl font-bold mt-1">{value}</p>
         </div>
-        <div className="rounded-full bg-blue-100 p-3">
+        <div className="rounded-full bg-blue-100 p-3 flex items-center justify-center">
           <Icon className="h-6 w-6 text-blue-600" />
         </div>
       </div>
