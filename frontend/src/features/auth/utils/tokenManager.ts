@@ -157,8 +157,18 @@ export class TokenManager {
       
       authLogger.tokenRefresh(false, { 
         error: error.message, 
-        retryCount: this.retryCount 
+        retryCount: this.retryCount,
+        status: error.status
       });
+      
+      // Handle 401 errors (no valid refresh token) - don't retry
+      if (error.status === 401) {
+        authLogger.info('No valid refresh token available, user needs to login', {}, 'TOKEN');
+        if (this.onTokenExpired) {
+          this.onTokenExpired();
+        }
+        return;
+      }
       
       // If refresh fails completely, notify callback
       if (this.retryCount >= this.config.maxRetries && this.onTokenExpired) {
@@ -167,7 +177,7 @@ export class TokenManager {
         }, 'TOKEN');
         this.onTokenExpired();
       } else if (this.retryCount < this.config.maxRetries) {
-        // Schedule retry
+        // Schedule retry for non-401 errors
         setTimeout(() => {
           this.refreshTokens();
         }, this.config.retryDelay * this.retryCount);

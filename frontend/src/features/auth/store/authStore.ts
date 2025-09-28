@@ -549,6 +549,18 @@ export const useAuthStore = create<AuthState>()((set, get) => {
         });
       }
       
+      // Skip server verification if we're on auth pages and no cached user
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        const isAuthPage = currentPath.includes('/register') || currentPath.includes('/login') || currentPath.includes('/forgot-password');
+        
+        if (isAuthPage && !cachedUser) {
+          authLogger.debug('Skipping server verification on auth page with no cached user', { path: currentPath }, 'AUTH');
+          set({ user: null, isAuthenticated: false });
+          return;
+        }
+      }
+      
       // Verify with server in background
       authLogger.debug('Verifying user with server', {}, 'AUTH');
       const user = await authAPI.getCurrentUser();
@@ -580,17 +592,26 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       get().validateTokenState();
       
     } catch (error: any) {
-      authLogger.error('Auth initialization failed', { error: error.message }, 'AUTH');
-      
-      // Handle network errors specifically
-      get().handleNetworkError(error);
-      
-      // Clear cache on error
-      clearUserFromStorage();
-      set({ user: null, isAuthenticated: false });
-      
-      // Track initialization failure
-      errorTracker.trackError(error, { action: 'initialize_auth' });
+      // Handle 401 errors gracefully (user not authenticated)
+      if (error.status === 401) {
+        authLogger.info('No authenticated user found during initialization', {}, 'AUTH');
+        
+        // Clear cache and set unauthenticated state
+        clearUserFromStorage();
+        set({ user: null, isAuthenticated: false });
+      } else {
+        authLogger.error('Auth initialization failed', { error: error.message }, 'AUTH');
+        
+        // Handle network errors specifically
+        get().handleNetworkError(error);
+        
+        // Clear cache on error
+        clearUserFromStorage();
+        set({ user: null, isAuthenticated: false });
+        
+        // Track initialization failure (only for non-401 errors)
+        errorTracker.trackError(error, { action: 'initialize_auth' });
+      }
     } finally {
       set({ isInitialized: true, isLoading: false });
     }

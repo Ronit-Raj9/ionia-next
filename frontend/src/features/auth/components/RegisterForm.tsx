@@ -5,12 +5,19 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
-import { useFormValidation } from '../store/validationStore';
 import type { RegisterData } from '../types';
 import { toast } from 'react-hot-toast';
 import { authLogger } from '../utils/logger';
 import { InputWithIcon } from './InputWithIcon';
 import { PasswordInput } from './PasswordInput';
+import { 
+  validateEmail, 
+  validatePasswordStrength, 
+  validateUsername, 
+  validateFullName,
+  validateRegistrationForm,
+  type PasswordStrength 
+} from '../utils/validation';
 
 interface FormData {
   fullName: string;
@@ -21,44 +28,129 @@ interface FormData {
   acceptTerms: boolean;
 }
 
+interface FieldValidation {
+  isValid: boolean;
+  errors: string[];
+  warnings?: string[];
+  touched: boolean;
+}
+
 export default function RegisterForm() {
   const router = useRouter();
   const { register, isLoading, error, clearError, checkUsername } = useAuthStore();
   
-  // Use validation store
-  const {
-    values: formData,
-    validation,
-    setValue,
-    setTouched,
-    reset,
-    isValid: isFormValid,
-    isDirty,
-    isTouched
-  } = useFormValidation('registration', 'registration');
+  // Form data state
+  const [formData, setFormData] = useState<FormData>({
+    fullName: '',
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    acceptTerms: false
+  });
+
+  // Field validation states
+  const [fieldValidations, setFieldValidations] = useState<Record<string, FieldValidation>>({
+    fullName: { isValid: true, errors: [], touched: false },
+    username: { isValid: true, errors: [], touched: false },
+    email: { isValid: true, errors: [], touched: false },
+    password: { isValid: true, errors: [], touched: false },
+    confirmPassword: { isValid: true, errors: [], touched: false }
+  });
+
+  // Password strength state
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null);
   
   // Username validation state
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [usernameMessage, setUsernameMessage] = useState('');
-  const [usernameError, setUsernameError] = useState('');
 
   useEffect(() => {
     clearError();
   }, [clearError]);
 
-  // Username validation effect
+  // Real-time field validation
+  const validateField = (fieldName: keyof FormData, value: any, touched = false) => {
+    let validation: FieldValidation = { isValid: true, errors: [], touched };
+
+    switch (fieldName) {
+      case 'fullName':
+        const fullNameResult = validateFullName(value);
+        validation = {
+          isValid: fullNameResult.isValid,
+          errors: fullNameResult.errors,
+          warnings: fullNameResult.warnings,
+          touched
+        };
+        break;
+
+      case 'email':
+        const emailResult = validateEmail(value);
+        validation = {
+          isValid: emailResult.isValid,
+          errors: emailResult.isValid ? [] : ['Please enter a valid email address'],
+          warnings: emailResult.suggestions ? [`Did you mean: ${emailResult.suggestions.join(', ')}?`] : [],
+          touched
+        };
+        break;
+
+      case 'username':
+        const usernameResult = validateUsername(value);
+        validation = {
+          isValid: usernameResult.isValid,
+          errors: usernameResult.errors,
+          warnings: usernameResult.warnings,
+          touched
+        };
+        break;
+
+      case 'password':
+        const passwordResult = validatePasswordStrength(value);
+        setPasswordStrength(passwordResult);
+        validation = {
+          isValid: passwordResult.isValid,
+          errors: passwordResult.suggestions,
+          touched
+        };
+        break;
+
+      case 'confirmPassword':
+        const passwordsMatch = value === formData.password;
+        validation = {
+          isValid: passwordsMatch,
+          errors: passwordsMatch ? [] : ['Passwords do not match'],
+          touched
+        };
+        break;
+    }
+
+    setFieldValidations(prev => ({
+      ...prev,
+      [fieldName]: validation
+    }));
+
+    return validation;
+  };
+
+  // Username availability check
   useEffect(() => {
     if (!formData.username || formData.username.length < 3) {
       setIsUsernameAvailable(null);
       setUsernameMessage('');
-      setUsernameError('');
       return;
     }
 
-    const validateUsername = async () => {
+    // First check local validation
+    const usernameValidation = validateUsername(formData.username);
+    if (!usernameValidation.isValid) {
+      setIsUsernameAvailable(false);
+      setUsernameMessage(usernameValidation.errors[0]);
+      return;
+    }
+
+    const checkUsernameAvailability = async () => {
       setIsCheckingUsername(true);
-      setUsernameError('');
       setUsernameMessage('');
       
       try {
@@ -67,28 +159,107 @@ export default function RegisterForm() {
         setUsernameMessage(result.message);
       } catch (error: any) {
         setIsUsernameAvailable(false);
-        setUsernameError(error.message || 'Error checking username');
+        setUsernameMessage(error.message || 'Error checking username');
       } finally {
         setIsCheckingUsername(false);
       }
     };
 
-    const timeoutId = setTimeout(validateUsername, 500);
+    const timeoutId = setTimeout(checkUsernameAvailability, 500);
     return () => clearTimeout(timeoutId);
   }, [formData.username, checkUsername]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     const fieldValue = type === 'checkbox' ? checked : value;
-    setValue(name, fieldValue);
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: fieldValue
+    }));
+
+    // Validate field in real-time (except for checkbox)
+    if (type !== 'checkbox') {
+      validateField(name as keyof FormData, fieldValue, fieldValidations[name]?.touched || false);
+    }
   };
 
-  const handleRegister = async () => {
+  const handleBlur = (fieldName: keyof FormData) => {
+    validateField(fieldName, formData[fieldName], true);
+  };
+
+  const isFormValid = () => {
+    // Check all field validations
+    const allFieldsValid = Object.values(fieldValidations).every(field => field.isValid);
+    
+    // Check username availability
+    const usernameValid = isUsernameAvailable === true;
+    
+    // Check terms acceptance
+    const termsAccepted = formData.acceptTerms;
+    
+    // Check all required fields are filled
+    const allFieldsFilled = formData.fullName && formData.username && formData.email && 
+                           formData.password && formData.confirmPassword;
+
+    return allFieldsValid && usernameValid && termsAccepted && allFieldsFilled;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    clearError();
+
+    // Mark all fields as touched to show validation errors
+    Object.keys(fieldValidations).forEach(fieldName => {
+      validateField(fieldName as keyof FormData, formData[fieldName as keyof FormData], true);
+    });
+
+    // Validate entire form
+    const formValidation = validateRegistrationForm(formData);
+    
+    if (!formValidation.isValid) {
+      toast.error(formValidation.errors[0] || "Please fix the validation errors before submitting");
+      return;
+    }
+
+    if (!isUsernameAvailable) {
+      toast.error("Please choose an available username");
+      return;
+    }
+
+    if (!formData.acceptTerms) {
+      toast.error("Please accept the terms and conditions");
+      return;
+    }
+
     try {
       const result = await register(formData as RegisterData);
       if (result.success) {
-        toast.success('Registration successful! Please log in.');
-        router.push('/login');
+        toast.success('Registration successful! You can now log in with your credentials.');
+        
+        // Clear the form
+        setFormData({
+          fullName: '',
+          username: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          acceptTerms: false
+        });
+        
+        // Reset validation states
+        setFieldValidations({
+          fullName: { isValid: true, errors: [], touched: false },
+          username: { isValid: true, errors: [], touched: false },
+          email: { isValid: true, errors: [], touched: false },
+          password: { isValid: true, errors: [], touched: false },
+          confirmPassword: { isValid: true, errors: [], touched: false }
+        });
+        
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
       } else {
         toast.error(result.error?.message || 'Registration failed.');
       }
@@ -98,35 +269,27 @@ export default function RegisterForm() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    clearError();
-
-    if (!isFormValid) {
-      toast.error("Please fix the validation errors before submitting");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }    
-    await handleRegister();
-  };
-
-  // Get username validation error
-  const getUsernameError = () => {
-    if (usernameError) return usernameError;
-    if (formData.username && isUsernameAvailable === false) return usernameMessage;
-    return null;
+  // Get field error message
+  const getFieldError = (fieldName: keyof FormData) => {
+    const validation = fieldValidations[fieldName];
+    if (!validation.touched || validation.isValid) return null;
+    return validation.errors[0] || null;
   };
 
   // Get username validation state for styling
   const getUsernameValidationState = () => {
     if (isCheckingUsername) return 'checking';
     if (formData.username && isUsernameAvailable === true) return 'success';
-    if (formData.username && isUsernameAvailable === false) return 'error';
+    if (formData.username && (isUsernameAvailable === false || !fieldValidations.username.isValid)) return 'error';
     return 'default';
+  };
+
+  // Get username error message
+  const getUsernameError = () => {
+    if (!fieldValidations.username.touched) return null;
+    if (!fieldValidations.username.isValid) return fieldValidations.username.errors[0];
+    if (isUsernameAvailable === false) return usernameMessage;
+    return null;
   };
 
   return (
@@ -192,10 +355,10 @@ export default function RegisterForm() {
               type="text"
               label="Full Name"
               placeholder="Enter your full name"
-              value={formData.fullName || ''}
+              value={formData.fullName}
               onChange={handleChange}
-              onBlur={() => setTouched('fullName')}
-              error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
+              onBlur={() => handleBlur('fullName')}
+              error={getFieldError('fullName')}
               required
               autoComplete="name"
             />
@@ -207,9 +370,9 @@ export default function RegisterForm() {
                 type="text"
                 label="Username"
                 placeholder="Choose a username"
-                value={formData.username || ''}
+                value={formData.username}
                 onChange={handleChange}
-                onBlur={() => setTouched('username')}
+                onBlur={() => handleBlur('username')}
                 error={getUsernameError()}
                 required
                 autoComplete="username"
@@ -260,27 +423,93 @@ export default function RegisterForm() {
             type="email"
             label="Email address"
             placeholder="Enter your email address"
-            value={formData.email || ''}
+            value={formData.email}
             onChange={handleChange}
-            onBlur={() => setTouched('email')}
-            error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
+            onBlur={() => handleBlur('email')}
+            error={getFieldError('email')}
             required
             autoComplete="email"
           />
 
           {/* Password */}
-          <PasswordInput
-            id="password"
-            name="password"
-            label="Password"
-            placeholder="Create a strong password"
-            value={formData.password || ''}
-            onChange={handleChange}
-            onBlur={() => setTouched('password')}
-            error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
-            required
-            autoComplete="new-password"
-          />
+          <div className="space-y-2">
+            <PasswordInput
+              id="password"
+              name="password"
+              label="Password"
+              placeholder="Create a strong password"
+              value={formData.password}
+              onChange={handleChange}
+              onBlur={() => handleBlur('password')}
+              error={getFieldError('password')}
+              required
+              autoComplete="new-password"
+            />
+            
+            {/* Password strength indicator */}
+            {formData.password && passwordStrength && (
+              <div className="mt-2">
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="text-gray-600">Strength:</span>
+                  <div className="flex space-x-1">
+                    {[1, 2, 3, 4].map((level) => (
+                      <div
+                        key={level}
+                        className={`h-1 w-6 rounded-full ${
+                          passwordStrength.score >= level
+                            ? passwordStrength.level === 'weak'
+                              ? 'bg-red-400'
+                              : passwordStrength.level === 'fair'
+                              ? 'bg-yellow-400'
+                              : passwordStrength.level === 'good'
+                              ? 'bg-blue-400'
+                              : 'bg-green-400'
+                            : 'bg-gray-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className={`capitalize font-medium ${
+                    passwordStrength.level === 'weak' ? 'text-red-600' :
+                    passwordStrength.level === 'fair' ? 'text-yellow-600' :
+                    passwordStrength.level === 'good' ? 'text-blue-600' :
+                    'text-green-600'
+                  }`}>
+                    {passwordStrength.level}
+                  </span>
+                </div>
+                
+                {/* Password requirements */}
+                {!passwordStrength.isValid && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    <div className="text-sm font-medium mb-1">Password must include:</div>
+                    <ul className="space-y-1">
+                      <li className={`flex items-center space-x-2 ${formData.password.length >= 8 ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className={`w-3 h-3 rounded-full ${formData.password.length >= 8 ? 'bg-green-400' : 'bg-gray-300'}`}></span>
+                        <span>At least 8 characters</span>
+                      </li>
+                      <li className={`flex items-center space-x-2 ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className={`w-3 h-3 rounded-full ${/[A-Z]/.test(formData.password) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
+                        <span>One uppercase letter</span>
+                      </li>
+                      <li className={`flex items-center space-x-2 ${/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className={`w-3 h-3 rounded-full ${/[a-z]/.test(formData.password) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
+                        <span>One lowercase letter</span>
+                      </li>
+                      <li className={`flex items-center space-x-2 ${/\d/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className={`w-3 h-3 rounded-full ${/\d/.test(formData.password) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
+                        <span>One number</span>
+                      </li>
+                      <li className={`flex items-center space-x-2 ${/[@$!%*?&]/.test(formData.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                        <span className={`w-3 h-3 rounded-full ${/[@$!%*?&]/.test(formData.password) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
+                        <span>One special character (@$!%*?&)</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Confirm Password */}
           <PasswordInput
@@ -288,10 +517,10 @@ export default function RegisterForm() {
             name="confirmPassword"
             label="Confirm password"
             placeholder="Confirm your password"
-            value={formData.confirmPassword || ''}
+            value={formData.confirmPassword}
             onChange={handleChange}
-            onBlur={() => setTouched('confirmPassword')}
-            error={validation.errors.length > 0 && isTouched ? validation.errors[0] : null}
+            onBlur={() => handleBlur('confirmPassword')}
+            error={getFieldError('confirmPassword')}
             required
             autoComplete="new-password"
           />
@@ -323,9 +552,9 @@ export default function RegisterForm() {
           {/* Submit Button */}
           <motion.button
             type="submit"
-            disabled={isLoading || !isFormValid}
-            whileHover={(!isLoading && isFormValid) ? { scale: 1.02, y: -2 } : {}}
-            whileTap={(!isLoading && isFormValid) ? { scale: 0.98 } : {}}
+            disabled={isLoading || !isFormValid()}
+            whileHover={(!isLoading && isFormValid()) ? { scale: 1.02, y: -2 } : {}}
+            whileTap={(!isLoading && isFormValid()) ? { scale: 0.98 } : {}}
             className="mt-4 w-full inline-flex items-center justify-center gap-2 h-12 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all focus:ring-2 focus:ring-green-200 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? (

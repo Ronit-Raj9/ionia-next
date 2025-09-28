@@ -95,6 +95,7 @@ export function validateEmail(email: string): EmailValidation {
 
 /**
  * Comprehensive password strength validation
+ * Matches backend requirements exactly: uppercase, lowercase, number, special character (@$!%*?&)
  */
 export function validatePasswordStrength(password: string): PasswordStrength {
   const suggestions: string[] = [];
@@ -109,7 +110,7 @@ export function validatePasswordStrength(password: string): PasswordStrength {
     };
   }
 
-  // Length check
+  // Length check (required: minimum 8 characters)
   if (password.length >= 8) {
     score += 1;
   } else {
@@ -120,29 +121,35 @@ export function validatePasswordStrength(password: string): PasswordStrength {
     score += 1;
   }
 
-  // Character variety checks
-  if (/[a-z]/.test(password)) {
+  // Character variety checks (all required by backend)
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  // Backend requires specific special characters: @$!%*?&
+  const hasSpecialChar = /[@$!%*?&]/.test(password);
+
+  if (hasLowerCase) {
     score += 1;
   } else {
     suggestions.push('Include lowercase letters');
   }
 
-  if (/[A-Z]/.test(password)) {
+  if (hasUpperCase) {
     score += 1;
   } else {
     suggestions.push('Include uppercase letters');
   }
 
-  if (/\d/.test(password)) {
+  if (hasNumbers) {
     score += 1;
   } else {
     suggestions.push('Include numbers');
   }
 
-  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/.test(password)) {
+  if (hasSpecialChar) {
     score += 1;
   } else {
-    suggestions.push('Include special characters');
+    suggestions.push('Include special characters (@$!%*?&)');
   }
 
   // Additional checks
@@ -179,11 +186,14 @@ export function validatePasswordStrength(password: string): PasswordStrength {
     level = 'strong';
   }
 
+  // Backend validation: must have all required elements
+  const backendValid = password.length >= 8 && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar;
+
   return {
     score,
     level,
     suggestions,
-    isValid: score >= 4 && password.length >= 8
+    isValid: backendValid // Must match backend requirements exactly
   };
 }
 
