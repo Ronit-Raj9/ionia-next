@@ -47,10 +47,10 @@ const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const content = (
     <div className={`${bgColor} p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div className="flex-1">
-          <div className="flex items-center mb-3">
-            <div className={`p-2 rounded-lg ${iconColor.includes('blue') ? 'bg-blue-100' : 
+          <div className="flex items-center mb-4">
+            <div className={`p-3 rounded-lg flex items-center justify-center ${iconColor.includes('blue') ? 'bg-blue-100' : 
               iconColor.includes('green') ? 'bg-green-100' :
               iconColor.includes('purple') ? 'bg-purple-100' : 'bg-indigo-100'}`}>
               <Icon className={`h-6 w-6 ${iconColor}`} />

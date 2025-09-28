@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { HiOutlineMail, HiCheckCircle, HiXCircle } from 'react-icons/hi';
 import { authAPI } from '../api/authApi';
 
 export default function EmailVerification() {
@@ -74,7 +73,6 @@ export default function EmailVerification() {
             className="flex flex-col items-center space-y-4"
           >
             <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900">
-              <HiCheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -111,7 +109,6 @@ export default function EmailVerification() {
           className="text-center"
         >
           <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900 mb-4">
-            <HiOutlineMail className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
           
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -145,7 +142,6 @@ export default function EmailVerification() {
             className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-600 dark:text-red-400 px-4 py-3 rounded-md"
           >
             <div className="flex items-center space-x-2">
-              <HiXCircle className="h-5 w-5" />
               <span>{error}</span>
             </div>
           </motion.div>

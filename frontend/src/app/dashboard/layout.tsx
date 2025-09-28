@@ -10,6 +10,7 @@ import { useMediaQuery } from '@/shared/hooks/useMediaQuery';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useAuthGuard } from '@/features/auth/components/withAuth';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ClipLoader } from 'react-spinners';
 
 export default function DashboardLayout({
@@ -65,8 +66,17 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-gray-50">
       {/* Desktop Header */}
       <header className="hidden md:flex bg-white shadow-sm py-4 px-6 justify-between items-center">
-        <Link href="/" className="text-xl font-bold text-emerald-600">
-          Ionia
+        <Link href="/" className="flex items-center space-x-3">
+          <Image
+            src="/ionia_logo.png"
+            alt="iONIA Logo"
+            width={28}
+            height={28}
+            className="w-7 h-7 object-contain"
+          />
+          <span className="text-xl font-bold text-emerald-600">
+            iONIA
+          </span>
         </Link>
         <Link href="/" className="text-gray-600 hover:text-emerald-600">
           Back to Home
@@ -89,8 +99,17 @@ export default function DashboardLayout({
           {/* Mobile Header */}
           {isMobile && !isSidebarOpen && (
             <header className="sticky top-0 z-20 bg-white shadow-sm py-4 px-6 flex justify-between items-center md:hidden">
-              <Link href="/" className="text-xl font-bold text-emerald-600">
-                Ionia
+              <Link href="/" className="flex items-center space-x-3">
+                <Image
+                  src="/ionia_logo.png"
+                  alt="iONIA Logo"
+                  width={24}
+                  height={24}
+                  className="w-6 h-6 object-contain"
+                />
+                <span className="text-xl font-bold text-emerald-600">
+                  iONIA
+                </span>
               </Link>
               <button
                 onClick={toggleSidebar}

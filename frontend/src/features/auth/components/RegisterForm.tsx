@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { HiOutlineMail, HiOutlineUser, HiOutlineLockClosed } from 'react-icons/hi';
 import { useAuthStore } from '../store/authStore';
 import { useFormValidation } from '../store/validationStore';
 import type { RegisterData } from '../types';
@@ -140,16 +139,6 @@ export default function RegisterForm() {
         >
         {/* Header */}
         <div className="text-center mb-8">
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mx-auto w-16 h-16 bg-gradient-to-br from-emerald-600 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-6"
-          >
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-          </motion.div>
           
           <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2">
               Create your account
@@ -203,7 +192,6 @@ export default function RegisterForm() {
               type="text"
               label="Full Name"
               placeholder="Enter your full name"
-              icon={<HiOutlineUser />}
               value={formData.fullName || ''}
               onChange={handleChange}
               onBlur={() => setTouched('fullName')}
@@ -219,7 +207,6 @@ export default function RegisterForm() {
                 type="text"
                 label="Username"
                 placeholder="Choose a username"
-                icon={<HiOutlineUser />}
                 value={formData.username || ''}
                 onChange={handleChange}
                 onBlur={() => setTouched('username')}
@@ -273,7 +260,6 @@ export default function RegisterForm() {
             type="email"
             label="Email address"
             placeholder="Enter your email address"
-            icon={<HiOutlineMail />}
             value={formData.email || ''}
             onChange={handleChange}
             onBlur={() => setTouched('email')}
@@ -367,12 +353,7 @@ export default function RegisterForm() {
                 <span>Creating account...</span>
               </>
             ) : (
-              <>
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-                <span>Create account</span>
-              </>
+              <span>Create account</span>
             )}
           </motion.button>
         </form>
@@ -380,9 +361,6 @@ export default function RegisterForm() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
-            <svg className="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
             <span>Secured with industry-standard encryption</span>
           </div>
           </div>

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiCheckCircle, HiArrowLeft } from 'react-icons/hi';
 import { authAPI } from '../api/authApi';
 import { useAuthStore } from '../store/authStore';
 
@@ -151,7 +150,6 @@ export default function ResetPasswordForm() {
             className="flex flex-col items-center space-y-4"
           >
             <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900">
-              <HiCheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
             </div>
             
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -241,7 +239,6 @@ export default function ResetPasswordForm() {
             onClick={handleBackToLogin}
             className="flex items-center text-sm text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors duration-200 mb-6"
           >
-            <HiArrowLeft className="h-4 w-4 mr-1" />
             Back to Login
           </button>
           
@@ -287,7 +284,6 @@ export default function ResetPasswordForm() {
                 New Password
               </label>
               <div className="relative">
-                <HiOutlineLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   id="password"
                   name="password"
@@ -307,7 +303,6 @@ export default function ResetPasswordForm() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  {showPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
                 </button>
               </div>
               
@@ -350,7 +345,6 @@ export default function ResetPasswordForm() {
                 Confirm Password
               </label>
               <div className="relative">
-                <HiOutlineLockClosed className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
@@ -370,7 +364,6 @@ export default function ResetPasswordForm() {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  {showConfirmPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
                 </button>
               </div>
               
@@ -383,7 +376,6 @@ export default function ResetPasswordForm() {
                 >
                   {password === confirmPassword ? (
                     <div className="flex items-center space-x-1 text-green-600 text-xs">
-                      <HiCheckCircle className="h-4 w-4" />
                       <span>Passwords match</span>
                     </div>
                   ) : (
