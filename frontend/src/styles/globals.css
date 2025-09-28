@@ -2,6 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import mobile-first responsive styles */
+@import './responsive.css';
+
+/* Critical z-index fixes for navbar visibility */
+nav[class*="z-[99999]"] {
+  z-index: 99999 !important;
+  position: fixed !important;
+}
+
+.mobile-menu-panel,
+.user-dropdown-mobile,
+.user-dropdown-desktop {
+  z-index: 99999 !important;
+}
+
+.backdrop-overlay {
+  z-index: 99998 !important;
+}
+
+/* Ensure desktop navigation shows properly */
+@media (min-width: 768px) {
+  .hidden.md\:flex {
+    display: flex !important;
+  }
+  
+  .md\:hidden {
+    display: none !important;
+  }
+  
+  /* Force desktop navigation visibility */
+  nav .hidden.md\:flex {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Ensure mobile menu button is hidden on desktop */
+@media (min-width: 768px) {
+  nav .md\:hidden {
+    display: none !important;
+  }
+}
+
 
 :root { /* Light background color */ /* Dark foreground color */
   }

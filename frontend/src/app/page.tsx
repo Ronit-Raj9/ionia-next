@@ -126,9 +126,9 @@ const testimonials = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white overflow-hidden">
+    <main className="main-content min-h-screen bg-white overflow-hidden">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-emerald-900 via-emerald-700 to-teal-600 text-white min-h-screen flex items-center">
+      <section className="hero-section relative bg-gradient-to-br from-emerald-900 via-emerald-700 to-teal-600 text-white min-h-screen flex items-center">
         {/* Animated Background */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30"></div>
