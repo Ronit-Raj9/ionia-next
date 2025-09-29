@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useAuth } from '@/providers/AuthProvider';
+import { useRole } from '@/contexts/RoleContext';
 import { motion } from 'framer-motion';
 import { 
   BookOpen, 
@@ -30,33 +30,33 @@ const staggerContainer = {
 };
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user } = useRole();
 
   const stats = [
     {
       title: 'Questions Attempted',
-      value: user?.totalQuestionsAttempted || 0,
+      value: 12,
       icon: <BookOpen className="w-6 h-6" />,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
     },
     {
       title: 'Accuracy Rate',
-      value: `${user?.accuracyPercentage || 0}%`,
+      value: `85%`,
       icon: <Target className="w-6 h-6" />,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
     {
       title: 'Learning Streak',
-      value: `${user?.learningStreak || 0} days`,
+      value: `7 days`,
       icon: <Zap className="w-6 h-6" />,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100'
     },
     {
       title: 'Average Score',
-      value: `${user?.averageScore || 0}%`,
+      value: `78%`,
       icon: <TrendingUp className="w-6 h-6" />,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
@@ -119,18 +119,10 @@ export default function Dashboard() {
           variants={fadeIn}
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.fullName}!
-            {user?.isGuest && (
-              <span className="ml-3 px-3 py-1 text-sm bg-emerald-100 text-emerald-700 rounded-full">
-                Guest Mode
-              </span>
-            )}
+            Welcome back, {user?.name || user?.displayName || 'User'}!
           </h1>
           <p className="text-gray-600">
-            {user?.isGuest 
-              ? "You're in guest mode. Explore the LMS features and UI without creating an account."
-              : "Ready to continue your learning journey? Let's make today productive."
-            }
+            Ready to continue your learning journey? Let's make today productive.
           </p>
         </motion.div>
 
