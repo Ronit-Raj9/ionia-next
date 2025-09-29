@@ -17,7 +17,7 @@ export interface UploadResult {
 export async function uploadFile(
   fileBuffer: Buffer,
   fileName: string,
-  folder: 'assignments' | 'submissions'
+  folder: 'assignments' | 'submissions' | 'chat' | 'class-chat'
 ): Promise<UploadResult> {
   try {
     const result = await new Promise((resolve, reject) => {

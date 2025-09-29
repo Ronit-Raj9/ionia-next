@@ -28,23 +28,34 @@ import Confetti from 'react-confetti';
 
 interface Assignment {
   _id: string;
+  title: string;
+  description: string;
+  subject: string;
+  difficulty: string;
+  totalMarks: number;
   taskType: string;
+  dueDate?: string;
   createdAt: string;
   uploadedFileUrl?: string;
   questions: string[];
   variations: string;
   originalQuestions: string[];
+  canSeeGrades: boolean;
+  canSeeFeedback: boolean;
 }
 
 interface Submission {
   _id: string;
   assignmentId: string;
   submissionTime: string;
-  grade: {
+  grade?: {
     score: number;
+    maxScore: number;
     feedback: string;
     errors: string[];
+    isPublished: boolean;
   };
+  status: 'submitted' | 'graded' | 'returned';
   processed: boolean;
 }
 
@@ -493,11 +504,25 @@ export default function StudentDashboard() {
                             <div className="flex items-center space-x-2 mb-2">
                               <BookOpen className="w-5 h-5 text-gray-500" />
                               <span className="font-medium text-gray-900">
-                                Math Assignment
+                                {assignment.title || 'Math Assignment'}
                               </span>
                               <span className="text-sm text-gray-500">
                                 {new Date(assignment.createdAt).toLocaleDateString()}
                               </span>
+                              {assignment.subject && (
+                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                                  {assignment.subject}
+                                </span>
+                              )}
+                              {assignment.difficulty && (
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  assignment.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                                  assignment.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {assignment.difficulty}
+                                </span>
+                              )}
                               {isCompleted && (
                                 <CheckCircle className="w-5 h-5 text-green-500" />
                               )}
@@ -529,7 +554,13 @@ export default function StudentDashboard() {
                           <div className="text-right">
                             {isCompleted ? (
                               <div className="text-green-600">
-                                <div className="font-bold text-lg">{submission.grade.score}%</div>
+                                {submission.grade && assignment.canSeeGrades && submission.grade.isPublished ? (
+                                  <div className="font-bold text-lg">
+                                    {submission.grade.score}/{submission.grade.maxScore || assignment.totalMarks}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-500">Graded</div>
+                                )}
                                 <div className="text-sm">Completed</div>
                               </div>
                             ) : (

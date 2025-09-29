@@ -119,9 +119,9 @@ async function getStudentProgress(studentMockId: string, classId: string) {
 
     // Calculate metrics
     const totalSubmissions = recentSubmissions.length;
-    const processedSubmissions = recentSubmissions.filter(s => s.processed);
+    const processedSubmissions = recentSubmissions.filter(s => s.processed && s.grade);
     const averageScore = processedSubmissions.length > 0 
-      ? processedSubmissions.reduce((sum, s) => sum + s.grade.score, 0) / processedSubmissions.length 
+      ? processedSubmissions.reduce((sum, s) => sum + (s.grade?.score || 0), 0) / processedSubmissions.length 
       : 0;
     
     const accuracy = averageScore;
@@ -145,8 +145,8 @@ async function getStudentProgress(studentMockId: string, classId: string) {
         },
         recentActivity: processedSubmissions.slice(0, 5).map(submission => ({
           date: submission.submissionTime,
-          score: submission.grade.score,
-          feedback: submission.grade.feedback,
+          score: submission.grade?.score || 0,
+          feedback: submission.grade?.feedback || '',
         })),
         progress: progress || null,
       },
@@ -197,9 +197,9 @@ async function getClassProgress(classId: string, specificStudentId?: string) {
 
     // Calculate class metrics
     const totalSubmissions = allSubmissions.length;
-    const processedSubmissions = allSubmissions.filter(s => s.processed);
+    const processedSubmissions = allSubmissions.filter(s => s.processed && s.grade);
     const averageScore = processedSubmissions.length > 0
-      ? processedSubmissions.reduce((sum, s) => sum + s.grade.score, 0) / processedSubmissions.length
+      ? processedSubmissions.reduce((sum, s) => sum + (s.grade?.score || 0), 0) / processedSubmissions.length
       : 0;
 
     // Calculate heatmap data (weaknesses across class)
@@ -220,9 +220,9 @@ async function getClassProgress(classId: string, specificStudentId?: string) {
     const studentProgress = await Promise.all(
       targetProfiles.map(async (profile) => {
         const studentSubmissions = allSubmissions.filter(s => s.studentMockId === profile.studentMockId);
-        const studentProcessed = studentSubmissions.filter(s => s.processed);
+        const studentProcessed = studentSubmissions.filter(s => s.processed && s.grade);
         const studentAverage = studentProcessed.length > 0
-          ? studentProcessed.reduce((sum, s) => sum + s.grade.score, 0) / studentProcessed.length
+          ? studentProcessed.reduce((sum, s) => sum + (s.grade?.score || 0), 0) / studentProcessed.length
           : 0;
 
         const progress = await progressCollection.findOne({
@@ -285,9 +285,9 @@ async function refreshProgressData(classId: string) {
         .find({ studentMockId: profile.studentMockId })
         .toArray() as unknown as Submission[];
 
-      const processedSubmissions = submissions.filter(s => s.processed);
+      const processedSubmissions = submissions.filter(s => s.processed && s.grade);
       const averageScore = processedSubmissions.length > 0
-        ? processedSubmissions.reduce((sum, s) => sum + s.grade.score, 0) / processedSubmissions.length
+        ? processedSubmissions.reduce((sum, s) => sum + (s.grade?.score || 0), 0) / processedSubmissions.length
         : 0;
 
       // Update or create progress record

@@ -35,7 +35,7 @@ export default function Dashboard() {
   const stats = [
     {
       title: 'Questions Attempted',
-      value: 0, // Will be loaded from API
+      value: '0', // Will be loaded from API
       icon: <BookOpen className="w-6 h-6" />,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
@@ -120,14 +120,14 @@ export default function Dashboard() {
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome back, {user?.displayName || user?.name || 'Student'}!
-            {user?.role?.includes?.('guest') && (
+            {user?.role === 'guest' && (
               <span className="ml-3 px-3 py-1 text-sm bg-emerald-100 text-emerald-700 rounded-full">
                 Guest Mode
               </span>
             )}
           </h1>
           <p className="text-gray-600">
-            {user?.role?.includes?.('guest')
+            {user?.role === 'guest'
               ? "You're in guest mode. Explore the LMS features and UI without creating an account."
               : "Ready to continue your learning journey? Let's make today productive."
             }

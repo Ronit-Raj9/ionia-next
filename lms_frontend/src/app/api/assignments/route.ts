@@ -13,6 +13,15 @@ export async function POST(request: NextRequest) {
     const classId = formData.get('classId') as string;
     const questions = formData.get('questions') as string;
     const file = formData.get('file') as File | null;
+    const title = formData.get('title') as string || 'New Assignment';
+    const description = formData.get('description') as string || '';
+    const subject = formData.get('subject') as string || 'General';
+    const difficulty = formData.get('difficulty') as string || 'medium';
+    const totalMarks = parseInt(formData.get('totalMarks') as string) || 100;
+    const dueDate = formData.get('dueDate') ? new Date(formData.get('dueDate') as string) : undefined;
+    const showMarksToStudents = formData.get('showMarksToStudents') === 'true';
+    const showFeedbackToStudents = formData.get('showFeedbackToStudents') === 'true';
+    const assignedStudents = formData.get('assignedStudents') as string;
 
     // Validate role
     if (role !== 'teacher') {
@@ -55,26 +64,75 @@ export async function POST(request: NextRequest) {
       questionsList = ['Please solve the problems shown in the uploaded file.'];
     }
 
-    // Get student profiles for personalization
-    const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
-    const studentProfiles = await profilesCollection
-      .find({ classId })
-      .toArray() as unknown as StudentProfile[];
+    // Parse assigned students
+    let assignedStudentsList: string[] = [];
+    if (assignedStudents) {
+      try {
+        assignedStudentsList = JSON.parse(assignedStudents);
+      } catch {
+        assignedStudentsList = assignedStudents.split(',').map(s => s.trim());
+      }
+    }
 
-    if (studentProfiles.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No student profiles found for this class' },
-        { status: 404 }
-      );
+    // Get student profiles for personalization (only for assigned students)
+    const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
+    let studentProfiles: StudentProfile[] = [];
+    
+    if (assignedStudentsList.length > 0) {
+      studentProfiles = await profilesCollection
+        .find({ studentMockId: { $in: assignedStudentsList } })
+        .toArray() as unknown as StudentProfile[];
+    } else {
+      // Fallback to all students in class if no specific students assigned
+      studentProfiles = await profilesCollection
+        .find({ classId })
+        .toArray() as unknown as StudentProfile[];
+      assignedStudentsList = studentProfiles.map(p => p.studentMockId);
+    }
+
+    if (studentProfiles.length === 0 && assignedStudentsList.length > 0) {
+      // Create basic profiles for students without existing profiles
+      assignedStudentsList.forEach(studentId => {
+        studentProfiles.push({
+          studentMockId: studentId,
+          previousPerformance: {
+            subject: subject,
+            weaknesses: [],
+            masteryScores: {}
+          },
+          personalityProfile: {
+            type: 'balanced',
+            quizResponses: []
+          },
+          intellectualProfile: {
+            strengths: [],
+            responsePatterns: []
+          },
+          updatedAt: new Date()
+        });
+      });
     }
 
     // Create assignment document (omit _id to let MongoDB generate it)
     const assignmentData: Omit<Assignment, '_id'> = {
       classId,
-      taskType: 'math',
+      taskType: subject.toLowerCase(),
+      title,
+      description,
+      subject,
+      difficulty: difficulty as 'easy' | 'medium' | 'hard',
+      totalMarks,
       originalContent: { questions: questionsList },
       uploadedFileUrl,
       createdBy: mockUserId,
+      assignedTo: assignedStudentsList,
+      gradeSettings: {
+        showMarksToStudents,
+        showFeedbackToStudents,
+        gradingRubric: ''
+      },
+      dueDate,
+      isPublished: true,
       createdAt: new Date(),
       personalizedVersions: [],
     };
@@ -207,7 +265,7 @@ export async function GET(request: NextRequest) {
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
 
     if (role === 'student') {
-      // Get personalized assignments for student
+      // Get assignments assigned to this specific student
       if (!studentMockId) {
         return NextResponse.json(
           { success: false, error: 'studentMockId is required for students' },
@@ -216,7 +274,10 @@ export async function GET(request: NextRequest) {
       }
 
       const assignments = await assignmentsCollection
-        .find({ classId })
+        .find({ 
+          assignedTo: studentMockId,
+          isPublished: true
+        })
         .sort({ createdAt: -1 })
         .toArray();
 
@@ -227,12 +288,20 @@ export async function GET(request: NextRequest) {
 
         return {
           _id: assignment._id,
+          title: assignment.title,
+          description: assignment.description,
+          subject: assignment.subject,
+          difficulty: assignment.difficulty,
+          totalMarks: assignment.totalMarks,
           taskType: assignment.taskType,
+          dueDate: assignment.dueDate,
           createdAt: assignment.createdAt,
           uploadedFileUrl: assignment.uploadedFileUrl,
           questions: personalizedVersion?.adaptedContent.questions || assignment.originalContent.questions,
           variations: personalizedVersion?.adaptedContent.variations || 'No personalization available',
           originalQuestions: assignment.originalContent.questions,
+          canSeeGrades: assignment.gradeSettings.showMarksToStudents,
+          canSeeFeedback: assignment.gradeSettings.showFeedbackToStudents,
         };
       });
 
@@ -241,9 +310,19 @@ export async function GET(request: NextRequest) {
         data: personalizedAssignments,
       });
     } else if (role === 'teacher' || role === 'admin') {
-      // Get all assignments for teacher/admin
+      // Get assignments created by this teacher or all assignments for admin
+      let query: any = {};
+      
+      if (role === 'teacher') {
+        query.createdBy = mockUserId;
+      }
+      
+      if (classId) {
+        query.classId = classId;
+      }
+
       const assignments = await assignmentsCollection
-        .find({ classId })
+        .find(query)
         .sort({ createdAt: -1 })
         .toArray();
 
