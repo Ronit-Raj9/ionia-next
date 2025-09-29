@@ -142,31 +142,33 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-[99999] transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled 
           ? 'bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200' 
           : 'bg-white border-b border-gray-100'
       } ${className}`}
     >
       {/* Main Navbar Container - Mobile First */}
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16">
           
           {/* Logo - Responsive sizing */}
           <Link 
             href="/" 
-            className="flex items-center space-x-2 sm:space-x-3 group flex-shrink-0"
+            className="flex items-center space-x-2 sm:space-x-3 group flex-shrink-0 relative z-10"
             onClick={() => setNavbarOpen(false)}
           >
-            <Image
-              src="/ionia_logo.png"
-              alt="iONIA Logo"
-              width={28}
-              height={28}
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain"
-              priority
-            />
-            <span className="text-xl sm:text-2xl font-extrabold text-gray-900 group-hover:text-emerald-600 transition-colors duration-300">
+            <div className="relative">
+              <Image
+                src="/ionia_logo.png"
+                alt="iONIA Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-sm"
+                priority
+              />
+            </div>
+            <span className="text-xl sm:text-2xl font-extrabold text-gray-900 group-hover:text-emerald-600 transition-colors duration-300 drop-shadow-sm">
               iONIA
             </span>
           </Link>
@@ -183,20 +185,12 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
                   href={item.href}
                   className={`relative flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
                     isActive 
-                      ? 'text-emerald-600 bg-emerald-50' 
-                      : 'text-gray-700 hover:text-gray-900'
+                      ? 'text-white bg-emerald-600 shadow-sm' 
+                      : 'text-gray-700 hover:text-gray-900 hover:shadow-sm'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span>{item.name}</span>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute inset-0 bg-emerald-100 rounded-lg -z-10"
-                      initial={false}
-                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                    />
-                  )}
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+                  <span className="font-medium">{item.name}</span>
                 </Link>
               );
             })}
@@ -252,7 +246,7 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="user-dropdown-mobile fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-4"
+                            className="user-dropdown-mobile fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
                             onClick={() => setUserDropdownOpen(false)}
                           >
                             <motion.div
@@ -321,7 +315,7 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
                             transition={{ duration: 0.2 }}
-                            className="user-dropdown-desktop absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-[99999] overflow-hidden"
+                            className="user-dropdown-desktop absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-[60] overflow-hidden"
                             style={{ 
                               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' 
                             }}
@@ -415,7 +409,7 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="backdrop-overlay fixed inset-0 bg-black/30 backdrop-blur-sm z-[99998] md:hidden"
+              className="backdrop-overlay fixed inset-0 bg-black/30 backdrop-blur-sm z-[55] md:hidden"
               onClick={() => setNavbarOpen(false)}
             />
             
@@ -425,7 +419,7 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="mobile-menu-panel absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-xl z-[99999] md:hidden"
+              className="mobile-menu-panel absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-xl z-[60] md:hidden"
             >
               <div className="px-4 py-6 space-y-4">
                 
@@ -440,14 +434,17 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
                     key={item.name}
                     href={item.href}
                     onClick={() => setNavbarOpen(false)}
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-colors duration-200 ${
+                        className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
                           isActive 
-                            ? 'text-emerald-600 bg-emerald-50' 
-                            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+                            ? 'text-white bg-emerald-600 shadow-sm' 
+                            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 hover:shadow-sm'
                         }`}
                   >
-                        <Icon className="w-5 h-5" />
-                        <span>{item.name}</span>
+                        <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
+                        <span className="font-medium">{item.name}</span>
+                        {isActive && (
+                          <div className="ml-auto w-2 h-2 bg-white rounded-full"></div>
+                        )}
                   </Link>
                     );
                   })}

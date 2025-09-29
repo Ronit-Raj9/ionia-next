@@ -7,7 +7,7 @@ import Navbar from "@/shared/components/common/Navbar";
 import Footer from "@/shared/components/common/Footer";
 import Notifications from "@/shared/components/common/Notifications";
 import CookieConsent from "@/shared/components/common/CookieConsent";
-import AuthProvider from "@/providers/AuthProvider";
+import { RoleProvider } from "@/contexts/RoleContext";
 import "@/styles/globals.css";
 import { Toaster } from 'react-hot-toast';
 import { enableMapSet } from 'immer';
@@ -86,7 +86,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-gray-50 flex flex-col">
         {/* Main application */}
-        <AuthProvider>
+        <RoleProvider>
           <div className="flex flex-col min-h-screen">
             <Navbar />
             
@@ -101,7 +101,7 @@ export default function RootLayout({
           <Notifications />
           <CookieConsent />
           <Toaster position="bottom-right" />
-        </AuthProvider>
+        </RoleProvider>
         
         {/* Service Worker registration - disabled in development */}
         {process.env.NODE_ENV === 'production' && (

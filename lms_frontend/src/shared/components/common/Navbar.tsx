@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/providers/AuthProvider';
+import { useRole } from '@/contexts/RoleContext';
 import { 
   BookOpen, 
   User, 
@@ -12,33 +12,54 @@ import {
   X, 
   Settings,
   BarChart3,
-  Brain
+  Brain,
+  Upload,
+  GraduationCap
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, clearRole } = useRole();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = () => {
-    logout();
+    clearRole();
+    router.push('/');
     setIsMenuOpen(false);
   };
 
-  const navigation = [
-    { name: 'Learn', href: '/learn', icon: BookOpen },
-    { name: 'Progress', href: '/progress', icon: BarChart3 },
-    { name: 'Analytics', href: '/analytics', icon: Brain },
+  const teacherNavigation = [
+    { name: 'Dashboard', href: '/teacher', icon: GraduationCap },
+    { name: 'Create Assignment', href: '/teacher#create', icon: Upload },
+  ];
+
+  const studentNavigation = [
+    { name: 'Assignments', href: '/student', icon: BookOpen },
+    { name: 'Progress', href: '/student#progress', icon: BarChart3 },
   ];
 
   const adminNavigation = [
     { name: 'Dashboard', href: '/admin', icon: BarChart3 },
-    { name: 'Question Chains', href: '/admin/chains', icon: Brain },
-    { name: 'Questions', href: '/admin/questions', icon: BookOpen },
-    { name: 'Users', href: '/admin/users', icon: User },
+    { name: 'Analytics', href: '/admin#analytics', icon: Brain },
+    { name: 'System', href: '/admin#system', icon: Settings },
   ];
 
-  const currentNavigation = user?.role === 'admin' || user?.role === 'guest_instructor' ? adminNavigation : navigation;
+  const getNavigation = () => {
+    if (!user) return [];
+    
+    switch (user.role) {
+      case 'teacher':
+        return teacherNavigation;
+      case 'student':
+        return studentNavigation;
+      case 'admin':
+        return adminNavigation;
+      default:
+        return [];
+    }
+  };
+
+  const currentNavigation = getNavigation();
 
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200 fixed w-full top-0 z-50">
@@ -49,7 +70,7 @@ export default function Navbar() {
             <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
               <Brain className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">LMS</span>
+            <span className="text-xl font-bold text-gray-900">Ionia</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -71,11 +92,12 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">
-                  Welcome, <span className="font-medium text-gray-900">{user.fullName}</span>
-                  {user.isGuest && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full">
-                      Guest
-                    </span>
+                  Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName}</span>
+                  <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full capitalize">
+                    {user.role}
+                  </span>
+                  {user.email && (
+                    <div className="text-xs text-gray-500 mt-1">{user.email}</div>
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
@@ -96,16 +118,10 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center space-x-4">
                 <Link
-                  href="/auth/login"
-                  className="text-gray-600 hover:text-emerald-600 transition-colors duration-200"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/auth/register"
+                  href="/"
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
                 >
-                  Register
+                  Select Role
                 </Link>
               </div>
             )}
@@ -141,11 +157,12 @@ export default function Navbar() {
               {user ? (
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="text-sm text-gray-600 px-2">
-                    Welcome, <span className="font-medium text-gray-900">{user.fullName}</span>
-                    {user.isGuest && (
-                      <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full">
-                        Guest
-                      </span>
+                    Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName}</span>
+                    <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full capitalize">
+                      {user.role}
+                    </span>
+                    {user.email && (
+                      <div className="text-xs text-gray-500 mt-1">{user.email}</div>
                     )}
                   </div>
                   <Link
@@ -167,18 +184,11 @@ export default function Navbar() {
               ) : (
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <Link
-                    href="/auth/login"
-                    className="block text-gray-600 hover:text-emerald-600 transition-colors duration-200 py-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/auth/register"
+                    href="/"
                     className="block bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Register
+                    Select Role
                   </Link>
                 </div>
               )}
