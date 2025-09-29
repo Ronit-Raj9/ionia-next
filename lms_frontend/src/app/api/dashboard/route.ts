@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const mockUserId = searchParams.get('mockUserId');
     const classId = searchParams.get('classId') || 'demo-class-1';
+    const schoolId = searchParams.get('schoolId');
 
     if (!role || !mockUserId) {
       return NextResponse.json(
@@ -18,11 +19,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (role === 'teacher') {
-      return await getTeacherDashboardData(mockUserId, classId);
+      return await getTeacherDashboardData(mockUserId, classId, schoolId);
     } else if (role === 'student') {
-      return await getStudentDashboardData(mockUserId, classId);
+      return await getStudentDashboardData(mockUserId, classId, schoolId);
     } else if (role === 'admin') {
-      return await getAdminDashboardData(classId);
+      return await getAdminDashboardData(classId, schoolId);
     } else {
       return NextResponse.json(
         { success: false, error: 'Invalid role' },
@@ -38,16 +39,24 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function getTeacherDashboardData(teacherMockId: string, classId: string) {
+async function getTeacherDashboardData(teacherMockId: string, classId: string, schoolId?: string) {
   try {
     // Get class progress data
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
-    const classProgress = await progressCollection.find({ classId }).toArray();
+    const classProgressQuery: any = { classId };
+    if (schoolId) {
+      classProgressQuery.schoolId = schoolId;
+    }
+    const classProgress = await progressCollection.find(classProgressQuery).toArray();
 
     // Get recent assignments
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    const assignmentsQuery: any = { createdBy: teacherMockId };
+    if (schoolId) {
+      assignmentsQuery.schoolId = schoolId;
+    }
     const recentAssignments = await assignmentsCollection
-      .find({ createdBy: teacherMockId })
+      .find(assignmentsQuery)
       .sort({ createdAt: -1 })
       .limit(5)
       .toArray();
@@ -129,23 +138,35 @@ async function getTeacherDashboardData(teacherMockId: string, classId: string) {
   }
 }
 
-async function getStudentDashboardData(studentMockId: string, classId: string) {
+async function getStudentDashboardData(studentMockId: string, classId: string, schoolId?: string) {
   try {
     // Get student progress
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
-    const studentProgress = await progressCollection.findOne({ 
+    const progressQuery: any = { 
       studentMockId, 
       classId 
-    }) as unknown as Progress | null;
+    };
+    if (schoolId) {
+      progressQuery.schoolId = schoolId;
+    }
+    const studentProgress = await progressCollection.findOne(progressQuery) as unknown as Progress | null;
 
     // Get student profile
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
-    const studentProfile = await profilesCollection.findOne({ studentMockId }) as unknown as StudentProfile | null;
+    const profileQuery: any = { studentMockId };
+    if (schoolId) {
+      profileQuery.schoolId = schoolId;
+    }
+    const studentProfile = await profilesCollection.findOne(profileQuery) as unknown as StudentProfile | null;
 
     // Get available assignments
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    const assignmentsQuery: any = { classId };
+    if (schoolId) {
+      assignmentsQuery.schoolId = schoolId;
+    }
     const assignments = await assignmentsCollection
-      .find({ classId })
+      .find(assignmentsQuery)
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -236,14 +257,22 @@ async function getStudentDashboardData(studentMockId: string, classId: string) {
   }
 }
 
-async function getAdminDashboardData(classId: string) {
+async function getAdminDashboardData(classId: string, schoolId?: string) {
   try {
     // Get all class data
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
-    const classProgress = await progressCollection.find({ classId }).toArray();
+    const classProgressQuery: any = { classId };
+    if (schoolId) {
+      classProgressQuery.schoolId = schoolId;
+    }
+    const classProgress = await progressCollection.find(classProgressQuery).toArray();
 
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
-    const studentProfiles = await profilesCollection.find({}).toArray();
+    const profilesQuery: any = {};
+    if (schoolId) {
+      profilesQuery.schoolId = schoolId;
+    }
+    const studentProfiles = await profilesCollection.find(profilesQuery).toArray();
 
     const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
     const allSubmissions = await submissionsCollection.find({}).toArray();

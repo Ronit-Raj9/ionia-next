@@ -47,11 +47,11 @@ export async function GET(request: NextRequest) {
 // POST - Create a new class
 export async function POST(request: NextRequest) {
   try {
-    const { teacherId, className, studentIds, description, role } = await request.json();
+    const { teacherId, className, studentIds, description, subject, grade, schoolId, role } = await request.json();
 
-    if (!teacherId || !className) {
+    if (!teacherId || !className || !schoolId) {
       return NextResponse.json(
-        { success: false, error: 'TeacherId and className are required' },
+        { success: false, error: 'TeacherId, className, and schoolId are required' },
         { status: 400 }
       );
     }
@@ -65,24 +65,35 @@ export async function POST(request: NextRequest) {
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
 
-    // Check if class with same name already exists for this teacher
+    // Check if class with same name already exists for this teacher in this school
     const existingClass = await classesCollection.findOne({
       teacherMockId: teacherId,
+      schoolId: schoolId,
       className: className
     });
 
     if (existingClass) {
       return NextResponse.json(
-        { success: false, error: 'A class with this name already exists' },
+        { success: false, error: 'A class with this name already exists in your school' },
         { status: 400 }
       );
     }
 
+    // Generate a unique join code
+    const joinCode = `${schoolId.slice(0, 3).toUpperCase()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
     const newClass: Omit<Class, '_id'> = {
       className,
       teacherMockId: teacherId,
+      schoolId,
       studentMockIds: studentIds || [],
-      createdAt: new Date()
+      description,
+      subject,
+      grade,
+      isActive: true,
+      joinCode,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     const result = await classesCollection.insertOne(newClass);

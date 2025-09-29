@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS, Submission, Assignment, Progress, StudentProfile } from '@/lib/db';
-import { gradeSubmission } from '@/lib/groq';
+import { gradeSubmission, gradeSubmissionDetailed } from '@/lib/groq';
 import { gradeSubmissionFallback } from '@/lib/openai';
 import { uploadFile } from '@/lib/cloudinary';
 import { extractTextFromImage } from '@/lib/googleVision';
 import { checkAndAwardBadges, generateAchievementNotification, updateEngagementMetrics } from '@/lib/gamification';
+import { updateStudentMastery } from '@/lib/progress-tracker';
 import { ObjectId } from 'mongodb';
 
 export async function POST(request: NextRequest) {
@@ -106,19 +107,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create submission document
-    const submission: Submission = {
+    // Create submission document with enhanced fields
+    const submission: Partial<Submission> = {
       assignmentId,
+      classId: assignment.classId,
+      schoolId: assignment.schoolId,
       studentMockId,
       studentName: `Student ${studentMockId.replace('student', '')}`,
+      subject: assignment.subject,
+      topic: assignment.topic,
       submittedContent: {
         text: fullSubmissionText,
         imageUrls,
       },
+      extractedText: extractedText || undefined,
+      ocrStatus: extractedText ? 'completed' : 'skipped',
+      imageQualityCheck: imageUrls.length > 0 ? {
+        isAcceptable: true,
+        issues: [],
+        confidence: 85
+      } : undefined,
       submissionTime: new Date(),
       grade: {
         score: 0,
-        maxScore: 100,
+        maxScore: assignment.maxScore || assignment.totalMarks || 100,
         feedback: '',
         errors: [],
         gradedBy: '',
@@ -126,6 +138,7 @@ export async function POST(request: NextRequest) {
         isPublished: false,
       },
       status: 'submitted' as const,
+      processingStatus: 'pending' as const,
       processed: false,
     };
 
@@ -134,45 +147,154 @@ export async function POST(request: NextRequest) {
     const result = await submissionsCollection.insertOne(submission);
     const submissionId = result.insertedId;
 
-    // Grade the submission
+    // Grade the submission with detailed AI feedback
     try {
-      let gradingResult;
+      console.log(`Starting AI grading for submission ${submissionId}...`);
       
-      // Try Groq first, fallback to OpenAI
-      try {
-        gradingResult = await gradeSubmission({
-          submittedText: fullSubmissionText,
-          originalQuestions: assignment.originalContent.questions,
-        });
-      } catch (groqError) {
-        console.warn('Groq grading failed, trying OpenAI fallback:', groqError);
-        gradingResult = await gradeSubmissionFallback({
-          submittedText: fullSubmissionText,
-          originalQuestions: assignment.originalContent.questions,
-        });
-      }
-
-      // Update submission with grade
+      // Update status to processing
       await submissionsCollection.updateOne(
         { _id: submissionId },
-        {
-          $set: {
-            grade: gradingResult,
-            processed: true,
-          },
-        }
+        { $set: { processingStatus: 'grading' } }
       );
+      
+      let detailedGrading;
+      
+      // Try detailed grading if we have rubric and solution
+      const hasDetailedInfo = assignment.gradingRubric || assignment.baseSolution;
+      
+      if (hasDetailedInfo) {
+        console.log('Using detailed grading with rubric/solution');
+        try {
+          detailedGrading = await gradeSubmissionDetailed({
+            studentAnswer: fullSubmissionText,
+            modelSolution: assignment.baseSolution?.solutionText || 'Refer to textbook and class notes',
+            questions: assignment.originalContent?.questions || [],
+            rubric: assignment.gradingRubric || {
+              criteria: [
+                { name: 'Understanding', points: 30, description: 'Shows understanding of concepts' },
+                { name: 'Application', points: 30, description: 'Correctly applies formulas/methods' },
+                { name: 'Calculation', points: 30, description: 'Accurate calculations' },
+                { name: 'Presentation', points: 10, description: 'Clear and organized' }
+              ]
+            },
+            maxScore: assignment.maxScore || assignment.totalMarks || 100,
+            subject: assignment.subject || 'Science',
+            topic: assignment.topic || 'General'
+          });
+          
+          // Store detailed grading data
+          const autoGrade = {
+            score: detailedGrading.score,
+            maxScore: detailedGrading.score,
+            percentage: detailedGrading.percentage,
+            detailedFeedback: detailedGrading.detailedFeedback,
+            questionWiseAnalysis: detailedGrading.questionWiseAnalysis,
+            errorAnalysis: detailedGrading.errorAnalysis,
+            strengthsIdentified: detailedGrading.strengthsIdentified,
+            areasForImprovement: detailedGrading.areasForImprovement.map(area => ({
+              concept: area,
+              suggestion: 'Review and practice',
+              studyMaterialReference: ''
+            })),
+            aiConfidence: detailedGrading.aiConfidence,
+            requiresReview: detailedGrading.aiConfidence < 70,
+            gradedBy: 'AI-Groq',
+            gradedAt: new Date()
+          };
+          
+          // Update submission with detailed grading
+          await submissionsCollection.updateOne(
+            { _id: submissionId },
+            {
+              $set: {
+                autoGrade,
+                grade: {
+                  score: detailedGrading.score,
+                  maxScore: assignment.maxScore || assignment.totalMarks || 100,
+                  feedback: detailedGrading.detailedFeedback,
+                  errors: detailedGrading.errorAnalysis.map(e => `${e.errorType}: ${e.description}`),
+                  gradedBy: 'AI-Groq',
+                  gradedAt: new Date(),
+                  isPublished: true,
+                },
+                processed: true,
+                processingStatus: 'completed' as const,
+                status: 'graded' as const
+              },
+            }
+          );
+          
+          console.log(`✓ Detailed grading complete: ${detailedGrading.score}/${detailedGrading.score} (${detailedGrading.percentage}%)`);
+          
+        } catch (detailedError) {
+          console.warn('Detailed grading failed, falling back to basic:', detailedError);
+          throw detailedError; // Will be caught by outer try-catch
+        }
+      } else {
+        // Fallback to basic grading
+        console.log('Using basic grading (no rubric/solution)');
+        const basicGrading = await gradeSubmission({
+          submittedText: fullSubmissionText,
+          originalQuestions: assignment.originalContent?.questions || [],
+        });
+        
+        detailedGrading = {
+          score: basicGrading.score,
+          percentage: (basicGrading.score / (assignment.maxScore || 100)) * 100,
+          detailedFeedback: basicGrading.feedback,
+          questionWiseAnalysis: [],
+          errorAnalysis: basicGrading.errors.map((e: string) => ({
+            errorType: 'Error',
+            description: e,
+            severity: 'minor' as const
+          })),
+          strengthsIdentified: ['Good effort'],
+          areasForImprovement: ['Continue practicing'],
+          aiConfidence: 75
+        };
+        
+        await submissionsCollection.updateOne(
+          { _id: submissionId },
+          {
+            $set: {
+              grade: basicGrading,
+              processed: true,
+              processingStatus: 'completed' as const,
+              status: 'graded' as const
+            },
+          }
+        );
+      }
 
-      // Update student progress (trigger progress update with gamification)
-      const gamificationResult = await updateStudentProgress(studentMockId, assignment.classId, gradingResult.score);
+      // Update student mastery with detailed feedback
+      const progressUpdate = await updateStudentMastery(
+        studentMockId,
+        assignment,
+        submission as Submission,
+        detailedGrading
+      );
+      
+      console.log(`✓ Progress updated: Mastery ${progressUpdate.previousMastery}% → ${progressUpdate.newMastery}%`);
+
+      // Also update legacy progress for backward compatibility
+      const gamificationResult = await updateStudentProgress(
+        studentMockId, 
+        assignment.classId, 
+        detailedGrading.score
+      ).catch(err => {
+        console.warn('Legacy progress update failed:', err);
+        return { badges: [], achievements: [] };
+      });
 
       return NextResponse.json({
         success: true,
         data: {
           submissionId,
-          grade: gradingResult,
+          grade: detailedGrading,
+          autoGrade: submission.autoGrade,
           ocrExtracted: extractedText.length > 0,
           imagesProcessed: imageUrls.length,
+          progressUpdate,
           gamification: gamificationResult,
         },
       });
@@ -274,8 +396,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper function to update student progress with gamification
-async function updateStudentProgress(studentMockId: string, classId: string, score: number) {
+// Helper function to update student progress with gamification and mastery tracking
+async function updateStudentProgress(
+  studentMockId: string, 
+  classId: string, 
+  score: number,
+  assignment?: Assignment,
+  detailedGrading?: any
+) {
   try {
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);

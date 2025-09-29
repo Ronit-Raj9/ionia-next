@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS, Assignment, StudentProfile } from '@/lib/db';
-import { personalizeAssignment } from '@/lib/groq';
+import { personalizeAssignment, personalizeAssignmentWithOcean } from '@/lib/groq';
 import { personalizeAssignmentFallback } from '@/lib/openai';
 import { uploadFile } from '@/lib/cloudinary';
 import { generateAssignmentSuggestions } from '@/lib/aiRecommendations';
+import { ObjectId } from 'mongodb';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +16,17 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
     const title = formData.get('title') as string || 'New Assignment';
     const description = formData.get('description') as string || '';
-    const subject = formData.get('subject') as string || 'General';
+    const subject = formData.get('subject') as string || 'Science';
+    const grade = formData.get('grade') as string || '9';
+    const topic = formData.get('topic') as string || '';
     const difficulty = formData.get('difficulty') as string || 'medium';
     const totalMarks = parseInt(formData.get('totalMarks') as string) || 100;
     const dueDate = formData.get('dueDate') ? new Date(formData.get('dueDate') as string) : undefined;
     const showMarksToStudents = formData.get('showMarksToStudents') === 'true';
     const showFeedbackToStudents = formData.get('showFeedbackToStudents') === 'true';
     const assignedStudents = formData.get('assignedStudents') as string;
+    const enablePersonalization = formData.get('enablePersonalization') !== 'false'; // Default true
+    const schoolId = formData.get('schoolId') as string;
 
     // Validate role
     if (role !== 'teacher') {
@@ -116,12 +121,18 @@ export async function POST(request: NextRequest) {
     // Create assignment document (omit _id to let MongoDB generate it)
     const assignmentData: Omit<Assignment, '_id'> = {
       classId,
+      schoolId,
       taskType: subject.toLowerCase(),
       title,
       description,
       subject,
+      grade: grade,
+      topic: topic,
       difficulty: difficulty as 'easy' | 'medium' | 'hard',
       totalMarks,
+      maxScore: totalMarks,
+      assignmentType: enablePersonalization ? 'personalized' : 'standard',
+      personalizationEnabled: enablePersonalization,
       originalContent: { questions: questionsList },
       uploadedFileUrl,
       createdBy: mockUserId,
@@ -129,7 +140,12 @@ export async function POST(request: NextRequest) {
       gradeSettings: {
         showMarksToStudents,
         showFeedbackToStudents,
-        gradingRubric: ''
+      },
+      submissionStats: {
+        totalStudents: assignedStudentsList.length,
+        submitted: 0,
+        graded: 0,
+        pending: assignedStudentsList.length
       },
       dueDate,
       isPublished: true,
@@ -137,54 +153,111 @@ export async function POST(request: NextRequest) {
       personalizedVersions: [],
     };
 
-    // Personalize for each student
-    const personalizationPromises = studentProfiles.map(async (profile) => {
-      try {
-        let personalized;
-        
-        // Try Groq first, fallback to OpenAI
+    // Personalize for each student if enabled
+    let personalizedVersions: any[] = [];
+    
+    if (enablePersonalization && studentProfiles.length > 0) {
+      console.log(`Personalizing assignment for ${studentProfiles.length} students...`);
+      
+      const personalizationPromises = studentProfiles.map(async (profile) => {
         try {
-          personalized = await personalizeAssignment({
-            questions: questionsList,
-            studentProfile: {
-              weaknesses: profile.previousPerformance.weaknesses,
-              personalityType: profile.personalityProfile.type,
-              intellectualStrengths: profile.intellectualProfile.strengths,
+          // Check if student has OCEAN profile
+          const hasOceanProfile = profile.oceanTraits && 
+                                  profile.learningPreferences && 
+                                  profile.personalityTestCompleted;
+          
+          let personalized;
+          
+          if (hasOceanProfile) {
+            // Use advanced OCEAN-based personalization
+            const subjectMastery = profile.subjectMastery?.find(s => s.subject === subject && s.grade === grade);
+            const topicInfo = subjectMastery?.topics.find(t => t.name === topic);
+            const topicMastery = topicInfo?.masteryScore || 50;
+            const weaknesses = topicInfo?.weaknesses || profile.previousPerformance?.weaknesses || [];
+            
+            console.log(`Using OCEAN personalization for ${profile.studentMockId} (mastery: ${topicMastery}%)`);
+            
+            personalized = await personalizeAssignmentWithOcean({
+              questions: questionsList,
+              studentProfile: {
+                oceanTraits: profile.oceanTraits!,
+                learningPreferences: profile.learningPreferences!,
+                topicMastery,
+                weaknesses
+              },
+              subject,
+              topic,
+              grade
+            });
+            
+            return {
+              studentMockId: profile.studentMockId,
+              adaptedContent: {
+                questions: personalized.personalizedQuestions,
+                variations: personalized.variations,
+                difficultyAdjustment: personalized.difficultyAdjustment,
+                visualAids: personalized.visualAids,
+                hints: personalized.hints,
+                remedialQuestions: personalized.remedialQuestions,
+                challengeQuestions: personalized.challengeQuestions,
+                encouragementNote: personalized.encouragementNote
+              },
+              personalizationReason: personalized.personalizationReason
+            };
+          } else {
+            // Fallback to legacy personalization
+            console.log(`Using legacy personalization for ${profile.studentMockId} (no OCEAN profile)`);
+            
+            try {
+              personalized = await personalizeAssignment({
+                questions: questionsList,
+                studentProfile: {
+                  weaknesses: profile.previousPerformance?.weaknesses || [],
+                  personalityType: profile.personalityProfile?.type || 'balanced',
+                  intellectualStrengths: profile.intellectualProfile?.strengths || [],
+                },
+              });
+            } catch (groqError) {
+              console.warn('Groq failed, trying OpenAI fallback:', groqError);
+              personalized = await personalizeAssignmentFallback({
+                questions: questionsList,
+                studentProfile: {
+                  weaknesses: profile.previousPerformance?.weaknesses || [],
+                  personalityType: profile.personalityProfile?.type || 'balanced',
+                  intellectualStrengths: profile.intellectualProfile?.strengths || [],
+                },
+              });
+            }
+
+            return {
+              studentMockId: profile.studentMockId,
+              adaptedContent: {
+                questions: personalized.questions,
+                variations: personalized.variations,
+              },
+              personalizationReason: 'Legacy personalization (OCEAN profile incomplete)'
+            };
+          }
+        } catch (error) {
+          console.error(`Failed to personalize for ${profile.studentMockId}:`, error);
+          // Return original questions as fallback
+          return {
+            studentMockId: profile.studentMockId,
+            adaptedContent: {
+              questions: questionsList,
+              variations: 'Using original questions (personalization failed)',
             },
-          });
-        } catch (groqError) {
-          console.warn('Groq failed, trying OpenAI fallback:', groqError);
-          personalized = await personalizeAssignmentFallback({
-            questions: questionsList,
-            studentProfile: {
-              weaknesses: profile.previousPerformance.weaknesses,
-              personalityType: profile.personalityProfile.type,
-              intellectualStrengths: profile.intellectualProfile.strengths,
-            },
-          });
+            personalizationReason: 'Personalization error - using standard assignment'
+          };
         }
+      });
 
-        return {
-          studentMockId: profile.studentMockId,
-          adaptedContent: {
-            questions: personalized.questions,
-            variations: personalized.variations,
-          },
-        };
-      } catch (error) {
-        console.error(`Failed to personalize for ${profile.studentMockId}:`, error);
-        // Return original questions as fallback
-        return {
-          studentMockId: profile.studentMockId,
-          adaptedContent: {
-            questions: questionsList,
-            variations: 'Using original questions (personalization failed)',
-          },
-        };
-      }
-    });
-
-    const personalizedVersions = await Promise.all(personalizationPromises);
+      personalizedVersions = await Promise.all(personalizationPromises);
+      console.log(`✓ Personalization complete for ${personalizedVersions.length} students`);
+    } else {
+      console.log('Personalization disabled or no students - creating standard assignment');
+    }
+    
     assignmentData.personalizedVersions = personalizedVersions;
 
     // Save assignment to database
@@ -286,22 +359,43 @@ export async function GET(request: NextRequest) {
           (pv: any) => pv.studentMockId === studentMockId
         );
 
+        const adaptedContent = personalizedVersion?.adaptedContent || {};
+        
         return {
           _id: assignment._id,
           title: assignment.title,
           description: assignment.description,
           subject: assignment.subject,
+          grade: assignment.grade,
+          topic: assignment.topic,
           difficulty: assignment.difficulty,
           totalMarks: assignment.totalMarks,
           taskType: assignment.taskType,
           dueDate: assignment.dueDate,
           createdAt: assignment.createdAt,
           uploadedFileUrl: assignment.uploadedFileUrl,
-          questions: personalizedVersion?.adaptedContent.questions || assignment.originalContent.questions,
-          variations: personalizedVersion?.adaptedContent.variations || 'No personalization available',
-          originalQuestions: assignment.originalContent.questions,
-          canSeeGrades: assignment.gradeSettings.showMarksToStudents,
-          canSeeFeedback: assignment.gradeSettings.showFeedbackToStudents,
+          
+          // Personalized content
+          questions: adaptedContent.questions || assignment.originalContent?.questions || [],
+          variations: adaptedContent.variations || 'No personalization available',
+          difficultyAdjustment: adaptedContent.difficultyAdjustment,
+          visualAids: adaptedContent.visualAids,
+          hints: adaptedContent.hints,
+          remedialQuestions: adaptedContent.remedialQuestions,
+          challengeQuestions: adaptedContent.challengeQuestions,
+          encouragementNote: adaptedContent.encouragementNote,
+          personalizationReason: personalizedVersion?.personalizationReason,
+          
+          // Original content for reference
+          originalQuestions: assignment.originalContent?.questions || [],
+          
+          // Grade visibility
+          canSeeGrades: assignment.gradeSettings?.showMarksToStudents || false,
+          canSeeFeedback: assignment.gradeSettings?.showFeedbackToStudents || true,
+          
+          // Assignment type
+          isPersonalized: !!personalizedVersion,
+          assignmentType: assignment.assignmentType || 'standard'
         };
       });
 
