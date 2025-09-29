@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCollection, COLLECTIONS, Submission, Assignment } from '@/lib/db';
+import { getCollection, COLLECTIONS, Submission, Assignment, Progress, StudentProfile } from '@/lib/db';
 import { gradeSubmission } from '@/lib/groq';
 import { gradeSubmissionFallback } from '@/lib/openai';
 import { uploadFile } from '@/lib/cloudinary';
 import { extractTextFromImage } from '@/lib/googleVision';
+import { checkAndAwardBadges, generateAchievementNotification, updateEngagementMetrics } from '@/lib/gamification';
 import { ObjectId } from 'mongodb';
 
 export async function POST(request: NextRequest) {
@@ -156,8 +157,8 @@ export async function POST(request: NextRequest) {
         }
       );
 
-      // Update student progress (trigger progress update)
-      await updateStudentProgress(studentMockId, assignment.classId, gradingResult.score);
+      // Update student progress (trigger progress update with gamification)
+      const gamificationResult = await updateStudentProgress(studentMockId, assignment.classId, gradingResult.score);
 
       return NextResponse.json({
         success: true,
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
           grade: gradingResult,
           ocrExtracted: extractedText.length > 0,
           imagesProcessed: imageUrls.length,
+          gamification: gamificationResult,
         },
       });
     } catch (gradingError) {
@@ -266,41 +268,127 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper function to update student progress
+// Helper function to update student progress with gamification
 async function updateStudentProgress(studentMockId: string, classId: string, score: number) {
   try {
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
+    const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
+    
+    // Get current student data
+    const studentProgress = await progressCollection.findOne({ studentMockId, classId }) as unknown as Progress | null;
+    const studentProfile = await profilesCollection.findOne({ studentMockId }) as unknown as StudentProfile | null;
+    const allSubmissions = await submissionsCollection.find({ studentMockId }).toArray() as unknown as Submission[];
+    
+    // Create current submission object for gamification
+    const currentSubmission = {
+      _id: new ObjectId(),
+      assignmentId: 'current',
+      studentMockId,
+      submittedContent: { text: '', imageUrls: [] },
+      submissionTime: new Date(),
+      grade: { score, feedback: '', errors: [] },
+      processed: true,
+      timeSpent: 30 // Default time spent
+    } as Submission;
+    
+    // Check for new badges
+    const newBadges = studentProgress && studentProfile 
+      ? checkAndAwardBadges(currentSubmission, studentProgress, [...allSubmissions, currentSubmission])
+      : [];
     
     // Update student profile based on score
     if (score >= 70) {
-      // Good score - potentially remove weaknesses
       await profilesCollection.updateOne(
         { studentMockId },
         {
           $set: { updatedAt: new Date() },
-          $inc: { 'previousPerformance.masteryScores.overall': 5 },
+          $inc: { 
+            'previousPerformance.masteryScores.overall': 5,
+            'engagementMetrics.badgeCount': newBadges.length
+          },
         }
       );
     }
     
-    // Update progress metrics
+    // Calculate new metrics
+    const currentAverage = studentProgress?.metrics.averageScore || 0;
+    const totalSubmissions = (studentProgress?.metrics.totalSubmissions || 0) + 1;
+    const newAverage = Math.round(((currentAverage * (totalSubmissions - 1)) + score) / totalSubmissions);
+    
+    // Prepare activity entries for new badges
+    const badgeActivities = newBadges.map(badgeType => ({
+      type: 'badge_earned' as const,
+      description: generateAchievementNotification(badgeType),
+      timestamp: new Date()
+    }));
+    
+    // Prepare general activity
+    const generalActivity = {
+      type: 'submission' as const,
+      description: `Completed assignment with ${score}% score`,
+      timestamp: new Date()
+    };
+    
+    // Update progress metrics with gamification
+    const updateData: any = {
+      $set: {
+        'metrics.timeSaved': (studentProgress?.metrics.timeSaved || 0) + 10,
+        'metrics.averageScore': newAverage,
+        'metrics.totalSubmissions': totalSubmissions,
+        'metrics.completionRate': Math.min(100, (totalSubmissions / 5) * 100), // Assume 5 total assignments
+      },
+      $push: {
+        updates: {
+          timestamp: new Date(),
+          change: `Scored ${score}% on recent assignment`,
+        },
+        recentActivity: {
+          $each: [generalActivity, ...badgeActivities],
+          $slice: -10 // Keep only last 10 activities
+        }
+      }
+    };
+    
+    // Add new badges to gamification data
+    if (newBadges.length > 0) {
+      updateData.$addToSet = {
+        'gamificationData.badges': { $each: newBadges }
+      };
+      
+      // Add achievements
+      const achievements = newBadges.map(badgeType => ({
+        name: badgeType,
+        earnedAt: new Date(),
+        description: generateAchievementNotification(badgeType)
+      }));
+      
+      updateData.$push['gamificationData.achievements'] = {
+        $each: achievements,
+        $slice: -20 // Keep last 20 achievements
+      };
+    }
+    
+    // Calculate score uplift
+    if (studentProgress && studentProgress.metrics.averageScore) {
+      const uplift = ((newAverage - studentProgress.metrics.averageScore) / studentProgress.metrics.averageScore) * 100;
+      updateData.$set['advancedMetrics.scoreUplift'] = Math.round(uplift);
+    }
+    
     await progressCollection.updateOne(
       { studentMockId, classId },
-      {
-        $set: {
-          'metrics.timeSaved': 10, // 10 minutes saved per submission
-        },
-        $push: {
-          updates: {
-            timestamp: new Date(),
-            change: `Scored ${score}% on recent assignment`,
-          },
-        },
-      },
+      updateData,
       { upsert: true }
     );
+    
+    // Return badge notifications for frontend
+    return {
+      newBadges,
+      notifications: newBadges.map(generateAchievementNotification)
+    };
+    
   } catch (error) {
     console.error('Failed to update student progress:', error);
+    return { newBadges: [], notifications: [] };
   }
 }

@@ -16,9 +16,15 @@ import {
   AlertCircle,
   Upload,
   Eye,
-  Award
+  Award,
+  Zap,
+  Target,
+  Flame,
+  Trophy,
+  Gift
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Confetti from 'react-confetti';
 
 interface Assignment {
   _id: string;
@@ -72,6 +78,14 @@ export default function StudentDashboard() {
   // Form state
   const [textAnswer, setTextAnswer] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  
+  // Phase 2 gamification state
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [badges, setBadges] = useState<any[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [recentBadges, setRecentBadges] = useState<string[]>([]);
+  const [adaptivePath, setAdaptivePath] = useState<string[]>([]);
+  const [progressBars, setProgressBars] = useState<Record<string, number>>({});
 
   // Check if user is student
   useEffect(() => {
@@ -84,6 +98,7 @@ export default function StudentDashboard() {
       fetchAssignments();
       fetchSubmissions();
       fetchProgress();
+      fetchEnhancedDashboardData();
     }
   }, [user, router]);
 
@@ -132,6 +147,24 @@ export default function StudentDashboard() {
     } catch (error) {
       console.error('Error fetching progress:', error);
       toast.error('Failed to fetch progress data');
+    }
+  };
+
+  const fetchEnhancedDashboardData = async () => {
+    try {
+      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setDashboardData(data.data);
+        setBadges(data.data.gamification?.badges || []);
+        setAdaptivePath(data.data.adaptivePath || []);
+        setProgressBars(data.data.progress?.progressBars || {});
+      } else {
+        console.error('Failed to fetch enhanced dashboard data');
+      }
+    } catch (error) {
+      console.error('Error fetching enhanced dashboard data:', error);
     }
   };
 
@@ -191,12 +224,31 @@ export default function StudentDashboard() {
       const data = await response.json();
       
       if (data.success) {
-        toast.success(`Answer submitted! Score: ${data.data.grade.score}%`);
+        const score = data.data.grade.score;
+        toast.success(`Answer submitted! Score: ${score}%`);
+        
+        // Handle gamification results
+        if (data.data.gamification && data.data.gamification.newBadges.length > 0) {
+          setRecentBadges(data.data.gamification.newBadges);
+          setShowConfetti(true);
+          
+          // Show badge notifications
+          data.data.gamification.notifications.forEach((notification: string, index: number) => {
+            setTimeout(() => {
+              toast.success(notification, { duration: 4000 });
+            }, index * 1000);
+          });
+          
+          // Hide confetti after 5 seconds
+          setTimeout(() => setShowConfetti(false), 5000);
+        }
+        
         setTextAnswer('');
         setSelectedFiles([]);
         setSelectedAssignment(null);
         fetchSubmissions();
         fetchProgress();
+        fetchEnhancedDashboardData(); // Refresh gamification data
       } else {
         toast.error(data.error || 'Failed to submit answer');
       }
@@ -225,6 +277,17 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50">
+      {/* Confetti for badge achievements */}
+      {showConfetti && (
+        <Confetti
+          width={window.innerWidth}
+          height={window.innerHeight}
+          recycle={false}
+          numberOfPieces={200}
+          gravity={0.1}
+        />
+      )}
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -284,6 +347,118 @@ export default function StudentDashboard() {
                 <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                   <Award className="w-6 h-6 text-orange-600" />
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Gamification Section */}
+        {badges.length > 0 && (
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Trophy className="w-6 h-6 text-purple-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Your Achievements</h2>
+                <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-sm font-medium">
+                  {badges.length} Badge{badges.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {badges.map((badge, index) => (
+                  <motion.div
+                    key={badge.key}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`bg-white rounded-lg p-4 text-center border-2 ${
+                      recentBadges.includes(badge.key) 
+                        ? 'border-yellow-300 shadow-lg animate-pulse' 
+                        : 'border-gray-100'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{badge.icon}</div>
+                    <h3 className="font-medium text-gray-900 text-sm mb-1">{badge.name}</h3>
+                    <p className="text-xs text-gray-600">{badge.description}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Progress Bars */}
+        {Object.keys(progressBars).length > 0 && (
+          <div className="mb-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Target className="w-6 h-6 text-emerald-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Learning Progress</h2>
+              </div>
+              
+              <div className="space-y-4">
+                {Object.entries(progressBars).map(([topic, percentage]) => (
+                  <div key={topic} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700 capitalize">
+                        {topic.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                      <span className="text-sm text-gray-600">{Math.round(percentage)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percentage}%` }}
+                        transition={{ duration: 1, delay: 0.2 }}
+                        className={`h-3 rounded-full ${
+                          percentage >= 80 ? 'bg-green-500' :
+                          percentage >= 60 ? 'bg-yellow-500' :
+                          percentage >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Adaptive Learning Path */}
+        {adaptivePath.length > 0 && (
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+              <div className="flex items-center space-x-2 mb-6">
+                <Zap className="w-6 h-6 text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Your Learning Journey</h2>
+              </div>
+              
+              <div className="flex flex-wrap gap-3">
+                {adaptivePath.map((step, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full border-2 ${
+                      index === 0 ? 'bg-blue-500 text-white border-blue-500' :
+                      index === 1 ? 'bg-blue-100 text-blue-700 border-blue-300' :
+                      'bg-gray-100 text-gray-600 border-gray-300'
+                    }`}
+                  >
+                    <span className="text-sm font-medium">{index + 1}</span>
+                    <span className="text-sm">{step}</span>
+                    {index < adaptivePath.length - 1 && (
+                      <span className="text-gray-400">→</span>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+              
+              <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  🎯 Your personalized learning path adapts based on your performance and learning style!
+                </p>
               </div>
             </div>
           </div>

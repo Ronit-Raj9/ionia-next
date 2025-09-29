@@ -291,8 +291,14 @@ body {
 }
 
 /* Force navbar and its children to always be on top */
-nav[class*="z-[99999]"] {
+nav {
   z-index: 99999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: auto !important;
 }
 
 /* Ensure mobile menu and dropdowns are always visible */

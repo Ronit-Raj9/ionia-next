@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, clearRole } = useRole();
+  const { user, clearRole, isLoading } = useRole();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -89,7 +89,12 @@ export default function Navbar() {
 
           {/* User Menu */}
           <div className="hidden md:flex items-center space-x-4">
-            {user ? (
+            {isLoading ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-sm text-gray-600">Loading...</span>
+              </div>
+            ) : user ? (
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">
                   Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName}</span>
@@ -154,7 +159,14 @@ export default function Navbar() {
                 </Link>
               ))}
               
-              {user ? (
+              {isLoading ? (
+                <div className="border-t border-gray-200 pt-4 space-y-2">
+                  <div className="flex items-center justify-center space-x-2 py-2">
+                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm text-gray-600">Loading...</span>
+                  </div>
+                </div>
+              ) : user ? (
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="text-sm text-gray-600 px-2">
                     Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName}</span>

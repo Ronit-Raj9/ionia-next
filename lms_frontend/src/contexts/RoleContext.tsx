@@ -30,8 +30,8 @@ export const useRole = () => {
   return context;
 };
 
-// Default class ID for demo
-const DEFAULT_CLASS_ID = 'demo-class-1';
+// Default class ID - can be configured via environment variable
+const DEFAULT_CLASS_ID = process.env.NEXT_PUBLIC_DEFAULT_CLASS_ID || 'demo-class-1';
 
 // Generate display names
 const getDisplayName = (role: UserRole, mockUserId: string): string => {
@@ -73,8 +73,8 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadStoredRole = () => {
       try {
-        const storedRole = localStorage.getItem('eduflow_role');
-        const storedUserInfo = localStorage.getItem('eduflow_user_info');
+        const storedRole = localStorage.getItem('ionia_role');
+        const storedUserInfo = localStorage.getItem('ionia_user_info');
         
         if (storedRole) {
           const parsed = JSON.parse(storedRole) as RoleUser;
@@ -94,8 +94,8 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Failed to load stored role:', error);
-        localStorage.removeItem('eduflow_role');
-        localStorage.removeItem('eduflow_user_info');
+        localStorage.removeItem('ionia_role');
+        localStorage.removeItem('ionia_user_info');
       } finally {
         setIsLoading(false);
       }
@@ -122,15 +122,15 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     
     // Store in localStorage
     if (typeof window !== 'undefined') {
-      localStorage.setItem('eduflow_role', JSON.stringify(newUser));
+      localStorage.setItem('ionia_role', JSON.stringify(newUser));
     }
   };
 
   const clearRole = () => {
     setUser(null);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('eduflow_role');
-      localStorage.removeItem('eduflow_user_info');
+      localStorage.removeItem('ionia_role');
+      localStorage.removeItem('ionia_user_info');
     }
   };
 

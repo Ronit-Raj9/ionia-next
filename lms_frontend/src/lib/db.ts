@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Please add your MongoDB URI to .env.local');
@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === 'development') {
 // Database connection helper
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
   const client = await clientPromise;
-  const db = client.db('EduFlowDB');
+  const db = client.db('IoniaDB');
   return { client, db };
 }
 
@@ -53,24 +53,36 @@ export const COLLECTIONS = {
 
 // Database schemas/interfaces
 export interface User {
-  _id?: string;
+  _id?: ObjectId;
   role: 'teacher' | 'student' | 'admin';
   mockUserId: string;
   email?: string;
   classId: string;
+  dashboardPreferences?: {
+    theme: string;
+    preferredSubjects: string[];
+  };
   createdAt: Date;
 }
 
 export interface Class {
-  _id?: string;
+  _id?: ObjectId;
   className: string;
   teacherMockId: string;
   studentMockIds: string[];
+  analyticsHistory?: {
+    timestamp: Date;
+    summary: {
+      averageScore: number;
+      topWeakness: string;
+      completionRate: number;
+    };
+  }[];
   createdAt: Date;
 }
 
 export interface StudentProfile {
-  _id?: string;
+  _id?: ObjectId;
   studentMockId: string;
   previousPerformance: {
     subject: string;
@@ -85,11 +97,21 @@ export interface StudentProfile {
     strengths: string[];
     responsePatterns: string[];
   };
+  engagementMetrics?: {
+    completionRate: number;
+    badgeCount: number;
+    progressChains: {
+      chainId: string;
+      status: 'in_progress' | 'mastered' | 'locked';
+    }[];
+    streakDays: number;
+    totalTimeSpent: number;
+  };
   updatedAt: Date;
 }
 
 export interface Assignment {
-  _id?: string;
+  _id?: ObjectId;
   classId: string;
   taskType: string;
   originalContent: {
@@ -105,10 +127,16 @@ export interface Assignment {
       variations: string;
     };
   }[];
+  suggestions?: {
+    recommendedTask: string;
+    basedOn: string;
+    difficulty: 'easy' | 'medium' | 'hard';
+    estimatedTime: number;
+  }[];
 }
 
 export interface Submission {
-  _id?: string;
+  _id?: ObjectId;
   assignmentId: string;
   studentMockId: string;
   submittedContent: {
@@ -122,16 +150,23 @@ export interface Submission {
     errors: string[];
   };
   processed: boolean;
+  hintUsage?: number;
+  chainLink?: string;
+  timeSpent?: number;
 }
 
 export interface Progress {
-  _id?: string;
+  _id?: ObjectId;
   studentMockId: string;
   classId: string;
   metrics: {
     mastery: Record<string, number>;
     weaknesses: string[];
     timeSaved: number;
+    strengths?: string[];
+    averageScore?: number;
+    completionRate?: number;
+    totalSubmissions?: number;
   };
   updates: {
     timestamp: Date;
@@ -143,6 +178,32 @@ export interface Progress {
       percentage: number;
     }[];
   };
+  advancedMetrics?: {
+    scoreUplift: number;
+    parentSummary: string;
+    learningVelocity: number;
+    conceptMastery: Record<string, number>;
+  };
+  reportExports?: {
+    format: 'PDF' | 'Excel';
+    url: string;
+    generatedAt: Date;
+    type: 'progress' | 'analytics' | 'parent_summary';
+  }[];
+  gamificationData?: {
+    badges: string[];
+    progressBars: Record<string, number>;
+    achievements: {
+      name: string;
+      earnedAt: Date;
+      description: string;
+    }[];
+  };
+  recentActivity?: {
+    type: 'submission' | 'badge_earned' | 'mastery_achieved';
+    description: string;
+    timestamp: Date;
+  }[];
 }
 
 export default clientPromise;

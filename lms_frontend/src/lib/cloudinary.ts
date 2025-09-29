@@ -23,7 +23,7 @@ export async function uploadFile(
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
-          folder: `eduflow/${folder}`,
+          folder: `ionia/${folder}`,
           public_id: `${Date.now()}_${fileName.replace(/\.[^/.]+$/, '')}`, // Remove extension
           resource_type: 'auto', // Automatically detect file type
           quality: 'auto:good', // Optimize quality
@@ -62,7 +62,7 @@ export async function uploadBase64Image(
 ): Promise<UploadResult> {
   try {
     const result = await cloudinary.uploader.upload(base64Data, {
-      folder: `eduflow/${folder}`,
+      folder: `ionia/${folder}`,
       public_id: `${Date.now()}_${fileName.replace(/\.[^/.]+$/, '')}`,
       resource_type: 'image',
       quality: 'auto:good',

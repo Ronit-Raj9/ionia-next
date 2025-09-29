@@ -35,28 +35,28 @@ export default function Dashboard() {
   const stats = [
     {
       title: 'Questions Attempted',
-      value: 12,
+      value: 0, // Will be loaded from API
       icon: <BookOpen className="w-6 h-6" />,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
     },
     {
       title: 'Accuracy Rate',
-      value: `85%`,
+      value: '0%', // Will be loaded from API
       icon: <Target className="w-6 h-6" />,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
     {
       title: 'Learning Streak',
-      value: `7 days`,
+      value: '0 days', // Will be loaded from API
       icon: <Zap className="w-6 h-6" />,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100'
     },
     {
       title: 'Average Score',
-      value: `78%`,
+      value: '0%', // Will be loaded from API
       icon: <TrendingUp className="w-6 h-6" />,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
@@ -119,10 +119,18 @@ export default function Dashboard() {
           variants={fadeIn}
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.name || user?.displayName || 'User'}!
+            Welcome back, {user?.displayName || user?.name || 'Student'}!
+            {user?.role?.includes?.('guest') && (
+              <span className="ml-3 px-3 py-1 text-sm bg-emerald-100 text-emerald-700 rounded-full">
+                Guest Mode
+              </span>
+            )}
           </h1>
           <p className="text-gray-600">
-            Ready to continue your learning journey? Let's make today productive.
+            {user?.role?.includes?.('guest')
+              ? "You're in guest mode. Explore the LMS features and UI without creating an account."
+              : "Ready to continue your learning journey? Let's make today productive."
+            }
           </p>
         </motion.div>
 
@@ -133,7 +141,7 @@ export default function Dashboard() {
           initial="initial"
           animate="animate"
         >
-          {stats.map((stat, index) => (
+          {stats.map((stat) => (
             <motion.div 
               key={stat.title}
               className="lms-card p-6"
@@ -164,7 +172,7 @@ export default function Dashboard() {
           >
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {quickActions.map((action, index) => (
+              {quickActions.map((action) => (
                 <motion.a
                   key={action.title}
                   href={action.href}
@@ -199,7 +207,7 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-gray-900">{activity.title}</p>
                       <p className="text-xs text-gray-500">{activity.time}</p>
                     </div>
-                    {activity.score && (
+                    {activity.score !== null && (
                       <div className="text-sm font-semibold text-emerald-600">
                         {activity.score}%
                       </div>
@@ -253,7 +261,7 @@ export default function Dashboard() {
                 questions: 32,
                 difficulty: 'Hard'
               }
-            ].map((recommendation, index) => (
+            ].map((recommendation) => (
               <motion.div 
                 key={recommendation.title}
                 className="lms-card p-6 hover:shadow-xl transition-all duration-300 cursor-pointer"

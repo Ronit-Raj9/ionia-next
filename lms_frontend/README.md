@@ -1,4 +1,4 @@
-# EduFlow AI - Phase 1 MVP
+# Ionia - Phase 1 MVP
 
 An intelligent Learning Management System with AI-powered assignment personalization and automated grading.
 
@@ -51,7 +51,7 @@ Create a `.env.local` file in the root directory:
 
 ```env
 # Database
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/EduFlowDB?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/IoniaDB?retryWrites=true&w=majority
 
 # AI Services
 GROQ_API_KEY=your_groq_api_key_here
@@ -228,7 +228,7 @@ The system includes a seeding script that creates:
 
 ## 📝 License
 
-This project is for demonstration purposes as part of the EduFlow AI MVP development.
+This project is for demonstration purposes as part of the Ionia MVP development.
 
 ---
 
