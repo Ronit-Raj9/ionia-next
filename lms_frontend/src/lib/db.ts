@@ -49,6 +49,8 @@ export const COLLECTIONS = {
   ASSIGNMENTS: 'assignments',
   SUBMISSIONS: 'submissions',
   PROGRESS: 'progress',
+  STUDY_MATERIALS: 'studyMaterials',
+  ANALYTICS: 'analytics',
   CHAT_CONVERSATIONS: 'chatConversations',
   CLASS_CHATS: 'classChats',
 } as const;
@@ -60,6 +62,7 @@ export interface User {
   mockUserId: string;
   email?: string;
   classId: string;
+  schoolId?: string;
   dashboardPreferences?: {
     theme: string;
     preferredSubjects: string[];
@@ -71,7 +74,31 @@ export interface Class {
   _id?: ObjectId;
   className: string;
   teacherMockId: string;
+  schoolId: string; // Add schoolId for filtering
   studentMockIds: string[];
+  description?: string;
+  subject?: string; // Science, Math, etc.
+  grade?: string; // 9, 10 for demo
+  syllabus?: 'CBSE' | 'ICSE' | 'State'; // Indian board system
+  isActive: boolean;
+  joinCode?: string; // For students to join classes
+  
+  // Enhanced for Indian schools
+  currentTopic?: string; // Current teaching topic
+  completedTopics?: string[]; // Topics already covered
+  upcomingTopics?: string[]; // Topics planned
+  studyMaterialLinks?: {
+    bookTitle: string; // e.g., "NCERT Science Class 10"
+    publisher: string; // e.g., "NCERT"
+    fileUrl: string;
+    chapters?: {
+      number: number;
+      title: string;
+      topics: string[];
+      indexed: boolean; // AI indexing status
+    }[];
+  }[];
+  
   analyticsHistory?: {
     timestamp: Date;
     summary: {
@@ -81,11 +108,74 @@ export interface Class {
     };
   }[];
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface StudentProfile {
   _id?: ObjectId;
   studentMockId: string;
+  schoolId?: string;
+  
+  // OCEAN Personality Traits (0-100 scale)
+  oceanTraits: {
+    openness: number; // Creativity, curiosity, openness to new experiences
+    conscientiousness: number; // Organization, dependability, discipline
+    extraversion: number; // Sociability, assertiveness, enthusiasm
+    agreeableness: number; // Cooperation, compassion, politeness
+    neuroticism: number; // Emotional stability (low = stable, high = anxious)
+  };
+  
+  // Learning Preferences derived from OCEAN
+  learningPreferences: {
+    visualLearner: boolean;
+    kinestheticLearner: boolean;
+    auditoryLearner: boolean;
+    readingWritingLearner: boolean;
+    preferredDifficulty: 'easy' | 'medium' | 'hard';
+    needsStepByStepGuidance: boolean;
+    respondsToEncouragement: boolean;
+  };
+  
+  // Intellectual Traits
+  intellectualTraits: {
+    analyticalThinking: number; // 0-100
+    creativeThinking: number;
+    criticalThinking: number;
+    problemSolvingSkill: number;
+  };
+  
+  // Subject-wise Performance (for Science demo)
+  subjectMastery: {
+    subject: string; // e.g., "Science"
+    grade: string; // e.g., "9" or "10"
+    topics: {
+      name: string; // e.g., "Gravitation", "Electricity"
+      masteryScore: number; // 0-100
+      weaknesses: string[]; // Specific weak concepts
+      lastPracticed: Date;
+      consecutiveHighScores: number; // Track mastery progression
+    }[];
+    overallMasteryScore: number;
+  }[];
+  
+  // Assignment History & Trends
+  assignmentHistory: {
+    assignmentId: string;
+    submissionId: string;
+    subject: string;
+    topic: string;
+    score: number;
+    submittedAt: Date;
+    performance: 'excellent' | 'good' | 'average' | 'poor';
+    improvementFromPrevious?: number; // Percentage change
+  }[];
+  
+  // Personality Test Metadata
+  personalityTestCompleted: boolean;
+  testTakenDate?: Date;
+  quizResponses?: any[]; // Original quiz responses for reference
+  
+  // Previous system compatibility
   previousPerformance: {
     subject: string;
     weaknesses: string[];
@@ -99,6 +189,7 @@ export interface StudentProfile {
     strengths: string[];
     responsePatterns: string[];
   };
+  
   engagementMetrics?: {
     completionRate: number;
     badgeCount: number;
@@ -115,33 +206,86 @@ export interface StudentProfile {
 export interface Assignment {
   _id?: ObjectId;
   classId: string;
+  schoolId?: string;
   taskType: string;
   title: string;
   description: string;
-  subject: string;
+  subject: string; // Science, Math, etc.
+  grade: string; // 9, 10
+  topic: string; // Gravitation, Electricity, etc.
   difficulty: 'easy' | 'medium' | 'hard';
   totalMarks: number;
+  
+  // Assignment Type
+  assignmentType: 'standard' | 'personalized'; // Same for all vs. customized per student
+  
+  // Base Content (uploaded by teacher)
   originalContent: {
     questions: string[];
   };
-  uploadedFileUrl?: string;
+  uploadedFileUrl?: string; // Image/PDF of questions
+  extractedText?: string; // AI-extracted text from uploaded file
+  
+  // Solution & Grading Rubric
+  baseSolution?: {
+    solutionText?: string;
+    solutionFileUrl?: string;
+    extractedSolutionText?: string;
+  };
+  gradingRubric?: {
+    criteria: {
+      name: string; // e.g., "Correct Formula"
+      points: number;
+      description: string;
+    }[];
+    aiGenerated: boolean;
+  };
+  
+  // Study Material Reference
+  studyMaterialReference?: {
+    bookTitle: string;
+    chapter: string;
+    topics: string[];
+  };
+  
+  // Assignment Metadata
   createdBy: string;
   assignedTo: string[]; // Student IDs who should see this assignment
   gradeSettings: {
     showMarksToStudents: boolean;
     showFeedbackToStudents: boolean;
-    gradingRubric?: string;
   };
   dueDate?: Date;
+  maxScore: number;
   isPublished: boolean;
   createdAt: Date;
+  
+  // Personalization
+  personalizationEnabled: boolean;
   personalizedVersions: {
     studentMockId: string;
     adaptedContent: {
       questions: string[];
       variations: string;
+      difficultyAdjustment?: string; // "easier" | "harder" | "same"
+      visualAids?: string[]; // Descriptions of diagrams for visual learners
+      hints?: string[]; // Step-by-step hints
+      remedialQuestions?: string[]; // Easier foundational questions
+      challengeQuestions?: string[]; // Advanced questions for high performers
+      encouragementNote?: string; // Personalized message
     };
+    personalizationReason: string; // Why this version was created
   }[];
+  
+  // Status Tracking
+  submissionStats: {
+    totalStudents: number;
+    submitted: number;
+    graded: number;
+    pending: number;
+    averageScore?: number;
+  };
+  
   suggestions?: {
     recommendedTask: string;
     basedOn: string;
@@ -153,8 +297,13 @@ export interface Assignment {
 export interface Submission {
   _id?: ObjectId;
   assignmentId: string;
+  classId: string;
   studentMockId: string;
   studentName: string;
+  subject: string; // For analytics aggregation
+  topic: string; // For progress tracking
+  
+  // Submitted Content
   submittedContent: {
     text: string;
     imageUrls: string[];
@@ -166,6 +315,74 @@ export interface Submission {
     }[];
   };
   submissionTime: Date;
+  
+  // OCR & AI Processing
+  extractedText?: string; // Text extracted from images via Gemini Vision
+  ocrStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  ocrErrorMessage?: string;
+  imageQualityCheck?: {
+    isBlurry: boolean;
+    isLegible: boolean;
+    confidenceScore: number; // 0-100
+    suggestions?: string[]; // e.g., "Please upload a clearer image"
+  }[];
+  
+  // Auto-Grading Results
+  autoGrade?: {
+    score: number;
+    maxScore: number;
+    percentage: number;
+    
+    // Detailed Feedback
+    detailedFeedback: string; // Overall feedback from AI
+    questionWiseAnalysis: {
+      questionNumber: number;
+      questionText: string;
+      studentAnswer: string;
+      correctAnswer: string;
+      pointsAwarded: number;
+      maxPoints: number;
+      isCorrect: boolean;
+      partialCredit: boolean;
+      feedback: string;
+    }[];
+    
+    // Error Analysis
+    errorAnalysis: {
+      errorType: string; // e.g., "Formula Error", "Calculation Error", "Conceptual Misunderstanding"
+      description: string;
+      relatedConcept: string; // e.g., "Ohm's Law"
+      severity: 'minor' | 'major' | 'critical';
+    }[];
+    
+    // Strengths Identified
+    strengthsIdentified: string[]; // Positive aspects of the answer
+    
+    // Areas for Improvement
+    areasForImprovement: {
+      concept: string;
+      suggestion: string;
+      studyMaterialReference?: string; // Link to textbook chapter
+    }[];
+    
+    // AI Confidence
+    aiConfidence: number; // 0-100, how confident the AI is in the grading
+    requiresReview: boolean; // Flag for teacher review if confidence is low
+    
+    gradedBy: 'AI' | string; // "AI" or teacher ID
+    gradedAt: Date;
+  };
+  
+  // Teacher Override
+  teacherOverride?: {
+    originalScore: number;
+    newScore: number;
+    reason: string;
+    adjustedBy: string; // Teacher ID
+    adjustedAt: Date;
+  };
+  
+  // Grade Visibility
   grade?: {
     score: number;
     maxScore: number;
@@ -175,11 +392,26 @@ export interface Submission {
     gradedAt: Date;
     isPublished: boolean; // Whether grade is visible to student
   };
-  status: 'submitted' | 'graded' | 'returned';
+  
+  // Status & Processing
+  status: 'submitted' | 'processing' | 'graded' | 'returned' | 'failed';
+  processingStatus?: 'pending' | 'ocr_in_progress' | 'grading_in_progress' | 'completed' | 'error';
   processed: boolean;
+  errorLogs?: string[]; // Any errors during processing
+  
+  // Performance Impact (calculated after grading)
+  performanceImpact?: {
+    masteryScoreChange: Record<string, number>; // topic → score change
+    newWeaknessesIdentified: string[];
+    weaknessesImproved: string[];
+  };
+  
+  // Metadata
   hintUsage?: number;
   chainLink?: string;
   timeSpent?: number;
+  isLateSubmission?: boolean;
+  
   teacherComments?: {
     content: string;
     isPrivate: boolean; // Private comments not shown to student
@@ -191,6 +423,7 @@ export interface Progress {
   _id?: ObjectId;
   studentMockId: string;
   classId: string;
+  schoolId?: string;
   metrics: {
     mastery: Record<string, number>;
     weaknesses: string[];
@@ -321,6 +554,173 @@ export interface ClassChat {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Study Materials Collection (for NCERT textbooks, etc.)
+export interface StudyMaterial {
+  _id?: ObjectId;
+  classId: string;
+  schoolId: string;
+  subject: string; // Science, Math, etc.
+  grade: string; // 9, 10
+  bookTitle: string; // e.g., "NCERT Science Class 10"
+  publisher: string; // e.g., "NCERT"
+  fileUrl: string; // PDF URL
+  uploadedBy: string; // Teacher ID
+  uploadedAt: Date;
+  
+  // AI Indexing
+  indexingStatus: 'pending' | 'processing' | 'completed' | 'failed';
+  indexingProgress?: number; // 0-100
+  indexingErrorMessage?: string;
+  
+  chapters: {
+    number: number;
+    title: string;
+    pageRange?: string; // e.g., "10-25"
+    
+    // AI-extracted content
+    topics: string[]; // Main topics covered
+    keyConceptsExtracted: {
+      concept: string;
+      definition: string;
+      importance: 'high' | 'medium' | 'low';
+    }[];
+    formulas: {
+      name: string;
+      formula: string;
+      explanation: string;
+      applicableScenarios: string[];
+    }[];
+    exampleProblems: {
+      problemText: string;
+      solution: string;
+      difficulty: 'basic' | 'intermediate' | 'advanced';
+    }[];
+    
+    // Difficulty progression
+    difficultyLevel: 'basic' | 'intermediate' | 'advanced';
+    prerequisites?: string[]; // Topics that should be learned first
+    
+    indexed: boolean;
+    indexedAt?: Date;
+  }[];
+  
+  // Searchable index (for quick reference during personalization)
+  searchableContent?: {
+    allTopics: string[];
+    allConcepts: string[];
+    allFormulas: string[];
+  };
+  
+  totalPages?: number;
+  fileSize?: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Analytics Collection (Class-level analytics)
+export interface ClassAnalytics {
+  _id?: ObjectId;
+  classId: string;
+  schoolId: string;
+  subject: string;
+  grade: string;
+  teacherId: string;
+  
+  // Period for this analytics snapshot
+  periodStart: Date;
+  periodEnd: Date;
+  periodType: 'daily' | 'weekly' | 'monthly' | 'all_time';
+  
+  // Topic-wise Performance
+  topicWisePerformance: {
+    topic: string;
+    assignmentsGiven: number;
+    averageScore: number;
+    highestScore: number;
+    lowestScore: number;
+    studentsStruggling: number; // Students with score < 60%
+    studentsExcelling: number; // Students with score > 85%
+    percentageStruggling: number;
+    percentageExcelling: number;
+    mostCommonErrors: string[];
+  }[];
+  
+  // Class-wide Weaknesses
+  classWeaknesses: {
+    concept: string;
+    topic: string;
+    affectedStudents: number;
+    percentageAffected: number;
+    severity: 'critical' | 'moderate' | 'minor'; // >60%, 30-60%, <30%
+    suggestedAction: string;
+  }[];
+  
+  // Assignment Metrics
+  assignmentMetrics: {
+    totalAssignments: number;
+    assignmentsCompleted: number;
+    averageCompletionTime: number; // hours
+    onTimeSubmissions: number;
+    lateSubmissions: number;
+    averageScore: number;
+    scoreDistribution: {
+      excellent: number; // 90-100%
+      good: number; // 75-89%
+      average: number; // 60-74%
+      needsImprovement: number; // <60%
+    };
+  };
+  
+  // Grading Efficiency
+  gradingEfficiency: {
+    totalSubmissionsGraded: number;
+    aiGradedCount: number;
+    teacherGradedCount: number;
+    averageGradingTime: number; // seconds
+    teacherTimeSaved: number; // hours
+    aiAccuracyRate?: number; // Percentage of AI grades accepted without modification
+  };
+  
+  // Student Rankings (optional, privacy-conscious)
+  studentRankings?: {
+    studentMockId: string;
+    studentName: string;
+    averageScore: number;
+    rank: number;
+    improvementTrend: 'improving' | 'stable' | 'declining';
+  }[];
+  
+  // Progress Trends
+  progressTrends: {
+    weekNumber: number;
+    weekStart: Date;
+    averageScore: number;
+    completionRate: number;
+    engagementScore: number; // 0-100 based on activity
+    change: number; // Percentage change from previous week
+  }[];
+  
+  // AI-Powered Insights
+  aiInsights?: {
+    generatedAt: Date;
+    insights: {
+      type: 'warning' | 'suggestion' | 'positive';
+      title: string;
+      description: string;
+      actionable: boolean;
+      suggestedAction?: string;
+      priority: 'high' | 'medium' | 'low';
+    }[];
+    predictedChallenges?: string[]; // Topics likely to be challenging
+    recommendedTopics?: string[]; // Topics to cover next
+    studentsNeedingAttention?: string[]; // Student IDs
+  };
+  
+  generatedAt: Date;
+  lastUpdated: Date;
 }
 
 export default clientPromise;
