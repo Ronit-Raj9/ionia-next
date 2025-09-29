@@ -120,14 +120,14 @@ export default function Dashboard() {
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Welcome back, {user?.displayName || user?.name || 'Student'}!
-            {user?.role.includes('guest') && (
+            {user?.role?.includes?.('guest') && (
               <span className="ml-3 px-3 py-1 text-sm bg-emerald-100 text-emerald-700 rounded-full">
                 Guest Mode
               </span>
             )}
           </h1>
           <p className="text-gray-600">
-            {user?.role.includes('guest')
+            {user?.role?.includes?.('guest')
               ? "You're in guest mode. Explore the LMS features and UI without creating an account."
               : "Ready to continue your learning journey? Let's make today productive."
             }
@@ -141,7 +141,7 @@ export default function Dashboard() {
           initial="initial"
           animate="animate"
         >
-          {stats.map((stat, index) => (
+          {stats.map((stat) => (
             <motion.div 
               key={stat.title}
               className="lms-card p-6"
@@ -172,7 +172,7 @@ export default function Dashboard() {
           >
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {quickActions.map((action, index) => (
+              {quickActions.map((action) => (
                 <motion.a
                   key={action.title}
                   href={action.href}
@@ -207,7 +207,7 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-gray-900">{activity.title}</p>
                       <p className="text-xs text-gray-500">{activity.time}</p>
                     </div>
-                    {activity.score && (
+                    {activity.score !== null && (
                       <div className="text-sm font-semibold text-emerald-600">
                         {activity.score}%
                       </div>
@@ -261,7 +261,7 @@ export default function Dashboard() {
                 questions: 32,
                 difficulty: 'Hard'
               }
-            ].map((recommendation, index) => (
+            ].map((recommendation) => (
               <motion.div 
                 key={recommendation.title}
                 className="lms-card p-6 hover:shadow-xl transition-all duration-300 cursor-pointer"
