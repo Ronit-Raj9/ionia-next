@@ -47,43 +47,31 @@ export default function ExamTypePage() {
   const details = examDetails[examType as ExamKey];
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 max-w-7xl">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary text-center mb-4 sm:mb-6 px-2">
-          {details.title}
-        </h1>
-        <p className="text-base sm:text-lg text-gray-700 text-center mb-8 sm:mb-10 px-4 max-w-3xl mx-auto">
-          {details.description}
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
-          {details.subjects.map((subject) => (
-            <Link
-              key={subject}
-              href={`/exam/${examType}/${subject.toLowerCase()}`}
-              className="block p-4 sm:p-6 bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 w-full"
-            >
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center text-primary break-words">
-                {subject}
-              </h2>
-            </Link>
-          ))}
+    <div className="other-container container mx-auto p-6 mt-10">
+      <h1 className="text-3xl font-bold text-primary text-center mb-6">{details.title}</h1>
+      <p className="text-lg text-gray-700 text-center">{details.description}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+        {details.subjects.map((subject) => (
           <Link
-            href={`/exam/${examType}/previous-year-paper`}
-            className="block p-4 sm:p-6 bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 w-full"
+            key={subject}
+            href={`/exam/${examType}/${subject.toLowerCase()}`}
+            className="block p-6 bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
           >
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center text-primary break-words">
-              Previous Year Paper
-            </h2>
+            <h2 className="text-2xl font-semibold text-center text-primary">{subject}</h2>
           </Link>
-          <Link
-            href={`/exam/${examType}/mock-test`}
-            className="block p-4 sm:p-6 bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 w-full"
-          >
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center text-primary break-words">
-              Mock Test
-            </h2>
-          </Link>
-        </div>
+        ))}
+        <Link
+          href={`/exam/${examType}/mock-test`}
+          className="block p-6 bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
+        >
+          <h2 className="text-2xl font-semibold text-center text-primary">Previous Year Paper</h2>
+        </Link>
+        <Link
+          href={`/exam/${examType}/mock-test`}
+          className="block p-6 bg-white border rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300"
+        >
+          <h2 className="text-2xl font-semibold text-center text-primary">Mock Test</h2>
+        </Link>
       </div>
     </div>
   );

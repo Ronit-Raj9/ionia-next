@@ -8,7 +8,6 @@ import { useTimeTrackingStore } from '@/stores/timeTrackingStore';
 import { useAnalysisStore } from '@/features/analysis/store/analysisStore';
 import { useUIStore } from '@/stores/uiStore';
 import { getTestAnalysis, transformAnalysisData } from '@/features/analysis/api/analysisApi';
-import { useResponsive } from '@/shared/hooks/useResponsive';
 
 import QuestionPanel from './QuestionPanel';
 import QuestionGrid from './Navigation/QuestionGrid';
@@ -104,10 +103,6 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   const [error, setError] = useState<string | null>(null);
   const [test, setTest] = useState<Test | null>(null);
   const [questionTimes, setQuestionTimes] = useState<Record<number, { totalTime: number }>>({});
-  
-  // Responsive state
-  const { isMobile, isTablet } = useResponsive();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Initialize them when test data loads
   useEffect(() => {
@@ -713,11 +708,11 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
     : null;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 relative">
+    <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 relative z-10">
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-4">
             <CandidateInfo name={getUserName()} testName={currentTest.title} />
           </div>
           <Timer 
@@ -728,12 +723,12 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
       </header>
       
       {/* Main Content */}
-      <main className="flex-1 flex overflow-hidden relative">
+      <main className="flex-1 flex overflow-hidden">
         {/* Left Panel - Question Area */}
-        <div className="flex-1 bg-white p-3 sm:p-6 overflow-y-auto min-w-0">
+        <div className="flex-1 bg-white p-6 overflow-y-auto min-w-0">
           {/* Question Header */}
-          <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Question {activeQuestion + 1}</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Question {activeQuestion + 1}</h2>
             <LanguageSelector 
               selectedLanguage={language} 
               onLanguageChange={(lang: string) => setLanguage(lang)} 
@@ -741,8 +736,8 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </div>
           
           {/* Question Content */}
-          <div className="mb-6 sm:mb-8">
-            <div className="text-base sm:text-lg text-gray-800 mb-4 leading-relaxed">
+          <div className="mb-8">
+            <div className="text-lg text-gray-800 mb-4 leading-relaxed">
               {questionText}
             </div>
             {questionImage && (
@@ -757,7 +752,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </div>
           
           {/* Options */}
-          <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+          <div className="space-y-4 mb-8">
             {currentQuestionData.options.map((option, index) => {
               const optionText = typeof option === 'string' ? option : option.text;
               // Only show image if URL is valid string and not empty
@@ -772,23 +767,23 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
               return (
                 <div 
                   key={index}
-                  className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
                     currentQuestionData.userAnswer === index 
                       ? 'border-blue-500 bg-blue-50' 
                       : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                   }`}
                   onClick={() => handleOptionChange(activeQuestion, index)}
                 >
-                  <div className="flex items-start space-x-3 sm:space-x-4">
-                    <div className={`flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center font-semibold text-sm ${
+                  <div className="flex items-start space-x-4">
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center font-semibold text-sm ${
                       currentQuestionData.userAnswer === index 
                         ? 'border-blue-500 bg-blue-500 text-white' 
                         : 'border-gray-400 text-gray-700'
                     }`}>
                       {optionLabel}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-gray-800 leading-relaxed text-sm sm:text-base break-words">
+                    <div className="flex-1">
+                      <div className="text-gray-800 leading-relaxed">
                         {optionText}
                       </div>
                       {optionImage && (
@@ -808,7 +803,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </div>
           
           {/* Action Buttons */}
-          <div className="w-full overflow-x-auto mt-4 sm:mt-6">
+          <div className="w-full overflow-x-auto mt-6">
             <ActionButtons 
               onPrevious={handlePrevious}
               onNext={handleNext}
@@ -826,18 +821,16 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </div>
         </div>
         
-        {/* Right Panel - Status and Navigation (Desktop) */}
-        <div className={`${isMobile || isTablet ? 'hidden' : 'block'} w-80 bg-gray-100 border-l border-gray-200 p-4 overflow-y-auto relative z-40`}>
+        {/* Right Panel - Status and Navigation */}
+        <div className="w-80 bg-gray-100 border-l border-gray-200 p-4 overflow-y-auto">
           {/* Question Status */}
-          <div className="relative z-50">
-            <QuestionStatus 
-              questions={currentTest.questions}
-              total={total}
-            />
-          </div>
+          <QuestionStatus 
+            questions={currentTest.questions}
+            total={total}
+          />
           
           {/* Question Grid */}
-          <div className="mt-6 relative z-50">
+          <div className="mt-6">
             <QuestionGrid 
               questions={currentTest.questions}
               activeQuestion={activeQuestion}
@@ -846,7 +839,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </div>
           
           {/* Submit Button */}
-          <div className="mt-6 pt-4 border-t border-gray-200 relative z-50">
+          <div className="mt-6 pt-4 border-t border-gray-200">
             <button
               onClick={() => setConfirmSubmit(true)}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors shadow-lg border-2 border-green-700"
@@ -855,114 +848,11 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
             </button>
           </div>
         </div>
-        
-        {/* Right Side Toggle Button for Mobile */}
-        {(isMobile || isTablet) && !isSidebarOpen && (
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="fixed top-1/2 right-0 transform -translate-y-1/2 z-[9997] flex items-center justify-center p-3 rounded-l-full bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow-xl border-2 border-blue-700 border-r-0 min-w-[48px] min-h-[48px]"
-            aria-label="Open navigation menu"
-          >
-            <svg 
-              className="w-6 h-6" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M15 19l-7-7 7-7" 
-              />
-            </svg>
-          </button>
-        )}
-
-        {/* Mobile/Tablet Sidebar Overlay */}
-        {(isMobile || isTablet) && (
-          <>
-            {/* Backdrop */}
-            {isSidebarOpen && (
-              <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-[9998]"
-                onClick={() => setIsSidebarOpen(false)}
-              />
-            )}
-            
-            {/* Sidebar */}
-            <div className={`
-              fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-gray-100 border-l border-gray-200 
-              transform transition-transform duration-300 ease-in-out z-[9999]
-              ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
-            `}>
-              {/* Sidebar Header */}
-              <div className="bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-800">Test Navigation</h3>
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-2 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors"
-                  aria-label="Close sidebar"
-                >
-                  <svg 
-                    className="w-5 h-5" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M6 18L18 6M6 6l12 12" 
-                    />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Sidebar Content */}
-              <div className="p-4 overflow-y-auto h-full pb-20">
-                {/* Question Status */}
-                <div className="relative z-50">
-                  <QuestionStatus 
-                    questions={currentTest.questions}
-                    total={total}
-                  />
-                </div>
-                
-                {/* Question Grid */}
-                <div className="mt-6 relative z-50">
-                  <QuestionGrid 
-                    questions={currentTest.questions}
-                    activeQuestion={activeQuestion}
-                    onQuestionClick={(questionIndex) => {
-                      handleQuestionClick(questionIndex);
-                      setIsSidebarOpen(false); // Close sidebar after question selection
-                    }}
-                  />
-                </div>
-                
-                {/* Submit Button */}
-                <div className="mt-6 pt-4 border-t border-gray-200 relative z-50">
-                  <button
-                    onClick={() => {
-                      setConfirmSubmit(true);
-                      setIsSidebarOpen(false);
-                    }}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors shadow-lg border-2 border-green-700"
-                  >
-                    Submit Test
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
       </main>
       
       {confirmSubmit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-xl font-bold mb-3">Confirm Submission</h3>
             <p className="mb-6">Are you sure you want to submit your test? You cannot change your answers after submission.</p>
             <div className="flex justify-end space-x-3">

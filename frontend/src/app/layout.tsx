@@ -12,8 +12,6 @@ import AuthProvider from "@/providers/AuthProvider";
 import "@/styles/globals.css";
 import { Toaster } from 'react-hot-toast';
 import { enableMapSet } from 'immer';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 enableMapSet();
 
@@ -60,42 +58,6 @@ if (typeof window !== 'undefined') {
   // } else {
   //   preloadComponentsByRole('user');
   // }
-}
-
-function LayoutContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const [isClient, setIsClient] = useState(false);
-  
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-  
-  // Check if we're on a test page
-  const isTestPage = pathname?.includes('/test') || false;
-  const isFullScreenPage = pathname?.startsWith('/dashboard') || pathname?.startsWith('/admin') || isTestPage;
-  
-  if (!isClient) {
-    return <div className="loading-spinner"></div>;
-  }
-  
-  return (
-    <AuthProvider>
-      <div className="flex flex-col min-h-screen">
-        <Navbar />
-        
-        <main className={`flex-1 ${isTestPage ? '' : 'pt-14 sm:pt-16'}`}>
-          {children}
-        </main>
-        
-        {!isTestPage && <Footer />}
-      </div>
-      
-      {/* Global components */}
-      <Notifications />
-      <CookieConsent />
-      <Toaster position="bottom-right" />
-    </AuthProvider>
-  );
 }
 
 export default function RootLayout({
@@ -155,9 +117,22 @@ export default function RootLayout({
         {/* <PerformanceInitializer /> */}
         
         {/* Main application */}
-        <LayoutContent>
-          {children}
-        </LayoutContent>
+        <AuthProvider>
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            
+            <main className="flex-1 pt-16">
+              {children}
+            </main>
+            
+            <Footer />
+          </div>
+          
+          {/* Global components */}
+          <Notifications />
+          <CookieConsent />
+          <Toaster position="bottom-right" />
+        </AuthProvider>
         
         {/* Service Worker registration - disabled in development */}
         {process.env.NODE_ENV === 'production' && (
