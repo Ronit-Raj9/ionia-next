@@ -14,13 +14,20 @@ import {
   BarChart3,
   Brain,
   Upload,
-  GraduationCap
+  GraduationCap,
+  MessageCircle
 } from 'lucide-react';
+import ChatInterface from '@/components/ChatInterface';
+import ClassChat from '@/components/ClassChat';
+import ClassManager from '@/components/ClassManager';
 
 export default function Navbar() {
   const { user, clearRole, isLoading } = useRole();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isGeneralOpen, setIsGeneralOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'personal' | 'class' | 'manage'>('class');
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
   const handleLogout = () => {
     clearRole();
@@ -31,17 +38,20 @@ export default function Navbar() {
   const teacherNavigation = [
     { name: 'Dashboard', href: '/teacher', icon: GraduationCap },
     { name: 'Create Assignment', href: '/teacher#create', icon: Upload },
+    { name: 'General', href: '#', icon: MessageCircle, onClick: () => setIsGeneralOpen(true) },
   ];
 
   const studentNavigation = [
     { name: 'Assignments', href: '/student', icon: BookOpen },
     { name: 'Progress', href: '/student#progress', icon: BarChart3 },
+    { name: 'General', href: '#', icon: MessageCircle, onClick: () => setIsGeneralOpen(true) },
   ];
 
   const adminNavigation = [
     { name: 'Dashboard', href: '/admin', icon: BarChart3 },
     { name: 'Analytics', href: '/admin#analytics', icon: Brain },
     { name: 'System', href: '/admin#system', icon: Settings },
+    { name: 'General', href: '#', icon: MessageCircle, onClick: () => setIsGeneralOpen(true) },
   ];
 
   const getNavigation = () => {
@@ -76,14 +86,25 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             {user && currentNavigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="flex items-center space-x-1 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.name}</span>
-              </Link>
+              item.onClick ? (
+                <button
+                  key={item.name}
+                  onClick={item.onClick}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.name}</span>
+                </button>
+              ) : (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.name}</span>
+                </Link>
+              )
             ))}
           </div>
 
@@ -148,15 +169,29 @@ export default function Navbar() {
           <div className="md:hidden border-t border-gray-200 py-4">
             <div className="space-y-4">
               {user && currentNavigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200 py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                </Link>
+                item.onClick ? (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      item.onClick();
+                      setIsMenuOpen(false);
+                    }}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200 py-2 w-full text-left"
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.name}</span>
+                  </button>
+                ) : (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200 py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.name}</span>
+                  </Link>
+                )
               ))}
               
               {isLoading ? (
@@ -208,6 +243,108 @@ export default function Navbar() {
           </div>
         )}
       </div>
+
+      {/* General Chat Modal */}
+      {isGeneralOpen && (
+        <div className="fixed inset-0 z-40 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={() => setIsGeneralOpen(false)}
+            ></div>
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-lg text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full" style={{ overflow: activeTab === 'manage' ? 'visible' : 'hidden' }}>
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+                    <MessageCircle className="w-5 h-5 mr-2 text-emerald-600" />
+                    General Chat
+                  </h3>
+                  <button
+                    onClick={() => setIsGeneralOpen(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Tab Navigation */}
+                <div className="flex space-x-1 mb-4 bg-gray-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => setActiveTab('class')}
+                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === 'class'
+                        ? 'bg-white text-emerald-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Class Chat
+                  </button>
+                  {user?.role === 'teacher' && (
+                    <button
+                      onClick={() => setActiveTab('manage')}
+                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        activeTab === 'manage'
+                          ? 'bg-white text-emerald-600 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Manage Classes
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setActiveTab('personal')}
+                    className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      activeTab === 'personal'
+                        ? 'bg-white text-emerald-600 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Personal Notes
+                  </button>
+                </div>
+                
+                {/* Chat Interface Content */}
+                <div className={`h-96 border border-gray-200 rounded-lg ${activeTab === 'manage' ? 'overflow-visible' : 'overflow-auto'}`}>
+                  {user && activeTab === 'class' && (
+                    <ClassChat
+                      userId={user.mockUserId || ''}
+                      userName={user.name || user.displayName || 'User'}
+                      role={user.role as 'teacher' | 'student' | 'admin'}
+                      classId={selectedClassId || user.classId}
+                      isEmbedded={true}
+                    />
+                  )}
+                  {user && activeTab === 'manage' && user.role === 'teacher' && (
+                    <ClassManager
+                      userId={user.mockUserId || ''}
+                      userName={user.name || user.displayName || 'User'}
+                      role={user.role}
+                      onClassSelected={(classId) => {
+                        setSelectedClassId(classId);
+                        setActiveTab('class');
+                      }}
+                    />
+                  )}
+                  {user && activeTab === 'personal' && (
+                    <ChatInterface
+                      teacherId={user.mockUserId || ''}
+                      classId={user.classId || ''}
+                      role={user.role || ''}
+                      isEmbedded={true}
+                      onAssignmentCreated={() => {
+                        console.log('Assignment created from General chat');
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

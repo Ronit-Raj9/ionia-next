@@ -15,9 +15,14 @@ import {
   CheckCircle,
   AlertCircle,
   TrendingUp,
-  BookOpen
+  BookOpen,
+  ClipboardCheck,
+  MessageCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import GradingInterface from '@/components/GradingInterface';
+import StudentSelector from '@/components/StudentSelector';
+import TeacherInbox from '@/components/TeacherInbox';
 
 interface Assignment {
   _id: string;
@@ -63,11 +68,22 @@ export default function TeacherDashboard() {
   // Form state
   const [questions, setQuestions] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [assignmentTitle, setAssignmentTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [subject, setSubject] = useState('Math');
+  const [difficulty, setDifficulty] = useState('medium');
+  const [totalMarks, setTotalMarks] = useState(100);
+  const [dueDate, setDueDate] = useState('');
+  const [showMarksToStudents, setShowMarksToStudents] = useState(false);
+  const [showFeedbackToStudents, setShowFeedbackToStudents] = useState(true);
+  const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
+  const [showStudentSelector, setShowStudentSelector] = useState(false);
   
   // Phase 2 state
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'inbox'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -167,6 +183,18 @@ export default function TeacherDashboard() {
       formData.append('mockUserId', user?.mockUserId || '');
       formData.append('classId', user?.classId || '');
       formData.append('questions', questions);
+      formData.append('title', assignmentTitle);
+      formData.append('description', description);
+      formData.append('subject', subject);
+      formData.append('difficulty', difficulty);
+      formData.append('totalMarks', totalMarks.toString());
+      formData.append('showMarksToStudents', showMarksToStudents.toString());
+      formData.append('showFeedbackToStudents', showFeedbackToStudents.toString());
+      formData.append('assignedStudents', JSON.stringify(selectedStudents.map(s => s.id)));
+      
+      if (dueDate) {
+        formData.append('dueDate', dueDate);
+      }
       
       if (selectedFile) {
         formData.append('file', selectedFile);
@@ -183,6 +211,15 @@ export default function TeacherDashboard() {
         toast.success(`Assignment created and personalized for ${data.data.personalizedCount} students!`);
         setQuestions('');
         setSelectedFile(null);
+        setAssignmentTitle('');
+        setDescription('');
+        setSubject('Math');
+        setDifficulty('medium');
+        setTotalMarks(100);
+        setDueDate('');
+        setShowMarksToStudents(false);
+        setShowFeedbackToStudents(true);
+        setSelectedStudents([]);
         fetchAssignments();
         fetchProgress();
       } else {
@@ -218,8 +255,61 @@ export default function TeacherDashboard() {
           <p className="text-gray-600">
             Create assignments and track your students' progress with AI-powered personalization.
           </p>
+          
+          {/* Navigation Tabs */}
+          <div className="mt-6 border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'overview'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 inline mr-2" />
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab('create')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'create'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Upload className="w-4 h-4 inline mr-2" />
+                Create Assignment
+              </button>
+              <button
+                onClick={() => setActiveTab('grading')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'grading'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <ClipboardCheck className="w-4 h-4 inline mr-2" />
+                Grading Center
+              </button>
+              <button
+                onClick={() => setActiveTab('inbox')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'inbox'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 inline mr-2" />
+                Student Messages
+              </button>
+            </nav>
+          </div>
         </div>
 
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <>
         {/* Quick Stats */}
         {progressData && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -273,6 +363,65 @@ export default function TeacherDashboard() {
           </div>
         )}
 
+            {/* Recent Assignments */}
+            <div className="mt-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Assignments</h2>
+                
+                {assignments.length > 0 ? (
+                  <div className="space-y-4">
+                    {assignments.map((assignment) => (
+                      <div key={assignment._id} className="border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200 bg-white">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <FileText className="w-5 h-5 text-gray-500" />
+                              <span className="font-medium text-gray-900">
+                                Math Assignment
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {new Date(assignment.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {assignment.originalContent.questions.slice(0, 2).map((q, i) => (
+                                <div key={i}>• {q}</div>
+                              ))}
+                              {assignment.originalContent.questions.length > 2 && (
+                                <div>... and {assignment.originalContent.questions.length - 2} more</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center space-x-2 text-sm text-gray-600">
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                              <span>{assignment.personalizedVersions.length} personalized</span>
+                            </div>
+                            {assignment.uploadedFileUrl && (
+                              <div className="flex items-center space-x-1 text-sm text-blue-600 mt-1">
+                                <Image className="w-4 h-4" />
+                                <span>File attached</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-500">No assignments created yet.</p>
+                    <p className="text-sm text-gray-400">Create your first assignment to get started!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Create Assignment Tab */}
+        {activeTab === 'create' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Assignment Creation */}
           <div className="lg:col-span-2">
@@ -280,15 +429,206 @@ export default function TeacherDashboard() {
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Create New Assignment</h2>
               
               <form onSubmit={handleSubmitAssignment} className="space-y-6">
+                  {/* Assignment Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Assignment Title *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={assignmentTitle}
+                        onChange={(e) => setAssignmentTitle(e.target.value)}
+                        placeholder="e.g., Algebra Practice Quiz"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Subject
+                      </label>
+                      <select
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      >
+                        <option value="Math">Math</option>
+                        <option value="Science">Science</option>
+                        <option value="English">English</option>
+                        <option value="History">History</option>
+                        <option value="General">General</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Difficulty
+                      </label>
+                      <select
+                        value={difficulty}
+                        onChange={(e) => setDifficulty(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      >
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Total Marks
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={totalMarks}
+                        onChange={(e) => setTotalMarks(parseInt(e.target.value) || 100)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Due Date (Optional)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Brief description of the assignment..."
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                    />
+                  </div>
+
+                  {/* Grade Settings */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Grade Visibility Settings</h4>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={showMarksToStudents}
+                          onChange={(e) => setShowMarksToStudents(e.target.checked)}
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Show marks to students immediately</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={showFeedbackToStudents}
+                          onChange={(e) => setShowFeedbackToStudents(e.target.checked)}
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Show feedback to students immediately</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Student Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Assign to Students
+                    </label>
+                    <div className="border border-gray-300 rounded-lg p-4">
+                      {selectedStudents.length > 0 ? (
+                        <div className="space-y-3">
+                          {selectedStudents.length >= 20 ? (
+                            <div className="flex items-center space-x-2 text-emerald-600">
+                              <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                <Users className="w-4 h-4 text-emerald-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Entire Class Selected</p>
+                                <p className="text-xs text-gray-500">All {selectedStudents.length} students will receive this assignment</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                Selected {selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''}:
+                              </p>
+                              <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                                {selectedStudents.map((student) => (
+                                  <span
+                                    key={student.id}
+                                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-emerald-100 text-emerald-800"
+                                  >
+                                    {student.name}
+                                    <button
+                                      onClick={() => setSelectedStudents(prev => prev.filter(s => s.id !== student.id))}
+                                      className="ml-2 text-emerald-600 hover:text-emerald-800"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                            <button
+                              type="button"
+                              onClick={() => setShowStudentSelector(true)}
+                              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                            >
+                              + Modify selection
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStudents([])}
+                              className="text-sm text-gray-500 hover:text-gray-700"
+                            >
+                              Clear all
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4">
+                          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Users className="w-6 h-6 text-gray-400" />
+                          </div>
+                          <p className="text-sm text-gray-500 mb-3">
+                            No students selected. Assignment will be sent to all students in the class.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setShowStudentSelector(true)}
+                            className="inline-flex items-center px-4 py-2 border border-emerald-300 text-sm font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 transition-colors"
+                          >
+                            <Users className="w-4 h-4 mr-2" />
+                            Select Students
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                 {/* Questions Input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Math Questions (one per line)
+                      Questions (one per line)
                   </label>
                   <textarea
                     value={questions}
                     onChange={(e) => setQuestions(e.target.value)}
-                    placeholder="Enter math questions, one per line:&#10;1. Solve for x: 2x + 5 = 13&#10;2. Calculate the area of a rectangle with length 8cm and width 5cm&#10;3. Simplify: 3/4 + 1/8"
+                      placeholder="Enter questions, one per line:&#10;1. Solve for x: 2x + 5 = 13&#10;2. Calculate the area of a rectangle with length 8cm and width 5cm&#10;3. Simplify: 3/4 + 1/8"
                     className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
                     rows={6}
                   />
@@ -375,8 +715,6 @@ export default function TeacherDashboard() {
                   No data available yet. Create assignments to see class weaknesses.
                 </p>
               )}
-            </div>
-          </div>
         </div>
 
         {/* AI-Powered Assignment Suggestions */}
@@ -452,62 +790,51 @@ export default function TeacherDashboard() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Recent Assignments */}
-        <div className="mt-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Assignments</h2>
-            
-            {assignments.length > 0 ? (
-              <div className="space-y-4">
-                {assignments.map((assignment) => (
-                  <div key={assignment._id} className="border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200 bg-white">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <FileText className="w-5 h-5 text-gray-500" />
-                          <span className="font-medium text-gray-900">
-                            Math Assignment
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {new Date(assignment.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {assignment.originalContent.questions.slice(0, 2).map((q, i) => (
-                            <div key={i}>• {q}</div>
-                          ))}
-                          {assignment.originalContent.questions.length > 2 && (
-                            <div>... and {assignment.originalContent.questions.length - 2} more</div>
                           )}
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span>{assignment.personalizedVersions.length} personalized</span>
-                        </div>
-                        {assignment.uploadedFileUrl && (
-                          <div className="flex items-center space-x-1 text-sm text-blue-600 mt-1">
-                            <Image className="w-4 h-4" />
-                            <span>File attached</span>
                           </div>
                         )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No assignments created yet.</p>
-                <p className="text-sm text-gray-400">Create your first assignment above to get started!</p>
-              </div>
-            )}
+
+        {/* Grading Tab */}
+        {activeTab === 'grading' && (
+          <div className="h-screen">
+            <GradingInterface
+              teacherId={user?.mockUserId || ''}
+              teacherName={user?.name || user?.displayName || 'Teacher'}
+              onGradeSubmitted={() => {
+                toast.success('Grade updated successfully!');
+              }}
+            />
           </div>
-        </div>
+        )}
+
+        {/* Inbox Tab */}
+        {activeTab === 'inbox' && (
+          <div className="h-screen">
+            <TeacherInbox
+              teacherId={user?.mockUserId || ''}
+              teacherName={user?.name || user?.displayName || 'Teacher'}
+              isEmbedded={true}
+            />
+          </div>
+        )}
+
+        {/* Student Selector Modal */}
+        {showStudentSelector && (
+            <StudentSelector
+              onStudentsSelected={(students, selectedClass) => {
+                setSelectedStudents(students.filter(s => s.isSelected));
+                setShowStudentSelector(false);
+                if (selectedClass) {
+                  toast.success(`Selected ${students.length} students from ${selectedClass.className}`);
+                }
+              }}
+              onClose={() => setShowStudentSelector(false)}
+              classId={user?.classId || 'default-class'}
+              teacherId={user?.mockUserId || ''}
+              teacherRole={user?.role || 'teacher'}
+            />
+        )}
       </div>
     </div>
   );

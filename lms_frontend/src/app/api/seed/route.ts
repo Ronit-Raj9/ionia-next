@@ -168,6 +168,11 @@ async function seedSampleAssignments() {
     {
       classId: 'demo-class-1',
       taskType: 'math',
+      title: 'Algebra Basics Practice',
+      description: 'Practice fundamental algebra concepts including equations, area calculations, and fractions.',
+      subject: 'Math',
+      difficulty: 'medium' as const,
+      totalMarks: 100,
       originalContent: {
         questions: [
           'Solve for x: 2x + 5 = 13',
@@ -178,12 +183,25 @@ async function seedSampleAssignments() {
         ],
       },
       createdBy: 'teacher1',
+      assignedTo: ['student1', 'student2', 'student3', 'student4', 'student5'],
+      gradeSettings: {
+        showMarksToStudents: true,
+        showFeedbackToStudents: true,
+        gradingRubric: 'Standard grading rubric for algebra problems'
+      },
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      isPublished: true,
       createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
       personalizedVersions: [], // Will be populated when assignments are created
     },
     {
       classId: 'demo-class-1',
       taskType: 'math',
+      title: 'Intermediate Math Problems',
+      description: 'More advanced problems including quadratic equations, geometry, and percentages.',
+      subject: 'Math',
+      difficulty: 'hard' as const,
+      totalMarks: 120,
       originalContent: {
         questions: [
           'Solve the quadratic equation: x² - 5x + 6 = 0',
@@ -193,12 +211,25 @@ async function seedSampleAssignments() {
         ],
       },
       createdBy: 'teacher1',
+      assignedTo: ['student11', 'student12', 'student13', 'student14', 'student15'],
+      gradeSettings: {
+        showMarksToStudents: true,
+        showFeedbackToStudents: true,
+        gradingRubric: 'Advanced mathematics grading rubric'
+      },
+      dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
+      isPublished: true,
       createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
       personalizedVersions: [],
     },
     {
       classId: 'demo-class-1',
       taskType: 'math',
+      title: 'Linear Equations and Graphing',
+      description: 'Practice with linear equations, slope calculations, and system solving.',
+      subject: 'Math',
+      difficulty: 'medium' as const,
+      totalMarks: 90,
       originalContent: {
         questions: [
           'Graph the linear equation: y = 2x + 3',
@@ -207,6 +238,14 @@ async function seedSampleAssignments() {
         ],
       },
       createdBy: 'teacher1',
+      assignedTo: ['student16', 'student17', 'student18', 'student19', 'student20'],
+      gradeSettings: {
+        showMarksToStudents: false,
+        showFeedbackToStudents: false,
+        gradingRubric: 'Linear algebra grading standards'
+      },
+      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+      isPublished: true,
       createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
       personalizedVersions: [],
     },

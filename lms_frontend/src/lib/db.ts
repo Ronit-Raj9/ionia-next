@@ -49,6 +49,8 @@ export const COLLECTIONS = {
   ASSIGNMENTS: 'assignments',
   SUBMISSIONS: 'submissions',
   PROGRESS: 'progress',
+  CHAT_CONVERSATIONS: 'chatConversations',
+  CLASS_CHATS: 'classChats',
 } as const;
 
 // Database schemas/interfaces
@@ -114,11 +116,24 @@ export interface Assignment {
   _id?: ObjectId;
   classId: string;
   taskType: string;
+  title: string;
+  description: string;
+  subject: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  totalMarks: number;
   originalContent: {
     questions: string[];
   };
   uploadedFileUrl?: string;
   createdBy: string;
+  assignedTo: string[]; // Student IDs who should see this assignment
+  gradeSettings: {
+    showMarksToStudents: boolean;
+    showFeedbackToStudents: boolean;
+    gradingRubric?: string;
+  };
+  dueDate?: Date;
+  isPublished: boolean;
   createdAt: Date;
   personalizedVersions: {
     studentMockId: string;
@@ -139,20 +154,37 @@ export interface Submission {
   _id?: ObjectId;
   assignmentId: string;
   studentMockId: string;
+  studentName: string;
   submittedContent: {
     text: string;
     imageUrls: string[];
+    attachments?: {
+      type: 'image' | 'document';
+      url: string;
+      fileName: string;
+      fileSize: number;
+    }[];
   };
   submissionTime: Date;
-  grade: {
+  grade?: {
     score: number;
+    maxScore: number;
     feedback: string;
     errors: string[];
+    gradedBy: string;
+    gradedAt: Date;
+    isPublished: boolean; // Whether grade is visible to student
   };
+  status: 'submitted' | 'graded' | 'returned';
   processed: boolean;
   hintUsage?: number;
   chainLink?: string;
   timeSpent?: number;
+  teacherComments?: {
+    content: string;
+    isPrivate: boolean; // Private comments not shown to student
+    timestamp: Date;
+  }[];
 }
 
 export interface Progress {
@@ -204,6 +236,91 @@ export interface Progress {
     description: string;
     timestamp: Date;
   }[];
+}
+
+// Chat interfaces
+export interface ChatMessage {
+  _id?: ObjectId;
+  senderId: string;
+  senderRole: 'teacher' | 'admin' | 'system';
+  messageType: 'text' | 'image' | 'document' | 'assignment_created';
+  content: string;
+  attachments?: {
+    type: 'image' | 'document';
+    url: string;
+    fileName: string;
+    fileSize: number;
+  }[];
+  metadata?: {
+    assignmentId?: string;
+    studentCount?: number;
+    [key: string]: any;
+  };
+  timestamp: Date;
+  isRead: boolean;
+}
+
+export interface ChatConversation {
+  _id?: ObjectId;
+  teacherId: string;
+  classId: string;
+  title: string;
+  description?: string;
+  lastMessage?: ChatMessage;
+  lastActivity: Date;
+  messages: ChatMessage[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Class Chat interfaces
+export interface ClassChatMessage {
+  _id?: ObjectId;
+  senderId: string;
+  senderRole: 'teacher' | 'student';
+  senderName: string;
+  messageType: 'text' | 'image' | 'document' | 'announcement';
+  content: string;
+  attachments?: {
+    type: 'image' | 'document';
+    url: string;
+    fileName: string;
+    fileSize: number;
+  }[];
+  timestamp: Date;
+  isRead: boolean;
+  reactions?: {
+    userId: string;
+    type: 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry';
+    timestamp: Date;
+  }[];
+}
+
+export interface ClassChat {
+  _id?: ObjectId;
+  classId: string;
+  teacherId: string;
+  className: string;
+  description?: string;
+  participants: {
+    userId: string;
+    role: 'teacher' | 'student';
+    name: string;
+    joinedAt: Date;
+    isActive: boolean;
+  }[];
+  messages: ClassChatMessage[];
+  lastActivity: Date;
+  settings: {
+    allowStudentMessages: boolean;
+    allowFileSharing: boolean;
+    moderationEnabled: boolean;
+    allowReactions: boolean;
+  };
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export default clientPromise;

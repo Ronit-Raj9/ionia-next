@@ -81,7 +81,7 @@ export function checkAndAwardBadges(
   }
 
   // Perfect score badge
-  if (submission.grade.score === 100 && !currentBadges.includes('PERFECT_SCORE')) {
+  if (submission.grade?.score === 100 && !currentBadges.includes('PERFECT_SCORE')) {
     newBadges.push('PERFECT_SCORE');
   }
 
@@ -89,11 +89,12 @@ export function checkAndAwardBadges(
   if (allSubmissions.length >= 2) {
     const previousScores = allSubmissions
       .slice(-3, -1) // Get 2 previous submissions
-      .map(s => s.grade.score);
+      .filter(s => s.grade)
+      .map(s => s.grade!.score);
     
     if (previousScores.length > 0) {
       const avgPrevious = previousScores.reduce((a, b) => a + b, 0) / previousScores.length;
-      const improvement = ((submission.grade.score - avgPrevious) / avgPrevious) * 100;
+      const improvement = ((submission.grade?.score || 0) - avgPrevious) / avgPrevious * 100;
       
       if (improvement >= 20 && !currentBadges.includes('IMPROVEMENT')) {
         newBadges.push('IMPROVEMENT');
@@ -110,13 +111,13 @@ export function checkAndAwardBadges(
   }
 
   // Problem Solver badge (10 submissions with score > 70)
-  const goodSubmissions = allSubmissions.filter(s => s.grade.score >= 70).length;
+  const goodSubmissions = allSubmissions.filter(s => s.grade && s.grade.score >= 70).length;
   if (goodSubmissions >= 10 && !currentBadges.includes('PROBLEM_SOLVER')) {
     newBadges.push('PROBLEM_SOLVER');
   }
 
   // Consistent performer badge
-  const recentScores = allSubmissions.slice(-5).map(s => s.grade.score);
+  const recentScores = allSubmissions.slice(-5).filter(s => s.grade).map(s => s.grade!.score);
   if (recentScores.length >= 5) {
     const avgRecent = recentScores.reduce((a, b) => a + b, 0) / recentScores.length;
     if (avgRecent >= 80 && !currentBadges.includes('CONSISTENT')) {

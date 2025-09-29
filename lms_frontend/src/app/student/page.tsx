@@ -21,30 +21,45 @@ import {
   Target,
   Flame,
   Trophy,
-  Gift
+  Gift,
+  Users,
+  MessageCircle,
+  Home
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Confetti from 'react-confetti';
+import StudentMessageTeacher from '@/components/StudentMessageTeacher';
 
 interface Assignment {
   _id: string;
+  title: string;
+  description: string;
+  subject: string;
+  difficulty: string;
+  totalMarks: number;
   taskType: string;
+  dueDate?: string;
   createdAt: string;
   uploadedFileUrl?: string;
   questions: string[];
   variations: string;
   originalQuestions: string[];
+  canSeeGrades: boolean;
+  canSeeFeedback: boolean;
 }
 
 interface Submission {
   _id: string;
   assignmentId: string;
   submissionTime: string;
-  grade: {
+  grade?: {
     score: number;
+    maxScore: number;
     feedback: string;
     errors: string[];
+    isPublished: boolean;
   };
+  status: 'submitted' | 'graded' | 'returned';
   processed: boolean;
 }
 
@@ -86,6 +101,11 @@ export default function StudentDashboard() {
   const [recentBadges, setRecentBadges] = useState<string[]>([]);
   const [adaptivePath, setAdaptivePath] = useState<string[]>([]);
   const [progressBars, setProgressBars] = useState<Record<string, number>>({});
+  
+  // Tab state and classes
+  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'message'>('assignments');
+  const [classes, setClasses] = useState<any[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
 
   // Check if user is student
   useEffect(() => {
@@ -99,6 +119,7 @@ export default function StudentDashboard() {
       fetchSubmissions();
       fetchProgress();
       fetchEnhancedDashboardData();
+      fetchStudentClasses();
     }
   }, [user, router]);
 
@@ -165,6 +186,27 @@ export default function StudentDashboard() {
       }
     } catch (error) {
       console.error('Error fetching enhanced dashboard data:', error);
+    }
+  };
+
+  const fetchStudentClasses = async () => {
+    setClassesLoading(true);
+    try {
+      // Fetch classes where this student is a member
+      const response = await fetch(`/api/classes/student?studentId=${user?.mockUserId}&role=${user?.role}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setClasses(data.data);
+      } else {
+        console.error('Failed to fetch student classes:', data.error);
+        setClasses([]);
+      }
+    } catch (error) {
+      console.error('Error fetching student classes:', error);
+      setClasses([]);
+    } finally {
+      setClassesLoading(false);
     }
   };
 
@@ -297,10 +339,57 @@ export default function StudentDashboard() {
           <p className="text-gray-600">
             Complete your personalized assignments and track your learning progress.
           </p>
+          
+          {/* Navigation Tabs */}
+          <div className="mt-6 border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('assignments')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'assignments'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Home className="w-4 h-4 inline mr-2" />
+                Dashboard
+              </button>
+              <button
+                onClick={() => setActiveTab('classes')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'classes'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Users className="w-4 h-4 inline mr-2" />
+                My Classes
+                {classes.length > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-emerald-100 bg-emerald-600 rounded-full">
+                    {classes.length}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab('message')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'message'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 inline mr-2" />
+                Message Teacher
+              </button>
+            </nav>
+          </div>
         </div>
 
-        {/* Progress Stats */}
-        {progress && (
+        {/* Dashboard Tab Content */}
+        {activeTab === 'assignments' && (
+          <>
+            {/* Progress Stats */}
+            {progress && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between">
@@ -493,11 +582,25 @@ export default function StudentDashboard() {
                             <div className="flex items-center space-x-2 mb-2">
                               <BookOpen className="w-5 h-5 text-gray-500" />
                               <span className="font-medium text-gray-900">
-                                Math Assignment
+                                {assignment.title || 'Math Assignment'}
                               </span>
                               <span className="text-sm text-gray-500">
                                 {new Date(assignment.createdAt).toLocaleDateString()}
                               </span>
+                              {assignment.subject && (
+                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                                  {assignment.subject}
+                                </span>
+                              )}
+                              {assignment.difficulty && (
+                                <span className={`text-xs px-2 py-1 rounded-full ${
+                                  assignment.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                                  assignment.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {assignment.difficulty}
+                                </span>
+                              )}
                               {isCompleted && (
                                 <CheckCircle className="w-5 h-5 text-green-500" />
                               )}
@@ -529,7 +632,13 @@ export default function StudentDashboard() {
                           <div className="text-right">
                             {isCompleted ? (
                               <div className="text-green-600">
-                                <div className="font-bold text-lg">{submission.grade.score}%</div>
+                                {submission.grade && assignment.canSeeGrades && submission.grade.isPublished ? (
+                                  <div className="font-bold text-lg">
+                                    {submission.grade.score}/{submission.grade.maxScore || assignment.totalMarks}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-500">Graded</div>
+                                )}
                                 <div className="text-sm">Completed</div>
                               </div>
                             ) : (
@@ -714,6 +823,136 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
+          </>
+        )}
+
+        {/* Classes Tab Content */}
+        {activeTab === 'classes' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-6 h-6 text-emerald-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">My Classes</h2>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {classes.length} class{classes.length !== 1 ? 'es' : ''} joined
+                </div>
+              </div>
+
+              {classesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                </div>
+              ) : classes.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {classes.map((classData) => (
+                    <motion.div
+                      key={classData._id}
+                      whileHover={{ scale: 1.02 }}
+                      className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition-all"
+                      onClick={() => {
+                        // TODO: Open class chat/details
+                        toast.success(`Opening ${classData.className}...`);
+                      }}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-1">
+                            {classData.className}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Teacher: {classData.teacherMockId.replace('teacher', 'Teacher ')}
+                          </p>
+                        </div>
+                        {classData.hasUnreadMessages && (
+                          <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="flex items-center space-x-2">
+                          <Users className="w-4 h-4 text-emerald-600" />
+                          <span className="text-sm text-gray-700">
+                            {classData.studentCount} students
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <BookOpen className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm text-gray-700">
+                            {classData.recentAssignments} assignments
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                        <span>Joined {new Date(classData.createdAt).toLocaleDateString()}</span>
+                        {classData.hasUnreadMessages && (
+                          <span className="text-emerald-600 font-medium">New messages</span>
+                        )}
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast.success(`Opening class chat for ${classData.className}...`);
+                            // TODO: Open class chat
+                          }}
+                          className="flex-1 px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-1"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Class Chat</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast.success(`Opening private chat with teacher...`);
+                            // TODO: Open private chat with teacher
+                          }}
+                          className="px-3 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 transition-colors"
+                          title="Private chat with teacher"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Yet</h3>
+                  <p className="text-gray-600 mb-4">
+                    You haven't joined any classes yet. Ask your teacher to add you to a class.
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                    <p className="text-sm text-blue-700">
+                      💡 <strong>Tip:</strong> Once your teacher creates a class and adds you, 
+                      you'll be able to see class discussions, get personalized assignments, 
+                      and chat with your teacher privately.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Message Teacher Tab Content */}
+        {activeTab === 'message' && (
+          <div className="space-y-6">
+            <div className="h-96">
+              <StudentMessageTeacher
+                studentId={user.mockUserId || ''}
+                studentName={user.name || user.displayName || 'Student'}
+                teacherId="teacher1" // For now, defaulting to teacher1
+                teacherName="Teacher"
+                isEmbedded={true}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
     const submission: Submission = {
       assignmentId,
       studentMockId,
+      studentName: `Student ${studentMockId.replace('student', '')}`,
       submittedContent: {
         text: fullSubmissionText,
         imageUrls,
@@ -117,9 +118,14 @@ export async function POST(request: NextRequest) {
       submissionTime: new Date(),
       grade: {
         score: 0,
+        maxScore: 100,
         feedback: '',
         errors: [],
+        gradedBy: '',
+        gradedAt: new Date(),
+        isPublished: false,
       },
+      status: 'submitted' as const,
       processed: false,
     };
 
@@ -285,9 +291,19 @@ async function updateStudentProgress(studentMockId: string, classId: string, sco
       _id: new ObjectId(),
       assignmentId: 'current',
       studentMockId,
+      studentName: `Student ${studentMockId.replace('student', '')}`,
       submittedContent: { text: '', imageUrls: [] },
       submissionTime: new Date(),
-      grade: { score, feedback: '', errors: [] },
+      grade: { 
+        score, 
+        maxScore: 100,
+        feedback: '', 
+        errors: [],
+        gradedBy: 'system',
+        gradedAt: new Date(),
+        isPublished: true
+      },
+      status: 'graded' as const,
       processed: true,
       timeSpent: 30 // Default time spent
     } as Submission;
