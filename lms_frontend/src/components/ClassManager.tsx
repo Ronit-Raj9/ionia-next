@@ -52,22 +52,24 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
   const fetchClasses = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/class-chat?role=${role}&userId=${userId}`);
+      const response = await fetch(`/api/classes?role=${role}&teacherId=${userId}`);
       const data = await response.json();
 
       if (data.success) {
-        // Transform class chats to class info
-        const classInfo: ClassInfo[] = data.data.map((chat: any) => ({
-          _id: chat._id,
-          classId: chat.classId,
-          className: chat.className,
-          description: chat.description,
-          participantCount: chat.participants.filter((p: any) => p.isActive).length,
-          messageCount: chat.messages.length,
-          isActive: chat.isActive,
-          createdAt: chat.createdAt,
-          lastActivity: chat.lastActivity
+        console.log('Fetched classes:', data.data); // Debug log
+        // Transform classes to class info
+        const classInfo: ClassInfo[] = data.data.map((classData: any) => ({
+          _id: classData._id,
+          classId: classData._id, // Use _id as classId
+          className: classData.className,
+          description: '', // Classes don't have description yet
+          participantCount: classData.studentMockIds?.length || 0,
+          messageCount: 0, // TODO: Get actual message count from class chats
+          isActive: true, // Assume all classes are active
+          createdAt: classData.createdAt,
+          lastActivity: classData.createdAt // Use createdAt as default last activity
         }));
+        console.log('Transformed classes:', classInfo); // Debug log
         setClasses(classInfo);
       } else if (data.error?.includes('Database connection')) {
         toast.error('Database connection issue. Using offline mode.');
@@ -92,6 +94,26 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
     setShowStudentSelector(true);
   };
 
+  const cleanupDemoClasses = async () => {
+    try {
+      const response = await fetch(`/api/classes/cleanup?teacherId=${userId}&role=${role}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(`Removed ${data.deletedCount} demo classes`);
+        await fetchClasses(); // Refresh the list
+      } else {
+        toast.error(data.error || 'Failed to cleanup demo classes');
+      }
+    } catch (error) {
+      console.error('Error cleaning up demo classes:', error);
+      toast.error('Failed to cleanup demo classes');
+    }
+  };
+
   const createClassWithStudents = async (selectedStudents: any[]) => {
     if (selectedStudents.length === 0) {
       toast.error('Please select at least one student');
@@ -100,25 +122,25 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
 
     setCreatingClass(true);
     try {
-      const formData = new FormData();
-      formData.append('action', 'create_chat');
-      formData.append('role', role);
-      formData.append('userId', userId);
-      formData.append('userName', userName);
-      formData.append('classId', `class-${Date.now()}`);
-      formData.append('className', newClassName);
-      formData.append('description', newClassDescription);
-      formData.append('selectedStudents', JSON.stringify(selectedStudents.map(s => ({ id: s.id, name: s.name }))));
-
-      const response = await fetch('/api/class-chat', {
+      // Create the class in the database
+      const response = await fetch('/api/classes', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          className: newClassName,
+          teacherId: userId,
+          studentIds: selectedStudents.map(s => s.id),
+          description: newClassDescription,
+          role: role
+        })
       });
 
       const data = await response.json();
 
       if (data.success) {
-        toast.success(`Class "${newClassName}" created successfully!`);
+        toast.success(`Class "${newClassName}" created successfully with ${selectedStudents.length} students!`);
         setShowStudentSelector(false);
         setNewClassName('');
         setNewClassDescription('');
@@ -167,13 +189,25 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
           <h2 className="text-lg font-semibold text-gray-900">Class Management</h2>
           <p className="text-sm text-gray-600">Create and manage your classes</p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Class
-        </button>
+        <div className="flex items-center space-x-2">
+          {classes.some(c => c.className.toLowerCase().includes('demo')) && (
+            <button
+              onClick={cleanupDemoClasses}
+              className="inline-flex items-center px-3 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
+              title="Remove demo classes"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clean Demo
+            </button>
+          )}
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Class
+          </button>
+        </div>
       </div>
 
       {/* Classes List */}
@@ -270,18 +304,20 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
       {/* Create Class Form Modal */}
       <AnimatePresence>
         {showCreateForm && (
-          <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 z-[9999] overflow-y-auto" style={{ position: 'fixed' }}>
             <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
               <div 
                 className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
                 onClick={() => setShowCreateForm(false)}
+                style={{ position: 'fixed' }}
               ></div>
 
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+                className="relative inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full z-[10000]"
+                style={{ position: 'relative', zIndex: 10000 }}
               >
                 <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
@@ -350,12 +386,13 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
           classId={`class-${Date.now()}`}
           teacherId={userId}
           teacherRole={role}
+          isCreatingClass={true}
         />
       )}
 
       {/* Loading overlay */}
       {creatingClass && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[10001] bg-black bg-opacity-50 flex items-center justify-center" style={{ position: 'fixed' }}>
           <div className="bg-white rounded-lg p-6 flex items-center space-x-3">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
             <span className="text-gray-900">Creating class...</span>
