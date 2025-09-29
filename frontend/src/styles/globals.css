@@ -6,9 +6,79 @@
 @import './responsive.css';
 
 /* Critical z-index fixes for navbar visibility */
-nav[class*="z-[99999]"] {
+nav {
   z-index: 99999 !important;
   position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  transform: translateY(0) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
+}
+
+/* Ensure navbar is never clipped */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden;
+}
+
+/* Prevent any element from covering the navbar */
+* {
+  z-index: auto;
+}
+
+nav, nav * {
+  z-index: 99999 !important;
+}
+
+/* Hide navbar on test pages */
+body:has([data-test-page="true"]) nav {
+  display: none !important;
+}
+
+/* Test page specific styles */
+.test-page-container {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* Ensure test window mobile sidebar is above everything */
+.test-window-mobile-sidebar {
+  z-index: 9999 !important;
+}
+
+.test-window-mobile-backdrop {
+  z-index: 9998 !important;
+}
+
+/* Test window header should be below mobile sidebar */
+.test-window-header {
+  z-index: 10 !important;
+}
+
+/* Right side toggle button for test window */
+.test-window-right-toggle {
+  position: fixed !important;
+  top: 50% !important;
+  right: 0 !important;
+  transform: translateY(-50%) !important;
+  z-index: 9997 !important;
+  width: 48px !important;
+  height: 48px !important;
+  border-top-left-radius: 24px !important;
+  border-bottom-left-radius: 24px !important;
+  border-right: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: -5px 0 15px rgba(0, 0, 0, 0.2) !important;
 }
 
 .mobile-menu-panel,

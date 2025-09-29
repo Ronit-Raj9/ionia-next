@@ -53,7 +53,7 @@ export async function generatePDFReport(
   // Header
   doc.setFontSize(20);
   doc.setTextColor(16, 185, 129); // Emerald color
-  doc.text('EduFlow AI - Learning Analytics Report', 20, 25);
+  doc.text('Ionia - Learning Analytics Report', 20, 25);
   
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
@@ -166,7 +166,7 @@ export async function generatePDFReport(
 
     doc.setFontSize(12);
     const summaryText = `
-Your child is making excellent progress in their mathematics learning journey with EduFlow AI. 
+Your child is making excellent progress in their mathematics learning journey with Ionia. 
 Here's a summary of their recent achievements and areas of focus:
 
 • Current average score: ${reportData.classMetrics.averageScore}%
@@ -185,7 +185,7 @@ Your child is developing excellent study habits and mathematical reasoning skill
 Thank you for supporting your child's learning journey!
 
 Best regards,
-The EduFlow AI Team
+The Ionia Team
     `;
 
     const splitText = doc.splitTextToSize(summaryText, pageWidth - 40);
@@ -199,7 +199,7 @@ The EduFlow AI Team
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128); // Gray-500
     doc.text(
-      `Page ${i} of ${pageCount} | EduFlow AI Analytics`,
+      `Page ${i} of ${pageCount} | Ionia Analytics`,
       pageWidth - 80,
       doc.internal.pageSize.height - 10
     );
@@ -218,7 +218,7 @@ export async function generateExcelReport(
 
   // Overview Sheet
   const overviewData = [
-    ['EduFlow AI - Learning Analytics Report'],
+    ['Ionia - Learning Analytics Report'],
     ['Class:', className],
     ['Generated:', new Date().toLocaleDateString()],
     ['Report Type:', reportType.replace('_', ' ').toUpperCase()],
@@ -301,7 +301,7 @@ export async function uploadReportToCloud(
   try {
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `${className}_${reportType}_${timestamp}`;
-    const folder = 'eduflow/reports';
+    const folder = 'ionia/reports';
 
     const result = await uploadFile(reportBuffer, filename, 'assignments');
     return result.url || '';

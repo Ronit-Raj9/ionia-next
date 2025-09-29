@@ -715,30 +715,9 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
   return (
     <div className="flex flex-col h-screen bg-gray-50 relative">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 relative z-30">
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 relative z-10">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-2 sm:space-x-4">
-            {(isMobile || isTablet) && (
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                aria-label="Toggle sidebar"
-              >
-                <svg 
-                  className="w-5 h-5" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M4 6h16M4 12h16M4 18h16" 
-                  />
-                </svg>
-              </button>
-            )}
             <CandidateInfo name={getUserName()} testName={currentTest.title} />
           </div>
           <Timer 
@@ -848,15 +827,17 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
         </div>
         
         {/* Right Panel - Status and Navigation (Desktop) */}
-        <div className={`${isMobile || isTablet ? 'hidden' : 'block'} w-80 bg-gray-100 border-l border-gray-200 p-4 overflow-y-auto`}>
+        <div className={`${isMobile || isTablet ? 'hidden' : 'block'} w-80 bg-gray-100 border-l border-gray-200 p-4 overflow-y-auto relative z-40`}>
           {/* Question Status */}
-          <QuestionStatus 
-            questions={currentTest.questions}
-            total={total}
-          />
+          <div className="relative z-50">
+            <QuestionStatus 
+              questions={currentTest.questions}
+              total={total}
+            />
+          </div>
           
           {/* Question Grid */}
-          <div className="mt-6">
+          <div className="mt-6 relative z-50">
             <QuestionGrid 
               questions={currentTest.questions}
               activeQuestion={activeQuestion}
@@ -865,7 +846,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </div>
           
           {/* Submit Button */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="mt-6 pt-4 border-t border-gray-200 relative z-50">
             <button
               onClick={() => setConfirmSubmit(true)}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors shadow-lg border-2 border-green-700"
@@ -875,13 +856,36 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
           </div>
         </div>
         
+        {/* Right Side Toggle Button for Mobile */}
+        {(isMobile || isTablet) && !isSidebarOpen && (
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="fixed top-1/2 right-0 transform -translate-y-1/2 z-[9997] flex items-center justify-center p-3 rounded-l-full bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow-xl border-2 border-blue-700 border-r-0 min-w-[48px] min-h-[48px]"
+            aria-label="Open navigation menu"
+          >
+            <svg 
+              className="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M15 19l-7-7 7-7" 
+              />
+            </svg>
+          </button>
+        )}
+
         {/* Mobile/Tablet Sidebar Overlay */}
         {(isMobile || isTablet) && (
           <>
             {/* Backdrop */}
             {isSidebarOpen && (
               <div 
-                className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                className="fixed inset-0 bg-black bg-opacity-50 z-[9998]"
                 onClick={() => setIsSidebarOpen(false)}
               />
             )}
@@ -889,7 +893,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
             {/* Sidebar */}
             <div className={`
               fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-gray-100 border-l border-gray-200 
-              transform transition-transform duration-300 ease-in-out z-50
+              transform transition-transform duration-300 ease-in-out z-[9999]
               ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
             `}>
               {/* Sidebar Header */}
@@ -919,13 +923,15 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
               {/* Sidebar Content */}
               <div className="p-4 overflow-y-auto h-full pb-20">
                 {/* Question Status */}
-                <QuestionStatus 
-                  questions={currentTest.questions}
-                  total={total}
-                />
+                <div className="relative z-50">
+                  <QuestionStatus 
+                    questions={currentTest.questions}
+                    total={total}
+                  />
+                </div>
                 
                 {/* Question Grid */}
-                <div className="mt-6">
+                <div className="mt-6 relative z-50">
                   <QuestionGrid 
                     questions={currentTest.questions}
                     activeQuestion={activeQuestion}
@@ -937,7 +943,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ examType, paperId, subject }) =
                 </div>
                 
                 {/* Submit Button */}
-                <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="mt-6 pt-4 border-t border-gray-200 relative z-50">
                   <button
                     onClick={() => {
                       setConfirmSubmit(true);

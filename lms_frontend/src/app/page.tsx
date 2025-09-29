@@ -99,38 +99,57 @@ export default function Home() {
   });
 
   const handleGetStarted = () => {
-    if (user) {
-      // User already has a role, redirect to appropriate dashboard
-      redirectToRolePage(user.role);
-    } else {
-      // Show role selection
-      setShowRoleSelection(true);
+    console.log('Get Started clicked!', { user, showRoleSelection });
+    try {
+      if (user) {
+        // User already has a role, redirect to appropriate dashboard
+        console.log('User exists, redirecting to:', user.role);
+        redirectToRolePage(user.role);
+      } else {
+        // Show role selection
+        console.log('No user, showing role selection');
+        setShowRoleSelection(true);
+      }
+    } catch (error) {
+      console.error('Error in handleGetStarted:', error);
+      toast.error('Something went wrong. Please try again.');
     }
   };
 
   const handleRoleSelect = (role: UserRole, mockUserId?: string) => {
-    if (role === 'student') {
-      // For students, we still need the student ID selection
-      setRole(role, mockUserId);
-      setShowRoleSelection(false);
-      redirectToRolePage(role);
-    } else {
-      // For teacher and admin, show the form
-      setSelectedRole(role);
-      setShowRoleSelection(false);
-      setShowUserForm(true);
+    console.log('Role selected:', { role, mockUserId });
+    try {
+      if (role === 'student') {
+        // For students, we still need the student ID selection
+        setRole(role, mockUserId);
+        setShowRoleSelection(false);
+        redirectToRolePage(role);
+      } else {
+        // For teacher and admin, show the form
+        setSelectedRole(role);
+        setShowRoleSelection(false);
+        setShowUserForm(true);
+      }
+    } catch (error) {
+      console.error('Error in handleRoleSelect:', error);
+      toast.error('Failed to select role. Please try again.');
     }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted:', { userForm, selectedRole, selectedStudentId });
     
     if (!userForm.name.trim() || !userForm.email.trim()) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    if (!selectedRole) return;
+    if (!selectedRole) {
+      console.error('No role selected');
+      toast.error('Please select a role first');
+      return;
+    }
 
     // Generate mock user ID based on role
     let mockUserId: string;
@@ -147,7 +166,7 @@ export default function Home() {
     setRole(selectedRole, mockUserId);
     
     // Store additional user info in localStorage
-    localStorage.setItem('eduflow_user_info', JSON.stringify({
+    localStorage.setItem('ionia_user_info', JSON.stringify({
       name: userForm.name,
       email: userForm.email,
       role: selectedRole,
@@ -224,7 +243,7 @@ export default function Home() {
             >
             <button 
               onClick={handleGetStarted}
-              className="lms-button text-lg px-8 py-4 rounded-xl flex items-center gap-2 hover:scale-105 transition-transform duration-200"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-lg px-8 py-4 rounded-xl flex items-center gap-2 hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               {user ? `Continue as ${user.displayName}` : 'Get Started'}
               <ArrowRight className="w-5 h-5" />
@@ -232,7 +251,7 @@ export default function Home() {
               
               <button 
                 onClick={handleLearnMore}
-                className="lms-button-secondary text-lg px-8 py-4 rounded-xl flex items-center gap-2 hover:scale-105 transition-transform duration-200"
+                className="bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium text-lg px-8 py-4 rounded-xl flex items-center gap-2 hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 <Play className="w-5 h-5" />
                 Learn More

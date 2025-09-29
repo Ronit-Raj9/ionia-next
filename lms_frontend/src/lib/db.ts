@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === 'development') {
 // Database connection helper
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
   const client = await clientPromise;
-  const db = client.db('EduFlowDB');
+  const db = client.db('IoniaDB');
   return { client, db };
 }
 
