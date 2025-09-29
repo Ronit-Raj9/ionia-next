@@ -55,7 +55,8 @@ export default function RegisterForm() {
     username: { isValid: true, errors: [], touched: false },
     email: { isValid: true, errors: [], touched: false },
     password: { isValid: true, errors: [], touched: false },
-    confirmPassword: { isValid: true, errors: [], touched: false }
+    confirmPassword: { isValid: true, errors: [], touched: false },
+    acceptTerms: { isValid: true, errors: [], touched: false }
   });
 
   // Password strength state
@@ -120,6 +121,14 @@ export default function RegisterForm() {
         validation = {
           isValid: passwordsMatch,
           errors: passwordsMatch ? [] : ['Passwords do not match'],
+          touched
+        };
+        break;
+
+      case 'acceptTerms':
+        validation = {
+          isValid: value === true,
+          errors: value === true ? [] : ['You must accept the terms and conditions'],
           touched
         };
         break;
@@ -253,7 +262,8 @@ export default function RegisterForm() {
           username: { isValid: true, errors: [], touched: false },
           email: { isValid: true, errors: [], touched: false },
           password: { isValid: true, errors: [], touched: false },
-          confirmPassword: { isValid: true, errors: [], touched: false }
+          confirmPassword: { isValid: true, errors: [], touched: false },
+          acceptTerms: { isValid: true, errors: [], touched: false }
         });
         
         // Redirect to login after a short delay
@@ -533,7 +543,7 @@ export default function RegisterForm() {
               name="acceptTerms"
               checked={formData.acceptTerms || false}
               onChange={handleChange}
-              onBlur={() => setTouched('acceptTerms')}
+              onBlur={() => handleBlur('acceptTerms')}
               className="mt-1 h-4 w-4 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 border-gray-300 rounded transition-colors"
               required
             />
