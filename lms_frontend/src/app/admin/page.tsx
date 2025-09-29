@@ -15,9 +15,11 @@ import {
   RefreshCw,
   Download,
   Eye,
-  Settings
+  Settings,
+  Brain
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ClassroomManager from '@/components/ClassroomManager';
 
 interface ProgressData {
   classMetrics: {
@@ -57,6 +59,7 @@ export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
+  const [activeSection, setActiveSection] = useState<'overview' | 'classrooms' | 'analytics'>('overview');
 
   // Check if user is admin
   useEffect(() => {
@@ -78,14 +81,50 @@ export default function AdminDashboard() {
       const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
       const data = await response.json();
       
-      if (data.success) {
-        setProgressData(data.data);
+      if (data.success && data.data) {
+        // Ensure all required fields have default values
+        const processedData = {
+          classMetrics: {
+            totalStudents: data.data.classMetrics?.totalStudents || 0,
+            averageScore: data.data.classMetrics?.averageScore || 0,
+            completionRate: data.data.classMetrics?.completionRate || 0,
+            totalSubmissions: data.data.classMetrics?.totalSubmissions || 0,
+            totalTimeSaved: data.data.classMetrics?.totalTimeSaved || 0,
+          },
+          heatmap: data.data.heatmap || [],
+          studentProgress: data.data.studentProgress || [],
+        };
+        setProgressData(processedData);
       } else {
         toast.error('Failed to fetch progress data');
+        // Set empty data structure to prevent errors
+        setProgressData({
+          classMetrics: {
+            totalStudents: 0,
+            averageScore: 0,
+            completionRate: 0,
+            totalSubmissions: 0,
+            totalTimeSaved: 0,
+          },
+          heatmap: [],
+          studentProgress: [],
+        });
       }
     } catch (error) {
       console.error('Error fetching progress:', error);
       toast.error('Failed to fetch progress data');
+      // Set empty data structure to prevent errors
+      setProgressData({
+        classMetrics: {
+          totalStudents: 0,
+          averageScore: 0,
+          completionRate: 0,
+          totalSubmissions: 0,
+          totalTimeSaved: 0,
+        },
+        heatmap: [],
+        studentProgress: [],
+      });
     } finally {
       setLoading(false);
     }
@@ -149,7 +188,7 @@ export default function AdminDashboard() {
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -251,7 +290,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-emerald-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
@@ -303,7 +342,47 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {progressData ? (
+        {/* Navigation Tabs */}
+        <div className="mb-8 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveSection('overview')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSection === 'overview'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4 inline mr-2" />
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveSection('classrooms')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSection === 'classrooms'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="w-4 h-4 inline mr-2" />
+              Classrooms
+            </button>
+            <button
+              onClick={() => setActiveSection('analytics')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSection === 'analytics'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Brain className="w-4 h-4 inline mr-2" />
+              Analytics
+            </button>
+          </nav>
+        </div>
+
+        {/* Overview Section */}
+        {activeSection === 'overview' && progressData ? (
           <>
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
@@ -311,7 +390,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Students</p>
-                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.totalStudents}</p>
+                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.totalStudents || 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                     <Users className="w-6 h-6 text-blue-600" />
@@ -323,7 +402,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Class Average</p>
-                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.averageScore}%</p>
+                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.averageScore || 0}%</p>
                   </div>
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-green-600" />
@@ -335,7 +414,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Completion Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.completionRate}%</p>
+                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.completionRate || 0}%</p>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                     <Award className="w-6 h-6 text-purple-600" />
@@ -347,7 +426,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Submissions</p>
-                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.totalSubmissions}</p>
+                    <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.totalSubmissions || 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                     <BookOpen className="w-6 h-6 text-orange-600" />
@@ -359,7 +438,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Time Saved</p>
-                    <p className="text-2xl font-bold text-gray-900">{Math.floor(progressData.classMetrics.totalTimeSaved / 60)}h</p>
+                    <p className="text-2xl font-bold text-gray-900">{Math.floor((progressData.classMetrics.totalTimeSaved || 0) / 60)}h</p>
                   </div>
                   <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                     <Clock className="w-6 h-6 text-red-600" />
@@ -374,9 +453,9 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-6">Class Weaknesses Heatmap</h2>
                   
-                  {progressData.heatmap.length > 0 ? (
+                  {(progressData.heatmap || []).length > 0 ? (
                     <div className="space-y-4">
-                      {progressData.heatmap.map((item, index) => (
+                      {(progressData.heatmap || []).map((item, index) => (
                         <div key={item.topic} className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className={`w-3 h-3 rounded-full ${
@@ -420,7 +499,7 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-6">Student Performance Overview</h2>
                   
-                  {progressData.studentProgress.length > 0 ? (
+                  {(progressData.studentProgress || []).length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
@@ -434,7 +513,7 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {progressData.studentProgress.map((student) => (
+                          {(progressData.studentProgress || []).map((student) => (
                             <tr key={student.studentMockId} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-2">
                                 <div className="font-medium text-gray-900">{student.displayName}</div>
@@ -442,33 +521,33 @@ export default function AdminDashboard() {
                               </td>
                               <td className="text-center py-3 px-2">
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                                  {student.metrics.totalSubmissions}
+                                  {student.metrics.totalSubmissions || 0}
                                 </span>
                               </td>
                               <td className="text-center py-3 px-2">
                                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                  student.metrics.averageScore >= 80 ? 'bg-green-100 text-green-800' :
-                                  student.metrics.averageScore >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                  (student.metrics.averageScore || 0) >= 80 ? 'bg-green-100 text-green-800' :
+                                  (student.metrics.averageScore || 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
                                   'bg-red-100 text-red-800'
                                 }`}>
-                                  {student.metrics.averageScore}%
+                                  {student.metrics.averageScore || 0}%
                                 </span>
                               </td>
                               <td className="text-center py-3 px-2">
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 capitalize">
-                                  {student.metrics.personalityType}
+                                  {student.metrics.personalityType || 'Unknown'}
                                 </span>
                               </td>
                               <td className="py-3 px-2">
                                 <div className="flex flex-wrap gap-1">
-                                  {student.metrics.weaknesses.slice(0, 2).map((weakness) => (
+                                  {(student.metrics.weaknesses || []).slice(0, 2).map((weakness) => (
                                     <span key={weakness} className="inline-flex items-center px-1 py-0.5 rounded text-xs bg-orange-100 text-orange-700">
                                       {weakness.replace('-', ' ')}
                                     </span>
                                   ))}
-                                  {student.metrics.weaknesses.length > 2 && (
+                                  {(student.metrics.weaknesses || []).length > 2 && (
                                     <span className="text-xs text-gray-500">
-                                      +{student.metrics.weaknesses.length - 2}
+                                      +{(student.metrics.weaknesses || []).length - 2}
                                     </span>
                                   )}
                                 </div>
@@ -497,7 +576,7 @@ export default function AdminDashboard() {
 
             {/* System Insights */}
             <div className="mt-8">
-              <div className="lms-card p-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">System Insights</h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -517,7 +596,7 @@ export default function AdminDashboard() {
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Time Efficiency</h3>
                     <p className="text-sm text-gray-600">
-                      Teachers save an average of {Math.floor(progressData.classMetrics.totalTimeSaved / progressData.classMetrics.totalStudents / 60)} hours per week on grading
+                      Teachers save an average of {progressData.classMetrics.totalStudents > 0 ? Math.floor(progressData.classMetrics.totalTimeSaved / progressData.classMetrics.totalStudents / 60) : 0} hours per week on grading
                     </p>
                   </div>
                   
@@ -527,7 +606,7 @@ export default function AdminDashboard() {
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Engagement Rate</h3>
                     <p className="text-sm text-gray-600">
-                      {progressData.classMetrics.completionRate}% of assignments are completed on time
+                      {progressData.classMetrics.completionRate || 0}% of assignments are completed on time
                     </p>
                   </div>
                 </div>
@@ -651,7 +730,7 @@ export default function AdminDashboard() {
             </div>
           </>
         ) : (
-          <div className="text-center py-12">
+          <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-gray-100">
             <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No Data Available</h2>
             <p className="text-gray-600 mb-6">
@@ -662,13 +741,50 @@ export default function AdminDashboard() {
               <li>• The database hasn't been seeded with demo data</li>
               <li>• There was an error loading the data</li>
             </ul>
-            <button
-              onClick={handleSeedDatabase}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2 mx-auto"
-            >
-              <Settings className="w-5 h-5" />
-              Seed Demo Data to Get Started
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={handleSeedDatabase}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                <Settings className="w-5 h-5" />
+                Seed Demo Data to Get Started
+              </button>
+              <button
+                onClick={handleRefreshData}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Refresh Data
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Classrooms Section */}
+        {activeSection === 'classrooms' && (
+          <div className="space-y-6">
+            <ClassroomManager
+              userId={user?.mockUserId || ''}
+              userName={user?.name || user?.displayName || 'Admin'}
+              role="admin"
+              schoolId={user?.schoolId || 'demo-school'}
+              onClassSelected={(classId) => {
+                console.log('Class selected:', classId);
+                // TODO: Handle class selection
+              }}
+            />
+          </div>
+        )}
+
+        {/* Analytics Section */}
+        {activeSection === 'analytics' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Advanced Analytics</h2>
+              <p className="text-gray-600">
+                Advanced analytics and reporting features will be available here.
+              </p>
+            </div>
           </div>
         )}
       </div>

@@ -18,7 +18,7 @@ import {
   UserCheck,
   Settings
 } from 'lucide-react';
-import { useRole, useStudentIds, UserRole } from '@/contexts/RoleContext';
+import { useRole, UserRole } from '@/contexts/RoleContext';
 import toast from 'react-hot-toast';
 
 const fadeIn = {
@@ -88,14 +88,13 @@ const stats = [
 export default function Home() {
   const router = useRouter();
   const { user, setRole } = useRole();
-  const studentIds = useStudentIds();
   const [showRoleSelection, setShowRoleSelection] = useState(false);
-  const [selectedStudentId, setSelectedStudentId] = useState('student1');
   const [showUserForm, setShowUserForm] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [userForm, setUserForm] = useState({
     name: '',
     email: '',
+    schoolId: '',
   });
 
   const handleGetStarted = () => {
@@ -138,10 +137,16 @@ export default function Home() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', { userForm, selectedRole, selectedStudentId });
+    console.log('Form submitted:', { userForm, selectedRole });
     
-    if (!userForm.name.trim() || !userForm.email.trim()) {
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.schoolId.trim()) {
       toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Basic school ID validation
+    if (userForm.schoolId.length < 3) {
+      toast.error('School ID must be at least 3 characters long');
       return;
     }
 
@@ -158,8 +163,8 @@ export default function Home() {
     } else if (selectedRole === 'admin') {
       mockUserId = 'admin1';
     } else {
-      // For students, assign based on existing students or create new one
-      mockUserId = selectedStudentId;
+      // For students, generate a unique ID based on email
+      mockUserId = `student_${userForm.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
     }
     
     // Set role with user info
@@ -169,20 +174,21 @@ export default function Home() {
     localStorage.setItem('ionia_user_info', JSON.stringify({
       name: userForm.name,
       email: userForm.email,
+      schoolId: userForm.schoolId,
       role: selectedRole,
       mockUserId: mockUserId,
     }));
     
     // Reset form and redirect
     setShowUserForm(false);
-    setUserForm({ name: '', email: '' });
+    setUserForm({ name: '', email: '', schoolId: '' });
     setSelectedRole(null);
     redirectToRolePage(selectedRole);
   };
 
   const handleFormCancel = () => {
     setShowUserForm(false);
-    setUserForm({ name: '', email: '' });
+    setUserForm({ name: '', email: '', schoolId: '' });
     setSelectedRole(null);
     setShowRoleSelection(true);
   };
@@ -456,25 +462,23 @@ export default function Home() {
             </p>
             
             <form onSubmit={handleFormSubmit} className="space-y-6">
-              {/* Student ID Selection for Students */}
-              {selectedRole === 'student' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Student ID
-                  </label>
-                  <select
-                    value={selectedStudentId}
-                    onChange={(e) => setSelectedStudentId(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    {studentIds.map((student) => (
-                      <option key={student.id} value={student.id}>
-                        {student.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {/* School ID Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School ID *
+                </label>
+                <input
+                  type="text"
+                  value={userForm.schoolId}
+                  onChange={(e) => setUserForm({ ...userForm, schoolId: e.target.value })}
+                  placeholder="Enter your school ID (e.g., CBSE001, ICSE123, KENDRIYA001)"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This helps us organize users by school for better management
+                </p>
+              </div>
 
               {/* Name Field */}
               <div>

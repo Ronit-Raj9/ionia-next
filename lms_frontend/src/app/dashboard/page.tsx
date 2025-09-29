@@ -132,6 +132,13 @@ export default function Dashboard() {
               : "Ready to continue your learning journey? Let's make today productive."
             }
           </p>
+          {user?.schoolId && (
+            <div className="mt-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                School: {user.schoolId}
+              </span>
+            </div>
+          )}
         </motion.div>
 
         {/* Stats Grid */}

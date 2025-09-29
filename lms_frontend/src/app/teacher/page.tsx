@@ -23,6 +23,8 @@ import toast from 'react-hot-toast';
 import GradingInterface from '@/components/GradingInterface';
 import StudentSelector from '@/components/StudentSelector';
 import TeacherInbox from '@/components/TeacherInbox';
+import AdvancedAnalytics from '@/components/AdvancedAnalytics';
+import ClassroomManager from '@/components/ClassroomManager';
 
 interface Assignment {
   _id: string;
@@ -83,7 +85,7 @@ export default function TeacherDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'inbox'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -133,7 +135,7 @@ export default function TeacherDashboard() {
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -291,6 +293,28 @@ export default function TeacherDashboard() {
               >
                 <ClipboardCheck className="w-4 h-4 inline mr-2" />
                 Grading Center
+              </button>
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'analytics'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 inline mr-2" />
+                Analytics
+              </button>
+              <button
+                onClick={() => setActiveTab('classrooms')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'classrooms'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Users className="w-4 h-4 inline mr-2" />
+                Classrooms
               </button>
               <button
                 onClick={() => setActiveTab('inbox')}
@@ -808,7 +832,32 @@ export default function TeacherDashboard() {
           </div>
         )}
 
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <div className="p-6">
+            <AdvancedAnalytics
+              studentId="class-overview"
+              isParentView={false}
+              onExportReport={(data) => {
+                console.log('Analytics report exported:', data);
+                toast.success('Analytics report exported successfully!');
+              }}
+            />
+          </div>
+        )}
+
         {/* Inbox Tab */}
+        {activeTab === 'classrooms' && (
+          <div className="space-y-6">
+            <ClassroomManager
+              userId={user?.mockUserId || ''}
+              userName={user?.name || user?.displayName || 'Teacher'}
+              role="teacher"
+              schoolId={user?.schoolId || 'demo-school'}
+            />
+          </div>
+        )}
+
         {activeTab === 'inbox' && (
           <div className="h-screen">
             <TeacherInbox

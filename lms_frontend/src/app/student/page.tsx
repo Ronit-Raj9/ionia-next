@@ -24,11 +24,14 @@ import {
   Gift,
   Users,
   MessageCircle,
-  Home
+  Home,
+  Brain
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Confetti from 'react-confetti';
 import StudentMessageTeacher from '@/components/StudentMessageTeacher';
+import PersonalityQuiz from '@/components/PersonalityQuiz';
+import ClassDiscovery from '@/components/ClassDiscovery';
 
 interface Assignment {
   _id: string;
@@ -103,9 +106,14 @@ export default function StudentDashboard() {
   const [progressBars, setProgressBars] = useState<Record<string, number>>({});
   
   // Tab state and classes
-  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'message'>('assignments');
+  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message'>('assignments');
   const [classes, setClasses] = useState<any[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
+  
+  // Personality quiz state
+  const [showPersonalityQuiz, setShowPersonalityQuiz] = useState(false);
+  const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
+  const [personalityProfile, setPersonalityProfile] = useState<any>(null);
 
   // Check if user is student
   useEffect(() => {
@@ -120,6 +128,7 @@ export default function StudentDashboard() {
       fetchProgress();
       fetchEnhancedDashboardData();
       fetchStudentClasses();
+      checkPersonalityQuizStatus();
     }
   }, [user, router]);
 
@@ -173,7 +182,7 @@ export default function StudentDashboard() {
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -208,6 +217,40 @@ export default function StudentDashboard() {
     } finally {
       setClassesLoading(false);
     }
+  };
+
+  const checkPersonalityQuizStatus = async () => {
+    try {
+      const response = await fetch(`/api/student-profiles?studentId=${user?.mockUserId}`);
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const hasQuiz = data.data.personalityProfile?.completedAt;
+        setHasCompletedQuiz(!!hasQuiz);
+        setPersonalityProfile(data.data.personalityProfile);
+      } else {
+        setHasCompletedQuiz(false);
+      }
+    } catch (error) {
+      console.error('Error checking personality quiz status:', error);
+      setHasCompletedQuiz(false);
+    }
+  };
+
+  const handleQuizComplete = (result: any) => {
+    setHasCompletedQuiz(true);
+    setPersonalityProfile(result);
+    setShowPersonalityQuiz(false);
+    toast.success('Your learning profile has been created! Assignments will now be personalized for you.');
+    
+    // Refresh data to get personalized assignments
+    fetchAssignments();
+    fetchEnhancedDashboardData();
+  };
+
+  const handleSkipQuiz = () => {
+    setShowPersonalityQuiz(false);
+    toast('You can complete the personality quiz later from your profile settings.');
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -317,6 +360,18 @@ export default function StudentDashboard() {
     );
   }
 
+  // Show personality quiz if not completed
+  if (showPersonalityQuiz) {
+    return (
+      <PersonalityQuiz
+        studentId={user.mockUserId || ''}
+        onComplete={handleQuizComplete}
+        onSkip={handleSkipQuiz}
+        isEmbedded={false}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50">
       {/* Confetti for badge achievements */}
@@ -371,6 +426,17 @@ export default function StudentDashboard() {
                 )}
               </button>
               <button
+                onClick={() => setActiveTab('discover')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'discover'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 inline mr-2" />
+                Discover Classes
+              </button>
+              <button
                 onClick={() => setActiveTab('message')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'message'
@@ -388,53 +454,112 @@ export default function StudentDashboard() {
         {/* Dashboard Tab Content */}
         {activeTab === 'assignments' && (
           <>
+            {/* Personality Quiz Prompt */}
+            {!hasCompletedQuiz && (
+              <div className="mb-8">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Brain className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          Complete Your Learning Profile
+                        </h3>
+                        <p className="text-gray-600 text-sm">
+                          Take a quick 5-question quiz to get personalized assignments tailored to your learning style!
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowPersonalityQuiz(true)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                    >
+                      <Brain className="w-4 h-4" />
+                      <span>Start Quiz</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Learning Profile Display */}
+            {hasCompletedQuiz && personalityProfile && (
+              <div className="mb-8">
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">
+                          {personalityProfile.learningStyle?.charAt(0).toUpperCase() + personalityProfile.learningStyle?.slice(1)} Learner
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Your assignments are personalized based on your learning style
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowPersonalityQuiz(true)}
+                      className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
+                    >
+                      Update Profile
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Progress Stats */}
             {progress && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Assignments Done</p>
-                  <p className="text-2xl font-bold text-gray-900">{progress.metrics.totalSubmissions}</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600">Assignments Done</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.totalSubmissions}</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                 </div>
               </div>
             </div>
             
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Average Score</p>
-                  <p className="text-2xl font-bold text-gray-900">{progress.metrics.averageScore}%</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600">Average Score</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.averageScore}%</p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                 </div>
               </div>
             </div>
             
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Completion Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">{progress.metrics.completionRate}%</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600">Completion Rate</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.completionRate}%</p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-purple-600" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
                 </div>
               </div>
             </div>
             
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Learning Streak</p>
-                  <p className="text-2xl font-bold text-gray-900">7 days</p>
+                  <p className="text-xs md:text-sm font-medium text-gray-600">Learning Streak</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900">7 days</p>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Award className="w-6 h-6 text-orange-600" />
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Award className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
                 </div>
               </div>
             </div>
@@ -553,11 +678,11 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           {/* Available Assignments */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Available Assignments</h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">Available Assignments</h2>
               
               {assignments.length > 0 ? (
                 <div className="space-y-4">
@@ -568,7 +693,7 @@ export default function StudentDashboard() {
                     return (
                       <div 
                         key={assignment._id} 
-                        className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                        className={`border-2 rounded-lg p-3 md:p-4 cursor-pointer transition-all duration-200 ${
                           selectedAssignment?._id === assignment._id 
                             ? 'border-emerald-500 bg-emerald-50' 
                             : isCompleted 
@@ -577,33 +702,37 @@ export default function StudentDashboard() {
                         }`}
                         onClick={() => !isCompleted && setSelectedAssignment(assignment)}
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-3 md:space-y-0">
                           <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <BookOpen className="w-5 h-5 text-gray-500" />
-                              <span className="font-medium text-gray-900">
-                                {assignment.title || 'Math Assignment'}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {new Date(assignment.createdAt).toLocaleDateString()}
-                              </span>
-                              {assignment.subject && (
-                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                                  {assignment.subject}
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-2">
+                              <div className="flex items-center space-x-2">
+                                <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
+                                <span className="font-medium text-gray-900 text-sm md:text-base">
+                                  {assignment.title || 'Math Assignment'}
                                 </span>
-                              )}
-                              {assignment.difficulty && (
-                                <span className={`text-xs px-2 py-1 rounded-full ${
-                                  assignment.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                  assignment.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-red-100 text-red-700'
-                                }`}>
-                                  {assignment.difficulty}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs md:text-sm text-gray-500">
+                                  {new Date(assignment.createdAt).toLocaleDateString()}
                                 </span>
-                              )}
-                              {isCompleted && (
-                                <CheckCircle className="w-5 h-5 text-green-500" />
-                              )}
+                                {assignment.subject && (
+                                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                                    {assignment.subject}
+                                  </span>
+                                )}
+                                {assignment.difficulty && (
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    assignment.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                                    assignment.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                  }`}>
+                                    {assignment.difficulty}
+                                  </span>
+                                )}
+                                {isCompleted && (
+                                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
+                                )}
+                              </div>
                             </div>
                             
                             {/* Personalized Questions */}
@@ -663,7 +792,7 @@ export default function StudentDashboard() {
 
             {/* Answer Submission Form */}
             {selectedAssignment && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mt-4 md:mt-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Submit Your Answer
                 </h3>
@@ -936,6 +1065,23 @@ export default function StudentDashboard() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Discover Classes Tab Content */}
+        {activeTab === 'discover' && (
+          <div className="space-y-6">
+            <ClassDiscovery
+              studentId={user.mockUserId || ''}
+              schoolId={user.schoolId || 'demo-school'}
+              onClassJoined={(classId) => {
+                console.log('Joined class:', classId);
+                // Refresh the classes list
+                fetchStudentClasses();
+                // Switch to My Classes tab
+                setActiveTab('classes');
+              }}
+            />
           </div>
         )}
 

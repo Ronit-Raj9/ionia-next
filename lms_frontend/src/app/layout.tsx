@@ -7,6 +7,7 @@ import Navbar from "@/shared/components/common/Navbar";
 import Footer from "@/shared/components/common/Footer";
 import Notifications from "@/shared/components/common/Notifications";
 import CookieConsent from "@/shared/components/common/CookieConsent";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { RoleProvider } from "@/contexts/RoleContext";
 import "@/styles/globals.css";
 import { Toaster } from 'react-hot-toast';
@@ -19,8 +20,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: "#10B981",
+  viewportFit: "cover",
 };
 
 // Initialize systems on first load
@@ -87,20 +90,22 @@ export default function RootLayout({
       <body className="min-h-screen bg-gray-50 flex flex-col">
         {/* Main application */}
         <RoleProvider>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
+          <ErrorBoundary>
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              
+              <main className="flex-1 pt-16">
+                {children}
+              </main>
+              
+              <Footer />
+            </div>
             
-            <main className="flex-1 pt-16">
-              {children}
-            </main>
-            
-            <Footer />
-          </div>
-          
-          {/* Global components */}
-          <Notifications />
-          <CookieConsent />
-          <Toaster position="bottom-right" />
+            {/* Global components */}
+            <Notifications />
+            <CookieConsent />
+            <Toaster position="bottom-right" />
+          </ErrorBoundary>
         </RoleProvider>
         
         {/* Service Worker registration - disabled in development */}
