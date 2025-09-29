@@ -11,6 +11,7 @@ export interface RoleUser {
   classId: string;
   name?: string;
   email?: string;
+  schoolId?: string;
 }
 
 interface RoleContextType {
@@ -84,6 +85,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
             const userInfo = JSON.parse(storedUserInfo);
             parsed.name = userInfo.name;
             parsed.email = userInfo.email;
+            parsed.schoolId = userInfo.schoolId;
             // Update display name with actual name if available
             if (userInfo.name) {
               parsed.displayName = userInfo.name;
@@ -161,12 +163,5 @@ export const useRoleCheck = (requiredRole: UserRole | UserRole[]) => {
   return user.role === requiredRole;
 };
 
-// Helper hook to get all available student IDs (1-20)
-export const useStudentIds = () => {
-  return Array.from({ length: 20 }, (_, i) => ({
-    id: `student${i + 1}`,
-    name: `Student ${i + 1}`,
-  }));
-};
 
 export default RoleContext;

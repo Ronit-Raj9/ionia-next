@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRole } from '@/contexts/RoleContext';
+import { useRole, UserRole } from '@/contexts/RoleContext';
 import { 
   BookOpen, 
   User, 
@@ -15,24 +15,129 @@ import {
   Brain,
   Upload,
   GraduationCap,
-  MessageCircle
+  MessageCircle,
+  UserCheck
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import ChatInterface from '@/components/ChatInterface';
 import ClassChat from '@/components/ClassChat';
 import ClassManager from '@/components/ClassManager';
 
 export default function Navbar() {
-  const { user, clearRole, isLoading } = useRole();
+  const { user, clearRole, isLoading, setRole } = useRole();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isGeneralOpen, setIsGeneralOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'personal' | 'class' | 'manage'>('class');
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    schoolId: '',
+  });
 
   const handleLogout = () => {
     clearRole();
     router.push('/');
     setIsMenuOpen(false);
+  };
+
+  const handleRoleSelect = (role: UserRole, mockUserId?: string) => {
+    console.log('Role selected:', { role, mockUserId });
+    try {
+      if (role === 'student') {
+        // For students, we still need the student ID selection
+        setRole(role, mockUserId);
+        setShowRoleSelection(false);
+        redirectToRolePage(role);
+      } else {
+        // For teacher and admin, show the form
+        setSelectedRole(role);
+        setShowRoleSelection(false);
+        setShowUserForm(true);
+      }
+    } catch (error) {
+      console.error('Error in handleRoleSelect:', error);
+      toast.error('Failed to select role. Please try again.');
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('Form submitted:', { userForm, selectedRole });
+    
+    if (!userForm.name.trim() || !userForm.email.trim() || !userForm.schoolId.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    // Basic school ID validation
+    if (userForm.schoolId.length < 3) {
+      toast.error('School ID must be at least 3 characters long');
+      return;
+    }
+
+    if (!selectedRole) {
+      console.error('No role selected');
+      toast.error('Please select a role first');
+      return;
+    }
+
+    // Generate mock user ID based on role
+    let mockUserId: string;
+    if (selectedRole === 'teacher') {
+      mockUserId = 'teacher1';
+    } else if (selectedRole === 'admin') {
+      mockUserId = 'admin1';
+    } else {
+      // For students, generate a unique ID based on email
+      mockUserId = `student_${userForm.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    }
+    
+    // Set role with user info
+    setRole(selectedRole, mockUserId);
+    
+    // Store additional user info in localStorage
+    localStorage.setItem('ionia_user_info', JSON.stringify({
+      name: userForm.name,
+      email: userForm.email,
+      schoolId: userForm.schoolId,
+      role: selectedRole,
+      mockUserId: mockUserId,
+    }));
+    
+    // Reset form and redirect
+    setShowUserForm(false);
+    setUserForm({ name: '', email: '', schoolId: '' });
+    setSelectedRole(null);
+    redirectToRolePage(selectedRole);
+  };
+
+  const handleFormCancel = () => {
+    setShowUserForm(false);
+    setUserForm({ name: '', email: '', schoolId: '' });
+    setSelectedRole(null);
+    setShowRoleSelection(true);
+  };
+
+  const redirectToRolePage = (role: UserRole) => {
+    switch (role) {
+      case 'teacher':
+        router.push('/teacher');
+        break;
+      case 'student':
+        router.push('/student');
+        break;
+      case 'admin':
+        router.push('/admin');
+        break;
+      default:
+        router.push('/dashboard');
+    }
   };
 
   const teacherNavigation = [
@@ -122,6 +227,11 @@ export default function Navbar() {
                   <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full capitalize">
                     {user.role}
                   </span>
+                  {user.schoolId && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                      {user.schoolId}
+                    </span>
+                  )}
                   {user.email && (
                     <div className="text-xs text-gray-500 mt-1">{user.email}</div>
                   )}
@@ -143,12 +253,12 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link
-                  href="/"
+                <button
+                  onClick={() => setShowRoleSelection(true)}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors duration-200"
                 >
                   Select Role
-                </Link>
+                </button>
               </div>
             )}
           </div>
@@ -230,13 +340,15 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="border-t border-gray-200 pt-4 space-y-2">
-                  <Link
-                    href="/"
-                    className="block bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-center"
-                    onClick={() => setIsMenuOpen(false)}
+                  <button
+                    onClick={() => {
+                      setShowRoleSelection(true);
+                      setIsMenuOpen(false);
+                    }}
+                    className="block w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-center"
                   >
                     Select Role
-                  </Link>
+                  </button>
                 </div>
               )}
             </div>
@@ -343,6 +455,171 @@ export default function Navbar() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Role Selection Modal */}
+      {showRoleSelection && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div 
+            className="bg-white rounded-2xl p-8 max-w-md w-full mx-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              Choose Your Role
+            </h2>
+            <p className="text-gray-600 mb-8 text-center">
+              Select how you'd like to experience Ionia
+            </p>
+            
+            <div className="space-y-4">
+              {/* Teacher Option */}
+              <button
+                onClick={() => handleRoleSelect('teacher')}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all duration-200 flex items-center space-x-4"
+              >
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <GraduationCap className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900">Teacher</h3>
+                  <p className="text-sm text-gray-600">Upload assignments and track student progress</p>
+                </div>
+              </button>
+
+              {/* Student Option */}
+              <button
+                onClick={() => {
+                  setSelectedRole('student');
+                  setShowRoleSelection(false);
+                  setShowUserForm(true);
+                }}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 flex items-center space-x-4"
+              >
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <UserCheck className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900">Student</h3>
+                  <p className="text-sm text-gray-600">Receive personalized assignments and submit answers</p>
+                </div>
+              </button>
+
+              {/* Admin Option */}
+              <button
+                onClick={() => handleRoleSelect('admin')}
+                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 flex items-center space-x-4"
+              >
+                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Settings className="w-6 h-6 text-purple-600" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-semibold text-gray-900">Admin</h3>
+                  <p className="text-sm text-gray-600">View class analytics and manage system</p>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowRoleSelection(false)}
+              className="w-full mt-6 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
+            >
+              Cancel
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* User Information Form Modal */}
+      {showUserForm && selectedRole && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div 
+            className="bg-white rounded-2xl p-8 max-w-md w-full mx-4"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              {selectedRole === 'teacher' ? 'Teacher Information' : 
+               selectedRole === 'admin' ? 'Admin Information' : 'Student Information'}
+            </h2>
+            <p className="text-gray-600 mb-8 text-center">
+              Please provide your details to continue
+            </p>
+            
+            <form onSubmit={handleFormSubmit} className="space-y-6">
+              {/* School ID Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  School ID *
+                </label>
+                <input
+                  type="text"
+                  value={userForm.schoolId}
+                  onChange={(e) => setUserForm({ ...userForm, schoolId: e.target.value })}
+                  placeholder="Enter your school ID (e.g., CBSE001, ICSE123, KENDRIYA001)"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This helps us organize users by school for better management
+                </p>
+              </div>
+
+              {/* Name Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  placeholder="Enter your full name"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Email Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  placeholder="Enter your email address"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-4">
+                <button
+                  type="submit"
+                  className={`flex-1 py-3 px-4 rounded-lg text-white font-medium transition-colors duration-200 ${
+                    selectedRole === 'teacher' ? 'bg-emerald-500 hover:bg-emerald-600' :
+                    selectedRole === 'student' ? 'bg-blue-500 hover:bg-blue-600' :
+                    'bg-purple-500 hover:bg-purple-600'
+                  }`}
+                >
+                  Continue as {selectedRole === 'teacher' ? 'Teacher' : 
+                              selectedRole === 'admin' ? 'Admin' : 'Student'}
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleFormCancel}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                >
+                  Back
+                </button>
+              </div>
+            </form>
+          </motion.div>
         </div>
       )}
     </nav>
