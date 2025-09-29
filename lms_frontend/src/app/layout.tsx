@@ -148,7 +148,7 @@ export default function RootLayout({
             const preloadRoutes = [];
             
             if (currentPath === '/') {
-              preloadRoutes.push('/dashboard', '/login');
+              preloadRoutes.push('/dashboard');
             } else if (currentPath === '/dashboard') {
               preloadRoutes.push('/learn', '/progress', '/profile');
             } else if (currentPath.startsWith('/admin')) {

@@ -1,7 +1,7 @@
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 
 // Initialize Google Cloud Vision client
-let visionClient: ImageAnnotatorClient;
+let visionClient: ImageAnnotatorClient | null = null;
 
 try {
   // Create credentials object from environment variables
@@ -24,6 +24,7 @@ try {
   });
 } catch (error) {
   console.error('Failed to initialize Google Vision client:', error);
+  visionClient = null;
 }
 
 export interface OCRResult {

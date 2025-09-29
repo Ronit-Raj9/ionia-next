@@ -30,8 +30,8 @@ export const useRole = () => {
   return context;
 };
 
-// Default class ID for demo
-const DEFAULT_CLASS_ID = 'demo-class-1';
+// Default class ID - can be configured via environment variable
+const DEFAULT_CLASS_ID = process.env.NEXT_PUBLIC_DEFAULT_CLASS_ID || 'demo-class-1';
 
 // Generate display names
 const getDisplayName = (role: UserRole, mockUserId: string): string => {

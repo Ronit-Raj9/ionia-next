@@ -24,12 +24,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate required parameters
+    if (!classId) {
+      return NextResponse.json(
+        { success: false, error: 'classId is required' },
+        { status: 400 }
+      );
+    }
+
     if (role === 'student') {
       // Students can only see their own progress
-      return await getStudentProgress(mockUserId, classId || 'demo-class-1');
+      return await getStudentProgress(mockUserId, classId);
     } else {
       // Teachers and admins can see class progress
-      return await getClassProgress(classId || 'demo-class-1', studentMockId);
+      return await getClassProgress(classId, studentMockId || undefined);
     }
   } catch (error) {
     console.error('Progress fetch error:', error);
@@ -61,8 +69,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'refresh') {
+      // Validate required parameters
+      if (!classId) {
+        return NextResponse.json(
+          { success: false, error: 'classId is required for refresh action' },
+          { status: 400 }
+        );
+      }
+      
       // Refresh/recalculate progress data
-      await refreshProgressData(classId || 'demo-class-1');
+      await refreshProgressData(classId);
       return NextResponse.json({
         success: true,
         message: 'Progress data refreshed successfully',
@@ -291,7 +307,7 @@ async function refreshProgressData(classId: string) {
               change: `Progress refreshed - Average: ${Math.round(averageScore)}%`,
             },
           },
-        },
+        } as any,
         { upsert: true }
       );
     }

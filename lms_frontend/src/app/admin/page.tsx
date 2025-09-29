@@ -52,6 +52,11 @@ export default function AdminDashboard() {
   const [progressData, setProgressData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Phase 2 state
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reports, setReports] = useState<any[]>([]);
 
   // Check if user is admin
   useEffect(() => {
@@ -62,6 +67,8 @@ export default function AdminDashboard() {
     
     if (user) {
       fetchProgressData();
+      fetchEnhancedDashboardData();
+      fetchReports();
     }
   }, [user, router]);
 
@@ -137,6 +144,74 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error seeding database:', error);
       toast.error('Failed to seed database');
+    }
+  };
+
+  const fetchEnhancedDashboardData = async () => {
+    try {
+      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setDashboardData(data.data);
+      } else {
+        console.error('Failed to fetch enhanced dashboard data');
+      }
+    } catch (error) {
+      console.error('Error fetching enhanced dashboard data:', error);
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const response = await fetch(`/api/reports?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setReports(data.data.reports || []);
+      } else {
+        console.error('Failed to fetch reports');
+      }
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+    }
+  };
+
+  const handleGenerateReport = async (format: 'PDF' | 'Excel', reportType: 'progress' | 'analytics' | 'parent_summary') => {
+    setReportLoading(true);
+    try {
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role: user?.role,
+          mockUserId: user?.mockUserId,
+          classId: user?.classId,
+          format,
+          reportType,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success(`${format} report generated successfully!`);
+        
+        // Open the report in a new tab
+        window.open(data.data.reportUrl, '_blank');
+        
+        // Refresh reports list
+        fetchReports();
+      } else {
+        toast.error(`Failed to generate ${format} report`);
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report');
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -456,6 +531,122 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Report Generation Section */}
+            <div className="mt-8">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-6">
+                <div className="flex items-center space-x-2 mb-6">
+                  <Download className="w-6 h-6 text-indigo-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Generate Reports</h2>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Analytics Report */}
+                  <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                    <h3 className="font-medium text-gray-900 mb-2">Analytics Report</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Comprehensive class performance and learning analytics
+                    </p>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => handleGenerateReport('PDF', 'analytics')}
+                        disabled={reportLoading}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                      >
+                        {reportLoading ? 'Generating...' : 'Generate PDF'}
+                      </button>
+                      <button
+                        onClick={() => handleGenerateReport('Excel', 'analytics')}
+                        disabled={reportLoading}
+                        className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                      >
+                        {reportLoading ? 'Generating...' : 'Generate Excel'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Progress Report */}
+                  <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                    <h3 className="font-medium text-gray-900 mb-2">Progress Report</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Individual student progress and performance tracking
+                    </p>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => handleGenerateReport('PDF', 'progress')}
+                        disabled={reportLoading}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                      >
+                        {reportLoading ? 'Generating...' : 'Generate PDF'}
+                      </button>
+                      <button
+                        onClick={() => handleGenerateReport('Excel', 'progress')}
+                        disabled={reportLoading}
+                        className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                      >
+                        {reportLoading ? 'Generating...' : 'Generate Excel'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Parent Summary */}
+                  <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                    <h3 className="font-medium text-gray-900 mb-2">Parent Summary</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Parent-friendly progress summaries and recommendations
+                    </p>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => handleGenerateReport('PDF', 'parent_summary')}
+                        disabled={reportLoading}
+                        className="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                      >
+                        {reportLoading ? 'Generating...' : 'Generate PDF'}
+                      </button>
+                      <button
+                        onClick={() => handleGenerateReport('Excel', 'parent_summary')}
+                        disabled={reportLoading}
+                        className="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+                      >
+                        {reportLoading ? 'Generating...' : 'Generate Excel'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Reports */}
+                {reports.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="font-medium text-gray-900 mb-3">Recent Reports</h3>
+                    <div className="space-y-2">
+                      {reports.slice(0, 5).map((report, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-indigo-100">
+                          <div className="flex items-center space-x-3">
+                            <Download className="w-4 h-4 text-gray-500" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {report.type.replace('_', ' ').toUpperCase()} - {report.format}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Generated {new Date(report.generatedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <a
+                            href={report.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                          >
+                            Download
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </>

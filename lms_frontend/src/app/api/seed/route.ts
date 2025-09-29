@@ -131,7 +131,6 @@ async function seedStudentProfiles() {
 
     profiles.push({
       studentMockId: `student${i}`,
-      classId: 'demo-class-1',
       previousPerformance: {
         subject: 'mathematics',
         weaknesses,

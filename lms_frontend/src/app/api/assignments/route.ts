@@ -3,6 +3,7 @@ import { getCollection, COLLECTIONS, Assignment, StudentProfile } from '@/lib/db
 import { personalizeAssignment } from '@/lib/groq';
 import { personalizeAssignmentFallback } from '@/lib/openai';
 import { uploadFile } from '@/lib/cloudinary';
+import { generateAssignmentSuggestions } from '@/lib/aiRecommendations';
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,8 +68,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create assignment document
-    const assignment: Assignment = {
+    // Create assignment document (omit _id to let MongoDB generate it)
+    const assignmentData: Omit<Assignment, '_id'> = {
       classId,
       taskType: 'math',
       originalContent: { questions: questionsList },
@@ -126,11 +127,47 @@ export async function POST(request: NextRequest) {
     });
 
     const personalizedVersions = await Promise.all(personalizationPromises);
-    assignment.personalizedVersions = personalizedVersions;
+    assignmentData.personalizedVersions = personalizedVersions;
 
     // Save assignment to database
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
-    const result = await assignmentsCollection.insertOne(assignment);
+    const result = await assignmentsCollection.insertOne(assignmentData);
+
+    // Generate AI-powered assignment suggestions for future use
+    try {
+      const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
+      const classProgress = await progressCollection.find({ classId }).toArray();
+      
+      if (classProgress.length > 0) {
+        // Calculate class weaknesses and average mastery
+        const allWeaknesses = classProgress.flatMap(p => p.metrics.weaknesses || []);
+        const weaknessFrequency = allWeaknesses.reduce((acc, weakness) => {
+          acc[weakness] = (acc[weakness] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const topWeaknesses = Object.entries(weaknessFrequency)
+          .sort(([,a], [,b]) => (b as number) - (a as number))
+          .slice(0, 5)
+          .map(([weakness]) => weakness);
+        
+        const averageScore = classProgress.reduce((sum, p) => sum + (p.metrics.averageScore || 0), 0) / classProgress.length;
+        
+        // Generate suggestions
+        const suggestions = await generateAssignmentSuggestions(topWeaknesses, averageScore, 'mathematics');
+        
+        // Update the assignment with suggestions
+        await assignmentsCollection.updateOne(
+          { _id: result.insertedId },
+          { $set: { suggestions } }
+        );
+        
+        assignmentData.suggestions = suggestions;
+      }
+    } catch (suggestionError) {
+      console.error('Failed to generate assignment suggestions:', suggestionError);
+      // Continue without suggestions - not critical for assignment creation
+    }
 
     return NextResponse.json({
       success: true,
@@ -138,7 +175,7 @@ export async function POST(request: NextRequest) {
         assignmentId: result.insertedId,
         personalizedCount: personalizedVersions.length,
         assignment: {
-          ...assignment,
+          ...assignmentData,
           _id: result.insertedId,
         },
       },

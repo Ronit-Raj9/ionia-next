@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useAuth } from '@/providers/AuthProvider';
+import { useRole } from '@/contexts/RoleContext';
 import { motion } from 'framer-motion';
 import { 
   BookOpen, 
@@ -30,33 +30,33 @@ const staggerContainer = {
 };
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user } = useRole();
 
   const stats = [
     {
       title: 'Questions Attempted',
-      value: user?.totalQuestionsAttempted || 0,
+      value: 0, // Will be loaded from API
       icon: <BookOpen className="w-6 h-6" />,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
     },
     {
       title: 'Accuracy Rate',
-      value: `${user?.accuracyPercentage || 0}%`,
+      value: '0%', // Will be loaded from API
       icon: <Target className="w-6 h-6" />,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
     },
     {
       title: 'Learning Streak',
-      value: `${user?.learningStreak || 0} days`,
+      value: '0 days', // Will be loaded from API
       icon: <Zap className="w-6 h-6" />,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100'
     },
     {
       title: 'Average Score',
-      value: `${user?.averageScore || 0}%`,
+      value: '0%', // Will be loaded from API
       icon: <TrendingUp className="w-6 h-6" />,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
@@ -119,15 +119,15 @@ export default function Dashboard() {
           variants={fadeIn}
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {user?.fullName}!
-            {user?.isGuest && (
+            Welcome back, {user?.displayName || user?.name || 'Student'}!
+            {user?.role.includes('guest') && (
               <span className="ml-3 px-3 py-1 text-sm bg-emerald-100 text-emerald-700 rounded-full">
                 Guest Mode
               </span>
             )}
           </h1>
           <p className="text-gray-600">
-            {user?.isGuest 
+            {user?.role.includes('guest')
               ? "You're in guest mode. Explore the LMS features and UI without creating an account."
               : "Ready to continue your learning journey? Let's make today productive."
             }
