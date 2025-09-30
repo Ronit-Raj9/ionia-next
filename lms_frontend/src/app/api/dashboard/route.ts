@@ -8,8 +8,16 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
     const mockUserId = searchParams.get('mockUserId');
-    const classId = searchParams.get('classId') || 'demo-class-1';
+    const classId = searchParams.get('classId');
     const schoolId = searchParams.get('schoolId');
+    
+    // Validate required parameters
+    if (!classId || classId === 'unassigned') {
+      return NextResponse.json(
+        { success: false, error: 'User must be assigned to a class. Please join or create a class first.' },
+        { status: 400 }
+      );
+    }
 
     if (!role || !mockUserId) {
       return NextResponse.json(

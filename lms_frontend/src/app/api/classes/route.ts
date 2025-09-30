@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+    const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     
     // Fetch classes created by this teacher
     const classes = await classesCollection
@@ -31,9 +32,24 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray() as unknown as Class[];
 
+    // For each class, count the assignments
+    const classesWithCounts = await Promise.all(
+      classes.map(async (classData) => {
+        const assignmentCount = await assignmentsCollection.countDocuments({
+          classId: classData._id?.toString()
+        });
+
+        return {
+          ...classData,
+          studentCount: classData.studentMockIds?.length || 0,
+          recentAssignments: assignmentCount
+        };
+      })
+    );
+
     return NextResponse.json({
       success: true,
-      data: classes
+      data: classesWithCounts
     });
   } catch (error) {
     console.error('Error fetching classes:', error);

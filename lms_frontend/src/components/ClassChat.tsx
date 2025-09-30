@@ -224,9 +224,14 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
       const formData = new FormData();
       formData.append('action', 'create_chat');
       formData.append('role', role);
+      if (!classId || classId === 'unassigned') {
+        toast.error('Please create or join a class first');
+        return;
+      }
+      
       formData.append('userId', userId);
       formData.append('userName', userName);
-      formData.append('classId', classId || 'default-class');
+      formData.append('classId', classId);
       formData.append('className', `${userName}'s Class`);
       formData.append('description', 'Class discussion and collaboration space');
       formData.append('selectedStudents', JSON.stringify(selectedStudents.map(s => ({ id: s.id, name: s.name }))));
@@ -606,7 +611,7 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
         <StudentSelector
           onStudentsSelected={createClassChat}
           onClose={() => setShowStudentSelector(false)}
-          classId={classId || 'default-class'}
+          classId={classId || 'unassigned'}
           teacherId={userId}
           teacherRole={role}
         />

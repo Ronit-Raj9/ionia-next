@@ -135,7 +135,7 @@ export default function Home() {
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted:', { userForm, selectedRole });
     
@@ -156,34 +156,79 @@ export default function Home() {
       return;
     }
 
-    // Generate mock user ID based on role
-    let mockUserId: string;
-    if (selectedRole === 'teacher') {
-      mockUserId = 'teacher1';
-    } else if (selectedRole === 'admin') {
-      mockUserId = 'admin1';
-    } else {
-      // For students, generate a unique ID based on email
-      mockUserId = `student_${userForm.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    try {
+      // Register user in database
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: userForm.name,
+          email: userForm.email,
+          role: selectedRole,
+          schoolId: userForm.schoolId,
+          classId: 'unassigned' // Will be assigned when user joins/creates a class
+        })
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        // If user already exists, try to fetch their data
+        if (data.error.includes('already exists')) {
+          const userCheckResponse = await fetch(`/api/auth/register?email=${encodeURIComponent(userForm.email)}`);
+          const userData = await userCheckResponse.json();
+          
+          if (userData.success && userData.exists) {
+            // Use existing user data
+            setRole(userData.user.role, userData.user.mockUserId);
+            
+            localStorage.setItem('ionia_user_info', JSON.stringify({
+              name: userData.user.name,
+              email: userData.user.email,
+              schoolId: userData.user.schoolId,
+              role: userData.user.role,
+              mockUserId: userData.user.mockUserId,
+              userId: userData.user.userId
+            }));
+            
+            toast.success(`Welcome back, ${userData.user.name}!`);
+            redirectToRolePage(userData.user.role);
+            return;
+          }
+        }
+        
+        toast.error(data.error || 'Failed to register');
+        return;
+      }
+
+      // Successfully registered
+      const userData = data.data;
+      
+      // Set role with user info
+      setRole(userData.role, userData.mockUserId);
+      
+      // Store user info in localStorage
+      localStorage.setItem('ionia_user_info', JSON.stringify({
+        name: userData.name,
+        email: userData.email,
+        schoolId: userData.schoolId,
+        role: userData.role,
+        mockUserId: userData.mockUserId,
+        userId: userData.userId
+      }));
+      
+      toast.success(`Welcome, ${userData.name}! Account created successfully.`);
+      
+      // Reset form and redirect
+      setShowUserForm(false);
+      setUserForm({ name: '', email: '', schoolId: '' });
+      setSelectedRole(null);
+      redirectToRolePage(userData.role);
+      
+    } catch (error) {
+      console.error('Error registering user:', error);
+      toast.error('Failed to register. Please try again.');
     }
-    
-    // Set role with user info
-    setRole(selectedRole, mockUserId);
-    
-    // Store additional user info in localStorage
-    localStorage.setItem('ionia_user_info', JSON.stringify({
-      name: userForm.name,
-      email: userForm.email,
-      schoolId: userForm.schoolId,
-      role: selectedRole,
-      mockUserId: mockUserId,
-    }));
-    
-    // Reset form and redirect
-    setShowUserForm(false);
-    setUserForm({ name: '', email: '', schoolId: '' });
-    setSelectedRole(null);
-    redirectToRolePage(selectedRole);
   };
 
   const handleFormCancel = () => {

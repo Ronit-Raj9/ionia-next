@@ -1,17 +1,22 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getUserDisplayName } from '@/lib/userUtils';
 
-export type UserRole = 'teacher' | 'student' | 'admin' | 'guest';
+export type UserRole = 'teacher' | 'student' | 'admin';
 
 export interface RoleUser {
   role: UserRole;
-  mockUserId: string;
-  displayName: string;
+  mockUserId: string; // Legacy field - for backward compatibility
+  userId?: string; // New user ID
+  name: string; // Full name (Required)
+  email: string; // Email (Required)
+  displayName?: string; // Optional display name
   classId: string;
-  name?: string;
-  email?: string;
   schoolId?: string;
+  profileImage?: string;
+  phoneNumber?: string;
+  status?: 'active' | 'inactive' | 'suspended';
 }
 
 interface RoleContextType {
@@ -31,38 +36,52 @@ export const useRole = () => {
   return context;
 };
 
-// Default class ID - can be configured via environment variable
-const DEFAULT_CLASS_ID = process.env.NEXT_PUBLIC_DEFAULT_CLASS_ID || 'demo-class-1';
-
-// Generate display names
-const getDisplayName = (role: UserRole, mockUserId: string): string => {
+// Generate default display names (fallback only)
+const getDefaultName = (role: UserRole, id: string): string => {
   switch (role) {
     case 'teacher':
-      return 'Demo Teacher';
+      return 'Teacher';
     case 'admin':
-      return 'Demo Admin';
+      return 'Administrator';
     case 'student':
-      const studentNumber = mockUserId.replace('student', '');
-      return `Student ${studentNumber}`;
+      return 'Student';
     default:
-      return 'Demo User';
+      return 'User';
   }
 };
 
-// Generate mock user ID
+// Generate default email (fallback only)
+const getDefaultEmail = (role: UserRole, id: string): string => {
+  const sanitizedId = id.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  switch (role) {
+    case 'teacher':
+      return `${sanitizedId}@teacher.school.edu`;
+    case 'admin':
+      return `${sanitizedId}@admin.school.edu`;
+    case 'student':
+      return `${sanitizedId}@student.school.edu`;
+    default:
+      return `${sanitizedId}@school.edu`;
+  }
+};
+
+// Generate unique user ID - NO HARDCODED DEFAULTS
 const generateMockUserId = (role: UserRole, customId?: string): string => {
   if (customId) return customId;
   
+  // Generate unique ID with timestamp
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  
   switch (role) {
     case 'teacher':
-      return 'teacher1';
+      return `teacher_${timestamp}_${random}`;
     case 'admin':
-      return 'admin1';
+      return `admin_${timestamp}_${random}`;
     case 'student':
-      // Default to student1, but this should be selected by user
-      return 'student1';
+      return `student_${timestamp}_${random}`;
     default:
-      return `${role}1`;
+      return `${role}_${timestamp}_${random}`;
   }
 };
 
@@ -113,11 +132,34 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
 
   const setRole = (role: UserRole, mockUserId?: string) => {
     const generatedMockUserId = generateMockUserId(role, mockUserId);
+    
+    // Check if there's additional user info in localStorage
+    let additionalInfo: any = {};
+    if (typeof window !== 'undefined') {
+      try {
+        const storedUserInfo = localStorage.getItem('ionia_user_info');
+        if (storedUserInfo) {
+          additionalInfo = JSON.parse(storedUserInfo);
+        }
+      } catch (error) {
+        console.error('Error reading user info from localStorage:', error);
+      }
+    }
+    
+    // Create user with required name and email fields
+    // Use stored info if available, otherwise use defaults
     const newUser: RoleUser = {
       role,
       mockUserId: generatedMockUserId,
-      displayName: getDisplayName(role, generatedMockUserId),
-      classId: DEFAULT_CLASS_ID,
+      userId: additionalInfo.userId || generatedMockUserId,
+      name: additionalInfo.name || getDefaultName(role, generatedMockUserId),
+      email: additionalInfo.email || getDefaultEmail(role, generatedMockUserId),
+      displayName: additionalInfo.name || getDefaultName(role, generatedMockUserId),
+      classId: additionalInfo.classId || 'unassigned', // Must be assigned to real class
+      schoolId: additionalInfo.schoolId,
+      profileImage: additionalInfo.profileImage,
+      phoneNumber: additionalInfo.phoneNumber,
+      status: additionalInfo.status || 'active',
     };
 
     setUser(newUser);

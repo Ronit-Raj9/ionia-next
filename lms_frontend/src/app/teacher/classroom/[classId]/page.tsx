@@ -557,20 +557,20 @@ export default function ClassroomPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Yet</h3>
-                <p className="text-gray-600 mb-6">
+              <p className="text-gray-600 mb-6">
                   Share the join code with students to add them to this classroom
-                </p>
-                <button
+              </p>
+              <button
                   onClick={() => copyJoinCode(classDetails?.class.joinCode || '')}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center space-x-2"
-                >
+              >
                   <Copy className="w-4 h-4" />
                   <span>Copy Join Code</span>
-                </button>
-              </div>
+              </button>
+            </div>
             )}
           </div>
         )}

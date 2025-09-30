@@ -11,6 +11,14 @@ import {
 } from '@/lib/demo-seed-data';
 
 export async function POST(request: NextRequest) {
+  // ⚠️ DEVELOPMENT ONLY - Disable in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { success: false, error: 'Seed endpoint is disabled in production. This endpoint is for development/testing only.' },
+      { status: 403 }
+    );
+  }
+  
   try {
     const { action, useScience = true } = await request.json();
 

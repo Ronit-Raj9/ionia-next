@@ -881,7 +881,7 @@ export default function TeacherDashboard() {
                 }
               }}
               onClose={() => setShowStudentSelector(false)}
-              classId={user?.classId || 'default-class'}
+              classId={user?.classId || 'unassigned'}
               teacherId={user?.mockUserId || ''}
               teacherRole={user?.role || 'teacher'}
             />

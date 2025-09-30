@@ -48,8 +48,15 @@ export async function POST(request: NextRequest) {
       ]
     }) as unknown as Class | null;
 
+    if (!classId || classId === 'unassigned') {
+      return NextResponse.json(
+        { success: false, error: 'Valid classId is required to generate reports' },
+        { status: 400 }
+      );
+    }
+
     const progressRecords = await progressCollection.find({ 
-      classId: classId || 'demo-class-1' 
+      classId: classId 
     }).toArray() as unknown as Progress[];
 
     const studentProfiles = await profilesCollection.find({
@@ -77,12 +84,12 @@ export async function POST(request: NextRequest) {
       generatedAt: result.generatedAt,
       type: reportType,
       generatedBy: mockUserId,
-      classId: classId || 'demo-class-1'
+      classId: classId
     };
 
     // Update progress records with report export info
     await progressCollection.updateMany(
-      { classId: classId || 'demo-class-1' },
+      { classId: classId },
       { 
         $push: { 
           reportExports: reportMetadata 
@@ -115,7 +122,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
     const mockUserId = searchParams.get('mockUserId');
-    const classId = searchParams.get('classId') || 'demo-class-1';
+    const classId = searchParams.get('classId');
+    
+    if (!classId || classId === 'unassigned') {
+      return NextResponse.json(
+        { success: false, error: 'Valid classId is required' },
+        { status: 400 }
+      );
+    }
 
     // Validate role permissions
     if (role !== 'teacher' && role !== 'admin') {

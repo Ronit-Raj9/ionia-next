@@ -33,6 +33,7 @@ import StudentMessageTeacher from '@/components/StudentMessageTeacher';
 import PersonalityQuiz from '@/components/PersonalityQuiz';
 import ClassDiscovery from '@/components/ClassDiscovery';
 import StudentClassroom from '@/components/StudentClassroom';
+import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 
 interface Assignment {
   _id: string;
@@ -116,6 +117,9 @@ export default function StudentDashboard() {
   const [showPersonalityQuiz, setShowPersonalityQuiz] = useState(false);
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [personalityProfile, setPersonalityProfile] = useState<any>(null);
+  
+  // Teacher info from class
+  const [teacherInfo, setTeacherInfo] = useState<{ id: string; name: string } | null>(null);
 
   // Check if user is student
   useEffect(() => {
@@ -209,6 +213,14 @@ export default function StudentDashboard() {
       
       if (data.success) {
         setClasses(data.data);
+        
+        // Get teacher info from first class if available
+        if (data.data && data.data.length > 0) {
+          const firstClass = data.data[0];
+          if (firstClass.teacherMockId) {
+            fetchTeacherInfo(firstClass.teacherMockId);
+          }
+        }
       } else {
         console.error('Failed to fetch student classes:', data.error);
         setClasses([]);
@@ -218,6 +230,22 @@ export default function StudentDashboard() {
       setClasses([]);
     } finally {
       setClassesLoading(false);
+    }
+  };
+  
+  const fetchTeacherInfo = async (teacherId: string) => {
+    try {
+      // Try to get teacher from users API or extract from class data
+      const usersCollection = await fetch(`/api/students`); // This returns users
+      const userData = await usersCollection.json();
+      
+      if (userData.success) {
+        // Find teacher in users data (this API might need updating to support teacher lookup)
+        setTeacherInfo({ id: teacherId, name: 'Teacher' });
+      }
+    } catch (error) {
+      console.error('Error fetching teacher info:', error);
+      setTeacherInfo({ id: teacherId, name: 'Teacher' });
     }
   };
 
@@ -366,7 +394,7 @@ export default function StudentDashboard() {
   if (showPersonalityQuiz) {
     return (
       <PersonalityQuiz
-        studentId={user.mockUserId || ''}
+        studentId={getUserId(user) || ''}
         onComplete={handleQuizComplete}
         onSkip={handleSkipQuiz}
         isEmbedded={false}
@@ -391,7 +419,7 @@ export default function StudentDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome, {user.name || user.displayName}!
+            Welcome, {getUserDisplayName(user)}!
           </h1>
           <p className="text-gray-600">
             Complete your personalized assignments and track your learning progress.
@@ -1099,13 +1127,23 @@ export default function StudentDashboard() {
         {activeTab === 'message' && (
           <div className="space-y-6">
             <div className="h-96">
-              <StudentMessageTeacher
-                studentId={user.mockUserId || ''}
-                studentName={user.name || user.displayName || 'Student'}
-                teacherId="teacher1" // For now, defaulting to teacher1
-                teacherName="Teacher"
-                isEmbedded={true}
-              />
+              {teacherInfo ? (
+                <StudentMessageTeacher
+                  studentId={getUserId(user) || ''}
+                  studentName={getUserDisplayName(user)}
+                  teacherId={teacherInfo.id}
+                  teacherName={teacherInfo.name}
+                  isEmbedded={true}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="text-center p-8">
+                    <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600 mb-2">No teacher assigned</p>
+                    <p className="text-sm text-gray-500">Please join a class to message your teacher</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

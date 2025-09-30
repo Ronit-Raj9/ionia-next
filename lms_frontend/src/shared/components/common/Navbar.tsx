@@ -23,6 +23,7 @@ import toast from 'react-hot-toast';
 import ChatInterface from '@/components/ChatInterface';
 import ClassChat from '@/components/ClassChat';
 import ClassManager from '@/components/ClassManager';
+import { getUserDisplayName } from '@/lib/userUtils';
 
 export default function Navbar() {
   const { user, clearRole, isLoading, setRole } = useRole();
@@ -87,15 +88,18 @@ export default function Navbar() {
       return;
     }
 
-    // Generate mock user ID based on role
+    // Generate unique mock user ID based on role and email
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    const emailPrefix = userForm.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '_');
+    
     let mockUserId: string;
     if (selectedRole === 'teacher') {
-      mockUserId = 'teacher1';
+      mockUserId = `teacher_${emailPrefix}_${random}`;
     } else if (selectedRole === 'admin') {
-      mockUserId = 'admin1';
+      mockUserId = `admin_${emailPrefix}_${random}`;
     } else {
-      // For students, generate a unique ID based on email
-      mockUserId = `student_${userForm.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      mockUserId = `student_${emailPrefix}_${random}`;
     }
     
     // Set role with user info
@@ -223,7 +227,7 @@ export default function Navbar() {
             ) : user ? (
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">
-                  Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName}</span>
+                  Welcome, <span className="font-medium text-gray-900">{getUserDisplayName(user)}</span>
                   <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full capitalize">
                     {user.role}
                   </span>
@@ -231,9 +235,6 @@ export default function Navbar() {
                     <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
                       {user.schoolId}
                     </span>
-                  )}
-                  {user.email && (
-                    <div className="text-xs text-gray-500 mt-1">{user.email}</div>
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
