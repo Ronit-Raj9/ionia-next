@@ -40,6 +40,26 @@ interface ClassDetails {
     createdAt: string;
     updatedAt: string;
   };
+  students: Array<{
+    studentMockId: string;
+    name: string;
+    email: string;
+    personalityTestCompleted?: boolean;
+    oceanTraits?: {
+      openness: number;
+      conscientiousness: number;
+      extraversion: number;
+      agreeableness: number;
+      neuroticism: number;
+    };
+    learningPreferences?: {
+      visualLearner: boolean;
+      auditoryLearner: boolean;
+      kinestheticLearner: boolean;
+      readingWritingLearner: boolean;
+      preferredDifficulty: string;
+    };
+  }>;
   statistics: {
     totalStudents: number;
     totalAssignments: number;
@@ -464,38 +484,188 @@ export default function ClassroomPage() {
         )}
 
         {activeTab === 'students' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Student Management</h3>
-              <p className="text-gray-600 mb-6">
-                View and manage students in this classroom
-              </p>
-              <button
-                onClick={() => toast.info('Student management coming soon!')}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors"
-              >
-                Manage Students
-              </button>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Students ({classDetails?.students?.length || 0})</h3>
             </div>
+            
+            {classDetails?.students && classDetails.students.length > 0 ? (
+              <div className="divide-y divide-gray-200">
+                {classDetails.students.map((student, index) => (
+                  <div key={student.studentMockId} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">{student.name}</h4>
+                          <p className="text-sm text-gray-500">{student.email}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">ID: {student.studentMockId}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-4">
+                        {student.personalityTestCompleted ? (
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle className="w-5 h-5 text-emerald-500" />
+                            <span className="text-sm text-emerald-600 font-medium">OCEAN Complete</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-5 h-5 text-gray-400" />
+                            <span className="text-sm text-gray-500">Pending Test</span>
+                          </div>
+                        )}
+                        
+                        {student.learningPreferences && (
+                          <div className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            {student.learningPreferences.visualLearner && '👁️ Visual'}
+                            {student.learningPreferences.auditoryLearner && ' 🎧 Auditory'}
+                            {student.learningPreferences.kinestheticLearner && ' 🤸 Kinesthetic'}
+                            {student.learningPreferences.readingWritingLearner && ' 📖 R/W'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {student.oceanTraits && (
+                      <div className="mt-3 grid grid-cols-5 gap-2">
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Openness</div>
+                          <div className="text-sm font-semibold text-emerald-600">{student.oceanTraits.openness}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Conscient.</div>
+                          <div className="text-sm font-semibold text-blue-600">{student.oceanTraits.conscientiousness}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Extraver.</div>
+                          <div className="text-sm font-semibold text-purple-600">{student.oceanTraits.extraversion}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Agreeable.</div>
+                          <div className="text-sm font-semibold text-pink-600">{student.oceanTraits.agreeableness}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs text-gray-500">Neuroticism</div>
+                          <div className="text-sm font-semibold text-orange-600">{student.oceanTraits.neuroticism}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Students Yet</h3>
+                <p className="text-gray-600 mb-6">
+                  Share the join code with students to add them to this classroom
+                </p>
+                <button
+                  onClick={() => copyJoinCode(classDetails?.class.joinCode || '')}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center space-x-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>Copy Join Code</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'assignments' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="text-center py-12">
-              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">All Assignments</h3>
-              <p className="text-gray-600 mb-6">
-                View, edit, and manage all assignments for this classroom
-              </p>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                All Assignments ({classDetails?.statistics.totalAssignments || 0})
+              </h3>
               <button
                 onClick={() => router.push('/teacher#create')}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
               >
-                Create New Assignment
+                <Plus className="w-4 h-4" />
+                <span>Create New</span>
               </button>
             </div>
+            
+            {classDetails?.recentAssignments && classDetails.recentAssignments.length > 0 ? (
+              <div className="divide-y divide-gray-200">
+                {classDetails.recentAssignments.map((assignment) => (
+                  <div 
+                    key={assignment._id} 
+                    className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      // View assignment details
+                      router.push(`/teacher/assignment/${assignment._id}`);
+                    }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <h4 className="text-base font-medium text-gray-900">{assignment.title}</h4>
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                            {assignment.subject}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                          {assignment.dueDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            Created: {new Date(assignment.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/teacher/assignment/${assignment._id}/edit`);
+                          }}
+                          className="text-gray-400 hover:text-emerald-600 transition-colors"
+                          title="Edit"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/teacher/assignment/${assignment._id}`);
+                          }}
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Assignments Yet</h3>
+                <p className="text-gray-600 mb-6">
+                  Create your first assignment for this classroom
+                </p>
+                <button
+                  onClick={() => router.push('/teacher#create')}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center space-x-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Create First Assignment</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 

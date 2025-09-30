@@ -86,28 +86,19 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
       const data = await response.json();
 
       if (data.success) {
-        setStudents(data.data);
-        if (data.fallback) {
-          toast('Using default students (database connection issue)', { icon: 'ℹ️' });
+        setStudents(data.data || []);
+        if (data.message) {
+          toast(data.message, { icon: 'ℹ️' });
         }
       } else {
-        throw new Error(data.error || 'Failed to fetch students');
+        console.error('Failed to fetch students:', data.error);
+        toast.error(data.error || 'Failed to load students');
+        setStudents([]);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
-      toast.error('Failed to load students');
-      
-      // Fallback to default students
-      const fallbackStudents: Student[] = [];
-      for (let i = 1; i <= 20; i++) {
-        fallbackStudents.push({
-          id: `student${i}`,
-          name: `Student ${i}`,
-          email: `student${i}@example.com`,
-          isSelected: false
-        });
-      }
-      setStudents(fallbackStudents);
+      toast.error('Failed to load students. Please check your connection.');
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -116,16 +107,45 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
   const fetchStudentsFromClass = async (selectedClassData: Class) => {
     setLoading(true);
     try {
+      console.log('Fetching students for class:', selectedClassData.className);
+      console.log('Class student IDs:', selectedClassData.studentMockIds);
+      
       // First get all available students
       const response = await fetch(`/api/students?role=${teacherRole}`);
       const data = await response.json();
 
+      console.log('All students response:', data);
+
       if (data.success) {
         // Filter students to only show those in the selected class
-        const classStudents = data.data.filter((student: any) => 
-          selectedClassData.studentMockIds.includes(student.id)
-        );
-        setStudents(classStudents);
+        const classStudents = data.data.filter((student: any) => {
+          const isInClass = selectedClassData.studentMockIds.includes(student.id);
+          console.log(`Student ${student.id} (${student.name}) in class:`, isInClass);
+          return isInClass;
+        });
+        
+        console.log('Filtered class students:', classStudents);
+        
+        // If no students match, use the class's student IDs to create entries
+        if (classStudents.length === 0 && selectedClassData.studentMockIds.length > 0) {
+          console.log('No matching students found, creating from class IDs');
+          const fallbackStudents: Student[] = selectedClassData.studentMockIds.map((id) => {
+            // Try to find the student in the full list
+            const foundStudent = data.data.find((s: any) => s.id === id);
+            if (foundStudent) {
+              return { ...foundStudent, isSelected: false };
+            }
+            return {
+              id,
+              name: id.replace(/_/g, ' ').replace(/student/i, 'Student '),
+              email: `${id}@student.com`,
+              isSelected: false
+            };
+          });
+          setStudents(fallbackStudents);
+        } else {
+          setStudents(classStudents);
+        }
         
         if (data.fallback) {
           toast('Using default students (database connection issue)', { icon: 'ℹ️' });
@@ -138,10 +158,10 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
       toast.error('Failed to load students');
       
       // Fallback to class students
-      const fallbackStudents: Student[] = selectedClassData.studentMockIds.map((id, index) => ({
+      const fallbackStudents: Student[] = selectedClassData.studentMockIds.map((id) => ({
         id,
-        name: `Student ${id.replace('student', '')}`,
-        email: `${id}@example.com`,
+        name: id.replace(/_/g, ' ').replace(/student/i, 'Student '),
+        email: `${id}@student.com`,
         isSelected: false
       }));
       setStudents(fallbackStudents);
@@ -202,15 +222,28 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
     await fetchStudentsFromClass(classData);
   };
 
-  const handleEntireClassSelection = () => {
+  const handleEntireClassSelection = async () => {
     if (!selectedClass) return;
     
-    // Select all students in the class
-    setStudents(prev => prev.map(student => ({ ...student, isSelected: true })));
-    
-    // Immediately confirm with all students selected
-    const allStudents = students.map(student => ({ ...student, isSelected: true }));
-    onStudentsSelected(allStudents, selectedClass);
+    // Check if we have students loaded
+    if (students.length === 0) {
+      // If no students loaded yet, fetch them first
+      await fetchStudentsFromClass(selectedClass);
+      // Wait a tiny bit for state to update
+      setTimeout(() => {
+        setStudents(prev => prev.map(student => ({ ...student, isSelected: true })));
+        const allStudents = students.map(student => ({ ...student, isSelected: true }));
+        if (allStudents.length > 0) {
+          onStudentsSelected(allStudents, selectedClass);
+        }
+      }, 200);
+    } else {
+      // Select all students in the class
+      const allStudents = students.map(student => ({ ...student, isSelected: true }));
+      setStudents(allStudents);
+      // Immediately confirm with all students selected
+      onStudentsSelected(allStudents, selectedClass);
+    }
   };
 
   const handleBackToClasses = () => {
@@ -326,11 +359,27 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
                           
                           <div className="flex items-center space-x-2">
                             <button
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                handleClassSelection(classData);
-                                // Wait a moment for students to load, then select all
-                                setTimeout(() => handleEntireClassSelection(), 100);
+                                setSelectedClass(classData);
+                                // Fetch students and then select entire class
+                                await fetchStudentsFromClass(classData);
+                                // Wait for state to update, then select all and confirm
+                                setTimeout(() => {
+                                  const allSelected = students.map(s => ({ ...s, isSelected: true }));
+                                  if (allSelected.length > 0) {
+                                    onStudentsSelected(allSelected, classData);
+                                  } else {
+                                    // If still no students, use fallback
+                                    const fallbackStudents = classData.studentMockIds.map((id) => ({
+                                      id,
+                                      name: id.replace(/_/g, ' ').replace(/student/i, 'Student '),
+                                      email: `${id}@student.com`,
+                                      isSelected: true
+                                    }));
+                                    onStudentsSelected(fallbackStudents, classData);
+                                  }
+                                }, 300);
                               }}
                               className="px-3 py-1 text-xs font-medium text-white bg-emerald-600 rounded-full hover:bg-emerald-700 transition-colors"
                             >

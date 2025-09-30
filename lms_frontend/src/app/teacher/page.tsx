@@ -28,6 +28,8 @@ import ClassroomManager from '@/components/ClassroomManager';
 
 interface Assignment {
   _id: string;
+  title: string;
+  subject: string;
   taskType: string;
   originalContent: {
     questions: string[];
@@ -394,14 +396,14 @@ export default function TeacherDashboard() {
                 
                 {assignments.length > 0 ? (
                   <div className="space-y-4">
-                    {assignments.map((assignment) => (
-                      <div key={assignment._id} className="border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200 bg-white">
+                    {assignments.map((assignment: any) => (
+                      <div key={assignment._id} className="border border-gray-100 rounded-lg p-4 hover:bg-gray-50 transition-colors duration-200 bg-white cursor-pointer" onClick={() => router.push(`/teacher/assignment/${assignment._id}`)}>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-2">
                               <FileText className="w-5 h-5 text-gray-500" />
                               <span className="font-medium text-gray-900">
-                                Math Assignment
+                                {assignment.title || 'Untitled Assignment'}
                               </span>
                               <span className="text-sm text-gray-500">
                                 {new Date(assignment.createdAt).toLocaleDateString()}
