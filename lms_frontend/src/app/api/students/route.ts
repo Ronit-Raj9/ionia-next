@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
 
     try {
       const usersCollection = await getCollection(COLLECTIONS.USERS);
+      const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
       
       // Get all student users
       const students = await usersCollection
@@ -24,56 +25,43 @@ export async function GET(request: NextRequest) {
         .sort({ mockUserId: 1 })
         .toArray();
 
+      // Get student profiles to fetch names
+      const profiles = await studentProfilesCollection
+        .find({})
+        .toArray();
+      
+      // Create a map of mockUserId to profile
+      const profileMap = new Map();
+      profiles.forEach((profile: any) => {
+        profileMap.set(profile.studentMockId, profile);
+      });
+
       // Transform to the format expected by StudentSelector
-      const formattedStudents = students.map(student => ({
-        id: student.mockUserId,
-        name: student.displayName || student.name || `Student ${student.mockUserId.replace('student', '')}`,
-        email: student.email || `${student.mockUserId}@example.com`,
-        isSelected: false
-      }));
+      const formattedStudents = students.map(student => {
+        const profile = profileMap.get(student.mockUserId);
+        return {
+          id: student.mockUserId,
+          name: profile?.studentName || profile?.name || student.displayName || student.name || `Student ${student.mockUserId.replace('student', '')}`,
+          email: profile?.email || student.email || `${student.mockUserId}@example.com`,
+          isSelected: false
+        };
+      });
 
-      // If no students found in database, use fallback
-      if (formattedStudents.length === 0) {
-        const fallbackStudents = [];
-        for (let i = 1; i <= 20; i++) {
-          fallbackStudents.push({
-            id: `student${i}`,
-            name: `Student ${i}`,
-            email: `student${i}@example.com`,
-            isSelected: false
-          });
-        }
-
-        return NextResponse.json({
-          success: true,
-          data: fallbackStudents,
-          fallback: true
-        });
-      }
-
+      // Return the students found (even if empty)
       return NextResponse.json({
         success: true,
-        data: formattedStudents
+        data: formattedStudents,
+        message: formattedStudents.length === 0 ? 'No students found in database' : undefined
       });
     } catch (dbError) {
       console.error('Database connection error:', dbError);
       
-      // Fallback to default students if database is not available
-      const fallbackStudents = [];
-      for (let i = 1; i <= 20; i++) {
-        fallbackStudents.push({
-          id: `student${i}`,
-          name: `Student ${i}`,
-          email: `student${i}@example.com`,
-          isSelected: false
-        });
-      }
-
+      // Return error instead of fallback dummy data
       return NextResponse.json({
-        success: true,
-        data: fallbackStudents,
-        fallback: true
-      });
+        success: false,
+        error: 'Database connection failed. Please check your database connection.',
+        data: []
+      }, { status: 500 });
     }
   } catch (error) {
     console.error('Error fetching students:', error);

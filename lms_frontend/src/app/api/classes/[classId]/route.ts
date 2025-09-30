@@ -31,6 +31,7 @@ export async function GET(
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
+    const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
     
     // Find the class
     const classData = await classesCollection.findOne({
@@ -74,6 +75,13 @@ export async function GET(
       .limit(10)
       .toArray();
 
+    // Fetch student details for all students in the class
+    const students = await studentProfilesCollection
+      .find({ 
+        studentMockId: { $in: classData.studentMockIds }
+      })
+      .toArray();
+
     // Calculate class statistics
     const totalAssignments = assignments.length;
     const totalSubmissions = submissions.length;
@@ -98,6 +106,14 @@ export async function GET(
           createdAt: classData.createdAt,
           updatedAt: classData.updatedAt
         },
+        students: students.map(s => ({
+          studentMockId: s.studentMockId,
+          name: s.studentName || s.name || s.studentMockId,
+          email: s.email || `${s.studentMockId}@student.com`,
+          personalityTestCompleted: s.personalityTestCompleted,
+          oceanTraits: s.oceanTraits,
+          learningPreferences: s.learningPreferences
+        })),
         statistics: {
           totalStudents: classData.studentMockIds.length,
           totalAssignments,
@@ -108,7 +124,7 @@ export async function GET(
             ? Math.round((gradedSubmissions / (classData.studentMockIds.length * totalAssignments)) * 100)
             : 0
         },
-        recentAssignments: assignments.slice(0, 5).map(a => ({
+        recentAssignments: assignments.map(a => ({
           _id: a._id,
           title: a.title,
           subject: a.subject,

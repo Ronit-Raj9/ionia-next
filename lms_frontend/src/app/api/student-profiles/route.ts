@@ -66,52 +66,59 @@ export async function POST(request: NextRequest) {
       updateData.testTakenDate = new Date();
     }
 
+    // Prepare $setOnInsert data (only for new documents)
+    const setOnInsertData: any = {
+      // Initialize subject mastery for Science
+      subjectMastery: [
+        {
+          subject: 'Science',
+          grade: '9',
+          topics: [],
+          overallMasteryScore: 0
+        },
+        {
+          subject: 'Science',
+          grade: '10',
+          topics: [],
+          overallMasteryScore: 0
+        }
+      ],
+      assignmentHistory: [],
+      
+      // Legacy fields for compatibility
+      previousPerformance: {
+        subject: 'mathematics',
+        weaknesses: [],
+        masteryScores: {}
+      },
+      intellectualProfile: {
+        strengths: [],
+        responsePatterns: []
+      },
+      engagementMetrics: {
+        completionRate: 0,
+        badgeCount: 0,
+        progressChains: [],
+        streakDays: 0,
+        totalTimeSpent: 0
+      },
+      createdAt: new Date()
+    };
+
+    // Only add personalityProfile to $setOnInsert if we're not updating it in $set
+    if (!updateData.personalityProfile) {
+      setOnInsertData.personalityProfile = {
+        type: 'visual',
+        quizResponses: []
+      };
+    }
+
     // Upsert the profile
     const result = await profilesCollection.updateOne(
       { studentMockId: studentId },
       { 
         $set: updateData,
-        $setOnInsert: {
-          // Initialize subject mastery for Science
-          subjectMastery: [
-            {
-              subject: 'Science',
-              grade: '9',
-              topics: [],
-              overallMasteryScore: 0
-            },
-            {
-              subject: 'Science',
-              grade: '10',
-              topics: [],
-              overallMasteryScore: 0
-            }
-          ],
-          assignmentHistory: [],
-          
-          // Legacy fields for compatibility
-          previousPerformance: {
-            subject: 'mathematics',
-            weaknesses: [],
-            masteryScores: {}
-          },
-          intellectualProfile: {
-            strengths: [],
-            responsePatterns: []
-          },
-          personalityProfile: {
-            type: 'visual',
-            quizResponses: []
-          },
-          engagementMetrics: {
-            completionRate: 0,
-            badgeCount: 0,
-            progressChains: [],
-            streakDays: 0,
-            totalTimeSpent: 0
-          },
-          createdAt: new Date()
-        }
+        $setOnInsert: setOnInsertData
       },
       { upsert: true }
     );

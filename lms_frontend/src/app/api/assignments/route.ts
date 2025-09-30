@@ -118,6 +118,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Log assignment creation details
+    console.log('Creating assignment with details:', {
+      classId,
+      schoolId,
+      subject,
+      title,
+      assignedStudentsCount: assignedStudentsList.length
+    });
+
     // Create assignment document (omit _id to let MongoDB generate it)
     const assignmentData: Omit<Assignment, '_id'> = {
       classId,
@@ -346,11 +355,19 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      // Build query - filter by student and optionally by class
+      const query: any = {
+        assignedTo: studentMockId,
+        isPublished: true
+      };
+
+      // If classId is provided, only show assignments for that class
+      if (classId) {
+        query.classId = classId;
+      }
+
       const assignments = await assignmentsCollection
-        .find({ 
-          assignedTo: studentMockId,
-          isPublished: true
-        })
+        .find(query)
         .sort({ createdAt: -1 })
         .toArray();
 

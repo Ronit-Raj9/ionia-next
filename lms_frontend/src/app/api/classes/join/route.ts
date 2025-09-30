@@ -4,7 +4,7 @@ import { getCollection, COLLECTIONS } from '@/lib/db';
 // POST - Student joins a class using join code
 export async function POST(request: NextRequest) {
   try {
-    const { joinCode, studentId, schoolId, role } = await request.json();
+    const { joinCode, studentId, schoolId, role, studentName, studentEmail } = await request.json();
 
     if (role !== 'student') {
       return NextResponse.json(
@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+    const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
     
     // Find class by join code and school ID
     const classData = await classesCollection.findOne({
@@ -57,6 +58,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Failed to join class' },
         { status: 500 }
+      );
+    }
+
+    // Create or update student profile with name information
+    if (studentName || studentEmail) {
+      await studentProfilesCollection.updateOne(
+        { studentMockId: studentId },
+        { 
+          $set: { 
+            ...(studentName && { studentName, name: studentName }),
+            ...(studentEmail && { email: studentEmail }),
+            schoolId: schoolId,
+            updatedAt: new Date()
+          },
+          $setOnInsert: {
+            personalityTestCompleted: false,
+            createdAt: new Date()
+          }
+        },
+        { upsert: true }
       );
     }
 

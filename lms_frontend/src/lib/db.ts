@@ -114,6 +114,9 @@ export interface Class {
 export interface StudentProfile {
   _id?: ObjectId;
   studentMockId: string;
+  studentName?: string; // Full name of the student
+  name?: string; // Alternative name field for compatibility
+  email?: string; // Student email
   schoolId?: string;
   
   // OCEAN Personality Traits (0-100 scale)

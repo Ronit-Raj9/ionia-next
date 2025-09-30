@@ -247,7 +247,7 @@ export async function updateClassAnalytics(
       mostCommonErrors
     };
     
-    const grading Efficiency = {
+    const gradingEfficiency = {
       totalSubmissionsGraded: gradedSubmissions.length,
       aiGradedCount: gradedSubmissions.filter(s => s.grade?.gradedBy?.includes('AI')).length,
       teacherGradedCount: gradedSubmissions.filter(s => s.grade?.gradedBy === 'teacher').length,
