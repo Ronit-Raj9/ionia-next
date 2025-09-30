@@ -140,7 +140,7 @@ export default function StudentDashboard() {
 
   const fetchAssignments = async () => {
     try {
-      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&studentMockId=${user?.mockUserId}`);
+      const response = await fetch(`/api/assignments?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&studentId=${user?.userId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -156,7 +156,7 @@ export default function StudentDashboard() {
 
   const fetchSubmissions = async () => {
     try {
-      const response = await fetch(`/api/submissions?role=${user?.role}&mockUserId=${user?.mockUserId}`);
+      const response = await fetch(`/api/submissions?role=${user?.role}&userId=${user?.userId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -172,7 +172,7 @@ export default function StudentDashboard() {
 
   const fetchProgress = async () => {
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -188,7 +188,7 @@ export default function StudentDashboard() {
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -208,7 +208,7 @@ export default function StudentDashboard() {
     setClassesLoading(true);
     try {
       // Fetch classes where this student is a member
-      const response = await fetch(`/api/classes/student?studentId=${user?.mockUserId}&role=${user?.role}`);
+      const response = await fetch(`/api/classes/student?studentId=${user?.userId}&role=${user?.role}`);
       const data = await response.json();
       
       if (data.success) {
@@ -251,7 +251,7 @@ export default function StudentDashboard() {
 
   const checkPersonalityQuizStatus = async () => {
     try {
-      const response = await fetch(`/api/student-profiles?studentId=${user?.mockUserId}`);
+      const response = await fetch(`/api/student-profiles?studentId=${user?.userId}`);
       const data = await response.json();
       
       if (data.success && data.data) {
@@ -323,7 +323,7 @@ export default function StudentDashboard() {
     try {
       const formData = new FormData();
       formData.append('role', user?.role || '');
-      formData.append('studentMockId', user?.mockUserId || '');
+      formData.append('studentId', user?.userId || '');
       formData.append('assignmentId', selectedAssignment._id);
       formData.append('textAnswer', textAnswer);
       
@@ -992,7 +992,7 @@ export default function StudentDashboard() {
               /* Show detailed classroom view */
               <StudentClassroom
                 classId={selectedClassId}
-                studentId={user?.mockUserId || ''}
+                studentId={user?.userId || ''}
                 studentName={user?.name || user?.displayName || 'Student'}
                 onBack={() => setSelectedClassId(null)}
               />
@@ -1110,7 +1110,7 @@ export default function StudentDashboard() {
         {activeTab === 'discover' && (
           <div className="space-y-6">
             <ClassDiscovery
-              studentId={user.mockUserId || ''}
+              studentId={user.userId || ''}
               schoolId={user.schoolId || 'demo-school'}
               onClassJoined={(classId) => {
                 console.log('Joined class:', classId);

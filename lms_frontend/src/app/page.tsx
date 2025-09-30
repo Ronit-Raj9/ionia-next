@@ -179,17 +179,22 @@ export default function Home() {
           const userData = await userCheckResponse.json();
           
           if (userData.success && userData.exists) {
-            // Use existing user data
-            setRole(userData.user.role, userData.user.mockUserId);
-            
-            localStorage.setItem('ionia_user_info', JSON.stringify({
+            // Store existing user info FIRST
+            const userInfo = {
               name: userData.user.name,
               email: userData.user.email,
               schoolId: userData.user.schoolId,
               role: userData.user.role,
-              mockUserId: userData.user.mockUserId,
-              userId: userData.user.userId
-            }));
+              userId: userData.user.userId,
+              classId: userData.user.classId || 'unassigned'
+            };
+            
+            localStorage.setItem('ionia_user_info', JSON.stringify(userInfo));
+            
+            console.log('✅ Existing user logged in:', userInfo);
+            
+            // Use existing user data
+            setRole(userData.user.role, userData.user.userId);
             
             toast.success(`Welcome back, ${userData.user.name}!`);
             redirectToRolePage(userData.user.role);
@@ -204,18 +209,22 @@ export default function Home() {
       // Successfully registered
       const userData = data.data;
       
-      // Set role with user info
-      setRole(userData.role, userData.mockUserId);
-      
-      // Store user info in localStorage
-      localStorage.setItem('ionia_user_info', JSON.stringify({
+      // Store user info in localStorage FIRST (before setRole reads it)
+      const userInfo = {
         name: userData.name,
         email: userData.email,
         schoolId: userData.schoolId,
         role: userData.role,
-        mockUserId: userData.mockUserId,
-        userId: userData.userId
-      }));
+        userId: userData.userId,
+        classId: userData.classId || 'unassigned'
+      };
+      
+      localStorage.setItem('ionia_user_info', JSON.stringify(userInfo));
+      
+      console.log('✅ User registered and saved:', userInfo);
+      
+      // Set role with user info (this will read from localStorage)
+      setRole(userData.role, userData.userId);
       
       toast.success(`Welcome, ${userData.name}! Account created successfully.`);
       

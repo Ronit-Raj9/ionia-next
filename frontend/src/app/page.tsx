@@ -126,9 +126,9 @@ const testimonials = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white overflow-hidden">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-emerald-900 via-emerald-700 to-teal-600 text-white min-h-screen flex items-center">
+      <section className="relative bg-gradient-to-br from-emerald-900 via-emerald-700 to-teal-600 text-white min-h-[calc(100vh-4rem)] flex items-center py-12 md:py-0 overflow-hidden">
         {/* Animated Background */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:40px_40px] opacity-30"></div>
@@ -176,9 +176,9 @@ export default function Home() {
           }}
         />
 
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-4 sm:px-6 relative z-0 w-full">
           <motion.div 
-            className="max-w-5xl mx-auto text-center"
+            className="max-w-5xl mx-auto text-center w-full"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
@@ -194,7 +194,7 @@ export default function Home() {
             </motion.div>
              */}
             <motion.h1 
-              className="text-6xl md:text-8xl font-extrabold mb-8 leading-tight"
+              className="text-5xl sm:text-6xl md:text-8xl font-extrabold mb-8 leading-tight px-4"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.8 }}
@@ -219,17 +219,17 @@ export default function Home() {
             </motion.p>
             
             <motion.div 
-              className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+              className="flex flex-col sm:flex-row gap-6 justify-center items-center px-4"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.8 }}
             >
               <Link 
                 href="/login"
-                className="group relative px-10 py-4 bg-white text-emerald-700 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all duration-300 hover:bg-emerald-50 hover:scale-105 hover:shadow-2xl"
+                className="group relative px-8 sm:px-10 py-3 sm:py-4 bg-white text-emerald-700 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-3 transition-all duration-300 hover:bg-emerald-50 hover:scale-105 hover:shadow-2xl w-full sm:w-auto max-w-xs"
               >
                 <span>Start Free</span>
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform duration-300" />
+                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform duration-300" />
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
               </Link>
               {/* <Link 
@@ -265,7 +265,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
         
         <motion.div 
-          className="container mx-auto px-6 relative z-10"
+          className="container mx-auto px-6 relative z-0"
           variants={staggerContainer}
           initial="initial"
           whileInView="animate"
@@ -329,7 +329,7 @@ export default function Home() {
       <section className="py-24 bg-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.05)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
         
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-6 relative z-0">
           <motion.div 
             className="text-center mb-20"
             initial={{ opacity: 0, y: 30 }}
@@ -374,6 +374,6 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

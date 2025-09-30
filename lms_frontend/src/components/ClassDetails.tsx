@@ -333,3 +333,4 @@ export default function ClassDetails({ classId, userId, role, onClose }: ClassDe
     </div>
   );
 }
+

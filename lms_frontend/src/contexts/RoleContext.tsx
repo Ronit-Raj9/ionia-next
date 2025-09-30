@@ -7,8 +7,7 @@ export type UserRole = 'teacher' | 'student' | 'admin';
 
 export interface RoleUser {
   role: UserRole;
-  mockUserId: string; // Legacy field - for backward compatibility
-  userId?: string; // New user ID
+  userId: string; // Unique user ID
   name: string; // Full name (Required)
   email: string; // Email (Required)
   displayName?: string; // Optional display name
@@ -21,7 +20,7 @@ export interface RoleUser {
 
 interface RoleContextType {
   user: RoleUser | null;
-  setRole: (role: UserRole, mockUserId?: string) => void;
+  setRole: (role: UserRole, userId?: string) => void;
   clearRole: () => void;
   isLoading: boolean;
 }
@@ -66,23 +65,15 @@ const getDefaultEmail = (role: UserRole, id: string): string => {
 };
 
 // Generate unique user ID - NO HARDCODED DEFAULTS
-const generateMockUserId = (role: UserRole, customId?: string): string => {
+const generateUserId = (role: UserRole, customId?: string): string => {
   if (customId) return customId;
   
   // Generate unique ID with timestamp
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
+  const prefix = role.substring(0, 3).toUpperCase(); // TCH, STU, ADM
   
-  switch (role) {
-    case 'teacher':
-      return `teacher_${timestamp}_${random}`;
-    case 'admin':
-      return `admin_${timestamp}_${random}`;
-    case 'student':
-      return `student_${timestamp}_${random}`;
-    default:
-      return `${role}_${timestamp}_${random}`;
-  }
+  return `${prefix}_${timestamp}_${random}`;
 };
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
@@ -130,8 +121,8 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setRole = (role: UserRole, mockUserId?: string) => {
-    const generatedMockUserId = generateMockUserId(role, mockUserId);
+  const setRole = (role: UserRole, userId?: string) => {
+    const generatedUserId = generateUserId(role, userId);
     
     // Check if there's additional user info in localStorage
     let additionalInfo: any = {};
@@ -150,11 +141,10 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     // Use stored info if available, otherwise use defaults
     const newUser: RoleUser = {
       role,
-      mockUserId: generatedMockUserId,
-      userId: additionalInfo.userId || generatedMockUserId,
-      name: additionalInfo.name || getDefaultName(role, generatedMockUserId),
-      email: additionalInfo.email || getDefaultEmail(role, generatedMockUserId),
-      displayName: additionalInfo.name || getDefaultName(role, generatedMockUserId),
+      userId: additionalInfo.userId || generatedUserId,
+      name: additionalInfo.name || getDefaultName(role, generatedUserId),
+      email: additionalInfo.email || getDefaultEmail(role, generatedUserId),
+      displayName: additionalInfo.name || getDefaultName(role, generatedUserId),
       classId: additionalInfo.classId || 'unassigned', // Must be assigned to real class
       schoolId: additionalInfo.schoolId,
       profileImage: additionalInfo.profileImage,

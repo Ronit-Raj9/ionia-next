@@ -271,3 +271,4 @@ export default function ClassDiscovery({ studentId, schoolId, onClassJoined }: C
     </div>
   );
 }
+

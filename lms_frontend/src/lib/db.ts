@@ -59,8 +59,7 @@ export const COLLECTIONS = {
 export interface User {
   _id?: ObjectId;
   role: 'teacher' | 'student' | 'admin';
-  mockUserId: string; // Legacy field - to be deprecated
-  userId?: string; // New unique user ID (replaces mockUserId)
+  userId: string; // Unique user ID
   name: string; // Full name of the user (Teacher/Student/Admin)
   email: string; // Email address (required)
   displayName?: string; // Optional display name
@@ -82,12 +81,10 @@ export interface User {
 export interface Class {
   _id?: ObjectId;
   className: string;
-  teacherMockId: string; // Legacy field - to be deprecated
-  teacherId?: string; // New teacher ID (replaces teacherMockId)
+  teacherId: string; // Teacher user ID
   teacherName?: string; // Teacher's full name for display
   schoolId: string; // School ID for filtering
-  studentMockIds: string[]; // Legacy field - to be deprecated
-  studentIds?: string[]; // New student IDs (replaces studentMockIds)
+  studentIds: string[]; // Student user IDs
   description?: string;
   subject?: string; // Science, Math, etc.
   grade?: string; // Grade level
@@ -125,7 +122,7 @@ export interface Class {
 
 export interface StudentProfile {
   _id?: ObjectId;
-  studentMockId: string;
+  studentId: string; // Student user ID
   studentName?: string; // Full name of the student
   name?: string; // Alternative name field for compatibility
   email?: string; // Student email
@@ -278,7 +275,7 @@ export interface Assignment {
   // Personalization
   personalizationEnabled: boolean;
   personalizedVersions: {
-    studentMockId: string;
+    studentId: string;
     adaptedContent: {
       questions: string[];
       variations: string;
@@ -313,7 +310,7 @@ export interface Submission {
   _id?: ObjectId;
   assignmentId: string;
   classId: string;
-  studentMockId: string;
+  studentId: string;
   studentName: string;
   subject: string; // For analytics aggregation
   topic: string; // For progress tracking
@@ -436,7 +433,7 @@ export interface Submission {
 
 export interface Progress {
   _id?: ObjectId;
-  studentMockId: string;
+  studentId: string;
   classId: string;
   schoolId?: string;
   metrics: {
@@ -701,7 +698,7 @@ export interface ClassAnalytics {
   
   // Student Rankings (optional, privacy-conscious)
   studentRankings?: {
-    studentMockId: string;
+    studentId: string;
     studentName: string;
     averageScore: number;
     rank: number;

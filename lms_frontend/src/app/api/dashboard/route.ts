@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
-    const mockUserId = searchParams.get('mockUserId');
+    const userId = searchParams.get('userId');
     const classId = searchParams.get('classId');
     const schoolId = searchParams.get('schoolId');
     
@@ -19,17 +19,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!role || !mockUserId) {
+    if (!role || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Role and mockUserId are required' },
+        { success: false, error: 'Role and userId are required' },
         { status: 400 }
       );
     }
 
     if (role === 'teacher') {
-      return await getTeacherDashboardData(mockUserId, classId, schoolId);
+      return await getTeacherDashboardData(userId, classId, schoolId);
     } else if (role === 'student') {
-      return await getStudentDashboardData(mockUserId, classId, schoolId);
+      return await getStudentDashboardData(userId, classId, schoolId);
     } else if (role === 'admin') {
       return await getAdminDashboardData(classId, schoolId);
     } else {

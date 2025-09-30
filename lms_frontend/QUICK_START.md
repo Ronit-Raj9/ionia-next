@@ -356,3 +356,4 @@ After testing the foundation:
 - [ ] Check analytics data
 
 **Ready to build the remaining 30% and have a fully functional demo! 🚀**
+

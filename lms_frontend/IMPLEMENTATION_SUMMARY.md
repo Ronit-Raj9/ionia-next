@@ -309,3 +309,4 @@ The foundation is solid. To complete the demo:
 **Total: 10-12 hours to fully functional demo**
 
 Current state: ~70% complete, with all core logic implemented and tested!
+

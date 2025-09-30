@@ -702,3 +702,4 @@ export default {
   gradeSubmission,
   generateClassInsights
 };
+

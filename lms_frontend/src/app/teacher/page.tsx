@@ -105,7 +105,7 @@ export default function TeacherDashboard() {
 
   const fetchAssignments = async () => {
     try {
-      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/assignments?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -121,7 +121,7 @@ export default function TeacherDashboard() {
 
   const fetchProgress = async () => {
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -137,7 +137,7 @@ export default function TeacherDashboard() {
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -184,7 +184,7 @@ export default function TeacherDashboard() {
     try {
       const formData = new FormData();
       formData.append('role', user?.role || '');
-      formData.append('mockUserId', user?.mockUserId || '');
+      formData.append('userId', user?.userId || '');
       formData.append('classId', user?.classId || '');
       formData.append('questions', questions);
       formData.append('title', assignmentTitle);
@@ -825,7 +825,7 @@ export default function TeacherDashboard() {
         {activeTab === 'grading' && (
           <div className="h-screen">
             <GradingInterface
-              teacherId={user?.mockUserId || ''}
+              teacherId={user?.userId || ''}
               teacherName={user?.name || user?.displayName || 'Teacher'}
               onGradeSubmitted={() => {
                 toast.success('Grade updated successfully!');
@@ -882,7 +882,7 @@ export default function TeacherDashboard() {
               }}
               onClose={() => setShowStudentSelector(false)}
               classId={user?.classId || 'unassigned'}
-              teacherId={user?.mockUserId || ''}
+              teacherId={user?.userId || ''}
               teacherRole={user?.role || 'teacher'}
             />
         )}

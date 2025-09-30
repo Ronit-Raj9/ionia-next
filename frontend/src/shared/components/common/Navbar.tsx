@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, memo } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, User } from "lucide-react";
@@ -21,6 +22,25 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
   const userRole = useAuthStore(state => state.user?.role);
   const { isNavbarOpen, toggleNavbar, setNavbarOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure component is mounted (for portal)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isNavbarOpen && isMounted) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isNavbarOpen, isMounted]);
 
   // Debug logging removed to prevent console spam
 
@@ -61,6 +81,152 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
     return null;
   }
+
+  // Mobile Sidebar Content (to be rendered via portal)
+  const mobileSidebar = isMounted && isNavbarOpen ? (
+    <AnimatePresence>
+      {isNavbarOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/50 z-[9998] md:hidden"
+            onClick={() => setNavbarOpen(false)}
+          />
+          
+          {/* Sidebar */}
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed top-0 left-0 h-full w-80 bg-white shadow-2xl z-[9999] md:hidden overflow-y-auto"
+          >
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <Link 
+                href="/" 
+                className="flex items-center space-x-3"
+                onClick={() => setNavbarOpen(false)}
+              >
+                <Image
+                  src="/ionia_logo.png"
+                  alt="iONIA Logo"
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 object-contain"
+                />
+                <span className="text-2xl font-extrabold text-black">
+                  iONIA
+                </span>
+              </Link>
+              <button
+                onClick={() => setNavbarOpen(false)}
+                className="p-2 rounded-lg text-gray-600 hover:text-black hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* User Info Section */}
+            {isAuthenticated && (
+              <div className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-gray-200">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 rounded-full bg-emerald-400 flex items-center justify-center text-white font-bold text-lg">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-black">{displayName}</p>
+                    <p className="text-sm text-gray-600">
+                      {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Admin' : 'Student'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Items */}
+            <div className="py-4">
+              <div className="px-4 mb-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Navigation
+                </p>
+              </div>
+              {navItems.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center px-6 py-3 text-base font-medium transition-all duration-200 ${
+                    pathname === item.href
+                      ? "bg-emerald-50 text-emerald-600 border-r-4 border-emerald-500"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-black"
+                  }`}
+                  onClick={() => setNavbarOpen(false)}
+                >
+                  <span>{item.name}</span>
+                </Link>
+              ))}
+            </div>
+
+            {/* Admin & User Actions */}
+            <div className="py-4 border-t border-gray-200">
+              {isAuthenticated ? (
+                <>
+                  {hasAdminAccess && (
+                    <Link
+                      href="/admin"
+                      className="flex items-center space-x-3 px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-black transition-all duration-200"
+                      onClick={() => setNavbarOpen(false)}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>{isSuperAdmin ? 'Super Admin Panel' : 'Admin Panel'}</span>
+                    </Link>
+                  )}
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center space-x-3 px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-black transition-all duration-200"
+                    onClick={() => setNavbarOpen(false)}
+                  >
+                    <User className="w-5 h-5" />
+                    <span>Dashboard</span>
+                  </Link>
+                </>
+              ) : (
+                <div className="px-6 space-y-3">
+                  <Link
+                    href="/login"
+                    className="block w-full text-center px-4 py-3 text-base font-semibold text-black bg-gray-100 rounded-lg border border-gray-300 hover:bg-gray-200 transition-all duration-200"
+                    onClick={() => setNavbarOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="block w-full text-center px-4 py-3 text-base font-semibold text-white bg-emerald-400 rounded-lg border border-emerald-400 hover:bg-emerald-500 transition-all duration-200"
+                    onClick={() => setNavbarOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  ) : null;
 
   return (
     <nav
@@ -167,71 +333,11 @@ const Navbar = memo(function Navbar({ className = "" }: NavbarProps) {
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isNavbarOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="fixed inset-0 z-40 bg-white/95 backdrop-blur-lg md:hidden"
-          >
-            <div className="container mx-auto px-4 py-8">
-              <div className="flex flex-col space-y-6 items-center justify-center min-h-[60vh]">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`text-lg font-bold transition-all duration-200 px-4 py-2 rounded-xl shadow bg-gray-100 hover:bg-gray-200 text-black hover:text-gray-800 border border-gray-300 ${pathname === item.href ? "bg-emerald-100 text-black" : ""}`}
-                    onClick={() => setNavbarOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-                {isAuthenticated ? (
-                  <>
-                    {hasAdminAccess && (
-                      <Link
-                        href="/admin"
-                        className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-gray-100 hover:bg-gray-200 text-black hover:text-gray-800 border border-gray-300"
-                        onClick={() => setNavbarOpen(false)}
-                      >
-                        {isSuperAdmin ? 'Super Admin Panel' : 'Admin Panel'}
-                      </Link>
-                    )}
-                    <Link
-                      href="/dashboard"
-                      className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-gray-100 hover:bg-gray-200 text-black hover:text-gray-800 border border-gray-300"
-                      onClick={() => setNavbarOpen(false)}
-                    >
-                      {displayName}
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-gray-100 hover:bg-gray-200 text-black hover:text-gray-800 border border-gray-300"
-                      onClick={() => setNavbarOpen(false)}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      href="/register"
-                      className="text-lg font-bold px-4 py-2 rounded-xl shadow bg-emerald-400 text-white border border-emerald-400 hover:bg-emerald-500 hover:scale-105 transition-all duration-200"
-                      onClick={() => setNavbarOpen(false)}
-                    >
-                      Sign Up
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       {/* Subtle border at the bottom */}
       <div className="absolute left-0 right-0 bottom-0 h-px bg-gray-200" />
+
+      {/* Render Mobile Sidebar via Portal */}
+      {isMounted && typeof document !== 'undefined' && mobileSidebar && createPortal(mobileSidebar, document.body)}
     </nav>
   );
 });
