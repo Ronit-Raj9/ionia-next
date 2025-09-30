@@ -59,27 +59,39 @@ export const COLLECTIONS = {
 export interface User {
   _id?: ObjectId;
   role: 'teacher' | 'student' | 'admin';
-  mockUserId: string;
-  email?: string;
+  mockUserId: string; // Legacy field - to be deprecated
+  userId?: string; // New unique user ID (replaces mockUserId)
+  name: string; // Full name of the user (Teacher/Student/Admin)
+  email: string; // Email address (required)
+  displayName?: string; // Optional display name
   classId: string;
   schoolId?: string;
+  phoneNumber?: string; // Contact number
+  profileImage?: string; // Profile photo URL
   dashboardPreferences?: {
     theme: string;
     preferredSubjects: string[];
   };
+  // Additional fields for proper user management
+  status?: 'active' | 'inactive' | 'suspended';
+  lastLogin?: Date;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export interface Class {
   _id?: ObjectId;
   className: string;
-  teacherMockId: string;
-  schoolId: string; // Add schoolId for filtering
-  studentMockIds: string[];
+  teacherMockId: string; // Legacy field - to be deprecated
+  teacherId?: string; // New teacher ID (replaces teacherMockId)
+  teacherName?: string; // Teacher's full name for display
+  schoolId: string; // School ID for filtering
+  studentMockIds: string[]; // Legacy field - to be deprecated
+  studentIds?: string[]; // New student IDs (replaces studentMockIds)
   description?: string;
   subject?: string; // Science, Math, etc.
-  grade?: string; // 9, 10 for demo
-  syllabus?: 'CBSE' | 'ICSE' | 'State'; // Indian board system
+  grade?: string; // Grade level
+  syllabus?: 'CBSE' | 'ICSE' | 'State' | 'IB' | 'Other'; // Board/Curriculum
   isActive: boolean;
   joinCode?: string; // For students to join classes
   

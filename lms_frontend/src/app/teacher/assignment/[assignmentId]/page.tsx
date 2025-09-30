@@ -452,9 +452,8 @@ export default function AssignmentDetailPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {version.studentName || version.studentMockId}
+                            {version.studentName || version.studentMockId.replace(/_/g, ' ').replace(/student/i, 'Student ').replace(/gmail|com/g, '').trim()}
                           </p>
-                          <p className="text-sm text-gray-500">{version.studentMockId}</p>
                         </div>
                       </div>
                       
