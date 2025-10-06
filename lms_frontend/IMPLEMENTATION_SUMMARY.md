@@ -310,3 +310,6 @@ The foundation is solid. To complete the demo:
 
 Current state: ~70% complete, with all core logic implemented and tested!
 
+
+
+
