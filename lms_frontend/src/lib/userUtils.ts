@@ -7,7 +7,7 @@ import { User } from './db';
 
 /**
  * Get display name for a user
- * Priority: name > displayName > email prefix
+ * Priority: name > displayName > formatted mockUserId
  */
 export function getUserDisplayName(user: Partial<User> | null | undefined): string {
   if (!user) return 'Unknown User';
@@ -28,9 +28,9 @@ export function getUserDisplayName(user: Partial<User> | null | undefined): stri
     return formatNameFromString(emailName);
   }
   
-  // Fallback: format userId
-  if (user.userId) {
-    return formatNameFromUserId(user.userId);
+  // Fallback: format mockUserId
+  if (user.mockUserId) {
+    return formatNameFromMockId(user.mockUserId);
   }
   
   return 'Unknown User';
@@ -54,24 +54,40 @@ export function getUserInitials(user: Partial<User> | null | undefined): string 
 }
 
 /**
- * Format a readable name from userId
+ * Format a readable name from mockUserId
  * Examples:
- *   TCH_1234567_abc123 -> "Teacher"
- *   STU_1234567_abc123 -> "Student"
- *   ADM_1234567_abc123 -> "Administrator"
+ *   teacher_demo_1 -> "Demo Teacher"
+ *   student_ronitk964_gmail_com -> "Ronitk Kumar"
+ *   admin_school_1 -> "School Admin"
  */
-export function formatNameFromUserId(userId: string): string {
-  if (!userId) return 'User';
+export function formatNameFromMockId(mockUserId: string): string {
+  if (!mockUserId) return 'User';
   
-  // Extract role prefix
-  const roleMap: Record<string, string> = {
-    'TCH': 'Teacher',
-    'STU': 'Student',
-    'ADM': 'Administrator'
-  };
-  
-  const prefix = userId.substring(0, 3).toUpperCase();
-  return roleMap[prefix] || 'User';
+  // Remove common prefixes and email parts
+  let cleaned = mockUserId
+    .replace(/^(teacher|student|admin)_/i, '')
+    .replace(/_gmail_com|_yahoo_com|_email_com|_hotmail_com/gi, '')
+    .replace(/\d{3,}/g, '') // Remove long number sequences
+    .replace(/_/g, ' ')
+    .trim();
+
+  // Capitalize first letter of each word
+  cleaned = cleaned
+    .split(' ')
+    .filter(word => word.length > 0)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
+  // If result is too short or empty, add role prefix
+  if (cleaned.length < 3) {
+    const roleMatch = mockUserId.match(/^(teacher|student|admin)/i);
+    if (roleMatch) {
+      const role = roleMatch[0].charAt(0).toUpperCase() + roleMatch[0].slice(1);
+      cleaned = cleaned.length > 0 ? `${role} ${cleaned}` : role;
+    }
+  }
+
+  return cleaned || 'User';
 }
 
 /**
@@ -110,10 +126,18 @@ export function getRoleDisplayName(role: string): string {
 
 /**
  * Get user identifier (for backend APIs)
+ * Priority: userId > mockUserId
  */
 export function getUserId(user: Partial<User> | null | undefined): string | null {
   if (!user) return null;
-  return user.userId || null;
+  return user.userId || user.mockUserId || null;
+}
+
+/**
+ * Check if user data is legacy (mock/demo)
+ */
+export function isLegacyUser(user: Partial<User>): boolean {
+  return !user.userId && !!user.mockUserId;
 }
 
 /**
@@ -126,9 +150,9 @@ export function getUserEmail(user: Partial<User> | null | undefined): string {
     return user.email;
   }
   
-  // Generate fallback email from userId
-  if (user.userId) {
-    const sanitized = user.userId.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  // Generate fallback email from mockUserId
+  if (user.mockUserId) {
+    const sanitized = user.mockUserId.replace(/[^a-z0-9]/gi, '').toLowerCase();
     return `${sanitized}@school.edu`;
   }
   
