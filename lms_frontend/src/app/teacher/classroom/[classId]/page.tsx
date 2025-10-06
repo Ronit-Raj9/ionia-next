@@ -198,14 +198,14 @@ export default function ClassroomPage() {
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => toast.info('Edit classroom coming soon!')}
+                  onClick={() => toast('Edit classroom coming soon!')}
                   className="bg-white bg-opacity-20 hover:bg-opacity-30 p-3 rounded-lg transition-colors"
                   title="Edit classroom"
                 >
                   <Edit className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => toast.info('Settings coming soon!')}
+                  onClick={() => toast('Settings coming soon!')}
                   className="bg-white bg-opacity-20 hover:bg-opacity-30 p-3 rounded-lg transition-colors"
                   title="Classroom settings"
                 >

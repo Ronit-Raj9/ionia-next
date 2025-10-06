@@ -100,7 +100,7 @@ export async function updateStudentMastery(
 
     // Update topic entry
     topicEntry.masteryScore = newMastery;
-    topicEntry.weaknesses = [...new Set(weaknessesIdentified)]; // Remove duplicates
+    topicEntry.weaknesses = Array.from(new Set(weaknessesIdentified)); // Remove duplicates
     topicEntry.lastPracticed = new Date();
 
     // Recalculate overall subject mastery
@@ -121,7 +121,7 @@ export async function updateStudentMastery(
       topic,
       score: scorePercentage,
       submittedAt: submission.submissionTime || new Date(),
-      performance: scorePercentage >= 85 ? 'excellent' : scorePercentage >= 70 ? 'good' : scorePercentage >= 50 ? 'average' : 'needs_improvement',
+      performance: scorePercentage >= 85 ? 'excellent' : scorePercentage >= 70 ? 'good' : scorePercentage >= 50 ? 'average' : 'poor',
       improvementFromPrevious: improvement
     });
 

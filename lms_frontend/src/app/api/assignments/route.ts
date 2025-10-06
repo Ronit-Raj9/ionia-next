@@ -100,6 +100,38 @@ export async function POST(request: NextRequest) {
       assignedStudentsList.forEach(studentId => {
         studentProfiles.push({
           studentMockId: studentId,
+          // OCEAN Personality Traits (default balanced values)
+          oceanTraits: {
+            openness: 50,
+            conscientiousness: 50,
+            extraversion: 50,
+            agreeableness: 50,
+            neuroticism: 50
+          },
+          // Learning Preferences (default balanced)
+          learningPreferences: {
+            visualLearner: true,
+            kinestheticLearner: false,
+            auditoryLearner: false,
+            readingWritingLearner: false,
+            preferredDifficulty: 'medium' as const,
+            needsStepByStepGuidance: false,
+            respondsToEncouragement: true
+          },
+          // Intellectual Traits (default balanced)
+          intellectualTraits: {
+            analyticalThinking: 50,
+            creativeThinking: 50,
+            criticalThinking: 50,
+            problemSolvingSkill: 50
+          },
+          // Subject Mastery (empty for new students)
+          subjectMastery: [],
+          // Assignment History (empty for new students)
+          assignmentHistory: [],
+          // Personality Test Status
+          personalityTestCompleted: false,
+          // Legacy fields for backward compatibility
           previousPerformance: {
             subject: subject,
             weaknesses: [],

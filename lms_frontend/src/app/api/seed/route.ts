@@ -60,6 +60,7 @@ async function seedScienceDemo() {
     {
       role: 'teacher',
       mockUserId: DEMO_TEACHER_ID,
+      name: DEMO_TEACHER_NAME,
       email: 'teacher.demo@school.com',
       classId: 'demo-class-9a',
       schoolId: DEMO_SCHOOL_ID,
@@ -68,6 +69,7 @@ async function seedScienceDemo() {
     {
       role: 'admin',
       mockUserId: 'admin_demo',
+      name: 'Admin Demo User',
       email: 'admin.demo@school.com',
       classId: 'demo-class-9a',
       schoolId: DEMO_SCHOOL_ID,
@@ -81,6 +83,7 @@ async function seedScienceDemo() {
     users.push({
       role: 'student',
       mockUserId: `student_demo_${i + 1}`,
+      name: `${student.first} ${student.last}`,
       email: `${student.first.toLowerCase()}.${student.last.toLowerCase()}@student.com`,
       classId: i < 10 ? 'demo-class-9a' : 'demo-class-10b',
       schoolId: DEMO_SCHOOL_ID,
@@ -199,6 +202,7 @@ async function seedUsers() {
     {
       role: 'teacher',
       mockUserId: 'teacher1',
+      name: 'Demo Teacher',
       email: 'teacher@demo.com',
       classId: 'demo-class-1',
       schoolId: 'CBSE001',
@@ -207,6 +211,7 @@ async function seedUsers() {
     {
       role: 'admin',
       mockUserId: 'admin1',
+      name: 'Demo Admin',
       email: 'admin@demo.com',
       classId: 'demo-class-1',
       schoolId: 'CBSE001',
@@ -221,6 +226,7 @@ async function seedUsers() {
     users.push({
       role: 'student',
       mockUserId: `student${i}`,
+      name: `Student ${i}`,
       email: `student${i}@demo.com`,
       classId: 'demo-class-1',
       schoolId: schoolId,
@@ -237,8 +243,11 @@ async function seedClasses() {
   const demoClass: Class = {
     className: 'Math Demo Class - Grade 10',
     teacherMockId: 'teacher1',
+    schoolId: 'CBSE001',
     studentMockIds: Array.from({ length: 20 }, (_, i) => `student${i + 1}`),
+    isActive: true,
     createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   await classesCollection.insertOne(demoClass);
@@ -281,6 +290,38 @@ async function seedStudentProfiles() {
     profiles.push({
       studentMockId: `student${i}`,
       schoolId: schoolId,
+      // OCEAN Personality Traits (default balanced values)
+      oceanTraits: {
+        openness: 50,
+        conscientiousness: 50,
+        extraversion: 50,
+        agreeableness: 50,
+        neuroticism: 50
+      },
+      // Learning Preferences (default balanced)
+      learningPreferences: {
+        visualLearner: true,
+        kinestheticLearner: false,
+        auditoryLearner: false,
+        readingWritingLearner: false,
+        preferredDifficulty: 'medium' as const,
+        needsStepByStepGuidance: false,
+        respondsToEncouragement: true
+      },
+      // Intellectual Traits (default balanced)
+      intellectualTraits: {
+        analyticalThinking: 50,
+        creativeThinking: 50,
+        criticalThinking: 50,
+        problemSolvingSkill: 50
+      },
+      // Subject Mastery (empty for new students)
+      subjectMastery: [],
+      // Assignment History (empty for new students)
+      assignmentHistory: [],
+      // Personality Test Status
+      personalityTestCompleted: false,
+      // Legacy fields for backward compatibility
       previousPerformance: {
         subject: 'mathematics',
         weaknesses,
@@ -321,8 +362,11 @@ async function seedSampleAssignments() {
       title: 'Algebra Basics Practice',
       description: 'Practice fundamental algebra concepts including equations, area calculations, and fractions.',
       subject: 'Math',
+      grade: '10',
+      topic: 'Algebra',
       difficulty: 'medium' as const,
       totalMarks: 100,
+      assignmentType: 'standard' as const,
       originalContent: {
         questions: [
           'Solve for x: 2x + 5 = 13',
@@ -336,13 +380,20 @@ async function seedSampleAssignments() {
       assignedTo: ['student1', 'student2', 'student3', 'student4', 'student5'],
       gradeSettings: {
         showMarksToStudents: true,
-        showFeedbackToStudents: true,
-        gradingRubric: 'Standard grading rubric for algebra problems'
+        showFeedbackToStudents: true
       },
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      maxScore: 100,
       isPublished: true,
       createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      personalizationEnabled: true,
       personalizedVersions: [], // Will be populated when assignments are created
+      submissionStats: {
+        totalStudents: 5,
+        submitted: 0,
+        graded: 0,
+        pending: 0
+      }
     },
     {
       classId: 'demo-class-1',
@@ -350,8 +401,11 @@ async function seedSampleAssignments() {
       title: 'Intermediate Math Problems',
       description: 'More advanced problems including quadratic equations, geometry, and percentages.',
       subject: 'Math',
+      grade: '10',
+      topic: 'Quadratic Equations',
       difficulty: 'hard' as const,
       totalMarks: 120,
+      assignmentType: 'standard' as const,
       originalContent: {
         questions: [
           'Solve the quadratic equation: x² - 5x + 6 = 0',
@@ -364,13 +418,20 @@ async function seedSampleAssignments() {
       assignedTo: ['student11', 'student12', 'student13', 'student14', 'student15'],
       gradeSettings: {
         showMarksToStudents: true,
-        showFeedbackToStudents: true,
-        gradingRubric: 'Advanced mathematics grading rubric'
+        showFeedbackToStudents: true
       },
       dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
+      maxScore: 120,
       isPublished: true,
       createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      personalizationEnabled: true,
       personalizedVersions: [],
+      submissionStats: {
+        totalStudents: 5,
+        submitted: 0,
+        graded: 0,
+        pending: 0
+      }
     },
     {
       classId: 'demo-class-1',
@@ -378,8 +439,11 @@ async function seedSampleAssignments() {
       title: 'Linear Equations and Graphing',
       description: 'Practice with linear equations, slope calculations, and system solving.',
       subject: 'Math',
+      grade: '10',
+      topic: 'Linear Equations',
       difficulty: 'medium' as const,
       totalMarks: 90,
+      assignmentType: 'standard' as const,
       originalContent: {
         questions: [
           'Graph the linear equation: y = 2x + 3',
@@ -391,13 +455,20 @@ async function seedSampleAssignments() {
       assignedTo: ['student16', 'student17', 'student18', 'student19', 'student20'],
       gradeSettings: {
         showMarksToStudents: false,
-        showFeedbackToStudents: false,
-        gradingRubric: 'Linear algebra grading standards'
+        showFeedbackToStudents: false
       },
       dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+      maxScore: 90,
       isPublished: true,
       createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+      personalizationEnabled: true,
       personalizedVersions: [],
+      submissionStats: {
+        totalStudents: 5,
+        submitted: 0,
+        graded: 0,
+        pending: 0
+      }
     },
   ];
 

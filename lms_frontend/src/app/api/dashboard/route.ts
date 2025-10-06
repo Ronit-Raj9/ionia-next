@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const mockUserId = searchParams.get('mockUserId');
     const classId = searchParams.get('classId') || 'demo-class-1';
-    const schoolId = searchParams.get('schoolId');
+    const schoolId = searchParams.get('schoolId') || undefined;
 
     if (!role || !mockUserId) {
       return NextResponse.json(
