@@ -117,9 +117,6 @@ export default function StudentDashboard() {
   const [showPersonalityQuiz, setShowPersonalityQuiz] = useState(false);
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [personalityProfile, setPersonalityProfile] = useState<any>(null);
-  
-  // Teacher info from class
-  const [teacherInfo, setTeacherInfo] = useState<{ id: string; name: string } | null>(null);
 
   // Check if user is student
   useEffect(() => {
@@ -140,7 +137,7 @@ export default function StudentDashboard() {
 
   const fetchAssignments = async () => {
     try {
-      const response = await fetch(`/api/assignments?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&studentId=${user?.userId}`);
+      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&studentMockId=${user?.mockUserId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -156,7 +153,7 @@ export default function StudentDashboard() {
 
   const fetchSubmissions = async () => {
     try {
-      const response = await fetch(`/api/submissions?role=${user?.role}&userId=${user?.userId}`);
+      const response = await fetch(`/api/submissions?role=${user?.role}&mockUserId=${user?.mockUserId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -172,7 +169,7 @@ export default function StudentDashboard() {
 
   const fetchProgress = async () => {
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -188,7 +185,7 @@ export default function StudentDashboard() {
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -208,19 +205,11 @@ export default function StudentDashboard() {
     setClassesLoading(true);
     try {
       // Fetch classes where this student is a member
-      const response = await fetch(`/api/classes/student?studentId=${user?.userId}&role=${user?.role}`);
+      const response = await fetch(`/api/classes/student?studentId=${user?.mockUserId}&role=${user?.role}`);
       const data = await response.json();
       
       if (data.success) {
         setClasses(data.data);
-        
-        // Get teacher info from first class if available
-        if (data.data && data.data.length > 0) {
-          const firstClass = data.data[0];
-          if (firstClass.teacherMockId) {
-            fetchTeacherInfo(firstClass.teacherMockId);
-          }
-        }
       } else {
         console.error('Failed to fetch student classes:', data.error);
         setClasses([]);
@@ -232,26 +221,10 @@ export default function StudentDashboard() {
       setClassesLoading(false);
     }
   };
-  
-  const fetchTeacherInfo = async (teacherId: string) => {
-    try {
-      // Try to get teacher from users API or extract from class data
-      const usersCollection = await fetch(`/api/students`); // This returns users
-      const userData = await usersCollection.json();
-      
-      if (userData.success) {
-        // Find teacher in users data (this API might need updating to support teacher lookup)
-        setTeacherInfo({ id: teacherId, name: 'Teacher' });
-      }
-    } catch (error) {
-      console.error('Error fetching teacher info:', error);
-      setTeacherInfo({ id: teacherId, name: 'Teacher' });
-    }
-  };
 
   const checkPersonalityQuizStatus = async () => {
     try {
-      const response = await fetch(`/api/student-profiles?studentId=${user?.userId}`);
+      const response = await fetch(`/api/student-profiles?studentId=${user?.mockUserId}`);
       const data = await response.json();
       
       if (data.success && data.data) {
@@ -323,7 +296,7 @@ export default function StudentDashboard() {
     try {
       const formData = new FormData();
       formData.append('role', user?.role || '');
-      formData.append('studentId', user?.userId || '');
+      formData.append('studentMockId', user?.mockUserId || '');
       formData.append('assignmentId', selectedAssignment._id);
       formData.append('textAnswer', textAnswer);
       
@@ -992,7 +965,7 @@ export default function StudentDashboard() {
               /* Show detailed classroom view */
               <StudentClassroom
                 classId={selectedClassId}
-                studentId={user?.userId || ''}
+                studentId={user?.mockUserId || ''}
                 studentName={user?.name || user?.displayName || 'Student'}
                 onBack={() => setSelectedClassId(null)}
               />
@@ -1110,10 +1083,13 @@ export default function StudentDashboard() {
         {activeTab === 'discover' && (
           <div className="space-y-6">
             <ClassDiscovery
-              studentId={user.userId || ''}
+              studentId={getUserId(user) || ''}
               schoolId={user.schoolId || 'demo-school'}
+              studentName={getUserDisplayName(user)}
+              studentEmail={user.email}
               onClassJoined={(classId) => {
                 console.log('Joined class:', classId);
+                toast.success('You have successfully joined the class!');
                 // Refresh the classes list
                 fetchStudentClasses();
                 // Switch to My Classes tab
@@ -1127,23 +1103,13 @@ export default function StudentDashboard() {
         {activeTab === 'message' && (
           <div className="space-y-6">
             <div className="h-96">
-              {teacherInfo ? (
-                <StudentMessageTeacher
-                  studentId={getUserId(user) || ''}
-                  studentName={getUserDisplayName(user)}
-                  teacherId={teacherInfo.id}
-                  teacherName={teacherInfo.name}
-                  isEmbedded={true}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-center p-8">
-                    <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-2">No teacher assigned</p>
-                    <p className="text-sm text-gray-500">Please join a class to message your teacher</p>
-                  </div>
-                </div>
-              )}
+              <StudentMessageTeacher
+                studentId={getUserId(user) || ''}
+                studentName={getUserDisplayName(user)}
+                teacherId="teacher1" // For now, defaulting to teacher1
+                teacherName="Teacher"
+                isEmbedded={true}
+              />
             </div>
           </div>
         )}

@@ -25,6 +25,7 @@ import StudentSelector from '@/components/StudentSelector';
 import TeacherInbox from '@/components/TeacherInbox';
 import AdvancedAnalytics from '@/components/AdvancedAnalytics';
 import ClassroomManager from '@/components/ClassroomManager';
+import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 
 interface Assignment {
   _id: string;
@@ -105,7 +106,7 @@ export default function TeacherDashboard() {
 
   const fetchAssignments = async () => {
     try {
-      const response = await fetch(`/api/assignments?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -121,7 +122,7 @@ export default function TeacherDashboard() {
 
   const fetchProgress = async () => {
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -137,7 +138,7 @@ export default function TeacherDashboard() {
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -184,7 +185,7 @@ export default function TeacherDashboard() {
     try {
       const formData = new FormData();
       formData.append('role', user?.role || '');
-      formData.append('userId', user?.userId || '');
+      formData.append('mockUserId', user?.mockUserId || '');
       formData.append('classId', user?.classId || '');
       formData.append('questions', questions);
       formData.append('title', assignmentTitle);
@@ -410,7 +411,7 @@ export default function TeacherDashboard() {
                               </span>
                             </div>
                             <div className="text-sm text-gray-600">
-                              {assignment.originalContent.questions.slice(0, 2).map((q, i) => (
+                              {assignment.originalContent.questions.slice(0, 2).map((q: string, i: number) => (
                                 <div key={i}>• {q}</div>
                               ))}
                               {assignment.originalContent.questions.length > 2 && (
@@ -825,7 +826,7 @@ export default function TeacherDashboard() {
         {activeTab === 'grading' && (
           <div className="h-screen">
             <GradingInterface
-              teacherId={user?.userId || ''}
+              teacherId={user?.mockUserId || ''}
               teacherName={user?.name || user?.displayName || 'Teacher'}
               onGradeSubmitted={() => {
                 toast.success('Grade updated successfully!');
@@ -848,15 +849,33 @@ export default function TeacherDashboard() {
           </div>
         )}
 
-        {/* Inbox Tab */}
+        {/* Classrooms Tab */}
         {activeTab === 'classrooms' && (
           <div className="space-y-6">
-            <ClassroomManager
-              userId={user?.mockUserId || ''}
-              userName={user?.name || user?.displayName || 'Teacher'}
-              role="teacher"
-              schoolId={user?.schoolId || 'demo-school'}
-            />
+            {!user?.mockUserId || !user?.schoolId ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                <p className="text-yellow-800 mb-4">
+                  ⚠️ Please log out and log back in to access classrooms.
+                  Your user data needs to be refreshed.
+                </p>
+                <button
+                  onClick={() => {
+                    localStorage.clear();
+                    window.location.href = '/';
+                  }}
+                  className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700"
+                >
+                  Log Out
+                </button>
+              </div>
+            ) : (
+              <ClassroomManager
+                userId={getUserId(user) || user.mockUserId}
+                userName={getUserDisplayName(user)}
+                role="teacher"
+                schoolId={user.schoolId}
+              />
+            )}
           </div>
         )}
 
@@ -881,8 +900,8 @@ export default function TeacherDashboard() {
                 }
               }}
               onClose={() => setShowStudentSelector(false)}
-              classId={user?.classId || 'unassigned'}
-              teacherId={user?.userId || ''}
+              classId={user?.classId || 'default-class'}
+              teacherId={user?.mockUserId || ''}
               teacherRole={user?.role || 'teacher'}
             />
         )}
