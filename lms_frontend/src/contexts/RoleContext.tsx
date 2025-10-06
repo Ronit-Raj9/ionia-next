@@ -7,7 +7,8 @@ export type UserRole = 'teacher' | 'student' | 'admin';
 
 export interface RoleUser {
   role: UserRole;
-  userId: string; // Unique user ID
+  mockUserId: string; // Legacy field - for backward compatibility
+  userId?: string; // New user ID
   name: string; // Full name (Required)
   email: string; // Email (Required)
   displayName?: string; // Optional display name
@@ -20,7 +21,7 @@ export interface RoleUser {
 
 interface RoleContextType {
   user: RoleUser | null;
-  setRole: (role: UserRole, userId?: string) => void;
+  setRole: (role: UserRole, mockUserId?: string) => void;
   clearRole: () => void;
   isLoading: boolean;
 }
@@ -34,6 +35,9 @@ export const useRole = () => {
   }
   return context;
 };
+
+// Default class ID - can be configured via environment variable
+const DEFAULT_CLASS_ID = process.env.NEXT_PUBLIC_DEFAULT_CLASS_ID || 'demo-class-1';
 
 // Generate default display names (fallback only)
 const getDefaultName = (role: UserRole, id: string): string => {
@@ -64,25 +68,30 @@ const getDefaultEmail = (role: UserRole, id: string): string => {
   }
 };
 
-// Generate unique user ID - NO HARDCODED DEFAULTS
-const generateUserId = (role: UserRole, customId?: string): string => {
+// Generate mock user ID
+const generateMockUserId = (role: UserRole, customId?: string): string => {
   if (customId) return customId;
   
-  // Generate unique ID with timestamp
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  const prefix = role.substring(0, 3).toUpperCase(); // TCH, STU, ADM
-  
-  return `${prefix}_${timestamp}_${random}`;
+  switch (role) {
+    case 'teacher':
+      return 'teacher1';
+    case 'admin':
+      return 'admin1';
+    case 'student':
+      // Default to student1, but this should be selected by user
+      return 'student1';
+    default:
+      return `${role}1`;
+  }
 };
 
 export function RoleProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<RoleUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load role from localStorage on mount
+  // Load role from localStorage and sync with database on mount
   useEffect(() => {
-    const loadStoredRole = () => {
+    const loadStoredRole = async () => {
       try {
         const storedRole = localStorage.getItem('ionia_role');
         const storedUserInfo = localStorage.getItem('ionia_user_info');
@@ -96,13 +105,55 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
             parsed.name = userInfo.name;
             parsed.email = userInfo.email;
             parsed.schoolId = userInfo.schoolId;
+            parsed.userId = userInfo.userId;
             // Update display name with actual name if available
             if (userInfo.name) {
               parsed.displayName = userInfo.name;
             }
           }
           
-          setUser(parsed);
+          // Try to sync with database to get latest user data
+          try {
+            const response = await fetch(`/api/auth/login?mockUserId=${parsed.mockUserId}`);
+            const data = await response.json();
+            
+            if (data.success && data.user) {
+              // Update with latest data from database
+              const syncedUser: RoleUser = {
+                role: data.user.role,
+                mockUserId: data.user.mockUserId,
+                userId: data.user.userId,
+                name: data.user.name,
+                email: data.user.email,
+                displayName: data.user.displayName || data.user.name,
+                classId: data.user.classId,
+                schoolId: data.user.schoolId,
+                profileImage: data.user.profileImage,
+                phoneNumber: data.user.phoneNumber,
+                status: data.user.status,
+              };
+              
+              setUser(syncedUser);
+              
+              // Update localStorage with synced data
+              localStorage.setItem('ionia_role', JSON.stringify(syncedUser));
+              localStorage.setItem('ionia_user_info', JSON.stringify({
+                name: syncedUser.name,
+                email: syncedUser.email,
+                schoolId: syncedUser.schoolId,
+                role: syncedUser.role,
+                mockUserId: syncedUser.mockUserId,
+                userId: syncedUser.userId
+              }));
+            } else {
+              // Database sync failed, use localStorage data
+              setUser(parsed);
+            }
+          } catch (syncError) {
+            console.warn('Failed to sync with database, using cached data:', syncError);
+            // Use localStorage data if database sync fails
+            setUser(parsed);
+          }
         }
       } catch (error) {
         console.error('Failed to load stored role:', error);
@@ -121,8 +172,8 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setRole = (role: UserRole, userId?: string) => {
-    const generatedUserId = generateUserId(role, userId);
+  const setRole = (role: UserRole, mockUserId?: string) => {
+    const generatedMockUserId = generateMockUserId(role, mockUserId);
     
     // Check if there's additional user info in localStorage
     let additionalInfo: any = {};
@@ -141,11 +192,12 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     // Use stored info if available, otherwise use defaults
     const newUser: RoleUser = {
       role,
-      userId: additionalInfo.userId || generatedUserId,
-      name: additionalInfo.name || getDefaultName(role, generatedUserId),
-      email: additionalInfo.email || getDefaultEmail(role, generatedUserId),
-      displayName: additionalInfo.name || getDefaultName(role, generatedUserId),
-      classId: additionalInfo.classId || 'unassigned', // Must be assigned to real class
+      mockUserId: generatedMockUserId,
+      userId: additionalInfo.userId || generatedMockUserId,
+      name: additionalInfo.name || getDefaultName(role, generatedMockUserId),
+      email: additionalInfo.email || getDefaultEmail(role, generatedMockUserId),
+      displayName: additionalInfo.name || getDefaultName(role, generatedMockUserId),
+      classId: DEFAULT_CLASS_ID,
       schoolId: additionalInfo.schoolId,
       profileImage: additionalInfo.profileImage,
       phoneNumber: additionalInfo.phoneNumber,

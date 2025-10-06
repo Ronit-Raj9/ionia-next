@@ -97,6 +97,24 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
       return;
     }
 
+    if (!schoolId || !schoolId.trim()) {
+      toast.error('School ID is required. Please update your profile.');
+      return;
+    }
+
+    if (!userId || !userId.trim()) {
+      toast.error('User ID is missing. Please log out and log back in.');
+      return;
+    }
+
+    console.log('Creating class with:', {
+      teacherId: userId,
+      className: newClassName,
+      schoolId: schoolId,
+      subject: newClassSubject,
+      grade: newClassGrade
+    });
+
     setCreatingClass(true);
     try {
       const response = await fetch('/api/classes', {
@@ -106,11 +124,11 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
         },
         body: JSON.stringify({
           teacherId: userId,
-          className: newClassName,
-          description: newClassDescription,
-          subject: newClassSubject,
-          grade: newClassGrade,
-          schoolId: schoolId,
+          className: newClassName.trim(),
+          description: newClassDescription.trim() || '',
+          subject: newClassSubject || 'General',
+          grade: newClassGrade || '',
+          schoolId: schoolId.trim(),
           role: role
         }),
       });
@@ -126,6 +144,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
         setNewClassGrade('');
         fetchClassrooms();
       } else {
+        console.error('Failed to create classroom:', data);
         toast.error(data.error || 'Failed to create classroom');
       }
     } catch (error) {

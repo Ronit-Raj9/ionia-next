@@ -30,10 +30,12 @@ interface AvailableClass {
 interface ClassDiscoveryProps {
   studentId: string;
   schoolId: string;
+  studentName?: string;
+  studentEmail?: string;
   onClassJoined?: (classId: string) => void;
 }
 
-export default function ClassDiscovery({ studentId, schoolId, onClassJoined }: ClassDiscoveryProps) {
+export default function ClassDiscovery({ studentId, schoolId, studentName, studentEmail, onClassJoined }: ClassDiscoveryProps) {
   const [availableClasses, setAvailableClasses] = useState<AvailableClass[]>([]);
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState<string | null>(null);
@@ -78,7 +80,9 @@ export default function ClassDiscovery({ studentId, schoolId, onClassJoined }: C
           joinCode: availableClasses.find(c => c._id === classId)?.joinCode,
           studentId: studentId,
           schoolId: schoolId,
-          role: 'student'
+          role: 'student',
+          studentName: studentName,
+          studentEmail: studentEmail
         }),
       });
 

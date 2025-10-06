@@ -67,7 +67,7 @@ export default function Navbar() {
     }
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Form submitted:', { userForm, selectedRole });
     
@@ -88,79 +88,34 @@ export default function Navbar() {
       return;
     }
 
-    try {
-      // Register user in database
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: userForm.name,
-          email: userForm.email,
-          role: selectedRole,
-          schoolId: userForm.schoolId,
-          classId: 'unassigned'
-        })
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        // If user already exists, use their data
-        if (data.error.includes('already exists')) {
-          const userCheckResponse = await fetch(`/api/auth/register?email=${encodeURIComponent(userForm.email)}`);
-          const userData = await userCheckResponse.json();
-          
-          if (userData.success && userData.exists) {
-            const userInfo = {
-              name: userData.user.name,
-              email: userData.user.email,
-              schoolId: userData.user.schoolId,
-              role: userData.user.role,
-              userId: userData.user.userId,
-              classId: userData.user.classId || 'unassigned'
-            };
-            
-            localStorage.setItem('ionia_user_info', JSON.stringify(userInfo));
-            setRole(userData.user.role, userData.user.userId);
-            
-            toast.success(`Welcome back, ${userData.user.name}!`);
-            redirectToRolePage(userData.user.role);
-            return;
-          }
-        }
-        
-        toast.error(data.error || 'Failed to register');
-        return;
-      }
-
-      // Successfully registered - save to database
-      const userData = data.data;
-      
-      const userInfo = {
-        name: userData.name,
-        email: userData.email,
-        schoolId: userData.schoolId,
-        role: userData.role,
-        userId: userData.userId,
-        classId: userData.classId || 'unassigned'
-      };
-      
-      localStorage.setItem('ionia_user_info', JSON.stringify(userInfo));
-      console.log('✅ User registered via Navbar:', userInfo);
-      
-      setRole(userData.role, userData.userId);
-      toast.success(`Welcome, ${userData.name}!`);
-      
-      // Reset form and redirect
-      setShowUserForm(false);
-      setUserForm({ name: '', email: '', schoolId: '' });
-      setSelectedRole(null);
-      redirectToRolePage(userData.role);
-      
-    } catch (error) {
-      console.error('Error registering user:', error);
-      toast.error('Failed to register. Please try again.');
+    // Generate mock user ID based on role
+    let mockUserId: string;
+    if (selectedRole === 'teacher') {
+      mockUserId = 'teacher1';
+    } else if (selectedRole === 'admin') {
+      mockUserId = 'admin1';
+    } else {
+      // For students, generate a unique ID based on email
+      mockUserId = `student_${userForm.email.replace(/[^a-zA-Z0-9]/g, '_')}`;
     }
+    
+    // Set role with user info
+    setRole(selectedRole, mockUserId);
+    
+    // Store additional user info in localStorage
+    localStorage.setItem('ionia_user_info', JSON.stringify({
+      name: userForm.name,
+      email: userForm.email,
+      schoolId: userForm.schoolId,
+      role: selectedRole,
+      mockUserId: mockUserId,
+    }));
+    
+    // Reset form and redirect
+    setShowUserForm(false);
+    setUserForm({ name: '', email: '', schoolId: '' });
+    setSelectedRole(null);
+    redirectToRolePage(selectedRole);
   };
 
   const handleFormCancel = () => {
@@ -465,7 +420,7 @@ export default function Navbar() {
                 <div className={`h-96 border border-gray-200 rounded-lg ${activeTab === 'manage' ? 'overflow-visible' : 'overflow-auto'}`}>
                   {user && activeTab === 'class' && (
                     <ClassChat
-                      userId={user.userId || ''}
+                      userId={user.mockUserId || ''}
                       userName={user.name || user.displayName || 'User'}
                       role={user.role as 'teacher' | 'student' | 'admin'}
                       classId={selectedClassId || user.classId}
@@ -474,7 +429,7 @@ export default function Navbar() {
                   )}
                   {user && activeTab === 'manage' && user.role === 'teacher' && (
                     <ClassManager
-                      userId={user.userId || ''}
+                      userId={user.mockUserId || ''}
                       userName={user.name || user.displayName || 'User'}
                       role={user.role}
                       onClassSelected={(classId) => {
@@ -485,7 +440,7 @@ export default function Navbar() {
                   )}
                   {user && activeTab === 'personal' && (
                     <ChatInterface
-                      teacherId={user.userId || ''}
+                      teacherId={user.mockUserId || ''}
                       classId={user.classId || ''}
                       role={user.role || ''}
                       isEmbedded={true}
