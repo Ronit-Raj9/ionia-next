@@ -46,28 +46,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique user ID
+    // Generate unique user IDs
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     
+    let mockUserId: string;
     let userId: string;
     
     if (role === 'teacher') {
+      mockUserId = `teacher_${email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '_')}`;
       userId = `TCH_${timestamp}_${randomSuffix}`;
     } else if (role === 'admin') {
+      mockUserId = `admin_${email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '_')}`;
       userId = `ADM_${timestamp}_${randomSuffix}`;
     } else {
+      mockUserId = `student_${email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '_')}`;
       userId = `STU_${timestamp}_${randomSuffix}`;
     }
 
     // Create user document
     const newUser: Omit<User, '_id'> = {
       role: role as 'teacher' | 'student' | 'admin',
+      mockUserId: mockUserId,
       userId: userId,
       name: name,
       email: email,
       displayName: name,
-      classId: classId || 'unassigned', // Must join/create class later
+      classId: classId || 'default-class',
       schoolId: schoolId,
       phoneNumber: phoneNumber,
       status: 'active',
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
     // If student, also create a student profile
     if (role === 'student') {
       await studentProfilesCollection.insertOne({
-        studentId: userId,
+        studentMockId: mockUserId,
         studentName: name,
         name: name,
         email: email,
@@ -177,6 +182,7 @@ export async function GET(request: NextRequest) {
           name: user.name,
           email: user.email,
           role: user.role,
+          mockUserId: user.mockUserId,
           userId: user.userId,
           schoolId: user.schoolId,
           classId: user.classId

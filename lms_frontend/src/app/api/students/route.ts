@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       // Get all student users
       const students = await usersCollection
         .find({ role: 'student' })
-        .sort({ userId: 1 })
+        .sort({ mockUserId: 1 })
         .toArray();
 
       // Get student profiles to fetch names
@@ -30,19 +30,19 @@ export async function GET(request: NextRequest) {
         .find({})
         .toArray();
       
-      // Create a map of userId to profile
+      // Create a map of mockUserId to profile
       const profileMap = new Map();
       profiles.forEach((profile: any) => {
-        profileMap.set(profile.studentId, profile);
+        profileMap.set(profile.studentMockId, profile);
       });
 
       // Transform to the format expected by StudentSelector
       const formattedStudents = students.map(student => {
-        const profile = profileMap.get(student.userId);
+        const profile = profileMap.get(student.mockUserId);
         return {
-          id: student.userId,
-          name: profile?.studentName || profile?.name || student.displayName || student.name || `Student ${student.userId}`,
-          email: profile?.email || student.email || `${student.userId}@example.com`,
+          id: student.mockUserId,
+          name: profile?.studentName || profile?.name || student.displayName || student.name || `Student ${student.mockUserId.replace('student', '')}`,
+          email: profile?.email || student.email || `${student.mockUserId}@example.com`,
           isSelected: false
         };
       });

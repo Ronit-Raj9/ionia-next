@@ -7,29 +7,21 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
-    const userId = searchParams.get('userId');
-    const classId = searchParams.get('classId');
+    const mockUserId = searchParams.get('mockUserId');
+    const classId = searchParams.get('classId') || 'demo-class-1';
     const schoolId = searchParams.get('schoolId');
-    
-    // Validate required parameters
-    if (!classId || classId === 'unassigned') {
-      return NextResponse.json(
-        { success: false, error: 'User must be assigned to a class. Please join or create a class first.' },
-        { status: 400 }
-      );
-    }
 
-    if (!role || !userId) {
+    if (!role || !mockUserId) {
       return NextResponse.json(
-        { success: false, error: 'Role and userId are required' },
+        { success: false, error: 'Role and mockUserId are required' },
         { status: 400 }
       );
     }
 
     if (role === 'teacher') {
-      return await getTeacherDashboardData(userId, classId, schoolId);
+      return await getTeacherDashboardData(mockUserId, classId, schoolId);
     } else if (role === 'student') {
-      return await getStudentDashboardData(userId, classId, schoolId);
+      return await getStudentDashboardData(mockUserId, classId, schoolId);
     } else if (role === 'admin') {
       return await getAdminDashboardData(classId, schoolId);
     } else {

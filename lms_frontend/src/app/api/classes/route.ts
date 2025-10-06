@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     
     // Fetch classes created by this teacher
     const classes = await classesCollection
-      .find({ teacherId: teacherId })
+      .find({ teacherMockId: teacherId })
       .sort({ createdAt: -1 })
       .toArray() as unknown as Class[];
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ...classData,
-          studentCount: classData.studentIds?.length || 0,
+          studentCount: classData.studentMockIds?.length || 0,
           recentAssignments: assignmentCount
         };
       })
