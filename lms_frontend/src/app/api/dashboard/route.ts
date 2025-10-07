@@ -3,6 +3,9 @@ import { getCollection, COLLECTIONS, Submission, StudentProfile, Progress } from
 import { generateAssignmentSuggestions, generateAdaptivePath } from '@/lib/aiRecommendations';
 import { calculateEngagementMetrics, calculateProgressBars, BADGES } from '@/lib/gamification';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

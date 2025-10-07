@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS } from '@/lib/db';
 
-// GET - Retrieve list of students
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+// GET - Retrieve list of students filtered by schoolId
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
+    const schoolId = searchParams.get('schoolId');
 
     // Only teachers and admins can access student list
     if (role !== 'teacher' && role !== 'admin') {
@@ -15,13 +19,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Require schoolId for filtering
+    if (!schoolId) {
+      return NextResponse.json(
+        { success: false, error: 'schoolId is required to filter students' },
+        { status: 400 }
+      );
+    }
+
     try {
       const usersCollection = await getCollection(COLLECTIONS.USERS);
       const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
       
-      // Get all student users
+      // Get student users filtered by EXACT schoolId match (case-sensitive)
       const students = await usersCollection
-        .find({ role: 'student' })
+        .find({ 
+          role: 'student',
+          schoolId: schoolId  // Exact match, case-sensitive
+        })
         .sort({ mockUserId: 1 })
         .toArray();
 
@@ -51,7 +66,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: formattedStudents,
-        message: formattedStudents.length === 0 ? 'No students found in database' : undefined
+        message: formattedStudents.length === 0 ? `No students found for school: ${schoolId}` : `Found ${formattedStudents.length} students for school: ${schoolId}`,
+        schoolId: schoolId,
+        totalStudents: formattedStudents.length
       });
     } catch (dbError) {
       console.error('Database connection error:', dbError);

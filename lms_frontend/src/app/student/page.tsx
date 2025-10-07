@@ -46,7 +46,7 @@ interface Assignment {
   dueDate?: string;
   createdAt: string;
   uploadedFileUrl?: string;
-  questions: string[];
+  questions: Array<string | {question: string; format?: string}>;
   variations: string;
   originalQuestions: string[];
   canSeeGrades: boolean;
@@ -137,7 +137,9 @@ export default function StudentDashboard() {
 
   const fetchAssignments = async () => {
     try {
-      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&studentMockId=${user?.mockUserId}`);
+      // Fetch assignments for all classes the student is enrolled in
+      // Don't pass classId to get assignments from all classes
+      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&studentMockId=${user?.mockUserId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -743,10 +745,12 @@ export default function StudentDashboard() {
                               <p className="font-medium text-emerald-600 mb-1">
                                 Personalized for you: {assignment.variations}
                               </p>
-                              {assignment.questions.slice(0, 2).map((q, i) => (
-                                <div key={i} className="mb-1">• {q}</div>
+                              {assignment.questions && assignment.questions.slice(0, 2).map((q, i) => (
+                                <div key={i} className="mb-1">
+                                  • {typeof q === 'string' ? q : q.question || 'Question'}
+                                </div>
                               ))}
-                              {assignment.questions.length > 2 && (
+                              {assignment.questions && assignment.questions.length > 2 && (
                                 <div className="text-gray-500">
                                   ... and {assignment.questions.length - 2} more questions
                                 </div>

@@ -493,15 +493,44 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
               
               <div className="p-6">
                 <StudentSelector
-                  onStudentsSelected={(students) => {
-                    // Handle student selection
-                    console.log('Selected students:', students);
+                  onStudentsSelected={async (students) => {
+                    // Handle student selection for existing classroom
+                    console.log('Selected students for classroom:', students);
+                    
+                    try {
+                      const response = await fetch('/api/classes', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          classId: selectedClassroom._id,
+                          teacherId: userId,
+                          selectedStudents: students,
+                          role: role
+                        })
+                      });
+
+                      const data = await response.json();
+                      
+                      if (data.success) {
+                        toast.success(`Added ${students.length} students to ${selectedClassroom.className}`);
+                        // Refresh the classrooms list
+                        fetchClassrooms();
+                      } else {
+                        toast.error(data.error || 'Failed to add students to class');
+                      }
+                    } catch (error) {
+                      console.error('Error adding students to class:', error);
+                      toast.error('Failed to add students to class');
+                    }
+                    
                     setSelectedClassroom(null);
                   }}
                   onClose={() => setSelectedClassroom(null)}
                   classId={selectedClassroom._id}
                   teacherId={userId}
                   teacherRole={role}
+                  teacherSchoolId={schoolId}
+                  isCreatingClass={true} // Show all available students from school
                 />
               </div>
             </motion.div>

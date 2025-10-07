@@ -31,10 +31,11 @@ interface ClassManagerProps {
   userId: string;
   userName: string;
   role: string;
+  schoolId: string;
   onClassSelected: (classId: string) => void;
 }
 
-export default function ClassManager({ userId, userName, role, onClassSelected }: ClassManagerProps) {
+export default function ClassManager({ userId, userName, role, schoolId, onClassSelected }: ClassManagerProps) {
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -133,6 +134,7 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
           teacherId: userId,
           studentIds: selectedStudents.map(s => s.id),
           description: newClassDescription,
+          schoolId: schoolId,
           role: role
         })
       });
@@ -386,6 +388,7 @@ export default function ClassManager({ userId, userName, role, onClassSelected }
           classId={`class-${Date.now()}`}
           teacherId={userId}
           teacherRole={role}
+          teacherSchoolId={schoolId}
           isCreatingClass={true}
         />
       )}

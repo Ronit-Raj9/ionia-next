@@ -432,6 +432,7 @@ export default function Navbar() {
                       userId={user.mockUserId || ''}
                       userName={user.name || user.displayName || 'User'}
                       role={user.role}
+                      schoolId={user.schoolId || ''}
                       onClassSelected={(classId) => {
                         setSelectedClassId(classId);
                         setActiveTab('class');

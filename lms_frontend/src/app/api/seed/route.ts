@@ -98,11 +98,8 @@ async function seedScienceDemo() {
   await usersCollection.insertMany(users);
   console.log('✓ Users seeded');
 
-  // 2. Seed classes with CBSE Science structure
-  const classesCollection = await getCollection(COLLECTIONS.CLASSES);
-  const demoClasses = generateDemoClasses();
-  await classesCollection.insertMany(demoClasses);
-  console.log('✓ Classes seeded');
+  // 2. Skip hardcoded classes - let teachers create their own
+  console.log('✓ Skipping hardcoded classes - teachers will create their own');
 
   // 3. Seed student profiles with OCEAN traits
   const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
@@ -110,73 +107,18 @@ async function seedScienceDemo() {
   await profilesCollection.insertMany(studentProfiles as any[]);
   console.log('✓ Student profiles with OCEAN traits seeded');
 
-  // 4. Seed assignments for both classes
-  const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
-  const class9Id = demoClasses[0]._id!.toString();
-  const class10Id = demoClasses[1]._id!.toString();
-  
-  const class9Students = Array.from({ length: 10 }, (_, i) => `student_demo_${i + 1}`);
-  const class10Students = Array.from({ length: 10 }, (_, i) => `student_demo_${i + 11}`);
-  
-  const class9Assignment = generateDemoAssignments(class9Id, '9', class9Students);
-  const class10Assignment = generateDemoAssignments(class10Id, '10', class10Students);
-  
-  await assignmentsCollection.insertMany([class9Assignment, class10Assignment]);
-  console.log('✓ Assignments seeded');
+  // 4. Skip hardcoded assignments - teachers will create their own
+  console.log('✓ Skipping hardcoded assignments - teachers will create their own');
 
-  // 5. Seed initial progress data
-  const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
-  const progressRecords: Progress[] = [];
+  // 5. Skip initial progress data - will be created when students submit assignments
+  console.log('✓ Skipping initial progress data - will be created dynamically');
 
-  for (let i = 1; i <= 20; i++) {
-    const studentMockId = `student_demo_${i}`;
-    const grade = i <= 10 ? '9' : '10';
-    const classId = i <= 10 ? class9Id : class10Id;
-    const topic = i <= 10 ? 'Gravitation' : 'Electricity';
-    
-    progressRecords.push({
-      studentMockId,
-      classId,
-      schoolId: DEMO_SCHOOL_ID,
-      metrics: {
-        mastery: {
-          [topic]: Math.floor(Math.random() * 40) + 50, // 50-90
-        },
-        weaknesses: Math.random() < 0.5 ? ['formula-application', 'numerical-problems'] : [],
-        timeSaved: Math.floor(Math.random() * 30) + 10,
-        strengths: ['conceptual-understanding', 'diagram-drawing'],
-        averageScore: Math.floor(Math.random() * 30) + 60, // 60-90
-        completionRate: Math.floor(Math.random() * 30) + 70, // 70-100
-        totalSubmissions: Math.floor(Math.random() * 5) + 1
-      },
-      updates: [
-        {
-          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          change: 'Initial profile created with OCEAN assessment',
-        },
-        {
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          change: `${topic} assignment started`,
-        },
-      ],
-      heatmapData: {
-        weaknesses: [
-          { topic: 'formula-application', percentage: Math.floor(Math.random() * 40) + 20 },
-          { topic: 'numerical-problems', percentage: Math.floor(Math.random() * 30) + 15 },
-          { topic: 'conceptual-questions', percentage: Math.floor(Math.random() * 20) + 10 },
-        ],
-      },
-    });
-  }
-
-  await progressCollection.insertMany(progressRecords);
-  console.log('✓ Progress data seeded');
-
-  console.log('✅ Science demo data seeding complete!');
-  console.log(`   - 2 Classes: Class 9A Science, Class 10B Science`);
+  console.log('✅ Dynamic demo data seeding complete!');
+  console.log(`   - 1 Teacher: ${DEMO_TEACHER_NAME} (${DEMO_TEACHER_ID})`);
   console.log(`   - 20 Students: Each with unique OCEAN personality profiles`);
-  console.log(`   - 2 Assignments: Gravitation (Class 9), Electricity (Class 10)`);
-  console.log(`   - All students ready for personalized learning`);
+  console.log(`   - 0 Classes: Teachers will create their own classes`);
+  console.log(`   - 0 Assignments: Teachers will create assignments for their classes`);
+  console.log(`   - All students ready for class enrollment and personalized learning`);
 }
 
 async function clearCollections() {
