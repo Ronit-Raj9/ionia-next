@@ -60,6 +60,7 @@ async function seedScienceDemo() {
     {
       role: 'teacher',
       mockUserId: DEMO_TEACHER_ID,
+      name: DEMO_TEACHER_NAME,
       email: 'teacher.demo@school.com',
       classId: 'demo-class-9a',
       schoolId: DEMO_SCHOOL_ID,
@@ -68,6 +69,7 @@ async function seedScienceDemo() {
     {
       role: 'admin',
       mockUserId: 'admin_demo',
+      name: 'Admin Demo User',
       email: 'admin.demo@school.com',
       classId: 'demo-class-9a',
       schoolId: DEMO_SCHOOL_ID,
@@ -81,6 +83,7 @@ async function seedScienceDemo() {
     users.push({
       role: 'student',
       mockUserId: `student_demo_${i + 1}`,
+      name: `${student.first} ${student.last}`,
       email: `${student.first.toLowerCase()}.${student.last.toLowerCase()}@student.com`,
       classId: i < 10 ? 'demo-class-9a' : 'demo-class-10b',
       schoolId: DEMO_SCHOOL_ID,
@@ -95,11 +98,8 @@ async function seedScienceDemo() {
   await usersCollection.insertMany(users);
   console.log('✓ Users seeded');
 
-  // 2. Seed classes with CBSE Science structure
-  const classesCollection = await getCollection(COLLECTIONS.CLASSES);
-  const demoClasses = generateDemoClasses();
-  await classesCollection.insertMany(demoClasses);
-  console.log('✓ Classes seeded');
+  // 2. Skip hardcoded classes - let teachers create their own
+  console.log('✓ Skipping hardcoded classes - teachers will create their own');
 
   // 3. Seed student profiles with OCEAN traits
   const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
@@ -107,73 +107,18 @@ async function seedScienceDemo() {
   await profilesCollection.insertMany(studentProfiles as any[]);
   console.log('✓ Student profiles with OCEAN traits seeded');
 
-  // 4. Seed assignments for both classes
-  const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
-  const class9Id = demoClasses[0]._id!.toString();
-  const class10Id = demoClasses[1]._id!.toString();
-  
-  const class9Students = Array.from({ length: 10 }, (_, i) => `student_demo_${i + 1}`);
-  const class10Students = Array.from({ length: 10 }, (_, i) => `student_demo_${i + 11}`);
-  
-  const class9Assignment = generateDemoAssignments(class9Id, '9', class9Students);
-  const class10Assignment = generateDemoAssignments(class10Id, '10', class10Students);
-  
-  await assignmentsCollection.insertMany([class9Assignment, class10Assignment]);
-  console.log('✓ Assignments seeded');
+  // 4. Skip hardcoded assignments - teachers will create their own
+  console.log('✓ Skipping hardcoded assignments - teachers will create their own');
 
-  // 5. Seed initial progress data
-  const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
-  const progressRecords: Progress[] = [];
+  // 5. Skip initial progress data - will be created when students submit assignments
+  console.log('✓ Skipping initial progress data - will be created dynamically');
 
-  for (let i = 1; i <= 20; i++) {
-    const studentMockId = `student_demo_${i}`;
-    const grade = i <= 10 ? '9' : '10';
-    const classId = i <= 10 ? class9Id : class10Id;
-    const topic = i <= 10 ? 'Gravitation' : 'Electricity';
-    
-    progressRecords.push({
-      studentMockId,
-      classId,
-      schoolId: DEMO_SCHOOL_ID,
-      metrics: {
-        mastery: {
-          [topic]: Math.floor(Math.random() * 40) + 50, // 50-90
-        },
-        weaknesses: Math.random() < 0.5 ? ['formula-application', 'numerical-problems'] : [],
-        timeSaved: Math.floor(Math.random() * 30) + 10,
-        strengths: ['conceptual-understanding', 'diagram-drawing'],
-        averageScore: Math.floor(Math.random() * 30) + 60, // 60-90
-        completionRate: Math.floor(Math.random() * 30) + 70, // 70-100
-        totalSubmissions: Math.floor(Math.random() * 5) + 1
-      },
-      updates: [
-        {
-          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-          change: 'Initial profile created with OCEAN assessment',
-        },
-        {
-          timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-          change: `${topic} assignment started`,
-        },
-      ],
-      heatmapData: {
-        weaknesses: [
-          { topic: 'formula-application', percentage: Math.floor(Math.random() * 40) + 20 },
-          { topic: 'numerical-problems', percentage: Math.floor(Math.random() * 30) + 15 },
-          { topic: 'conceptual-questions', percentage: Math.floor(Math.random() * 20) + 10 },
-        ],
-      },
-    });
-  }
-
-  await progressCollection.insertMany(progressRecords);
-  console.log('✓ Progress data seeded');
-
-  console.log('✅ Science demo data seeding complete!');
-  console.log(`   - 2 Classes: Class 9A Science, Class 10B Science`);
+  console.log('✅ Dynamic demo data seeding complete!');
+  console.log(`   - 1 Teacher: ${DEMO_TEACHER_NAME} (${DEMO_TEACHER_ID})`);
   console.log(`   - 20 Students: Each with unique OCEAN personality profiles`);
-  console.log(`   - 2 Assignments: Gravitation (Class 9), Electricity (Class 10)`);
-  console.log(`   - All students ready for personalized learning`);
+  console.log(`   - 0 Classes: Teachers will create their own classes`);
+  console.log(`   - 0 Assignments: Teachers will create assignments for their classes`);
+  console.log(`   - All students ready for class enrollment and personalized learning`);
 }
 
 async function clearCollections() {
@@ -199,6 +144,7 @@ async function seedUsers() {
     {
       role: 'teacher',
       mockUserId: 'teacher1',
+      name: 'Demo Teacher',
       email: 'teacher@demo.com',
       classId: 'demo-class-1',
       schoolId: 'CBSE001',
@@ -207,6 +153,7 @@ async function seedUsers() {
     {
       role: 'admin',
       mockUserId: 'admin1',
+      name: 'Demo Admin',
       email: 'admin@demo.com',
       classId: 'demo-class-1',
       schoolId: 'CBSE001',
@@ -221,6 +168,7 @@ async function seedUsers() {
     users.push({
       role: 'student',
       mockUserId: `student${i}`,
+      name: `Student ${i}`,
       email: `student${i}@demo.com`,
       classId: 'demo-class-1',
       schoolId: schoolId,
@@ -237,8 +185,11 @@ async function seedClasses() {
   const demoClass: Class = {
     className: 'Math Demo Class - Grade 10',
     teacherMockId: 'teacher1',
+    schoolId: 'CBSE001',
     studentMockIds: Array.from({ length: 20 }, (_, i) => `student${i + 1}`),
+    isActive: true,
     createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   await classesCollection.insertOne(demoClass);
@@ -281,6 +232,38 @@ async function seedStudentProfiles() {
     profiles.push({
       studentMockId: `student${i}`,
       schoolId: schoolId,
+      // OCEAN Personality Traits (default balanced values)
+      oceanTraits: {
+        openness: 50,
+        conscientiousness: 50,
+        extraversion: 50,
+        agreeableness: 50,
+        neuroticism: 50
+      },
+      // Learning Preferences (default balanced)
+      learningPreferences: {
+        visualLearner: true,
+        kinestheticLearner: false,
+        auditoryLearner: false,
+        readingWritingLearner: false,
+        preferredDifficulty: 'medium' as const,
+        needsStepByStepGuidance: false,
+        respondsToEncouragement: true
+      },
+      // Intellectual Traits (default balanced)
+      intellectualTraits: {
+        analyticalThinking: 50,
+        creativeThinking: 50,
+        criticalThinking: 50,
+        problemSolvingSkill: 50
+      },
+      // Subject Mastery (empty for new students)
+      subjectMastery: [],
+      // Assignment History (empty for new students)
+      assignmentHistory: [],
+      // Personality Test Status
+      personalityTestCompleted: false,
+      // Legacy fields for backward compatibility
       previousPerformance: {
         subject: 'mathematics',
         weaknesses,
@@ -321,8 +304,11 @@ async function seedSampleAssignments() {
       title: 'Algebra Basics Practice',
       description: 'Practice fundamental algebra concepts including equations, area calculations, and fractions.',
       subject: 'Math',
+      grade: '10',
+      topic: 'Algebra',
       difficulty: 'medium' as const,
       totalMarks: 100,
+      assignmentType: 'standard' as const,
       originalContent: {
         questions: [
           'Solve for x: 2x + 5 = 13',
@@ -336,13 +322,20 @@ async function seedSampleAssignments() {
       assignedTo: ['student1', 'student2', 'student3', 'student4', 'student5'],
       gradeSettings: {
         showMarksToStudents: true,
-        showFeedbackToStudents: true,
-        gradingRubric: 'Standard grading rubric for algebra problems'
+        showFeedbackToStudents: true
       },
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      maxScore: 100,
       isPublished: true,
       createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      personalizationEnabled: true,
       personalizedVersions: [], // Will be populated when assignments are created
+      submissionStats: {
+        totalStudents: 5,
+        submitted: 0,
+        graded: 0,
+        pending: 0
+      }
     },
     {
       classId: 'demo-class-1',
@@ -350,8 +343,11 @@ async function seedSampleAssignments() {
       title: 'Intermediate Math Problems',
       description: 'More advanced problems including quadratic equations, geometry, and percentages.',
       subject: 'Math',
+      grade: '10',
+      topic: 'Quadratic Equations',
       difficulty: 'hard' as const,
       totalMarks: 120,
+      assignmentType: 'standard' as const,
       originalContent: {
         questions: [
           'Solve the quadratic equation: x² - 5x + 6 = 0',
@@ -364,13 +360,20 @@ async function seedSampleAssignments() {
       assignedTo: ['student11', 'student12', 'student13', 'student14', 'student15'],
       gradeSettings: {
         showMarksToStudents: true,
-        showFeedbackToStudents: true,
-        gradingRubric: 'Advanced mathematics grading rubric'
+        showFeedbackToStudents: true
       },
       dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
+      maxScore: 120,
       isPublished: true,
       createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      personalizationEnabled: true,
       personalizedVersions: [],
+      submissionStats: {
+        totalStudents: 5,
+        submitted: 0,
+        graded: 0,
+        pending: 0
+      }
     },
     {
       classId: 'demo-class-1',
@@ -378,8 +381,11 @@ async function seedSampleAssignments() {
       title: 'Linear Equations and Graphing',
       description: 'Practice with linear equations, slope calculations, and system solving.',
       subject: 'Math',
+      grade: '10',
+      topic: 'Linear Equations',
       difficulty: 'medium' as const,
       totalMarks: 90,
+      assignmentType: 'standard' as const,
       originalContent: {
         questions: [
           'Graph the linear equation: y = 2x + 3',
@@ -391,13 +397,20 @@ async function seedSampleAssignments() {
       assignedTo: ['student16', 'student17', 'student18', 'student19', 'student20'],
       gradeSettings: {
         showMarksToStudents: false,
-        showFeedbackToStudents: false,
-        gradingRubric: 'Linear algebra grading standards'
+        showFeedbackToStudents: false
       },
       dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+      maxScore: 90,
       isPublished: true,
       createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+      personalizationEnabled: true,
       personalizedVersions: [],
+      submissionStats: {
+        totalStudents: 5,
+        submitted: 0,
+        graded: 0,
+        pending: 0
+      }
     },
   ];
 

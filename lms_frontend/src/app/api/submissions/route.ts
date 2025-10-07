@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
     const submission: Partial<Submission> = {
       assignmentId,
       classId: assignment.classId,
-      schoolId: assignment.schoolId,
       studentMockId,
       studentName: `Student ${studentMockId.replace('student', '')}`,
       subject: assignment.subject,
@@ -121,12 +120,13 @@ export async function POST(request: NextRequest) {
         imageUrls,
       },
       extractedText: extractedText || undefined,
-      ocrStatus: extractedText ? 'completed' : 'skipped',
-      imageQualityCheck: imageUrls.length > 0 ? {
-        isAcceptable: true,
-        issues: [],
-        confidence: 85
-      } : undefined,
+      ocrStatus: extractedText ? 'completed' : undefined,
+      imageQualityCheck: imageUrls.length > 0 ? [{
+        isBlurry: false,
+        isLegible: true,
+        confidenceScore: 85,
+        suggestions: []
+      }] : undefined,
       submissionTime: new Date(),
       grade: {
         score: 0,
@@ -418,8 +418,11 @@ async function updateStudentProgress(
     const currentSubmission = {
       _id: new ObjectId(),
       assignmentId: 'current',
+      classId: assignment?.classId || classId,
       studentMockId,
       studentName: `Student ${studentMockId.replace('student', '')}`,
+      subject: assignment?.subject || 'General',
+      topic: assignment?.topic || 'General',
       submittedContent: { text: '', imageUrls: [] },
       submissionTime: new Date(),
       grade: { 

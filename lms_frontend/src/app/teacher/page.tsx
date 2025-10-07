@@ -873,7 +873,7 @@ export default function TeacherDashboard() {
                 userId={getUserId(user) || user.mockUserId}
                 userName={getUserDisplayName(user)}
                 role="teacher"
-                schoolId={user.schoolId}
+                schoolId={user?.schoolId || 'demo-school-delhi-2025'}
               />
             )}
           </div>
@@ -903,6 +903,7 @@ export default function TeacherDashboard() {
               classId={user?.classId || 'default-class'}
               teacherId={user?.mockUserId || ''}
               teacherRole={user?.role || 'teacher'}
+              teacherSchoolId={user?.schoolId || ''}
             />
         )}
       </div>

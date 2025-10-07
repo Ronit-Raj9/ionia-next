@@ -609,6 +609,7 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
           classId={classId || 'default-class'}
           teacherId={userId}
           teacherRole={role}
+          teacherSchoolId="demo-school-delhi-2025"
         />
       )}
     </div>

@@ -34,10 +34,11 @@ interface StudentSelectorProps {
   classId: string;
   teacherId: string;
   teacherRole: string;
+  teacherSchoolId: string; // New prop for school filtering
   isCreatingClass?: boolean; // New prop for class creation mode
 }
 
-export default function StudentSelector({ onStudentsSelected, onClose, classId, teacherId, teacherRole, isCreatingClass = false }: StudentSelectorProps) {
+export default function StudentSelector({ onStudentsSelected, onClose, classId, teacherId, teacherRole, teacherSchoolId, isCreatingClass = false }: StudentSelectorProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
@@ -82,7 +83,7 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
   const fetchAllStudents = async () => { // New function for class creation
     setLoading(true);
     try {
-      const response = await fetch(`/api/students?role=${teacherRole}`);
+      const response = await fetch(`/api/students?role=${teacherRole}&schoolId=${encodeURIComponent(teacherSchoolId)}`);
       const data = await response.json();
 
       if (data.success) {
@@ -110,24 +111,25 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
       console.log('Fetching students for class:', selectedClassData.className);
       console.log('Class student IDs:', selectedClassData.studentMockIds);
       
-      // First get all available students
-      const response = await fetch(`/api/students?role=${teacherRole}`);
+      // First get all available students from the same school
+      const response = await fetch(`/api/students?role=${teacherRole}&schoolId=${encodeURIComponent(teacherSchoolId)}`);
       const data = await response.json();
 
-      console.log('All students response:', data);
-
       if (data.success) {
-        // Filter students to only show those in the selected class
-        const classStudents = data.data.filter((student: any) => {
-          const isInClass = selectedClassData.studentMockIds.includes(student.id);
-          console.log(`Student ${student.id} (${student.name}) in class:`, isInClass);
-          return isInClass;
-        });
+        // If we're creating a class, show all students from the school
+        // If we're managing an existing class, filter to show only students in that class
+        let studentsToShow = data.data;
         
-        console.log('Filtered class students:', classStudents);
+        if (!isCreatingClass) {
+          // Filter students to only show those in the selected class
+          studentsToShow = data.data.filter((student: any) => {
+            const isInClass = selectedClassData.studentMockIds.includes(student.id);
+            return isInClass;
+          });
+        }
         
-        // If no students match, use the class's student IDs to create entries
-        if (classStudents.length === 0 && selectedClassData.studentMockIds.length > 0) {
+        // If no students match and we're not creating a class, use the class's student IDs to create entries
+        if (studentsToShow.length === 0 && selectedClassData.studentMockIds.length > 0 && !isCreatingClass) {
           console.log('No matching students found, creating from class IDs');
           const fallbackStudents: Student[] = selectedClassData.studentMockIds.map((id) => {
             // Try to find the student in the full list
@@ -144,7 +146,7 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
           });
           setStudents(fallbackStudents);
         } else {
-          setStudents(classStudents);
+          setStudents(studentsToShow);
         }
         
         if (data.fallback) {

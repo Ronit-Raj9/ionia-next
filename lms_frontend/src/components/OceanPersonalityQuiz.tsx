@@ -203,17 +203,17 @@ export default function OceanPersonalityQuiz({
                         <p className="text-xs text-gray-600">{traitDescriptions[trait]}</p>
                       </div>
                     </div>
-                    <span className="text-lg font-bold text-blue-600">{score}%</span>
+                    <span className="text-lg font-bold text-blue-600">{Number(score)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${score}%` }}
+                      animate={{ width: `${Number(score)}%` }}
                       transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
                       className={`h-2 rounded-full ${
-                        score >= 75 ? 'bg-green-500' :
-                        score >= 50 ? 'bg-blue-500' :
-                        score >= 25 ? 'bg-yellow-500' : 'bg-red-500'
+                        Number(score) >= 75 ? 'bg-green-500' :
+                        Number(score) >= 50 ? 'bg-blue-500' :
+                        Number(score) >= 25 ? 'bg-yellow-500' : 'bg-red-500'
                       }`}
                     />
                   </div>
@@ -245,7 +245,7 @@ export default function OceanPersonalityQuiz({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {Object.entries(intellectualTraits).map(([trait, score]) => (
               <div key={trait} className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-emerald-600 mb-1">{score}%</div>
+                <div className="text-2xl font-bold text-emerald-600 mb-1">{Number(score)}%</div>
                 <div className="text-xs text-gray-600 capitalize">
                   {trait.replace(/([A-Z])/g, ' $1').trim()}
                 </div>
