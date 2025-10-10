@@ -100,23 +100,25 @@ export async function gradeSubmission(
   request: GradingRequest
 ): Promise<GradingResponse> {
   try {
-    const prompt = `You are an AI math teacher grading student submissions for Indian CBSE/ICSE curriculum.
+    const prompt = `You are an AI teacher grading student submissions for Indian CBSE/ICSE curriculum.
 
-Original Questions:
-${request.originalQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+ASSIGNMENT QUESTIONS:
+${request.originalQuestions.map((q, i) => `Question ${i + 1}: ${q}`).join('\n\n')}
 
-Student's Submitted Answer:
+STUDENT'S SUBMITTED ANSWER:
 ${request.submittedText}
 
-Instructions:
-1. Grade the submission against the original questions
-2. Provide a score from 0-100
-3. Give constructive feedback focusing on:
-   - Correct steps and methodology
-   - Areas for improvement
-   - Specific mistakes made
-4. List specific errors found
-5. Be encouraging but accurate
+GRADING INSTRUCTIONS:
+1. Carefully read each question and compare it with the student's response
+2. Check if the student understood what was being asked
+3. Evaluate their approach, working, and final answer for each question
+4. Provide a score from 0-100 based on correctness and understanding
+5. Give specific feedback that references:
+   - Which questions were answered well and why
+   - Which questions need improvement and specific suggestions
+   - How the student's solution relates to what was actually asked
+6. Be encouraging but accurate in your assessment
+7. Award partial credit for correct methodology even if the final answer is wrong
 
 Return ONLY valid JSON in this format:
 {
@@ -367,30 +369,33 @@ export async function gradeSubmissionDetailed(
 
     const prompt = `You are an expert ${subject} teacher grading a Class 9/10 assignment on "${topic}".
 
-Questions:
-${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+ASSIGNMENT QUESTIONS:
+${questions.map((q, i) => `Question ${i + 1}: ${q}`).join('\n\n')}
 
-Model Solution:
+MODEL SOLUTION/EXPECTED APPROACH:
 ${modelSolution}
 
-Grading Rubric:
+GRADING RUBRIC:
 ${JSON.stringify(rubric, null, 2)}
 
-Student's Answer:
+STUDENT'S SUBMITTED ANSWER:
 ${studentAnswer}
 
 Maximum Score: ${maxScore}
 
-Task: Grade thoroughly. Provide:
-1. Total Score and percentage
-2. Question-wise breakdown with points and feedback
-3. Error Analysis (identify specific mistakes)
-4. Strengths (what student did well)
-5. Areas for Improvement
-6. AI Confidence (0-100)
+GRADING INSTRUCTIONS:
+1. Compare the student's answer to each specific question
+2. Check if the student understood the question correctly
+3. Evaluate the approach, methodology, and final answer
+4. Award partial credit for correct steps even if final answer is wrong
+5. Provide specific feedback referencing the actual question and student's response
+6. Follow CBSE marking principles with emphasis on understanding over memorization
 
-Award partial credit for correct approach even if final answer is wrong.
-Follow CBSE marking principles.
+Focus your feedback on:
+- How well the student addressed each specific question
+- Whether their solution method is appropriate for the given problem
+- Specific areas where their understanding is strong or needs improvement
+- Clear connection between the question asked and the answer provided
 
 Return ONLY valid JSON:
 {

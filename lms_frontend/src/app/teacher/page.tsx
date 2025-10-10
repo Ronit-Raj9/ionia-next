@@ -181,7 +181,7 @@ export default function TeacherDashboard() {
     const newQuestion = {
       id: Date.now().toString(),
       text: '',
-      marks: Math.floor(totalMarks / Math.max(1, questionsList.length + 1))
+      marks: 1 // Default to 1 mark per question
     };
     setQuestionsList([...questionsList, newQuestion]);
   };

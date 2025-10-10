@@ -98,8 +98,21 @@ export default function StudentClassroom({
   studentId, 
   studentName,
   onBack,
-  showScoreNotifications = true
+  showScoreNotifications
 }: StudentClassroomProps) {
+  // Use localStorage if showScoreNotifications is not provided - Default to false (no notifications)
+  const [localShowScoreNotifications, setLocalShowScoreNotifications] = useState(false);
+  
+  useEffect(() => {
+    if (showScoreNotifications === undefined) {
+      const savedPreference = localStorage.getItem('showScoreNotifications');
+      if (savedPreference !== null) {
+        setLocalShowScoreNotifications(JSON.parse(savedPreference));
+      }
+    }
+  }, [showScoreNotifications]);
+  
+  const shouldShowScoreNotifications = showScoreNotifications !== undefined ? showScoreNotifications : localShowScoreNotifications;
   const [classDetails, setClassDetails] = useState<any>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -248,7 +261,7 @@ export default function StudentClassroom({
       const data = await response.json();
 
       if (data.success) {
-        if (showScoreNotifications && data.data.grade && data.data.grade.score !== undefined) {
+        if (shouldShowScoreNotifications && data.data.grade && data.data.grade.score !== undefined) {
           toast.success(`Assignment submitted! Score: ${data.data.grade.score}%`);
         } else {
           toast.success('Assignment submitted successfully!');
