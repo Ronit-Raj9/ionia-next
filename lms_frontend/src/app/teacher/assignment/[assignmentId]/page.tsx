@@ -37,6 +37,7 @@ interface AssignmentDetails {
   uploadedFileUrl?: string;
   originalContent: {
     questions: string[];
+    questionDetails?: Array<{id: string, text: string, marks: number}>;
   };
   assignedTo: string[];
   personalizedVersions: Array<{
@@ -375,15 +376,40 @@ export default function AssignmentDetailPage() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Questions</h3>
               
               {assignment.originalContent?.questions && assignment.originalContent.questions.length > 0 ? (
-                <div className="space-y-3">
-                  {assignment.originalContent.questions.map((question, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm font-medium text-gray-700">
-                        <span className="text-emerald-600 mr-2">Q{index + 1}.</span>
-                        {question}
+                <div className="space-y-4">
+                  {assignment.originalContent.questions.map((question, index) => {
+                    // Check if we have detailed question information
+                    const questionDetail = assignment.originalContent?.questionDetails?.[index];
+                    
+                    return (
+                      <div key={index} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-700">
+                              <span className="text-emerald-600 mr-2">Q{index + 1}.</span>
+                              {question}
+                            </p>
+                          </div>
+                          {questionDetail && (
+                            <div className="ml-4 text-right">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {questionDetail.marks} marks
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {assignment.originalContent?.questionDetails && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        <strong>Total Questions:</strong> {assignment.originalContent.questions.length} | 
+                        <strong> Total Marks:</strong> {assignment.originalContent.questionDetails.reduce((sum: number, q: any) => sum + q.marks, 0)}
                       </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               ) : (
                 <p className="text-gray-500">No questions available</p>

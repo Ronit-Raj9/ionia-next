@@ -237,6 +237,7 @@ export interface Assignment {
   // Base Content (uploaded by teacher)
   originalContent: {
     questions: string[];
+    questionDetails?: Array<{id: string, text: string, marks: number}>; // Detailed questions with individual marks
   };
   uploadedFileUrl?: string; // Image/PDF of questions
   extractedText?: string; // AI-extracted text from uploaded file

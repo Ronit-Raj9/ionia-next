@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     const assignedStudents = formData.get('assignedStudents') as string;
     const enablePersonalization = formData.get('enablePersonalization') !== 'false'; // Default true
     const schoolId = formData.get('schoolId') as string;
+    const questionDetails = formData.get('questionDetails') as string;
 
     // Validate role
     if (role !== 'teacher') {
@@ -61,8 +62,21 @@ export async function POST(request: NextRequest) {
       uploadedFileUrl = uploadResult.url;
     }
 
-    // Parse questions
-    if (questions) {
+    // Parse questions and question details
+    let detailedQuestions: Array<{id: string, text: string, marks: number}> = [];
+    
+    if (questionDetails) {
+      try {
+        detailedQuestions = JSON.parse(questionDetails);
+        questionsList = detailedQuestions.map(q => q.text).filter(text => text.trim().length > 0);
+      } catch (error) {
+        console.error('Error parsing question details:', error);
+        // Fallback to simple questions parsing
+        if (questions) {
+          questionsList = questions.split('\n').filter(q => q.trim().length > 0);
+        }
+      }
+    } else if (questions) {
       questionsList = questions.split('\n').filter(q => q.trim().length > 0);
     } else {
       // If only file provided, create placeholder questions
@@ -174,7 +188,10 @@ export async function POST(request: NextRequest) {
       maxScore: totalMarks,
       assignmentType: enablePersonalization ? 'personalized' : 'standard',
       personalizationEnabled: enablePersonalization,
-      originalContent: { questions: questionsList },
+      originalContent: { 
+        questions: questionsList,
+        questionDetails: detailedQuestions.length > 0 ? detailedQuestions : undefined
+      },
       uploadedFileUrl,
       createdBy: mockUserId,
       assignedTo: assignedStudentsList,
