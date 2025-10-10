@@ -17,7 +17,9 @@ import {
   TrendingUp,
   BookOpen,
   ClipboardCheck,
-  MessageCircle
+  MessageCircle,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GradingInterface from '@/components/GradingInterface';
@@ -72,6 +74,7 @@ export default function TeacherDashboard() {
   
   // Form state
   const [questions, setQuestions] = useState('');
+  const [questionsList, setQuestionsList] = useState<Array<{id: string, text: string, marks: number}>>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [assignmentTitle, setAssignmentTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -83,6 +86,7 @@ export default function TeacherDashboard() {
   const [showFeedbackToStudents, setShowFeedbackToStudents] = useState(true);
   const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
   const [showStudentSelector, setShowStudentSelector] = useState(false);
+  const [useAdvancedQuestions, setUseAdvancedQuestions] = useState(false);
   
   // Phase 2 state
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -172,12 +176,53 @@ export default function TeacherDashboard() {
     }
   };
 
+  // Functions to manage questions list
+  const addQuestion = () => {
+    const newQuestion = {
+      id: Date.now().toString(),
+      text: '',
+      marks: Math.floor(totalMarks / Math.max(1, questionsList.length + 1))
+    };
+    setQuestionsList([...questionsList, newQuestion]);
+  };
+
+  const updateQuestion = (id: string, text: string) => {
+    setQuestionsList(questionsList.map(q => 
+      q.id === id ? { ...q, text } : q
+    ));
+  };
+
+  const updateQuestionMarks = (id: string, marks: number) => {
+    setQuestionsList(questionsList.map(q => 
+      q.id === id ? { ...q, marks } : q
+    ));
+  };
+
+  const removeQuestion = (id: string) => {
+    setQuestionsList(questionsList.filter(q => q.id !== id));
+  };
+
   const handleSubmitAssignment = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    if (!questions.trim() && !selectedFile) {
-      toast.error('Please provide questions or upload a file');
-      return;
+    // Determine which questions to use
+    let finalQuestions: string[] = [];
+    if (useAdvancedQuestions) {
+      if (questionsList.length === 0) {
+        toast.error('Please add at least one question');
+        return;
+      }
+      finalQuestions = questionsList.map(q => q.text).filter(text => text.trim());
+      if (finalQuestions.length === 0) {
+        toast.error('Please fill in all question texts');
+        return;
+      }
+    } else {
+      if (!questions.trim() && !selectedFile) {
+        toast.error('Please provide questions or upload a file');
+        return;
+      }
+      finalQuestions = questions.split('\n').filter(q => q.trim());
     }
 
     setUploadLoading(true);
@@ -187,7 +232,7 @@ export default function TeacherDashboard() {
       formData.append('role', user?.role || '');
       formData.append('mockUserId', user?.mockUserId || '');
       formData.append('classId', user?.classId || '');
-      formData.append('questions', questions);
+      formData.append('questions', useAdvancedQuestions ? finalQuestions.join('\n') : questions);
       formData.append('title', assignmentTitle);
       formData.append('description', description);
       formData.append('subject', subject);
@@ -196,6 +241,11 @@ export default function TeacherDashboard() {
       formData.append('showMarksToStudents', showMarksToStudents.toString());
       formData.append('showFeedbackToStudents', showFeedbackToStudents.toString());
       formData.append('assignedStudents', JSON.stringify(selectedStudents.map(s => s.id)));
+      
+      // Add question details if using advanced mode
+      if (useAdvancedQuestions) {
+        formData.append('questionDetails', JSON.stringify(questionsList));
+      }
       
       if (dueDate) {
         formData.append('dueDate', dueDate);
@@ -215,6 +265,7 @@ export default function TeacherDashboard() {
       if (data.success) {
         toast.success(`Assignment created and personalized for ${data.data.personalizedCount} students!`);
         setQuestions('');
+        setQuestionsList([]);
         setSelectedFile(null);
         setAssignmentTitle('');
         setDescription('');
@@ -225,6 +276,7 @@ export default function TeacherDashboard() {
         setShowMarksToStudents(false);
         setShowFeedbackToStudents(true);
         setSelectedStudents([]);
+        setUseAdvancedQuestions(false);
         fetchAssignments();
         fetchProgress();
       } else {
@@ -649,16 +701,90 @@ export default function TeacherDashboard() {
 
                 {/* Questions Input */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Questions (one per line)
-                  </label>
-                  <textarea
-                    value={questions}
-                    onChange={(e) => setQuestions(e.target.value)}
+                  <div className="flex items-center justify-between mb-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Questions
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={useAdvancedQuestions}
+                          onChange={(e) => setUseAdvancedQuestions(e.target.checked)}
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Advanced Mode</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  {useAdvancedQuestions ? (
+                    <div className="space-y-4">
+                      {questionsList.map((question, index) => (
+                        <div key={question.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-start space-x-3">
+                            <div className="flex-shrink-0 w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-medium text-emerald-600">Q{index + 1}</span>
+                            </div>
+                            <div className="flex-1 space-y-3">
+                              <textarea
+                                value={question.text}
+                                onChange={(e) => updateQuestion(question.id, e.target.value)}
+                                placeholder={`Enter question ${index + 1}...`}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                                rows={2}
+                              />
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <label className="text-sm text-gray-600">Marks:</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={question.marks}
+                                    onChange={(e) => updateQuestionMarks(question.id, parseInt(e.target.value) || 1)}
+                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeQuestion(question.id)}
+                                  className="text-red-500 hover:text-red-700 p-1"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <button
+                        type="button"
+                        onClick={addQuestion}
+                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-emerald-400 hover:bg-emerald-50 transition-colors"
+                      >
+                        <Plus className="w-5 h-5 mx-auto mb-2 text-gray-400" />
+                        <span className="text-sm text-gray-600">Add Question</span>
+                      </button>
+                      
+                      {questionsList.length > 0 && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm text-blue-700">
+                            <strong>Total Questions:</strong> {questionsList.length} | 
+                            <strong> Total Marks:</strong> {questionsList.reduce((sum, q) => sum + q.marks, 0)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <textarea
+                      value={questions}
+                      onChange={(e) => setQuestions(e.target.value)}
                       placeholder="Enter questions, one per line:&#10;1. Solve for x: 2x + 5 = 13&#10;2. Calculate the area of a rectangle with length 8cm and width 5cm&#10;3. Simplify: 3/4 + 1/8"
-                    className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                    rows={6}
-                  />
+                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                      rows={6}
+                    />
+                  )}
                 </div>
 
                 {/* File Upload */}
@@ -689,7 +815,7 @@ export default function TeacherDashboard() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={uploadLoading || (!questions.trim() && !selectedFile)}
+                  disabled={uploadLoading || (useAdvancedQuestions ? questionsList.length === 0 : (!questions.trim() && !selectedFile))}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
                 >
                   {uploadLoading ? (

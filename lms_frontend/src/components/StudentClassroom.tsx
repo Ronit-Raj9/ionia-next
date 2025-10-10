@@ -90,13 +90,15 @@ interface StudentClassroomProps {
   studentId: string;
   studentName: string;
   onBack?: () => void;
+  showScoreNotifications?: boolean;
 }
 
 export default function StudentClassroom({ 
   classId, 
   studentId, 
   studentName,
-  onBack 
+  onBack,
+  showScoreNotifications = true
 }: StudentClassroomProps) {
   const [classDetails, setClassDetails] = useState<any>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -150,13 +152,19 @@ export default function StudentClassroom({
 
   const fetchAssignments = async () => {
     try {
+      // Fetch all assignments for the student, then filter by classId
       const response = await fetch(
-        `/api/assignments?role=student&classId=${classId}&studentMockId=${studentId}`
+        `/api/assignments?role=student&mockUserId=${studentId}&studentMockId=${studentId}`
       );
       const data = await response.json();
       
       if (data.success) {
-        setAssignments(data.data);
+        // Filter assignments to show only those for this specific class
+        const classAssignments = data.data.filter((assignment: any) => 
+          assignment.classId === classId || 
+          (assignment.assignedTo && assignment.assignedTo.includes(studentId))
+        );
+        setAssignments(classAssignments);
       }
     } catch (error) {
       console.error('Error fetching assignments:', error);
@@ -240,7 +248,11 @@ export default function StudentClassroom({
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Assignment submitted successfully!');
+        if (showScoreNotifications && data.data.grade && data.data.grade.score !== undefined) {
+          toast.success(`Assignment submitted! Score: ${data.data.grade.score}%`);
+        } else {
+          toast.success('Assignment submitted successfully!');
+        }
         setTextAnswer('');
         setSelectedFiles([]);
         setPreviewUrls([]);

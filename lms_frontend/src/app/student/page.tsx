@@ -25,7 +25,8 @@ import {
   Users,
   MessageCircle,
   Home,
-  Brain
+  Brain,
+  Settings
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Confetti from 'react-confetti';
@@ -108,7 +109,7 @@ export default function StudentDashboard() {
   const [progressBars, setProgressBars] = useState<Record<string, number>>({});
   
   // Tab state and classes
-  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message'>('assignments');
+  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings'>('assignments');
   const [classes, setClasses] = useState<any[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -117,6 +118,9 @@ export default function StudentDashboard() {
   const [showPersonalityQuiz, setShowPersonalityQuiz] = useState(false);
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [personalityProfile, setPersonalityProfile] = useState<any>(null);
+  
+  // Notification preferences
+  const [showScoreNotifications, setShowScoreNotifications] = useState(true);
 
   // Check if user is student
   useEffect(() => {
@@ -315,7 +319,11 @@ export default function StudentDashboard() {
       
       if (data.success) {
         const score = data.data.grade.score;
-        toast.success(`Answer submitted! Score: ${score}%`);
+        if (showScoreNotifications) {
+          toast.success(`Answer submitted! Score: ${score}%`);
+        } else {
+          toast.success('Answer submitted successfully!');
+        }
         
         // Handle gamification results
         if (data.data.gamification && data.data.gamification.newBadges.length > 0) {
@@ -451,6 +459,17 @@ export default function StudentDashboard() {
               >
                 <MessageCircle className="w-4 h-4 inline mr-2" />
                 Message Teacher
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'settings'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Settings className="w-4 h-4 inline mr-2" />
+                Settings
               </button>
             </nav>
           </div>
@@ -797,9 +816,81 @@ export default function StudentDashboard() {
               )}
             </div>
 
-            {/* Answer Submission Form */}
+            {/* Assignment Details */}
             {selectedAssignment && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mt-4 md:mt-6">
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {selectedAssignment.title}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
+                    <span className="flex items-center">
+                      <BookOpen className="w-4 h-4 mr-1" />
+                      {selectedAssignment.subject}
+                    </span>
+                    <span className="flex items-center">
+                      <Target className="w-4 h-4 mr-1" />
+                      {selectedAssignment.difficulty}
+                    </span>
+                    <span className="flex items-center">
+                      <Trophy className="w-4 h-4 mr-1" />
+                      {selectedAssignment.totalMarks} marks
+                    </span>
+                    {selectedAssignment.dueDate && (
+                      <span className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        Due: {new Date(selectedAssignment.dueDate).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {selectedAssignment.description && (
+                    <p className="text-gray-700 mb-4">{selectedAssignment.description}</p>
+                  )}
+                  
+                  {/* Questions */}
+                  <div className="mb-6">
+                    <h4 className="text-lg font-medium text-gray-900 mb-3">Questions</h4>
+                    <div className="space-y-4">
+                      {selectedAssignment.questions && selectedAssignment.questions.map((q, index) => (
+                        <div key={index} className="bg-gray-50 rounded-lg p-4">
+                          <div className="flex items-start space-x-3">
+                            <div className="flex-shrink-0 w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-medium text-emerald-600">{index + 1}</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-gray-800">
+                                {typeof q === 'string' ? q : q.question || 'Question'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {selectedAssignment.uploadedFileUrl && (
+                    <div className="mb-6">
+                      <h4 className="text-lg font-medium text-gray-900 mb-3">Reference File</h4>
+                      <a
+                        href={selectedAssignment.uploadedFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        View Assignment File
+                      </a>
+                    </div>
+                  )}
+                  
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-sm text-emerald-600 font-medium">
+                      Personalized for you: {selectedAssignment.variations}
+                    </p>
+                  </div>
+                </div>
+                
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Submit Your Answer
                 </h3>
@@ -972,6 +1063,7 @@ export default function StudentDashboard() {
                 studentId={user?.mockUserId || ''}
                 studentName={user?.name || user?.displayName || 'Student'}
                 onBack={() => setSelectedClassId(null)}
+                showScoreNotifications={showScoreNotifications}
               />
             ) : (
               /* Show classes grid */
@@ -1114,6 +1206,76 @@ export default function StudentDashboard() {
                 teacherName="Teacher"
                 isEmbedded={true}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab Content */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Notification Settings</h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">Score Notifications</h4>
+                    <p className="text-sm text-gray-600">Show your score immediately after submitting assignments</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showScoreNotifications}
+                      onChange={(e) => setShowScoreNotifications(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+                
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <AlertCircle className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="ml-3">
+                      <h4 className="text-sm font-medium text-blue-900">About Score Notifications</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        When enabled, you'll see your assignment score immediately after submission. 
+                        When disabled, you'll only see a confirmation that your assignment was submitted successfully.
+                        You can always view your scores later in the assignments section.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Account Information</h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">Name</h4>
+                    <p className="text-sm text-gray-600">{getUserDisplayName(user)}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">School</h4>
+                    <p className="text-sm text-gray-600">{user?.schoolId || 'Not specified'}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900">Role</h4>
+                    <p className="text-sm text-gray-600 capitalize">{user?.role}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
