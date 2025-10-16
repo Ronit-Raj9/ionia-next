@@ -119,8 +119,22 @@ export default function StudentDashboard() {
   const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
   const [personalityProfile, setPersonalityProfile] = useState<any>(null);
   
-  // Notification preferences
-  const [showScoreNotifications, setShowScoreNotifications] = useState(true);
+  // Notification preferences - Default to false (no notifications)
+  const [showScoreNotifications, setShowScoreNotifications] = useState(false);
+
+  // Load notification preference from localStorage
+  useEffect(() => {
+    const savedPreference = localStorage.getItem('showScoreNotifications');
+    if (savedPreference !== null) {
+      setShowScoreNotifications(JSON.parse(savedPreference));
+    }
+  }, []);
+
+  // Save notification preference to localStorage
+  const handleNotificationToggle = (enabled: boolean) => {
+    setShowScoreNotifications(enabled);
+    localStorage.setItem('showScoreNotifications', JSON.stringify(enabled));
+  };
 
   // Check if user is student
   useEffect(() => {
@@ -1226,7 +1240,7 @@ export default function StudentDashboard() {
                     <input
                       type="checkbox"
                       checked={showScoreNotifications}
-                      onChange={(e) => setShowScoreNotifications(e.target.checked)}
+                      onChange={(e) => handleNotificationToggle(e.target.checked)}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
