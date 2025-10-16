@@ -149,6 +149,39 @@
   }
 }
 
+/* Custom Scrollbar Styles */
+.horizontal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+/* Academic Planner specific styles */
+.academic-planner-container {
+  padding-bottom: 6rem; /* 96px - enough space for footer */
+}
+
+.topic-cards-container {
+  margin-bottom: 2rem; /* 32px - extra space for topic cards */
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
   .lms-card {
@@ -165,5 +198,21 @@
   
   .chain-node {
     @apply bg-gray-800 border-gray-600;
+  }
+  
+  .horizontal-scroll {
+    scrollbar-color: #4b5563 #374151;
+  }
+  
+  .horizontal-scroll::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  
+  .horizontal-scroll::-webkit-scrollbar-thumb {
+    background: #4b5563;
+  }
+  
+  .horizontal-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
   }
 }
