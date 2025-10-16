@@ -25,6 +25,13 @@ interface GeminiResponse {
 }
 
 /**
+ * Generate AI response using Gemini (exported for academic plan generation)
+ */
+export async function generateAIResponse(prompt: string, useFlashModel = false): Promise<string> {
+  return callGemini(prompt, useFlashModel);
+}
+
+/**
  * Call Gemini API with text prompt
  */
 async function callGemini(prompt: string, useFlashModel = false): Promise<string> {

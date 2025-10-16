@@ -27,6 +27,7 @@ import StudentSelector from '@/components/StudentSelector';
 import TeacherInbox from '@/components/TeacherInbox';
 import AdvancedAnalytics from '@/components/AdvancedAnalytics';
 import ClassroomManager from '@/components/ClassroomManager';
+import AcademicPlanner from '@/components/AcademicPlanner';
 import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 
 interface Assignment {
@@ -92,7 +93,7 @@ export default function TeacherDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -302,7 +303,7 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -370,6 +371,17 @@ export default function TeacherDashboard() {
               >
                 <Users className="w-4 h-4 inline mr-2" />
                 Classrooms
+              </button>
+              <button
+                onClick={() => setActiveTab('academic-planner')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'academic-planner'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 inline mr-2" />
+                Academic Planner
               </button>
               <button
                 onClick={() => setActiveTab('inbox')}
@@ -1002,6 +1014,14 @@ export default function TeacherDashboard() {
                 schoolId={user?.schoolId || 'demo-school-delhi-2025'}
               />
             )}
+          </div>
+        )}
+
+        {activeTab === 'academic-planner' && (
+          <div className="min-h-screen pb-24">
+            <AcademicPlanner
+              classId={user?.classId || 'default-class'}
+            />
           </div>
         )}
 

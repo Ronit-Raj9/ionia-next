@@ -48,6 +48,8 @@ export const COLLECTIONS = {
   STUDENT_PROFILES: 'studentProfiles',
   ASSIGNMENTS: 'assignments',
   SUBMISSIONS: 'submissions',
+  ACADEMIC_PLANS: 'academicPlans',
+  CURRICULUM_PROGRESS: 'curriculumProgress',
   PROGRESS: 'progress',
   STUDY_MATERIALS: 'studyMaterials',
   ANALYTICS: 'analytics',
@@ -737,6 +739,234 @@ export interface ClassAnalytics {
   
   generatedAt: Date;
   lastUpdated: Date;
+}
+
+// Academic Plans Collection
+export interface AcademicPlan {
+  _id?: ObjectId;
+  teacherId: string;
+  classId: string;
+  subject: string;
+  grade: string;
+  academicYear: string;
+  
+  // Uploaded files
+  syllabusFile: {
+    originalName: string;
+    url: string;
+    publicId: string;
+    size: number;
+    type: string;
+  };
+  calendarFile?: {
+    originalName: string;
+    url: string;
+    publicId: string;
+    size: number;
+    type: string;
+  };
+  
+  // Extracted content
+  extractedContent: {
+    syllabusText: string;
+    calendarText?: string;
+  };
+  
+  // AI-generated plan
+  generatedPlan: {
+    overview: {
+      subject: string;
+      grade: string;
+      academicYear: string;
+      totalWeeks: number;
+      totalHours: number;
+      description: string;
+      mainGoals: string[];
+    };
+    topics: {
+      id: string;
+      title: string;
+      description: string;
+      difficulty: 'basic' | 'intermediate' | 'advanced';
+      estimatedHours: number;
+      prerequisites: string[];
+      learningObjectives: string[];
+      keyConceptsToMaster: string[];
+      suggestedActivities: string[];
+      assessmentMethods: string[];
+      resources: {
+        type: 'textbook' | 'video' | 'article' | 'exercise' | 'lab';
+        title: string;
+        description?: string;
+        url?: string;
+      }[];
+      scheduledDate?: Date;
+      completed: boolean;
+      completedDate?: Date;
+      notes?: string;
+      weekNumber: number;
+      monthNumber: number;
+    }[];
+    timeline: {
+      quarters: {
+        quarter: number;
+        name: string;
+        startWeek: number;
+        endWeek: number;
+        focusAreas: string[];
+        majorAssessments: string[];
+      }[];
+      milestones: {
+        week: number;
+        title: string;
+        description: string;
+        type: 'assessment' | 'project' | 'review' | 'exam';
+      }[];
+    };
+    assessmentStrategy: {
+      formativeAssessments: string[];
+      summativeAssessments: string[];
+      gradingCriteria: string[];
+      feedbackMethods: string[];
+    };
+    differentiationStrategies: {
+      forAdvancedLearners: string[];
+      forStrugglingLearners: string[];
+      forDifferentLearningStyles: string[];
+    };
+    integrationPoints: {
+      homeworkPersonalization: {
+        topicBasedAssignment: boolean;
+        difficultyAdaptation: boolean;
+        prerequisiteChecking: boolean;
+        progressTracking: boolean;
+      };
+      aiRecommendations: {
+        nextTopicSuggestions: boolean;
+        remedialContentSuggestions: boolean;
+        enrichmentActivities: boolean;
+      };
+    };
+  };
+  
+  // Progress tracking
+  progress: {
+    totalTopics: number;
+    completedTopics: number;
+    completionPercentage: number;
+    lastUpdated: Date;
+  };
+  
+  status: 'active' | 'archived' | 'draft';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Curriculum Progress Tracking Collection
+export interface CurriculumProgress {
+  _id?: ObjectId;
+  academicPlanId: ObjectId;
+  classId: string;
+  teacherId: string;
+  
+  // Overall progress metrics
+  overallProgress: {
+    totalTopics: number;
+    completedTopics: number;
+    inProgressTopics: number;
+    notStartedTopics: number;
+    completionPercentage: number;
+    averageTopicCompletionTime: number; // in hours
+    projectedCompletionDate: Date;
+    onSchedule: boolean;
+    daysAheadBehind: number; // positive = ahead, negative = behind
+  };
+  
+  // Topic-wise progress
+  topicProgress: {
+    topicId: string;
+    topicTitle: string;
+    status: 'not_started' | 'in_progress' | 'completed' | 'skipped';
+    startedDate?: Date;
+    completedDate?: Date;
+    actualHoursSpent?: number;
+    estimatedHours: number;
+    completionPercentage: number;
+    teacherNotes?: string;
+    studentFeedback?: {
+      difficulty: 'too_easy' | 'just_right' | 'too_hard';
+      engagement: 'low' | 'medium' | 'high';
+      understanding: 'poor' | 'fair' | 'good' | 'excellent';
+      comments?: string;
+    };
+    assessmentResults?: {
+      formativeScores: number[];
+      summativeScore?: number;
+      averageScore: number;
+    };
+  }[];
+  
+  // Weekly/Monthly tracking
+  weeklyProgress: {
+    weekNumber: number;
+    startDate: Date;
+    endDate: Date;
+    plannedTopics: string[];
+    completedTopics: string[];
+    hoursSpent: number;
+    onSchedule: boolean;
+  }[];
+  
+  monthlyProgress: {
+    month: number;
+    year: number;
+    plannedTopics: string[];
+    completedTopics: string[];
+    totalHours: number;
+    completionRate: number;
+    majorMilestones: string[];
+  }[];
+  
+  // Integration with homework system
+  homeworkIntegration: {
+    topicBasedAssignments: {
+      topicId: string;
+      assignmentIds: ObjectId[];
+      averageScore: number;
+      completionRate: number;
+    }[];
+    adaptiveDifficulty: {
+      topicId: string;
+      currentDifficultyLevel: 'basic' | 'intermediate' | 'advanced';
+      adjustmentHistory: {
+        date: Date;
+        fromLevel: string;
+        toLevel: string;
+        reason: string;
+      }[];
+    }[];
+  };
+  
+  // AI insights and recommendations
+  aiInsights: {
+    strugglingTopics: string[];
+    strongTopics: string[];
+    recommendedPacing: 'slower' | 'current' | 'faster';
+    suggestedInterventions: string[];
+    nextTopicRecommendations: string[];
+    remedialContentSuggestions: {
+      topicId: string;
+      suggestions: string[];
+    }[];
+    enrichmentActivities: {
+      topicId: string;
+      activities: string[];
+    }[];
+    lastAnalyzed: Date;
+  };
+  
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export default clientPromise;
