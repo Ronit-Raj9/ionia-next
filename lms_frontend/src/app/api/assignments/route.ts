@@ -404,6 +404,11 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      console.log(`🔍 Student fetching assignments:`, {
+        studentMockId,
+        classId: classId || 'all classes'
+      });
+
       // Build query - filter by student and optionally by class
       const query: any = {
         assignedTo: studentMockId,
@@ -415,10 +420,14 @@ export async function GET(request: NextRequest) {
         query.classId = classId;
       }
 
+      console.log(`Query:`, query);
+
       const assignments = await assignmentsCollection
         .find(query)
         .sort({ createdAt: -1 })
         .toArray();
+
+      console.log(`📊 Found ${assignments.length} assignments for student ${studentMockId}`);
 
       const personalizedAssignments = assignments.map((assignment) => {
         const personalizedVersion = assignment.personalizedVersions?.find(

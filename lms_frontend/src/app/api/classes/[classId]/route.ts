@@ -47,8 +47,13 @@ export async function GET(
 
     // Check permissions
     if (role === 'teacher' && classData.teacherMockId !== mockUserId) {
+      console.log('Permission denied:', {
+        classTeacherId: classData.teacherMockId,
+        requestingUserId: mockUserId,
+        match: classData.teacherMockId === mockUserId
+      });
       return NextResponse.json(
-        { success: false, error: 'You do not have permission to view this class' },
+        { success: false, error: 'You do not have permission to view this class', debug: { classTeacherId: classData.teacherMockId, requestingUserId: mockUserId } },
         { status: 403 }
       );
     }

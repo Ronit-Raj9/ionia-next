@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRole } from '@/contexts/RoleContext';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
+import {   
   Upload, 
   FileText, 
   Image, 
@@ -19,7 +19,8 @@ import {
   ClipboardCheck,
   MessageCircle,
   Plus,
-  Trash2
+  Trash2,
+  Brain
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GradingInterface from '@/components/GradingInterface';
@@ -28,6 +29,8 @@ import TeacherInbox from '@/components/TeacherInbox';
 import AdvancedAnalytics from '@/components/AdvancedAnalytics';
 import ClassroomManager from '@/components/ClassroomManager';
 import AcademicPlanner from '@/components/AcademicPlanner';
+import TeacherAssignmentCreator from '@/components/TeacherAssignmentCreator';
+import TeacherAnalyticsDashboard from '@/components/TeacherAnalyticsDashboard';
 import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 
 interface Assignment {
@@ -93,7 +96,7 @@ export default function TeacherDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner' | 'adaptive-assignments'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -126,6 +129,11 @@ export default function TeacherDashboard() {
   };
 
   const fetchProgress = async () => {
+    // Skip if no classId (teacher might not have a default class)
+    if (!user?.classId) {
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
       const data = await response.json();
@@ -133,15 +141,23 @@ export default function TeacherDashboard() {
       if (data.success) {
         setProgressData(data.data);
       } else {
-        toast.error('Failed to fetch progress data');
+        // Don't show error toast for permission issues
+        if (!data.error?.includes('permission')) {
+          toast.error('Failed to fetch progress data');
+        }
       }
     } catch (error) {
       console.error('Error fetching progress:', error);
-      toast.error('Failed to fetch progress data');
+      // Don't show error toast for permission issues
     }
   };
 
   const fetchEnhancedDashboardData = async () => {
+    // Skip if no classId (teacher might not have a default class)
+    if (!user?.classId) {
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
@@ -150,7 +166,12 @@ export default function TeacherDashboard() {
         setDashboardData(data.data);
         setAiSuggestions(data.data.suggestions || []);
       } else {
-        console.error('Failed to fetch enhanced dashboard data');
+        // Silently log permission errors
+        if (data.error?.includes('permission')) {
+          console.log('Dashboard data not available for this class');
+        } else {
+          console.error('Failed to fetch enhanced dashboard data');
+        }
       }
     } catch (error) {
       console.error('Error fetching enhanced dashboard data:', error);
@@ -382,6 +403,17 @@ export default function TeacherDashboard() {
               >
                 <BookOpen className="w-4 h-4 inline mr-2" />
                 Academic Planner
+              </button>
+              <button
+                onClick={() => setActiveTab('adaptive-assignments')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'adaptive-assignments'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Brain className="w-4 h-4 inline mr-2" />
+                Adaptive Assignments
               </button>
               <button
                 onClick={() => setActiveTab('inbox')}
@@ -1008,7 +1040,7 @@ export default function TeacherDashboard() {
               </div>
             ) : (
               <ClassroomManager
-                userId={getUserId(user) || user.mockUserId}
+                userId={user?.mockUserId || getUserId(user) || ''}
                 userName={getUserDisplayName(user)}
                 role="teacher"
                 schoolId={user?.schoolId || 'demo-school-delhi-2025'}
@@ -1022,6 +1054,49 @@ export default function TeacherDashboard() {
             <AcademicPlanner
               classId={user?.classId || 'default-class'}
             />
+          </div>
+        )}
+
+        {activeTab === 'adaptive-assignments' && (
+          <div className="space-y-8 pb-24">
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-6">
+              <div className="flex items-center space-x-3 mb-2">
+                <Brain className="w-6 h-6 text-purple-600" />
+                <h2 className="text-2xl font-bold text-gray-900">Adaptive Learning Assignments</h2>
+              </div>
+              <p className="text-gray-600">
+                Create assignments where each student receives personalized question variants based on their learning profile. 
+                Students choose which questions to attempt, and the system tracks their choices to understand their preferences and anxieties.
+              </p>
+            </div>
+
+            {/* Assignment Creator */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Create New Adaptive Assignment</h3>
+              <TeacherAssignmentCreator
+                teacherId={user?.mockUserId || ''}
+                classId={user?.classId || 'default-class'}
+                subject={subject || 'Math'}
+                grade="10"
+                teacherSchoolId={user?.schoolId || 'demo-school-delhi-2025'}
+                onComplete={(assignmentId: string, questionSetId: string) => {
+                  toast.success('Adaptive assignment created successfully!');
+                  console.log('Created assignment:', assignmentId, questionSetId);
+                }}
+                onCancel={() => {
+                  toast('Assignment creation cancelled');
+                }}
+              />
+            </div>
+
+            {/* Analytics Dashboard - Requires an assignmentId */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Student Analytics & Insights</h3>
+              <p className="text-gray-600 text-center py-8">
+                Create an adaptive assignment above to view student analytics and insights here.
+              </p>
+              {/* TeacherAnalyticsDashboard requires assignmentId, which we'll get after creating an assignment */}
+            </div>
           </div>
         )}
 
