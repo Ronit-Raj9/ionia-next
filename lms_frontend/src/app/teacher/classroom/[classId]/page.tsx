@@ -109,14 +109,27 @@ export default function ClassroomPage() {
   const fetchClassDetails = async () => {
     setLoading(true);
     try {
+      console.log('Fetching class details:', {
+        classId,
+        role: user?.role,
+        mockUserId: user?.mockUserId
+      });
+      
       const response = await fetch(`/api/classes/${classId}?role=${user?.role}&mockUserId=${user?.mockUserId}`);
       const data = await response.json();
 
       if (data.success) {
         setClassDetails(data.data);
       } else {
-        toast.error(data.error || 'Failed to load class details');
-        router.push('/teacher');
+        console.error('Failed to fetch class details:', data);
+        if (data.debug) {
+          console.error('Debug info:', data.debug);
+          toast.error(`Permission Error: Your ID (${data.debug.requestingUserId}) doesn't match class teacher ID (${data.debug.classTeacherId})`);
+        } else {
+          toast.error(data.error || 'Failed to load class details');
+        }
+        // Don't redirect immediately, let user see the error
+        setTimeout(() => router.push('/teacher'), 3000);
       }
     } catch (error) {
       console.error('Error fetching class details:', error);

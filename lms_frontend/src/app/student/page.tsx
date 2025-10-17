@@ -34,6 +34,8 @@ import StudentMessageTeacher from '@/components/StudentMessageTeacher';
 import PersonalityQuiz from '@/components/PersonalityQuiz';
 import ClassDiscovery from '@/components/ClassDiscovery';
 import StudentClassroom from '@/components/StudentClassroom';
+import LearningAssessmentQuiz from '@/components/LearningAssessmentQuiz';
+import StudentAssignmentView from '@/components/StudentAssignmentView';
 import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 
 interface Assignment {
@@ -109,7 +111,7 @@ export default function StudentDashboard() {
   const [progressBars, setProgressBars] = useState<Record<string, number>>({});
   
   // Tab state and classes
-  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings'>('assignments');
+  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings' | 'adaptive-assignments'>('assignments');
   const [classes, setClasses] = useState<any[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -462,6 +464,17 @@ export default function StudentDashboard() {
               >
                 <BookOpen className="w-4 h-4 inline mr-2" />
                 Discover Classes
+              </button>
+              <button
+                onClick={() => setActiveTab('adaptive-assignments')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'adaptive-assignments'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Brain className="w-4 h-4 inline mr-2" />
+                Adaptive Assignments
               </button>
               <button
                 onClick={() => setActiveTab('message')}
@@ -1206,6 +1219,54 @@ export default function StudentDashboard() {
                 setActiveTab('classes');
               }}
             />
+          </div>
+        )}
+
+        {/* Adaptive Assignments Tab Content */}
+        {activeTab === 'adaptive-assignments' && (
+          <div className="space-y-8 pb-24">
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-6">
+              <div className="flex items-center space-x-3 mb-2">
+                <Brain className="w-6 h-6 text-purple-600" />
+                <h2 className="text-2xl font-bold text-gray-900">Adaptive Learning Assignments</h2>
+              </div>
+              <p className="text-gray-600">
+                Experience personalized learning! Each assignment is tailored to your learning profile. 
+                Choose which questions you'd like to attempt, and the system will adapt to your preferences.
+              </p>
+            </div>
+
+            {/* Learning Assessment Prompt */}
+            {!hasCompletedQuiz && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <Brain className="w-6 h-6 text-yellow-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Complete Your Learning Assessment</h3>
+                </div>
+                <p className="text-gray-600 mb-4">
+                  To get the most out of adaptive assignments, please complete a quick 5-question learning assessment. 
+                  This will help us understand your learning style and create perfectly personalized questions for you!
+                </p>
+                <LearningAssessmentQuiz
+                  studentId={user?.mockUserId || ''}
+                  classId={user?.classId || 'default-class'}
+                  grade="10"
+                  onComplete={(profile) => {
+                    setHasCompletedQuiz(true);
+                    toast.success('Learning assessment complete! Your assignments will now be personalized.');
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Assignments List */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">Your Adaptive Assignments</h3>
+              <StudentAssignmentView
+                studentId={user?.mockUserId || ''}
+                classId={user?.classId || 'default-class'}
+              />
+            </div>
           </div>
         )}
 

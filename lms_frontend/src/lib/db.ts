@@ -46,6 +46,7 @@ export const COLLECTIONS = {
   USERS: 'users',
   CLASSES: 'classes',
   STUDENT_PROFILES: 'studentProfiles',
+  STUDENT_LEARNING_PROFILES: 'studentLearningProfiles',
   ASSIGNMENTS: 'assignments',
   SUBMISSIONS: 'submissions',
   ACADEMIC_PLANS: 'academicPlans',
@@ -55,6 +56,12 @@ export const COLLECTIONS = {
   ANALYTICS: 'analytics',
   CHAT_CONVERSATIONS: 'chatConversations',
   CLASS_CHATS: 'classChats',
+  QUESTION_BANK: 'questionBank',
+  QUESTION_ATTEMPTS: 'questionAttempts',
+  TEACHER_PERFORMANCE: 'teacherPerformance',
+  TEACHER_QUESTION_SETS: 'teacherQuestionSets',
+  STUDENT_QUESTION_VARIANTS: 'studentQuestionVariants',
+  STUDENT_QUESTION_CHOICES: 'studentQuestionChoices',
 } as const;
 
 // Database schemas/interfaces
@@ -964,6 +971,628 @@ export interface CurriculumProgress {
     }[];
     lastAnalyzed: Date;
   };
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================
+// ADAPTIVE LEARNING ASSESSMENT SYSTEM
+// ============================================
+
+/**
+ * Student Learning Profile - Research-backed metrics for personalized learning
+ * Based on: Bloom's Taxonomy, Zone of Proximal Development, Self-Determination Theory
+ */
+export interface StudentLearningProfile {
+  _id?: ObjectId;
+  studentId: string;
+  classId: string;
+  grade: string;
+  subjects: string[];
+  
+  // ===== ONBOARDING METRICS (Initial Assessment) =====
+  onboardingMetrics: {
+    // Cognitive Depth Preference (1-5)
+    // Based on Bloom's Taxonomy (Remembering → Creating)
+    cognitive_depth_preference: number;
+    
+    // Challenge Resilience (1-5)
+    // Measures persistence and self-regulation
+    challenge_resilience: number;
+    
+    // Subject Affinity Map (0-10 per subject)
+    // Interest and engagement per subject area
+    subject_affinity_map: {
+      math: number;
+      science: number;
+      language: number;
+      social_studies: number;
+      arts: number;
+      technology: number;
+      other?: Record<string, number>;
+    };
+    
+    // Learning Pace Self-Assessment (1-5)
+    // Metacognitive awareness of learning speed
+    learning_pace_self_assessment: number;
+    
+    // Help-Seeking Tendency (1-5)
+    // Willingness to ask for clarification
+    help_seeking_tendency: number;
+    
+    // Assessment Date
+    assessed_at: Date;
+  };
+  
+  // ===== DYNAMIC METRICS (Evolving over time) =====
+  dynamicMetrics: {
+    // Actual Learning Pace (1-10)
+    // Calculated from time taken vs. average
+    actual_learning_pace: number;
+    
+    // Concept Mastery Rate (0-100%)
+    // Percentage of concepts mastered
+    concept_mastery_rate: number;
+    
+    // Error Recovery Rate (0-100%)
+    // Success rate when retrying failed questions
+    error_recovery_rate: number;
+    
+    // Question Attempt Ratio (0-1)
+    // Ratio of questions attempted to questions presented
+    question_attempt_ratio: number;
+    
+    // Time per Difficulty Level (minutes)
+    time_per_difficulty_level: {
+      easy: number;
+      medium: number;
+      hard: number;
+    };
+    
+    // Skip Patterns
+    skip_patterns: {
+      topicId: string;
+      topicName: string;
+      difficulty: 'easy' | 'medium' | 'hard';
+      timestamp: Date;
+      reason?: string;
+    }[];
+    
+    // Strength Topics (Topics with >80% accuracy)
+    strength_topics: {
+      topicId: string;
+      topicName: string;
+      subject: string;
+      accuracyRate: number;
+      lastAttempt: Date;
+    }[];
+    
+    // Weakness Topics (Topics with <50% accuracy)
+    weakness_topics: {
+      topicId: string;
+      topicName: string;
+      subject: string;
+      accuracyRate: number;
+      attemptsCount: number;
+      lastAttempt: Date;
+    }[];
+    
+    // Topic Avoidance Patterns (NEW)
+    topicAvoidancePatterns?: {
+      topicId: string;
+      topicName: string;
+      timesAvoided: number;
+      possibleAnxiety: boolean;
+      needsIntervention: boolean;
+    }[];
+  };
+  
+  // ===== ENGAGEMENT METRICS =====
+  engagementMetrics: {
+    // Session Frequency (sessions per week)
+    session_frequency: number;
+    
+    // Average Session Duration (minutes)
+    avg_session_duration: number;
+    
+    // Consecutive Days Active
+    consecutive_days: number;
+    
+    // Progress Velocity (concepts mastered per week)
+    progress_velocity: number;
+    
+    // Last Activity
+    last_activity: Date;
+  };
+  
+  // ===== BEHAVIORAL PATTERNS =====
+  behavioralPatterns: {
+    // Peak Performance Time (hour of day 0-23)
+    peak_performance_time?: number;
+    
+    // Preferred Question Types
+    preferred_question_types: ('mcq' | 'short_answer' | 'long_answer' | 'true_false' | 'fill_blank' | 'numerical' | 'essay')[];
+    
+    // Hint Usage Frequency (hints per question on average)
+    hint_usage_frequency: number;
+    
+    // Confidence vs Accuracy Correlation (-1 to 1)
+    // Measures if student can accurately judge their knowledge
+    confidence_accuracy_correlation: number;
+    
+    // Growth Trajectory
+    growth_trajectory: 'rapid' | 'steady' | 'slow' | 'stagnant' | 'declining';
+    
+    // Question Selection Patterns (NEW)
+    questionSelectionPatterns?: {
+      difficultyPreference: 'easy' | 'medium' | 'hard' | 'mixed';
+      bloomsLevelComfort: number; // Average Bloom's level chosen
+      avoidsAbstractConcepts: boolean;
+      challengeAcceptance: number; // 0-100
+      strategicSelection: number; // 0-100 (chooses well)
+      decisionMakingSpeed: number; // seconds to choose
+      choiceConfidence: number; // 0-100
+    };
+  };
+  
+  // ===== SUBJECT-SPECIFIC PERFORMANCE =====
+  subjectPerformance: {
+    subject: string;
+    
+    // Current Bloom's Level (1-6)
+    // 1=Remember, 2=Understand, 3=Apply, 4=Analyze, 5=Evaluate, 6=Create
+    current_blooms_level: number;
+    
+    // Topic Mastery
+    topicMastery: {
+      topicId: string;
+      topicName: string;
+      masteryLevel: 'not_started' | 'beginner' | 'intermediate' | 'advanced' | 'expert';
+      accuracy: number;
+      timeSpent: number; // minutes
+      questionsAttempted: number;
+      lastPracticed: Date;
+    }[];
+    
+    // Concept Dependencies
+    conceptDependencies: {
+      conceptId: string;
+      conceptName: string;
+      prerequisites: string[];
+      masteryScore: number; // 0-100
+      blockedConcepts?: string[]; // Concepts that can't be learned without this
+    }[];
+  }[];
+  
+  // ===== ZONE OF PROXIMAL DEVELOPMENT (ZPD) =====
+  zpdMetrics: {
+    // Current Difficulty Level
+    current_difficulty_level: 'below_zpd' | 'in_zpd' | 'above_zpd';
+    
+    // Optimal Challenge Level (based on 80% success rate target)
+    optimal_challenge_level: 'easy' | 'medium' | 'hard';
+    
+    // Scaffolding Needed
+    scaffolding_needed: boolean;
+    
+    // Last Adjustment
+    last_zpd_adjustment: Date;
+  };
+  
+  // ===== QUESTION HISTORY =====
+  questionHistory: {
+    questionId: string;
+    topicId: string;
+    subject: string;
+    difficulty: 'easy' | 'medium' | 'hard';
+    bloomsLevel: number;
+    isCorrect: boolean;
+    timeSpent: number; // seconds
+    hintsUsed: number;
+    confidence: 'low' | 'medium' | 'high';
+    attemptedAt: Date;
+    skipReason?: string;
+  }[];
+  
+  // ===== AI RECOMMENDATIONS =====
+  aiRecommendations: {
+    nextQuestions: {
+      questionId: string;
+      reason: string;
+      priority: 'high' | 'medium' | 'low';
+    }[];
+    
+    remedialTopics: {
+      topicId: string;
+      topicName: string;
+      reason: string;
+    }[];
+    
+    enrichmentActivities: {
+      activityId: string;
+      activityName: string;
+      description: string;
+    }[];
+    
+    lastGenerated: Date;
+  };
+  
+  // ===== METADATA =====
+  status: 'onboarding' | 'active' | 'inactive';
+  onboardingCompleted: boolean;
+  lastAssessment: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Question Bank - Adaptive question repository
+ */
+export interface QuestionBank {
+  _id?: ObjectId;
+  subject: string;
+  topicId: string;
+  topicName: string;
+  grade: string;
+  
+  // Question Content
+  questionText: string;
+  questionType: 'mcq' | 'short_answer' | 'long_answer' | 'true_false' | 'fill_blank';
+  options?: string[]; // For MCQ
+  correctAnswer: string | string[];
+  explanation: string;
+  
+  // Learning Classification
+  difficulty: 'easy' | 'medium' | 'hard';
+  bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6; // Remember, Understand, Apply, Analyze, Evaluate, Create
+  estimatedTime: number; // seconds
+  
+  // Prerequisites
+  prerequisites: string[]; // Topic IDs that should be mastered first
+  
+  // Metadata
+  tags: string[];
+  language: string;
+  createdBy: string;
+  isActive: boolean;
+  
+  // Performance Stats
+  stats: {
+    totalAttempts: number;
+    correctAttempts: number;
+    averageTime: number;
+    skipRate: number;
+  };
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Question Attempts - Track individual question attempts
+ */
+export interface QuestionAttempt {
+  _id?: ObjectId;
+  studentId: string;
+  questionId: ObjectId;
+  classId: string;
+  subject: string;
+  topicId: string;
+  
+  // Attempt Details
+  studentAnswer: string | string[];
+  isCorrect: boolean;
+  timeSpent: number; // seconds
+  hintsUsed: number;
+  attemptNumber: number; // 1st attempt, 2nd attempt, etc.
+  
+  // Student State
+  confidence: 'low' | 'medium' | 'high';
+  wasSkipped: boolean;
+  skipReason?: string;
+  
+  // Context
+  sessionId: string;
+  previousQuestionId?: ObjectId;
+  nextQuestionId?: ObjectId;
+  
+  // Metric Updates Triggered
+  metricsUpdated: {
+    learning_pace_updated: boolean;
+    concept_mastery_updated: boolean;
+    zpd_adjusted: boolean;
+  };
+  
+  attemptedAt: Date;
+}
+
+/**
+ * Teacher Performance Metrics
+ * Evaluates teaching effectiveness based on student outcomes
+ */
+export interface TeacherPerformance {
+  _id?: ObjectId;
+  teacherId: string;
+  classId: string;
+  subject: string;
+  grade: string;
+  
+  // Time Period
+  periodStart: Date;
+  periodEnd: Date;
+  periodType: 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  
+  // Effectiveness Indicators
+  effectiveness: {
+    // Average Concept Mastery Rate across all students (0-100%)
+    avg_concept_mastery_rate: number;
+    
+    // Class Growth Velocity (concepts mastered per week per student)
+    class_growth_velocity: number;
+    
+    // Engagement Index (0-100)
+    // Based on session frequency, duration, and participation
+    engagement_index: number;
+    
+    // Student Distribution
+    mastery_distribution: {
+      expert: number; // Percentage of students at expert level
+      advanced: number;
+      intermediate: number;
+      beginner: number;
+      not_started: number;
+    };
+    
+    // Learning Pace Variance
+    // Low variance = consistent teaching, high variance = some students left behind
+    learning_pace_variance: number;
+  };
+  
+  // Intervention Success
+  interventionSuccess: {
+    // Students who were struggling but improved
+    struggling_students_improved: number;
+    total_struggling_students: number;
+    improvement_rate: number; // Percentage
+    
+    // Average time to mastery
+    avg_time_to_mastery_days: number;
+  };
+  
+  // Topic-Specific Teaching Effectiveness
+  topicEffectiveness: {
+    topicId: string;
+    topicName: string;
+    avg_mastery_score: number;
+    student_success_rate: number; // % of students who mastered it
+    teaching_quality_score: number; // 0-100
+    needs_reteaching: boolean;
+  }[];
+  
+  // Comparative Performance
+  comparativeMetrics: {
+    // Performance vs. grade average
+    performance_vs_grade_avg: number; // Percentage difference
+    
+    // Performance vs. school average
+    performance_vs_school_avg: number;
+    
+    // Improvement rate vs. expected
+    improvement_rate: 'above_expected' | 'as_expected' | 'below_expected';
+  };
+  
+  // AI Insights
+  aiInsights: {
+    strengths: string[];
+    areas_for_improvement: string[];
+    recommended_strategies: string[];
+    students_needing_attention: {
+      studentId: string;
+      studentName: string;
+      reason: string;
+      priority: 'high' | 'medium' | 'low';
+    }[];
+  };
+  
+  generatedAt: Date;
+  lastUpdated: Date;
+}
+
+// ============================================
+// TEACHER-PROVIDED QUESTIONS WITH AI PERSONALIZATION
+// ============================================
+
+/**
+ * Teacher Question Set - Questions uploaded by teacher with AI analysis
+ */
+export interface TeacherQuestionSet {
+  _id?: ObjectId;
+  assignmentId: ObjectId;
+  teacherId: string;
+  classId: string;
+  subject: string;
+  topic: string;
+  
+  // Original questions from teacher
+  masterQuestions: {
+    id: string; // q1, q2, q3...
+    questionText: string;
+    questionType: 'mcq' | 'short_answer' | 'long_answer' | 'numerical' | 'essay' | 'true_false';
+    options?: string[]; // For MCQ
+    correctAnswer?: string | string[];
+    points: number;
+    attachments?: string[]; // Image URLs
+    
+    // AI-generated metadata
+    aiAnalysis: {
+      difficulty: 'easy' | 'medium' | 'hard';
+      bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+      cognitiveComplexity: number; // 1-10
+      identifiedTopics: string[];
+      keyConcepts: string[];
+      prerequisites: string[];
+      estimatedTime: number; // seconds
+      cognitiveLoad: 'low' | 'medium' | 'high';
+      requiredSkills: string[];
+      abstractionLevel: number; // 1-5 (concrete to abstract)
+      analyzedAt: Date;
+    };
+  }[];
+  
+  // Assignment rules
+  assignmentRules: {
+    totalQuestions: number; // e.g., 10
+    questionsToAttempt: number; // e.g., 5
+    allowStudentChoice: boolean; // true
+    choiceDeadline?: Date; // When they must choose
+    submissionDeadline: Date;
+  };
+  
+  // Personalization settings
+  personalizationEnabled: boolean;
+  personalizationLevel: 'light' | 'moderate' | 'aggressive';
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Student Question Variant - Personalized version of master question
+ */
+export interface StudentQuestionVariant {
+  _id?: ObjectId;
+  questionSetId: ObjectId;
+  assignmentId: ObjectId;
+  studentId: string;
+  masterQuestionId: string; // Reference to master question
+  
+  // Personalized variant
+  personalizedQuestion: {
+    questionText: string; // Modified based on learning profile
+    questionType: 'mcq' | 'short_answer' | 'long_answer' | 'numerical' | 'essay' | 'true_false';
+    options?: string[]; // Modified options
+    hints?: string[]; // Added based on help-seeking tendency
+    scaffolding?: {
+      enabled: boolean;
+      stepByStepGuidance: string[];
+      visualAids?: string[];
+      examples?: string[];
+      formulaSheet?: string[];
+    };
+    simplifiedLanguage?: boolean;
+    additionalContext?: string;
+    encouragementNote?: string;
+  };
+  
+  // Personalization reasoning
+  personalizationDetails: {
+    difficultyAdjustment: 'easier' | 'same' | 'harder';
+    modificationsApplied: string[];
+    basedOnMetrics: {
+      cognitive_depth_preference: number;
+      challenge_resilience: number;
+      learning_pace: number;
+      current_zpd: string;
+      help_seeking_tendency: number;
+    };
+    expectedAccuracy: number; // 0-100 (AI prediction)
+    personalizationReason: string;
+  };
+  
+  // Student interaction
+  wasPresented: boolean;
+  wasChosen: boolean;
+  chosenAt?: Date;
+  timeSpentViewing: number; // seconds before choosing
+  viewCount: number; // How many times they viewed this question
+  
+  // If attempted
+  attempt?: {
+    studentAnswer: string | string[];
+    isCorrect: boolean;
+    timeSpent: number; // seconds
+    hintsUsed: number;
+    hintsViewed: string[]; // Which hints were used
+    confidence: 'low' | 'medium' | 'high';
+    submittedAt: Date;
+    score: number;
+    maxScore: number;
+  };
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Student Question Choice - Tracks which questions student chose
+ */
+export interface StudentQuestionChoice {
+  _id?: ObjectId;
+  questionSetId: ObjectId;
+  assignmentId: ObjectId;
+  studentId: string;
+  
+  // Questions presented vs chosen
+  presentedQuestions: string[]; // 10 question IDs
+  chosenQuestions: string[]; // 5 question IDs
+  
+  // Choice timeline
+  choiceTimeline: {
+    questionId: string;
+    action: 'viewed' | 'selected' | 'deselected' | 'finalized';
+    timestamp: Date;
+  }[];
+  
+  // Choice analysis
+  choiceAnalysis: {
+    // Which difficulties were chosen
+    difficultyDistribution: {
+      easy: number;
+      medium: number;
+      hard: number;
+    };
+    
+    // Bloom's levels chosen
+    bloomsDistribution: Record<number, number>;
+    
+    // Avoided questions
+    avoidedQuestions: {
+      questionId: string;
+      difficulty: string;
+      bloomsLevel: number;
+      topics: string[];
+      possibleReason: 'too_hard' | 'too_easy' | 'unfamiliar_topic' | 'time_consuming' | 'uncertain' | 'abstract_concepts';
+      viewCount: number;
+      timeSpentViewing: number;
+    }[];
+    
+    // Choice patterns
+    patterns: {
+      avoidsHighBloomsLevel: boolean; // Avoids analysis/evaluation questions
+      prefersConcrete: boolean; // Chooses lower abstraction
+      riskAverse: boolean; // Always chooses easy/medium
+      challengeSeeker: boolean; // Chooses mostly hard
+      balancedApproach: boolean; // Good mix
+      strategicDiversity: boolean; // Good topic coverage
+    };
+    
+    // Time analysis
+    timeToMakeChoice: number; // seconds
+    hesitationIndicators: string[]; // "Viewed Q3 5 times before skipping"
+    decisionConfidence: 'low' | 'medium' | 'high';
+  };
+  
+  // Metric impact
+  metricUpdates: {
+    confidenceScore: number; // 0-100, based on choice boldness
+    strategicThinking: number; // 0-100, quality of selection
+    selfAwareness: number; // 0-100, choosing appropriate difficulty
+  };
+  
+  // Status
+  status: 'choosing' | 'finalized' | 'submitted';
+  finalizedAt?: Date;
   
   createdAt: Date;
   updatedAt: Date;
