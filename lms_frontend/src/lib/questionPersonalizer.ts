@@ -9,6 +9,19 @@ import { generateAIResponse } from './gemini-service';
 import { StudentLearningProfile } from './db';
 import { QuestionAnalysis } from './questionAnalyzer';
 
+// Helper function to convert Bloom's taxonomy level to number
+function getBloomsLevelNumber(level: string): number {
+  const levelMap: Record<string, number> = {
+    'remember': 1,
+    'understand': 2,
+    'apply': 3,
+    'analyze': 4,
+    'evaluate': 5,
+    'create': 6
+  };
+  return levelMap[level] || 1;
+}
+
 export interface PersonalizedQuestionResult {
   questionText: string;
   questionType: string;
@@ -109,9 +122,12 @@ function determinePersonalizationStrategy(
   // Determine difficulty adjustment based on ZPD
   let difficultyAdjustment: 'easier' | 'same' | 'harder' = 'same';
   
-  if (zpdMetrics.optimal_challenge_level === 'easy' && analysis.difficulty !== 'easy') {
+  const difficultyScore = analysis.difficultyAnalysis.overallScore;
+  const difficultyLevel = difficultyScore <= 3 ? 'easy' : difficultyScore <= 7 ? 'medium' : 'hard';
+  
+  if (zpdMetrics.optimal_challenge_level === 'easy' && difficultyLevel !== 'easy') {
     difficultyAdjustment = 'easier';
-  } else if (zpdMetrics.optimal_challenge_level === 'hard' && analysis.difficulty !== 'hard') {
+  } else if (zpdMetrics.optimal_challenge_level === 'hard' && difficultyLevel !== 'hard') {
     difficultyAdjustment = 'harder';
   }
   
@@ -124,7 +140,7 @@ function determinePersonalizationStrategy(
   // Simplify language for students with lower cognitive depth preference
   const simplifyLanguage = 
     onboardingMetrics.cognitive_depth_preference <= 2 ||
-    analysis.abstractionLevel > 3;
+    analysis.cognitiveComplexity.score > 7;
   
   // Add hints for students with low help-seeking tendency
   const addHints = 
@@ -137,8 +153,9 @@ function determinePersonalizationStrategy(
     dynamicMetrics.concept_mastery_rate < 60;
   
   // Modify complexity based on cognitive depth preference
+  const bloomsLevelNumber = getBloomsLevelNumber(analysis.bloomTaxonomy.level);
   const modifyComplexity = 
-    onboardingMetrics.cognitive_depth_preference !== analysis.bloomsLevel;
+    onboardingMetrics.cognitive_depth_preference !== bloomsLevelNumber;
   
   return {
     difficultyAdjustment,
@@ -172,11 +189,11 @@ ${masterQuestion.questionType === 'mcq' && masterQuestion.options ?
 ${masterQuestion.options.map((opt: string, i: number) => `${String.fromCharCode(65 + i)}. ${opt}`).join('\n')}` : ''}
 
 **Question Analysis:**
-- Difficulty: ${analysis.difficulty}
-- Bloom's Level: ${analysis.bloomsLevel}
-- Cognitive Complexity: ${analysis.cognitiveComplexity}/10
-- Topics: ${analysis.identifiedTopics.join(', ')}
-- Abstraction Level: ${analysis.abstractionLevel}/5
+- Difficulty: ${analysis.difficultyAnalysis.overallScore}/10
+- Bloom's Level: ${analysis.bloomTaxonomy.level}
+- Cognitive Complexity: ${analysis.cognitiveComplexity.score}/10
+- Topics: ${analysis.concepts.join(', ')}
+- Skills: ${analysis.skills.join(', ')}
 
 **Student Profile:**
 - Cognitive Depth Preference: ${onboardingMetrics.cognitive_depth_preference}/5 (${onboardingMetrics.cognitive_depth_preference <= 2 ? 'Prefers concrete' : 'Prefers deep exploration'})

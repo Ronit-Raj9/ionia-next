@@ -48,7 +48,22 @@ export interface ChoiceAnalysisResult {
 export function analyzeQuestionChoices(
   allVariants: StudentQuestionVariant[],
   chosenVariants: StudentQuestionVariant[],
-  masterQuestions: Array<{ id: string; aiAnalysis: QuestionAnalysis }>,
+  masterQuestions: Array<{ 
+    id: string; 
+    aiAnalysis: {
+      difficulty: 'easy' | 'medium' | 'hard';
+      bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+      cognitiveComplexity: number;
+      identifiedTopics: string[];
+      keyConcepts: string[];
+      prerequisites: string[];
+      estimatedTime: number;
+      cognitiveLoad: 'low' | 'medium' | 'high';
+      requiredSkills: string[];
+      abstractionLevel: number;
+      analyzedAt: Date;
+    }
+  }>,
   studentProfile: StudentLearningProfile
 ): ChoiceAnalysisResult {
   
@@ -59,12 +74,12 @@ export function analyzeQuestionChoices(
   const chosenAnalyses = chosenVariants.map(v => {
     const master = masterQuestions.find(q => q.id === v.masterQuestionId);
     return master?.aiAnalysis;
-  }).filter(Boolean) as QuestionAnalysis[];
+  }).filter((analysis): analysis is NonNullable<typeof analysis> => analysis !== undefined);
   
   const avoidedAnalyses = avoidedVariants.map(v => {
     const master = masterQuestions.find(q => q.id === v.masterQuestionId);
     return { variant: v, analysis: master?.aiAnalysis };
-  }).filter(item => item.analysis) as Array<{ variant: StudentQuestionVariant; analysis: QuestionAnalysis }>;
+  }).filter((item): item is { variant: StudentQuestionVariant; analysis: NonNullable<typeof item.analysis> } => item.analysis !== undefined);
   
   // Calculate distributions
   const difficultyDistribution = calculateDifficultyDistribution(chosenAnalyses);
@@ -97,17 +112,28 @@ export function analyzeQuestionChoices(
 /**
  * Calculate difficulty distribution of chosen questions
  */
-function calculateDifficultyDistribution(analyses: QuestionAnalysis[]): {
+function calculateDifficultyDistribution(analyses: Array<{
+  difficulty: 'easy' | 'medium' | 'hard';
+  bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+  cognitiveComplexity: number;
+  identifiedTopics: string[];
+  keyConcepts: string[];
+  prerequisites: string[];
+  estimatedTime: number;
+  cognitiveLoad: 'low' | 'medium' | 'high';
+  requiredSkills: string[];
+  abstractionLevel: number;
+  analyzedAt: Date;
+}>): {
   easy: number;
   medium: number;
   hard: number;
 } {
   return analyses.reduce(
     (acc, analysis) => {
-      const difficultyScore = analysis.difficultyAnalysis.overallScore;
-      if (difficultyScore <= 3) {
+      if (analysis.difficulty === 'easy') {
         acc.easy++;
-      } else if (difficultyScore <= 7) {
+      } else if (analysis.difficulty === 'medium') {
         acc.medium++;
       } else {
         acc.hard++;
@@ -121,10 +147,21 @@ function calculateDifficultyDistribution(analyses: QuestionAnalysis[]): {
 /**
  * Calculate Bloom's level distribution
  */
-function calculateBloomsDistribution(analyses: QuestionAnalysis[]): Record<number, number> {
+function calculateBloomsDistribution(analyses: Array<{
+  difficulty: 'easy' | 'medium' | 'hard';
+  bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+  cognitiveComplexity: number;
+  identifiedTopics: string[];
+  keyConcepts: string[];
+  prerequisites: string[];
+  estimatedTime: number;
+  cognitiveLoad: 'low' | 'medium' | 'high';
+  requiredSkills: string[];
+  abstractionLevel: number;
+  analyzedAt: Date;
+}>): Record<number, number> {
   return analyses.reduce((acc, analysis) => {
-    const bloomsLevel = getBloomsLevelNumber(analysis.bloomTaxonomy.level);
-    acc[bloomsLevel] = (acc[bloomsLevel] || 0) + 1;
+    acc[analysis.bloomsLevel] = (acc[analysis.bloomsLevel] || 0) + 1;
     return acc;
   }, {} as Record<number, number>);
 }
@@ -146,7 +183,22 @@ function getBloomsLevelNumber(level: string): number {
  * Analyze avoided questions to understand why
  */
 function analyzeAvoidedQuestions(
-  avoidedItems: Array<{ variant: StudentQuestionVariant; analysis: QuestionAnalysis }>,
+  avoidedItems: Array<{ 
+    variant: StudentQuestionVariant; 
+    analysis: {
+      difficulty: 'easy' | 'medium' | 'hard';
+      bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+      cognitiveComplexity: number;
+      identifiedTopics: string[];
+      keyConcepts: string[];
+      prerequisites: string[];
+      estimatedTime: number;
+      cognitiveLoad: 'low' | 'medium' | 'high';
+      requiredSkills: string[];
+      abstractionLevel: number;
+      analyzedAt: Date;
+    }
+  }>,
   profile: StudentLearningProfile
 ): ChoiceAnalysisResult['avoidedQuestions'] {
   
@@ -155,9 +207,9 @@ function analyzeAvoidedQuestions(
     
     return {
       questionId: variant.masterQuestionId,
-      difficulty: getDifficultyFromScore(analysis.difficultyAnalysis.overallScore),
-      bloomsLevel: getBloomsLevelNumber(analysis.bloomTaxonomy.level),
-      topics: analysis.concepts,
+      difficulty: analysis.difficulty,
+      bloomsLevel: analysis.bloomsLevel,
+      topics: analysis.identifiedTopics,
       possibleReason,
       viewCount: variant.viewCount || 0,
       timeSpentViewing: variant.timeSpentViewing || 0
@@ -176,12 +228,24 @@ function getDifficultyFromScore(score: number): string {
  * Infer why a question was avoided
  */
 function inferAvoidanceReason(
-  analysis: QuestionAnalysis,
+  analysis: {
+    difficulty: 'easy' | 'medium' | 'hard';
+    bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    cognitiveComplexity: number;
+    identifiedTopics: string[];
+    keyConcepts: string[];
+    prerequisites: string[];
+    estimatedTime: number;
+    cognitiveLoad: 'low' | 'medium' | 'high';
+    requiredSkills: string[];
+    abstractionLevel: number;
+    analyzedAt: Date;
+  },
   variant: StudentQuestionVariant,
   profile: StudentLearningProfile
 ): 'too_hard' | 'too_easy' | 'unfamiliar_topic' | 'time_consuming' | 'uncertain' | 'abstract_concepts' {
   
-  const difficulty = getDifficultyFromScore(analysis.difficultyAnalysis.overallScore);
+  const difficulty = analysis.difficulty;
   
   // Too hard: High difficulty and student has low ZPD
   if (difficulty === 'hard' && profile.zpdMetrics.optimal_challenge_level === 'easy') {
@@ -194,18 +258,18 @@ function inferAvoidanceReason(
   }
   
   // Abstract concepts: High abstraction and student prefers concrete
-  if (analysis.cognitiveComplexity.score >= 7 && profile.onboardingMetrics.cognitive_depth_preference <= 2) {
+  if (analysis.cognitiveComplexity >= 7 && profile.onboardingMetrics.cognitive_depth_preference <= 2) {
     return 'abstract_concepts';
   }
   
   // Time consuming: High estimated time
-  if (analysis.estimatedTime > 5) { // Convert to minutes
+  if (analysis.estimatedTime > 300) { // Convert to seconds (5 minutes)
     return 'time_consuming';
   }
   
   // Unfamiliar topic: Check if topic is in weakness list
   const hasWeakness = profile.dynamicMetrics.weakness_topics?.some(w =>
-    analysis.concepts.includes(w.topicName)
+    analysis.identifiedTopics.includes(w.topicName)
   );
   if (hasWeakness) {
     return 'unfamiliar_topic';
@@ -224,27 +288,51 @@ function inferAvoidanceReason(
  * Identify behavioral patterns in choices
  */
 function identifyChoicePatterns(
-  chosenAnalyses: QuestionAnalysis[],
-  avoidedAnalyses: QuestionAnalysis[],
+  chosenAnalyses: Array<{
+    difficulty: 'easy' | 'medium' | 'hard';
+    bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    cognitiveComplexity: number;
+    identifiedTopics: string[];
+    keyConcepts: string[];
+    prerequisites: string[];
+    estimatedTime: number;
+    cognitiveLoad: 'low' | 'medium' | 'high';
+    requiredSkills: string[];
+    abstractionLevel: number;
+    analyzedAt: Date;
+  }>,
+  avoidedAnalyses: Array<{
+    difficulty: 'easy' | 'medium' | 'hard';
+    bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    cognitiveComplexity: number;
+    identifiedTopics: string[];
+    keyConcepts: string[];
+    prerequisites: string[];
+    estimatedTime: number;
+    cognitiveLoad: 'low' | 'medium' | 'high';
+    requiredSkills: string[];
+    abstractionLevel: number;
+    analyzedAt: Date;
+  }>,
   profile: StudentLearningProfile
 ): ChoiceAnalysisResult['patterns'] {
   
   // Avoids high Bloom's level
-  const avgChosenBlooms = chosenAnalyses.reduce((sum, a) => sum + getBloomsLevelNumber(a.bloomTaxonomy.level), 0) / chosenAnalyses.length;
-  const avgAvoidedBlooms = avoidedAnalyses.reduce((sum, a) => sum + getBloomsLevelNumber(a.bloomTaxonomy.level), 0) / avoidedAnalyses.length;
+  const avgChosenBlooms = chosenAnalyses.reduce((sum, a) => sum + a.bloomsLevel, 0) / chosenAnalyses.length;
+  const avgAvoidedBlooms = avoidedAnalyses.reduce((sum, a) => sum + a.bloomsLevel, 0) / avoidedAnalyses.length;
   const avoidsHighBloomsLevel = avgAvoidedBlooms > avgChosenBlooms + 1;
   
   // Prefers concrete
-  const avgChosenAbstraction = chosenAnalyses.reduce((sum, a) => sum + a.cognitiveComplexity.score, 0) / chosenAnalyses.length;
-  const avgAvoidedAbstraction = avoidedAnalyses.reduce((sum, a) => sum + a.cognitiveComplexity.score, 0) / avoidedAnalyses.length;
+  const avgChosenAbstraction = chosenAnalyses.reduce((sum, a) => sum + a.cognitiveComplexity, 0) / chosenAnalyses.length;
+  const avgAvoidedAbstraction = avoidedAnalyses.reduce((sum, a) => sum + a.cognitiveComplexity, 0) / avoidedAnalyses.length;
   const prefersConcrete = avgAvoidedAbstraction > avgChosenAbstraction + 0.5;
   
   // Risk averse: Mostly easy/medium
-  const hardCount = chosenAnalyses.filter(a => getDifficultyFromScore(a.difficultyAnalysis.overallScore) === 'hard').length;
+  const hardCount = chosenAnalyses.filter(a => a.difficulty === 'hard').length;
   const riskAverse = hardCount === 0 || (hardCount / chosenAnalyses.length) < 0.2;
   
   // Challenge seeker: Mostly medium/hard
-  const easyCount = chosenAnalyses.filter(a => getDifficultyFromScore(a.difficultyAnalysis.overallScore) === 'easy').length;
+  const easyCount = chosenAnalyses.filter(a => a.difficulty === 'easy').length;
   const challengeSeeker = (hardCount / chosenAnalyses.length) > 0.4;
   
   // Balanced approach: Good mix of difficulties
@@ -254,7 +342,7 @@ function identifyChoicePatterns(
   
   // Strategic diversity: Good topic coverage
   const topicSet = new Set<string>();
-  chosenAnalyses.forEach(a => a.concepts.forEach((t: string) => topicSet.add(t)));
+  chosenAnalyses.forEach(a => a.identifiedTopics.forEach((t: string) => topicSet.add(t)));
   const strategicDiversity = topicSet.size >= Math.min(chosenAnalyses.length, 5);
   
   return {
@@ -304,8 +392,32 @@ function analyzeChoiceTime(variants: StudentQuestionVariant[]): {
  * Calculate metric scores from choices
  */
 function calculateMetricScores(
-  chosenAnalyses: QuestionAnalysis[],
-  avoidedAnalyses: QuestionAnalysis[],
+  chosenAnalyses: Array<{
+    difficulty: 'easy' | 'medium' | 'hard';
+    bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    cognitiveComplexity: number;
+    identifiedTopics: string[];
+    keyConcepts: string[];
+    prerequisites: string[];
+    estimatedTime: number;
+    cognitiveLoad: 'low' | 'medium' | 'high';
+    requiredSkills: string[];
+    abstractionLevel: number;
+    analyzedAt: Date;
+  }>,
+  avoidedAnalyses: Array<{
+    difficulty: 'easy' | 'medium' | 'hard';
+    bloomsLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    cognitiveComplexity: number;
+    identifiedTopics: string[];
+    keyConcepts: string[];
+    prerequisites: string[];
+    estimatedTime: number;
+    cognitiveLoad: 'low' | 'medium' | 'high';
+    requiredSkills: string[];
+    abstractionLevel: number;
+    analyzedAt: Date;
+  }>,
   profile: StudentLearningProfile
 ): {
   confidenceScore: number;
@@ -315,9 +427,8 @@ function calculateMetricScores(
   
   // Confidence score: Based on difficulty of chosen questions
   const difficultyScore = chosenAnalyses.reduce((sum, a) => {
-    const difficulty = getDifficultyFromScore(a.difficultyAnalysis.overallScore);
-    if (difficulty === 'easy') return sum + 1;
-    if (difficulty === 'medium') return sum + 2;
+    if (a.difficulty === 'easy') return sum + 1;
+    if (a.difficulty === 'medium') return sum + 2;
     return sum + 3;
   }, 0);
   const maxDifficultyScore = chosenAnalyses.length * 3;
@@ -326,7 +437,7 @@ function calculateMetricScores(
   // Strategic thinking: Balance and diversity
   const diffDist = calculateDifficultyDistribution(chosenAnalyses);
   const hasBalance = diffDist.easy > 0 && diffDist.medium > 0;
-  const topicCount = new Set(chosenAnalyses.flatMap(a => a.concepts)).size;
+  const topicCount = new Set(chosenAnalyses.flatMap(a => a.identifiedTopics)).size;
   const hasDiversity = topicCount >= Math.min(chosenAnalyses.length - 1, 4);
   
   let strategicScore = 50; // Base
@@ -336,10 +447,9 @@ function calculateMetricScores(
   // Self-awareness: Choosing appropriate difficulty for ZPD
   const optimalLevel = profile.zpdMetrics.optimal_challenge_level;
   const appropriateChoices = chosenAnalyses.filter(a => {
-    const difficulty = getDifficultyFromScore(a.difficultyAnalysis.overallScore);
-    if (optimalLevel === 'easy') return difficulty === 'easy' || difficulty === 'medium';
-    if (optimalLevel === 'hard') return difficulty === 'medium' || difficulty === 'hard';
-    return difficulty === 'medium'; // Medium ZPD
+    if (optimalLevel === 'easy') return a.difficulty === 'easy' || a.difficulty === 'medium';
+    if (optimalLevel === 'hard') return a.difficulty === 'medium' || a.difficulty === 'hard';
+    return a.difficulty === 'medium'; // Medium ZPD
   }).length;
   
   const selfAwarenessScore = Math.round((appropriateChoices / chosenAnalyses.length) * 100);
