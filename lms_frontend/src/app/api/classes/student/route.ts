@@ -26,22 +26,42 @@ export async function GET(request: NextRequest) {
     }
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+    const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    
     const classes = await classesCollection
-      .find({ studentMockIds: { $in: [studentId] } })
+      .find({ studentIds: { $in: [studentId] } })
       .sort({ createdAt: -1 })
       .toArray();
 
-    // Transform to include additional info for student view
-    const formattedClasses = classes.map(classData => ({
-      _id: classData._id,
-      className: classData.className,
-      teacherMockId: classData.teacherMockId,
-      studentCount: classData.studentMockIds.length,
-      createdAt: classData.createdAt,
-      // Add some mock data for now
-      lastActivity: new Date(),
-      hasUnreadMessages: Math.random() > 0.5, // Mock unread status
-      recentAssignments: Math.floor(Math.random() * 5) + 1 // Mock assignment count
+    // Transform to include additional info for student view with real assignment counts
+    const formattedClasses = await Promise.all(classes.map(async classData => {
+      // Get actual assignment count for this class
+      const assignmentQuery = {
+        $or: [
+          { classId: classData._id?.toString() }, // Assignments for this specific class
+          { assignedTo: classData._id?.toString() }, // Assignments assigned to this class
+          { assignedTo: studentId } // Assignments assigned directly to this student
+        ],
+        isPublished: true
+      };
+      
+      console.log(`🔍 Checking assignments for class ${classData.className} (${classData._id}):`, JSON.stringify(assignmentQuery, null, 2));
+      
+      const assignmentCount = await assignmentsCollection.countDocuments(assignmentQuery);
+      
+      console.log(`📊 Found ${assignmentCount} assignments for class ${classData.className}`);
+
+      return {
+        _id: classData._id,
+        className: classData.className,
+        teacherId: classData.teacherId,
+        studentCount: classData.studentIds.length,
+        createdAt: classData.createdAt,
+        // Real data instead of mock data
+        lastActivity: new Date(),
+        hasUnreadMessages: false, // TODO: Implement real message tracking
+        recentAssignments: assignmentCount // Real assignment count from database
+      };
     }));
 
     return NextResponse.json({

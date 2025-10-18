@@ -1,27 +1,20 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getUserDisplayName } from '@/lib/userUtils';
+import { User } from '@/lib/db';
 
 export type UserRole = 'teacher' | 'student' | 'admin';
 
-export interface RoleUser {
-  role: UserRole;
-  mockUserId: string; // Legacy field - for backward compatibility
-  userId?: string; // New user ID
-  name: string; // Full name (Required)
-  email: string; // Email (Required)
-  displayName?: string; // Optional display name
-  classId: string;
-  schoolId?: string;
-  profileImage?: string;
-  phoneNumber?: string;
-  status?: 'active' | 'inactive' | 'suspended';
+// Use the standardized User interface from the new system
+export interface RoleUser extends Omit<User, '_id' | 'createdAt' | 'updatedAt'> {
+  _id?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface RoleContextType {
   user: RoleUser | null;
-  setRole: (role: UserRole, mockUserId?: string) => void;
+  setUser: (user: RoleUser) => void;
   clearRole: () => void;
   isLoading: boolean;
 }
@@ -36,193 +29,59 @@ export const useRole = () => {
   return context;
 };
 
-// Default class ID - can be configured via environment variable
-const DEFAULT_CLASS_ID = process.env.NEXT_PUBLIC_DEFAULT_CLASS_ID || 'demo-class-1';
-
-// Generate default display names (fallback only)
-const getDefaultName = (role: UserRole, id: string): string => {
-  switch (role) {
-    case 'teacher':
-      return 'Teacher';
-    case 'admin':
-      return 'Administrator';
-    case 'student':
-      return 'Student';
-    default:
-      return 'User';
-  }
-};
-
-// Generate default email (fallback only)
-const getDefaultEmail = (role: UserRole, id: string): string => {
-  const sanitizedId = id.replace(/[^a-z0-9]/gi, '').toLowerCase();
-  switch (role) {
-    case 'teacher':
-      return `${sanitizedId}@teacher.school.edu`;
-    case 'admin':
-      return `${sanitizedId}@admin.school.edu`;
-    case 'student':
-      return `${sanitizedId}@student.school.edu`;
-    default:
-      return `${sanitizedId}@school.edu`;
-  }
-};
-
-// Generate mock user ID
-const generateMockUserId = (role: UserRole, customId?: string): string => {
-  if (customId) return customId;
-  
-  switch (role) {
-    case 'teacher':
-      return 'teacher1';
-    case 'admin':
-      return 'admin1';
-    case 'student':
-      // Default to student1, but this should be selected by user
-      return 'student1';
-    default:
-      return `${role}1`;
-  }
-};
-
 export function RoleProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<RoleUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load role from localStorage and sync with database on mount
+  // Load user from localStorage on mount
   useEffect(() => {
-    const loadStoredRole = async () => {
+    const loadStoredUser = async () => {
       try {
-        const storedRole = localStorage.getItem('ionia_role');
-        const storedUserInfo = localStorage.getItem('ionia_user_info');
+        const storedUser = localStorage.getItem('ionia_user');
         
-        if (storedRole) {
-          const parsed = JSON.parse(storedRole) as RoleUser;
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser) as RoleUser;
           
-          // Merge with additional user info if available
-          if (storedUserInfo) {
-            const userInfo = JSON.parse(storedUserInfo);
-            parsed.name = userInfo.name;
-            parsed.email = userInfo.email;
-            parsed.schoolId = userInfo.schoolId;
-            parsed.userId = userInfo.userId;
-            // Update display name with actual name if available
-            if (userInfo.name) {
-              parsed.displayName = userInfo.name;
-            }
-          }
+          // Validate the user data using new system requirements
+          // For teachers and admins, schoolId is required; for students, classId is required
+          const isValidUser = parsedUser.role && parsedUser.userId && parsedUser.name && parsedUser.email && 
+            ((parsedUser.role === 'student' && parsedUser.classId) || 
+             ((parsedUser.role === 'teacher' || parsedUser.role === 'admin') && parsedUser.schoolId));
           
-          // Try to sync with database to get latest user data
-          try {
-            const response = await fetch(`/api/auth/login?mockUserId=${parsed.mockUserId}`);
-            const data = await response.json();
-            
-            if (data.success && data.user) {
-              // Update with latest data from database
-              const syncedUser: RoleUser = {
-                role: data.user.role,
-                mockUserId: data.user.mockUserId,
-                userId: data.user.userId,
-                name: data.user.name,
-                email: data.user.email,
-                displayName: data.user.displayName || data.user.name,
-                classId: data.user.classId,
-                schoolId: data.user.schoolId,
-                profileImage: data.user.profileImage,
-                phoneNumber: data.user.phoneNumber,
-                status: data.user.status,
-              };
-              
-              setUser(syncedUser);
-              
-              // Update localStorage with synced data
-              localStorage.setItem('ionia_role', JSON.stringify(syncedUser));
-              localStorage.setItem('ionia_user_info', JSON.stringify({
-                name: syncedUser.name,
-                email: syncedUser.email,
-                schoolId: syncedUser.schoolId,
-                role: syncedUser.role,
-                mockUserId: syncedUser.mockUserId,
-                userId: syncedUser.userId
-              }));
-            } else {
-              // Database sync failed, use localStorage data
-              setUser(parsed);
-            }
-          } catch (syncError) {
-            console.warn('Failed to sync with database, using cached data:', syncError);
-            // Use localStorage data if database sync fails
-            setUser(parsed);
+          if (isValidUser) {
+            setUser(parsedUser);
+          } else {
+            // Invalid user data, clear it
+            console.warn('Invalid user data in localStorage:', parsedUser);
+            localStorage.removeItem('ionia_user');
           }
         }
       } catch (error) {
-        console.error('Failed to load stored role:', error);
-        localStorage.removeItem('ionia_role');
-        localStorage.removeItem('ionia_user_info');
+        console.error('Failed to load stored user:', error);
+        // Clear invalid data
+        localStorage.removeItem('ionia_user');
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Only run on client side
-    if (typeof window !== 'undefined') {
-      loadStoredRole();
-    } else {
-      setIsLoading(false);
-    }
+    loadStoredUser();
   }, []);
 
-  const setRole = (role: UserRole, mockUserId?: string) => {
-    const generatedMockUserId = generateMockUserId(role, mockUserId);
-    
-    // Check if there's additional user info in localStorage
-    let additionalInfo: any = {};
-    if (typeof window !== 'undefined') {
-      try {
-        const storedUserInfo = localStorage.getItem('ionia_user_info');
-        if (storedUserInfo) {
-          additionalInfo = JSON.parse(storedUserInfo);
-        }
-      } catch (error) {
-        console.error('Error reading user info from localStorage:', error);
-      }
-    }
-    
-    // Create user with required name and email fields
-    // Use stored info if available, otherwise use defaults
-    const newUser: RoleUser = {
-      role,
-      mockUserId: generatedMockUserId,
-      userId: additionalInfo.userId || generatedMockUserId,
-      name: additionalInfo.name || getDefaultName(role, generatedMockUserId),
-      email: additionalInfo.email || getDefaultEmail(role, generatedMockUserId),
-      displayName: additionalInfo.name || getDefaultName(role, generatedMockUserId),
-      classId: DEFAULT_CLASS_ID,
-      schoolId: additionalInfo.schoolId,
-      profileImage: additionalInfo.profileImage,
-      phoneNumber: additionalInfo.phoneNumber,
-      status: additionalInfo.status || 'active',
-    };
-
+  const handleSetUser = (newUser: RoleUser) => {
     setUser(newUser);
-    
     // Store in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('ionia_role', JSON.stringify(newUser));
-    }
+    localStorage.setItem('ionia_user', JSON.stringify(newUser));
   };
 
   const clearRole = () => {
     setUser(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('ionia_role');
-      localStorage.removeItem('ionia_user_info');
-    }
+    localStorage.removeItem('ionia_user');
   };
 
-  const value = {
+  const value: RoleContextType = {
     user,
-    setRole,
+    setUser: handleSetUser,
     clearRole,
     isLoading,
   };
@@ -233,19 +92,3 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
     </RoleContext.Provider>
   );
 }
-
-// Helper hook to check if user has specific role
-export const useRoleCheck = (requiredRole: UserRole | UserRole[]) => {
-  const { user } = useRole();
-  
-  if (!user) return false;
-  
-  if (Array.isArray(requiredRole)) {
-    return requiredRole.includes(user.role);
-  }
-  
-  return user.role === requiredRole;
-};
-
-
-export default RoleContext;

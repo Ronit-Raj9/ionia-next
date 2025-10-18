@@ -190,7 +190,7 @@ export function generateDiverseOceanProfiles(count: number = 20) {
     };
     
     profiles.push({
-      studentMockId: studentId,
+      studentId: studentId,
       studentName: `${studentName.first} ${studentName.last}`,
       schoolId: DEMO_SCHOOL_ID,
       oceanTraits,
@@ -243,7 +243,7 @@ export function generateDemoClasses() {
       className: 'Class 9 Science - Section A',
       teacherMockId: DEMO_TEACHER_ID,
       schoolId: DEMO_SCHOOL_ID,
-      studentMockIds: Array.from({ length: 10 }, (_, i) => `student_demo_${i + 1}`),
+      studentIds: Array.from({ length: 10 }, (_, i) => `student_demo_${i + 1}`),
       description: 'CBSE Class 9 Science - Complete syllabus coverage with practical experiments',
       subject: 'Science',
       grade: '9',
@@ -276,7 +276,7 @@ export function generateDemoClasses() {
       className: 'Class 10 Science - Section B',
       teacherMockId: DEMO_TEACHER_ID,
       schoolId: DEMO_SCHOOL_ID,
-      studentMockIds: Array.from({ length: 10 }, (_, i) => `student_demo_${i + 11}`),
+      studentIds: Array.from({ length: 10 }, (_, i) => `student_demo_${i + 11}`),
       description: 'CBSE Class 10 Science - Board exam preparation with focus on numericals',
       subject: 'Science',
       grade: '10',

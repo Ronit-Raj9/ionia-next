@@ -18,13 +18,16 @@ interface Student {
   name: string;
   email?: string;
   isSelected: boolean;
+  userId?: string; // New system user ID
+  role?: string; // New system role
+  classId?: string; // New system class ID
 }
 
 interface Class {
   _id: string;
   className: string;
-  teacherMockId: string;
-  studentMockIds: string[];
+  teacherId: string; // Teacher ID from new system
+  studentIds: string[]; // Student IDs from new system
   createdAt: string;
 }
 
@@ -109,7 +112,7 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
     setLoading(true);
     try {
       console.log('Fetching students for class:', selectedClassData.className);
-      console.log('Class student IDs:', selectedClassData.studentMockIds);
+      console.log('Class student IDs:', selectedClassData.studentIds);
       
       // First get all available students from the same school
       const response = await fetch(`/api/students?role=${teacherRole}&schoolId=${encodeURIComponent(teacherSchoolId)}`);
@@ -123,15 +126,15 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
         if (!isCreatingClass) {
           // Filter students to only show those in the selected class
           studentsToShow = data.data.filter((student: any) => {
-            const isInClass = selectedClassData.studentMockIds.includes(student.id);
+            const isInClass = selectedClassData.studentIds.includes(student.id);
             return isInClass;
           });
         }
         
         // If no students match and we're not creating a class, use the class's student IDs to create entries
-        if (studentsToShow.length === 0 && selectedClassData.studentMockIds.length > 0 && !isCreatingClass) {
+        if (studentsToShow.length === 0 && selectedClassData.studentIds.length > 0 && !isCreatingClass) {
           console.log('No matching students found, creating from class IDs');
-          const fallbackStudents: Student[] = selectedClassData.studentMockIds.map((id) => {
+          const fallbackStudents: Student[] = selectedClassData.studentIds.map((id) => {
             // Try to find the student in the full list
             const foundStudent = data.data.find((s: any) => s.id === id);
             if (foundStudent) {
@@ -160,7 +163,7 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
       toast.error('Failed to load students');
       
       // Fallback to class students
-      const fallbackStudents: Student[] = selectedClassData.studentMockIds.map((id) => ({
+      const fallbackStudents: Student[] = selectedClassData.studentIds.map((id) => ({
         id,
         name: id.replace(/_/g, ' ').replace(/student/i, 'Student '),
         email: `${id}@student.com`,
@@ -355,7 +358,7 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
                               {classData.className}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {classData.studentMockIds.length} student{classData.studentMockIds.length !== 1 ? 's' : ''}
+                              {classData.studentIds.length} students
                             </p>
                           </div>
                           
@@ -373,7 +376,7 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
                                     onStudentsSelected(allSelected, classData);
                                   } else {
                                     // If still no students, use fallback
-                                    const fallbackStudents = classData.studentMockIds.map((id) => ({
+                                    const fallbackStudents = classData.studentIds.map((id) => ({
                                       id,
                                       name: id.replace(/_/g, ' ').replace(/student/i, 'Student '),
                                       email: `${id}@student.com`,

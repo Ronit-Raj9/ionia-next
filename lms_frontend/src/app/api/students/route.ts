@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
           role: 'student',
           schoolId: schoolId  // Exact match, case-sensitive
         })
-        .sort({ mockUserId: 1 })
+        .sort({ userId: 1 })
         .toArray();
 
       // Get student profiles to fetch names
@@ -45,19 +45,19 @@ export async function GET(request: NextRequest) {
         .find({})
         .toArray();
       
-      // Create a map of mockUserId to profile
+      // Create a map of userId to profile
       const profileMap = new Map();
       profiles.forEach((profile: any) => {
-        profileMap.set(profile.studentMockId, profile);
+        profileMap.set(profile.studentId, profile);
       });
 
       // Transform to the format expected by StudentSelector
       const formattedStudents = students.map(student => {
-        const profile = profileMap.get(student.mockUserId);
+        const profile = profileMap.get(student.userId);
         return {
-          id: student.mockUserId,
-          name: profile?.studentName || profile?.name || student.displayName || student.name || `Student ${student.mockUserId.replace('student', '')}`,
-          email: profile?.email || student.email || `${student.mockUserId}@example.com`,
+          id: student.userId,
+          name: profile?.studentName || profile?.name || student.displayName || student.name || `Student ${student.userId.replace('STUDENT_', '')}`,
+          email: profile?.email || student.email || `${student.userId}@example.com`,
           isSelected: false
         };
       });

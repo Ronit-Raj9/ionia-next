@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCollection, COLLECTIONS } from '@/lib/db';
+import { ObjectId } from 'mongodb';
+import { getCollection, COLLECTIONS, Class } from '@/lib/db';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -10,8 +11,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const schoolId = searchParams.get('schoolId');
     const role = searchParams.get('role');
-    const mockUserId = searchParams.get('mockUserId');
+    const userId = searchParams.get('userId');
 
+    // Validate required parameters
     if (!schoolId) {
       return NextResponse.json(
         { success: false, error: 'SchoolId is required' },
@@ -19,38 +21,89 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!role || !mockUserId) {
+    if (!role || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Role and mockUserId are required' },
+        { success: false, error: 'Role and userId are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate role
+    if (!['teacher', 'student', 'admin'].includes(role)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid role' },
         { status: 400 }
       );
     }
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+    const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    const classChatsCollection = await getCollection(COLLECTIONS.CLASS_CHATS);
     
-    let query: any = { schoolId, isActive: true };
+    // Handle both string and ObjectId schoolId formats
+    let schoolIdQuery: any;
+    if (ObjectId.isValid(schoolId)) {
+      // If it's a valid ObjectId string, convert it
+      schoolIdQuery = new ObjectId(schoolId);
+    } else {
+      // If it's not a valid ObjectId, use it as string (for existing data)
+      schoolIdQuery = schoolId;
+    }
+    
+    // Build query based on role and school
+    const query: any = { 
+      schoolId: schoolIdQuery, 
+      isActive: true 
+    };
     
     // Filter based on role
     if (role === 'teacher') {
-      query.teacherMockId = mockUserId;
+      query.teacherId = userId;
     } else if (role === 'student') {
-      query.studentMockIds = { $in: [mockUserId] };
+      query.studentIds = { $in: [userId] };
     }
-    // Admin can see all classes
+    // Admin can see all classes in the school
 
+    console.log('Querying classes with query:', JSON.stringify(query, null, 2));
+    
     const classes = await classesCollection
       .find(query)
       .sort({ createdAt: -1 })
-      .toArray();
+      .toArray() as unknown as Class[];
 
-    // Add additional info for each class
-    const enrichedClasses = classes.map(classData => ({
-      ...classData,
-      studentCount: classData.studentMockIds?.length || 0,
-      lastActivity: classData.updatedAt || classData.createdAt,
-      hasUnreadMessages: Math.random() > 0.5, // Mock for now
-      recentAssignments: Math.floor(Math.random() * 5) + 1 // Mock for now
-    }));
+    console.log('Found classes:', classes.length, classes);
+
+    // Enrich classes with real data
+    const enrichedClasses = await Promise.all(
+      classes.map(async (classData) => {
+        // Get real assignment count
+        const assignmentCount = await assignmentsCollection.countDocuments({
+          classId: classData._id?.toString()
+        });
+
+        // Get real unread message status from class chats
+        const classChat = await classChatsCollection.findOne({
+          classId: classData._id?.toString()
+        });
+
+        let hasUnreadMessages = false;
+        if (classChat && classChat.messages) {
+          // Check if there are unread messages for this user
+          const unreadCount = classChat.messages.filter((message: any) => 
+            !message.isRead && message.senderId !== userId
+          ).length;
+          hasUnreadMessages = unreadCount > 0;
+        }
+
+        return {
+          ...classData,
+          studentCount: classData.studentIds?.length || 0,
+          lastActivity: classData.updatedAt || classData.createdAt,
+          hasUnreadMessages,
+          recentAssignments: assignmentCount
+        };
+      })
+    );
 
     return NextResponse.json({
       success: true,
@@ -64,7 +117,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
-
-

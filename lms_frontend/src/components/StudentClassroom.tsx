@@ -53,7 +53,7 @@ interface Assignment {
 interface Submission {
   _id: string;
   assignmentId: string;
-  studentMockId: string;
+  studentId: string;
   submissionTime: string;
   submittedContent: {
     text: string;
@@ -148,7 +148,7 @@ export default function StudentClassroom({
   const fetchClassDetails = async () => {
     try {
       const response = await fetch(
-        `/api/classes/${classId}?role=student&mockUserId=${studentId}`
+        `/api/classes/${classId}?role=student&userId=${studentId}&studentId=${studentId}`
       );
       const data = await response.json();
       
@@ -167,7 +167,7 @@ export default function StudentClassroom({
     try {
       // Fetch all assignments for the student, then filter by classId
       const response = await fetch(
-        `/api/assignments?role=student&mockUserId=${studentId}&studentMockId=${studentId}`
+        `/api/assignments?role=student&userId=${studentId}&studentId=${studentId}&classId=${classId}`
       );
       const data = await response.json();
       
@@ -190,7 +190,7 @@ export default function StudentClassroom({
   const fetchSubmissions = async () => {
     try {
       const response = await fetch(
-        `/api/submissions?role=student&studentId=${studentId}&classId=${classId}`
+        `/api/submissions?role=student&userId=${studentId}&studentId=${studentId}&classId=${classId}`
       );
       const data = await response.json();
       
@@ -244,7 +244,7 @@ export default function StudentClassroom({
     try {
       const formData = new FormData();
       formData.append('assignmentId', selectedAssignment._id);
-      formData.append('studentMockId', studentId);
+      formData.append('studentId', studentId);
       formData.append('studentName', studentName);
       formData.append('classId', classId);
       formData.append('text', textAnswer);

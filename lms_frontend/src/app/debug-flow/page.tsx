@@ -1,21 +1,37 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRole } from '@/contexts/RoleContext';
+import React, { useState } from 'react';
+import { useRole, RoleUser } from '@/contexts/RoleContext';
 import StudentSelector from '@/components/StudentSelector';
 import ClassManager from '@/components/ClassManager';
 import toast from 'react-hot-toast';
 
+interface Student {
+  id: string;
+  name: string;
+  email?: string;
+  isSelected: boolean;
+  userId?: string; // New system user ID
+  role?: string; // New system role
+  classId?: string; // New system class ID
+}
+
+interface ApiTestResults {
+  login?: any;
+  students?: any;
+  error?: any;
+}
+
 export default function DebugFlow() {
-  const { user, setRole } = useRole();
+  const { user, setUser } = useRole();
   const [showSelector, setShowSelector] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
-  const [apiTestResults, setApiTestResults] = useState<any>(null);
-  const [loginForm, setLoginForm] = useState({ email: 'teacher.demo@school.com' });
+  const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
+  const [apiTestResults, setApiTestResults] = useState<ApiTestResults | null>(null);
+  const [loginForm, setLoginForm] = useState({ email: '' });
 
   // Test API endpoints
   const testAPIs = async () => {
-    const results: any = {};
+    const results: ApiTestResults = {};
     
     try {
       // Test login
@@ -27,7 +43,7 @@ export default function DebugFlow() {
       results.login = await loginResponse.json();
 
       // Test students API if we have schoolId
-      if (results.login.success && results.login.user.schoolId) {
+      if (results.login?.success && results.login.user?.schoolId) {
         const studentsResponse = await fetch(`/api/students?role=teacher&schoolId=${encodeURIComponent(results.login.user.schoolId)}`);
         results.students = await studentsResponse.json();
       }
@@ -51,18 +67,23 @@ export default function DebugFlow() {
       const data = await response.json();
       
       if (data.success) {
-        // Set role with user data
-        setRole(data.user.role, data.user.mockUserId);
-        
-        // Store user info
-        localStorage.setItem('ionia_user_info', JSON.stringify({
+        // Set user with new system data structure
+        setUser({
+          role: data.user.role,
+          userId: data.user.userId,
           name: data.user.name,
           email: data.user.email,
+          displayName: data.user.displayName,
+          classId: data.user.classId,
           schoolId: data.user.schoolId,
-          role: data.user.role,
-          mockUserId: data.user.mockUserId,
-          userId: data.user.userId
-        }));
+          phoneNumber: data.user.phoneNumber,
+          profileImage: data.user.profileImage,
+          status: data.user.status,
+          dashboardPreferences: data.user.dashboardPreferences,
+          lastLogin: data.user.lastLogin,
+          createdAt: data.user.createdAt,
+          updatedAt: data.user.updatedAt
+        });
         
         toast.success(`Logged in as ${data.user.name}`);
       } else {
@@ -74,7 +95,7 @@ export default function DebugFlow() {
     }
   };
 
-  const handleStudentsSelected = (students: any[]) => {
+  const handleStudentsSelected = (students: Student[]) => {
     console.log('Students selected:', students);
     setSelectedStudents(students);
     setShowSelector(false);
@@ -84,9 +105,14 @@ export default function DebugFlow() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Debug Student Selection Flow
-        </h1>
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Debug Student Selection Flow
+          </h1>
+          <p className="text-gray-600">
+            Test and debug the new authentication and student management system
+          </p>
+        </div>
 
         {/* Login Section */}
         <div className="bg-white rounded-lg shadow p-6">
@@ -96,12 +122,12 @@ export default function DebugFlow() {
               type="email"
               value={loginForm.email}
               onChange={(e) => setLoginForm({ email: e.target.value })}
-              placeholder="Email"
-              className="flex-1 p-2 border border-gray-300 rounded"
+              placeholder="Enter teacher email"
+              className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             <button
               onClick={handleLogin}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               Login
             </button>
@@ -122,7 +148,7 @@ export default function DebugFlow() {
           <h2 className="text-xl font-semibold mb-4">2. API Test</h2>
           <button
             onClick={testAPIs}
-            className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded mb-4"
+            className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-medium transition-colors mb-4"
           >
             Test APIs
           </button>
@@ -142,14 +168,14 @@ export default function DebugFlow() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">3. Student Selector Test</h2>
             <div className="mb-4">
-              <p><strong>Teacher ID:</strong> {user.mockUserId}</p>
-              <p><strong>School ID:</strong> {user.schoolId || 'NOT SET'}</p>
+              <p><strong>User ID:</strong> {user.userId}</p>
+              <p><strong>School ID:</strong> {user.schoolId?.toString() || 'NOT SET'}</p>
               <p><strong>Role:</strong> {user.role}</p>
             </div>
             
             <button
               onClick={() => setShowSelector(true)}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded mb-4"
+              className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors mb-4"
             >
               Open Student Selector
             </button>
@@ -177,10 +203,10 @@ export default function DebugFlow() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">4. Class Manager Test</h2>
             <ClassManager
-              userId={user.mockUserId}
+              userId={user.userId}
               userName={user.name}
               role={user.role}
-              schoolId={user.schoolId || ''}
+              schoolId={user.schoolId?.toString() || ''}
               onClassSelected={(classId) => {
                 console.log('Class selected:', classId);
                 toast.success(`Selected class: ${classId}`);
@@ -195,9 +221,9 @@ export default function DebugFlow() {
             onStudentsSelected={handleStudentsSelected}
             onClose={() => setShowSelector(false)}
             classId="debug-class"
-            teacherId={user.mockUserId}
+            teacherId={user.userId}
             teacherRole={user.role}
-            teacherSchoolId={user.schoolId || ''}
+            teacherSchoolId={user.schoolId?.toString() || ''}
             isCreatingClass={true}
           />
         )}

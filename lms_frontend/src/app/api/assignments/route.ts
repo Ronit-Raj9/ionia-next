@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS, Assignment, StudentProfile } from '@/lib/db';
-import { personalizeAssignment, personalizeAssignmentWithOcean } from '@/lib/groq';
-import { personalizeAssignmentFallback } from '@/lib/openai';
+import { personalizeAssignmentWithOcean } from '@/lib/groq';
 import { uploadFile } from '@/lib/cloudinary';
 import { generateAssignmentSuggestions } from '@/lib/aiRecommendations';
 import { ObjectId } from 'mongodb';
@@ -10,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const role = formData.get('role') as string;
-    const mockUserId = formData.get('mockUserId') as string;
+    const userId = formData.get('userId') as string;
     const classId = formData.get('classId') as string;
     const questions = formData.get('questions') as string;
     const file = formData.get('file') as File | null;
@@ -35,6 +34,33 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Only teachers can create assignments' },
         { status: 403 }
       );
+    }
+
+    // Validate classId format
+    if (classId && !ObjectId.isValid(classId)) {
+      console.error('❌ Invalid classId format:', classId);
+      return NextResponse.json(
+        { success: false, error: 'Invalid class ID format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that the class exists and teacher has permission (if classId provided)
+    let classData = null;
+    if (classId) {
+      const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+      classData = await classesCollection.findOne({
+        _id: new ObjectId(classId),
+        teacherId: userId
+      });
+
+      if (!classData) {
+        console.error('❌ Class not found or teacher not authorized:', { classId, userId });
+        return NextResponse.json(
+          { success: false, error: 'Class not found or you do not have permission to create assignments for this class' },
+          { status: 403 }
+        );
+      }
     }
 
     if (!questions && !file) {
@@ -85,35 +111,43 @@ export async function POST(request: NextRequest) {
 
     // Parse assigned students
     let assignedStudentsList: string[] = [];
-    if (assignedStudents) {
+    let isEntireClass = false;
+    
+    if (assignedStudents && assignedStudents.trim() !== '') {
       try {
         assignedStudentsList = JSON.parse(assignedStudents);
       } catch {
         assignedStudentsList = assignedStudents.split(',').map(s => s.trim());
       }
+    } else {
+      // No specific students assigned = entire class
+      isEntireClass = true;
     }
 
-    // Get student profiles for personalization (only for assigned students)
+    // Get student profiles for personalization
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
     let studentProfiles: StudentProfile[] = [];
     
-    if (assignedStudentsList.length > 0) {
-      studentProfiles = await profilesCollection
-        .find({ studentMockId: { $in: assignedStudentsList } })
-        .toArray() as unknown as StudentProfile[];
-    } else {
-      // Fallback to all students in class if no specific students assigned
+    if (isEntireClass) {
+      // Get all students in the class
       studentProfiles = await profilesCollection
         .find({ classId })
         .toArray() as unknown as StudentProfile[];
-      assignedStudentsList = studentProfiles.map(p => p.studentMockId);
+      assignedStudentsList = studentProfiles.map(p => p.studentId);
+      console.log(`📚 Assignment assigned to ENTIRE CLASS: ${assignedStudentsList.length} students`);
+    } else {
+      // Get only selected students
+      studentProfiles = await profilesCollection
+        .find({ studentId: { $in: assignedStudentsList } })
+        .toArray() as unknown as StudentProfile[];
+      console.log(`👥 Assignment assigned to SELECTED STUDENTS: ${assignedStudentsList.length} students`);
     }
 
     if (studentProfiles.length === 0 && assignedStudentsList.length > 0) {
       // Create basic profiles for students without existing profiles
       assignedStudentsList.forEach(studentId => {
         studentProfiles.push({
-          studentMockId: studentId,
+          studentId: studentId,
           // OCEAN Personality Traits (default balanced values)
           oceanTraits: {
             openness: 50,
@@ -145,7 +179,7 @@ export async function POST(request: NextRequest) {
           assignmentHistory: [],
           // Personality Test Status
           personalityTestCompleted: false,
-          // Legacy fields for backward compatibility
+          // Additional metadata fields
           previousPerformance: {
             subject: subject,
             weaknesses: [],
@@ -175,8 +209,8 @@ export async function POST(request: NextRequest) {
 
     // Create assignment document (omit _id to let MongoDB generate it)
     const assignmentData: Omit<Assignment, '_id'> = {
-      classId,
-      schoolId,
+      classId: classId || '', // Store as string
+      schoolId: classData?.schoolId?.toString() || schoolId, // Use class's schoolId or fallback
       taskType: subject.toLowerCase(),
       title,
       description,
@@ -193,8 +227,8 @@ export async function POST(request: NextRequest) {
         questionDetails: detailedQuestions.length > 0 ? detailedQuestions : undefined
       },
       uploadedFileUrl,
-      createdBy: mockUserId,
-      assignedTo: assignedStudentsList,
+      createdBy: userId,
+      assignedTo: isEntireClass ? [classId] : assignedStudentsList, // Store classId for entire class, student IDs for selected students
       gradeSettings: {
         showMarksToStudents,
         showFeedbackToStudents,
@@ -211,96 +245,54 @@ export async function POST(request: NextRequest) {
       personalizedVersions: [],
     };
 
-    // Personalize for each student if enabled
+    // Personalize for each student using OCEAN-based system
     let personalizedVersions: any[] = [];
     
     if (enablePersonalization && studentProfiles.length > 0) {
-      console.log(`Personalizing assignment for ${studentProfiles.length} students...`);
+      console.log(`Personalizing assignment for ${studentProfiles.length} students using OCEAN system...`);
       
       const personalizationPromises = studentProfiles.map(async (profile) => {
         try {
-          // Check if student has OCEAN profile
-          const hasOceanProfile = profile.oceanTraits && 
-                                  profile.learningPreferences && 
-                                  profile.personalityTestCompleted;
+          // Use OCEAN-based personalization for all students
+          const subjectMastery = profile.subjectMastery?.find(s => s.subject === subject && s.grade === grade);
+          const topicInfo = subjectMastery?.topics.find(t => t.name === topic);
+          const topicMastery = topicInfo?.masteryScore || 50;
+          const weaknesses = topicInfo?.weaknesses || [];
           
-          let personalized;
+          console.log(`Using OCEAN personalization for ${profile.studentId} (mastery: ${topicMastery}%)`);
           
-          if (hasOceanProfile) {
-            // Use advanced OCEAN-based personalization
-            const subjectMastery = profile.subjectMastery?.find(s => s.subject === subject && s.grade === grade);
-            const topicInfo = subjectMastery?.topics.find(t => t.name === topic);
-            const topicMastery = topicInfo?.masteryScore || 50;
-            const weaknesses = topicInfo?.weaknesses || profile.previousPerformance?.weaknesses || [];
-            
-            console.log(`Using OCEAN personalization for ${profile.studentMockId} (mastery: ${topicMastery}%)`);
-            
-            personalized = await personalizeAssignmentWithOcean({
-              questions: questionsList,
-              studentProfile: {
-                oceanTraits: profile.oceanTraits!,
-                learningPreferences: profile.learningPreferences!,
-                topicMastery,
-                weaknesses
-              },
-              subject,
-              topic,
-              grade
-            });
-            
-            return {
-              studentMockId: profile.studentMockId,
-              adaptedContent: {
-                questions: personalized.personalizedQuestions,
-                variations: personalized.variations,
-                difficultyAdjustment: personalized.difficultyAdjustment,
-                visualAids: personalized.visualAids,
-                hints: personalized.hints,
-                remedialQuestions: personalized.remedialQuestions,
-                challengeQuestions: personalized.challengeQuestions,
-                encouragementNote: personalized.encouragementNote
-              },
-              personalizationReason: personalized.personalizationReason
-            };
-          } else {
-            // Fallback to legacy personalization
-            console.log(`Using legacy personalization for ${profile.studentMockId} (no OCEAN profile)`);
-            
-            try {
-              personalized = await personalizeAssignment({
-                questions: questionsList,
-                studentProfile: {
-                  weaknesses: profile.previousPerformance?.weaknesses || [],
-                  personalityType: profile.personalityProfile?.type || 'balanced',
-                  intellectualStrengths: profile.intellectualProfile?.strengths || [],
-                },
-              });
-            } catch (groqError) {
-              console.warn('Groq failed, trying OpenAI fallback:', groqError);
-              personalized = await personalizeAssignmentFallback({
-                questions: questionsList,
-                studentProfile: {
-                  weaknesses: profile.previousPerformance?.weaknesses || [],
-                  personalityType: profile.personalityProfile?.type || 'balanced',
-                  intellectualStrengths: profile.intellectualProfile?.strengths || [],
-                },
-              });
-            }
-
-            return {
-              studentMockId: profile.studentMockId,
-              adaptedContent: {
-                questions: personalized.questions,
-                variations: personalized.variations,
-              },
-              personalizationReason: 'Legacy personalization (OCEAN profile incomplete)'
-            };
-          }
+          const personalized = await personalizeAssignmentWithOcean({
+            questions: questionsList,
+            studentProfile: {
+              oceanTraits: profile.oceanTraits,
+              learningPreferences: profile.learningPreferences,
+              topicMastery,
+              weaknesses
+            },
+            subject,
+            topic,
+            grade
+          });
+          
+          return {
+            studentId: profile.studentId,
+            adaptedContent: {
+              questions: personalized.personalizedQuestions,
+              variations: personalized.variations,
+              difficultyAdjustment: personalized.difficultyAdjustment,
+              visualAids: personalized.visualAids,
+              hints: personalized.hints,
+              remedialQuestions: personalized.remedialQuestions,
+              challengeQuestions: personalized.challengeQuestions,
+              encouragementNote: personalized.encouragementNote
+            },
+            personalizationReason: personalized.personalizationReason
+          };
         } catch (error) {
-          console.error(`Failed to personalize for ${profile.studentMockId}:`, error);
+          console.error(`Failed to personalize for ${profile.studentId}:`, error);
           // Return original questions as fallback
           return {
-            studentMockId: profile.studentMockId,
+            studentId: profile.studentId,
             adaptedContent: {
               questions: questionsList,
               variations: 'Using original questions (personalization failed)',
@@ -382,13 +374,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
-    const mockUserId = searchParams.get('mockUserId');
+    const userId = searchParams.get('userId');
     const classId = searchParams.get('classId');
-    const studentMockId = searchParams.get('studentMockId');
+    const studentId = searchParams.get('studentId');
 
-    if (!role || !mockUserId) {
+    if (!role || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Role and mockUserId are required' },
+        { success: false, error: 'Role and userId are required' },
         { status: 400 }
       );
     }
@@ -397,41 +389,69 @@ export async function GET(request: NextRequest) {
 
     if (role === 'student') {
       // Get assignments assigned to this specific student
-      if (!studentMockId) {
+      if (!studentId) {
         return NextResponse.json(
-          { success: false, error: 'studentMockId is required for students' },
+          { success: false, error: 'studentId is required for students' },
           { status: 400 }
         );
       }
 
       console.log(`🔍 Student fetching assignments:`, {
-        studentMockId,
+        studentId,
         classId: classId || 'all classes'
       });
 
-      // Build query - filter by student and optionally by class
+      // Build query - assignments can be assigned to:
+      // 1. The specific student ID (for selected student assignments)
+      // 2. The class ID (for "entire class" assignments)
       const query: any = {
-        assignedTo: studentMockId,
+        $or: [
+          { assignedTo: studentId }, // Direct assignment to student
+          { assignedTo: classId },   // Assignment to entire class
+          { assignedTo: { $in: [studentId, classId] } } // Assignment to either
+        ],
         isPublished: true
       };
+      
+      console.log(`🔍 Student assignment query:`, JSON.stringify(query, null, 2));
 
-      // If classId is provided, only show assignments for that class
+      // If classId is provided, also filter by classId field
       if (classId) {
-        query.classId = classId;
+        query.$and = [
+          { $or: query.$or },
+          { 
+            $or: [
+              { classId: classId },
+              { classId: { $exists: false } }, // Handle assignments without classId
+              { classId: null }
+            ]
+          }
+        ];
+        delete query.$or; // Remove the original $or since we're using $and
       }
 
-      console.log(`Query:`, query);
+      console.log(`Query:`, JSON.stringify(query, null, 2));
+
+      // Debug: Check all assignments in database
+      const allAssignments = await assignmentsCollection.find({}).toArray();
+      console.log(`🔍 All assignments in database:`, allAssignments.map(a => ({
+        id: a._id,
+        title: a.title,
+        classId: a.classId,
+        assignedTo: a.assignedTo,
+        isPublished: a.isPublished
+      })));
 
       const assignments = await assignmentsCollection
         .find(query)
         .sort({ createdAt: -1 })
         .toArray();
 
-      console.log(`📊 Found ${assignments.length} assignments for student ${studentMockId}`);
+      console.log(`📊 Found ${assignments.length} assignments for student ${studentId}`);
 
       const personalizedAssignments = assignments.map((assignment) => {
         const personalizedVersion = assignment.personalizedVersions?.find(
-          (pv: any) => pv.studentMockId === studentMockId
+          (pv: any) => pv.studentId === studentId
         );
 
         const adaptedContent = personalizedVersion?.adaptedContent || {};
@@ -483,17 +503,30 @@ export async function GET(request: NextRequest) {
       let query: any = {};
       
       if (role === 'teacher') {
-        query.createdBy = mockUserId;
+        query.createdBy = userId;
       }
       
       if (classId) {
-        query.classId = classId;
+        // Handle both ObjectId format and string format classId
+        query.$or = [
+          { classId: classId },
+          { classId: { $exists: false } }, // Handle assignments without classId
+          { classId: null }
+        ];
       }
+
+      console.log(`🔍 Teacher fetching assignments:`, {
+        userId,
+        classId: classId || 'all classes',
+        query: JSON.stringify(query, null, 2)
+      });
 
       const assignments = await assignmentsCollection
         .find(query)
         .sort({ createdAt: -1 })
         .toArray();
+
+      console.log(`📊 Found ${assignments.length} assignments for teacher ${userId}`);
 
       return NextResponse.json({
         success: true,

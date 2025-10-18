@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
 
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
 
-    // Prepare update data - support both new OCEAN format and legacy format
+    // Prepare update data - support both new OCEAN format and basic format
     const updateData: any = {
-      studentMockId: studentId,
+      studentId: studentId,
       updatedAt: new Date()
     };
 
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Upsert the profile
     const result = await profilesCollection.updateOne(
-      { studentMockId: studentId },
+      { studentId: studentId },
       { 
         $set: updateData,
         $setOnInsert: setOnInsertData
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
     }
 
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
-    const profile = await profilesCollection.findOne({ studentMockId: studentId });
+    const profile = await profilesCollection.findOne({ studentId: studentId });
 
     if (!profile) {
       return NextResponse.json(

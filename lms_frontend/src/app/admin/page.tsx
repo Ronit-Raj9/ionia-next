@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRole } from '@/contexts/RoleContext';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { 
   BarChart3, 
   Users, 
@@ -11,15 +10,14 @@ import {
   TrendingUp, 
   Clock,
   Award,
-  AlertTriangle,
   RefreshCw,
   Download,
-  Eye,
   Settings,
   Brain
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ClassroomManager from '@/components/ClassroomManager';
+import SchoolAdminDashboard from '@/components/SchoolAdminDashboard';
 
 interface ProgressData {
   classMetrics: {
@@ -35,7 +33,7 @@ interface ProgressData {
     studentCount: number;
   }[];
   studentProgress: {
-    studentMockId: string;
+    studentId: string;
     displayName: string;
     metrics: {
       totalSubmissions: number;
@@ -55,11 +53,10 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Phase 2 state
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
-  const [activeSection, setActiveSection] = useState<'overview' | 'classrooms' | 'analytics'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'classrooms' | 'analytics' | 'school'>('overview');
 
   // Check if user is admin
   useEffect(() => {
@@ -78,7 +75,7 @@ export default function AdminDashboard() {
   const fetchProgressData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success && data.data) {
@@ -140,7 +137,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           role: user?.role,
-          mockUserId: user?.mockUserId,
+          userId: user?.userId,
           classId: user?.classId,
           action: 'refresh',
         }),
@@ -162,33 +159,33 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleSeedDatabase = async () => {
+  const handleClearDatabase = async () => {
     try {
       const response = await fetch('/api/seed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action: 'seed' }),
+        body: JSON.stringify({ action: 'clear' }),
       });
 
       const data = await response.json();
       
       if (data.success) {
-        toast.success('Database seeded with demo data successfully!');
+        toast.success('Database cleared successfully!');
         fetchProgressData();
       } else {
-        toast.error('Failed to seed database');
+        toast.error('Failed to clear database');
       }
     } catch (error) {
-      console.error('Error seeding database:', error);
-      toast.error('Failed to seed database');
+      console.error('Error clearing database:', error);
+      toast.error('Failed to clear database');
     }
   };
 
   const fetchEnhancedDashboardData = async () => {
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -203,7 +200,7 @@ export default function AdminDashboard() {
 
   const fetchReports = async () => {
     try {
-      const response = await fetch(`/api/reports?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/reports?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -226,7 +223,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           role: user?.role,
-          mockUserId: user?.mockUserId,
+          userId: user?.userId,
           classId: user?.classId,
           format,
           reportType,
@@ -315,11 +312,11 @@ export default function AdminDashboard() {
           
           <div className="flex space-x-4">
             <button
-              onClick={handleSeedDatabase}
+              onClick={handleClearDatabase}
               className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
             >
               <Settings className="w-4 h-4" />
-              Seed Demo Data
+              Clear Database
             </button>
             
             <button
@@ -377,6 +374,17 @@ export default function AdminDashboard() {
             >
               <Brain className="w-4 h-4 inline mr-2" />
               Analytics
+            </button>
+            <button
+              onClick={() => setActiveSection('school')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSection === 'school'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Settings className="w-4 h-4 inline mr-2" />
+              School Management
             </button>
           </nav>
         </div>
@@ -514,10 +522,10 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody>
                           {(progressData.studentProgress || []).map((student) => (
-                            <tr key={student.studentMockId} className="border-b border-gray-100 hover:bg-gray-50">
+                            <tr key={student.studentId} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-2">
                                 <div className="font-medium text-gray-900">{student.displayName}</div>
-                                <div className="text-xs text-gray-500">{student.studentMockId}</div>
+                                <div className="text-xs text-gray-500">{student.studentId}</div>
                               </td>
                               <td className="text-center py-3 px-2">
                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
@@ -586,7 +594,7 @@ export default function AdminDashboard() {
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Performance Trend</h3>
                     <p className="text-sm text-gray-600">
-                      Class average has improved by 15% since using AI personalization
+                      AI personalization is helping improve student learning outcomes
                     </p>
                   </div>
                   
@@ -738,16 +746,16 @@ export default function AdminDashboard() {
             </p>
             <ul className="text-sm text-gray-500 mb-8 space-y-2">
               <li>• No students have submitted assignments yet</li>
-              <li>• The database hasn't been seeded with demo data</li>
+              <li>• The database is empty - no users or data</li>
               <li>• There was an error loading the data</li>
             </ul>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={handleSeedDatabase}
+                onClick={handleClearDatabase}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2"
               >
                 <Settings className="w-5 h-5" />
-                Seed Demo Data to Get Started
+                Clear Database to Get Started
               </button>
               <button
                 onClick={handleRefreshData}
@@ -764,12 +772,11 @@ export default function AdminDashboard() {
         {activeSection === 'classrooms' && (
           <div className="space-y-6">
             <ClassroomManager
-              userId={user?.mockUserId || ''}
+              userId={user?.userId || ''}
               userName={user?.name || user?.displayName || 'Admin'}
               role="admin"
-              schoolId={user?.schoolId || 'demo-school'}
+              schoolId={user?.schoolId?.toString() || ''}
               onClassSelected={(classId) => {
-                console.log('Class selected:', classId);
                 // TODO: Handle class selection
               }}
             />
@@ -785,6 +792,13 @@ export default function AdminDashboard() {
                 Advanced analytics and reporting features will be available here.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* School Management Section */}
+        {activeSection === 'school' && user && (
+          <div className="space-y-6">
+            <SchoolAdminDashboard userId={user.userId || ''} />
           </div>
         )}
       </div>

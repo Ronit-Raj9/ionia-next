@@ -22,7 +22,7 @@ import toast from 'react-hot-toast';
 interface Submission {
   _id: string;
   assignmentId: string;
-  studentMockId: string;
+  studentId: string;
   studentName: string;
   submittedContent: {
     text: string;

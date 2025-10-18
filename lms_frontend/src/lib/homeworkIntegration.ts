@@ -75,7 +75,7 @@ export async function getHomeworkRecommendations(
     const studentPerformance = await submissionsCollection.aggregate([
       {
         $match: {
-          studentMockId: studentId,
+          studentId: studentId,
           'metadata.academicPlanId': new ObjectId(academicPlanId)
         }
       },
@@ -141,7 +141,7 @@ export async function checkPrerequisites(
     // Check each prerequisite
     for (const prereqId of prerequisites) {
       const prereqPerformance = await submissionsCollection.findOne({
-        studentMockId: studentId,
+        studentId: studentId,
         'metadata.academicPlanId': new ObjectId(academicPlanId),
         'metadata.topicId': prereqId,
         'grade.score': { $gte: 70 } // Minimum 70% to consider prerequisite met
@@ -189,7 +189,7 @@ export async function adaptHomeworkDifficulty(
     const recentPerformance = await submissionsCollection.aggregate([
       {
         $match: {
-          studentMockId: studentId,
+          studentId: studentId,
           'metadata.academicPlanId': new ObjectId(academicPlanId),
           submissionTime: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
         }

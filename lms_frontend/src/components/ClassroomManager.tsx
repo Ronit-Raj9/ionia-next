@@ -28,8 +28,10 @@ interface Classroom {
   description?: string;
   subject?: string;
   grade?: string;
-  teacherMockId: string;
+  teacherId: string;
+  teacherName?: string; // New system field
   schoolId: string;
+  studentIds: string[];
   studentCount: number;
   joinCode: string;
   isActive: boolean;
@@ -38,6 +40,11 @@ interface Classroom {
   lastActivity?: string;
   hasUnreadMessages?: boolean;
   recentAssignments?: number;
+  // New system fields
+  syllabus?: string;
+  currentTopic?: string;
+  completedTopics?: string[];
+  upcomingTopics?: string[];
 }
 
 interface ClassroomManagerProps {
@@ -73,13 +80,18 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
   const fetchClassrooms = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/classes/school?schoolId=${schoolId}&role=${role}&mockUserId=${userId}`);
+      console.log('Fetching classrooms with params:', { schoolId, role, userId });
+      const response = await fetch(`/api/classes/school?schoolId=${schoolId}&role=${role}&userId=${userId}`);
       const data = await response.json();
+
+      console.log('Classrooms API response:', data);
 
       if (data.success) {
         setClassrooms(data.data);
+        console.log('Classrooms loaded:', data.data);
       } else {
-        toast.error('Failed to load classrooms');
+        console.error('Failed to load classrooms:', data.error);
+        toast.error(data.error || 'Failed to load classrooms');
         setClassrooms([]);
       }
     } catch (error) {
@@ -129,7 +141,8 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
           subject: newClassSubject || 'General',
           grade: newClassGrade || '',
           schoolId: schoolId.trim(),
-          role: role
+          role: role,
+          studentIds: [] // Initialize with empty array
         }),
       });
 
@@ -433,6 +446,9 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     >
                       <option value="">Select Grade</option>
+                      <option value="6">Grade 6</option>
+                      <option value="7">Grade 7</option>
+                      <option value="8">Grade 8</option>
                       <option value="9">Grade 9</option>
                       <option value="10">Grade 10</option>
                       <option value="11">Grade 11</option>
@@ -530,7 +546,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                   teacherId={userId}
                   teacherRole={role}
                   teacherSchoolId={schoolId}
-                  isCreatingClass={true} // Show all available students from school
+                  isCreatingClass={false} // This is for managing existing classroom
                 />
               </div>
             </motion.div>

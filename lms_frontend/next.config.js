@@ -7,6 +7,34 @@ const nextConfig = {
     LMS_API_URL: process.env.LMS_API_URL || 'http://localhost:5000',
     IONIA_API_URL: process.env.IONIA_API_URL || 'http://localhost:4000',
   },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        stream: false,
+        url: false,
+        zlib: false,
+        http: false,
+        https: false,
+        assert: false,
+        os: false,
+        path: false,
+        child_process: false,
+        events: false,
+        process: false,
+        util: false,
+        buffer: false,
+        querystring: false,
+        vm: false,
+        constants: false,
+      };
+    }
+    return config;
+  },
   async rewrites() {
     return [
       {

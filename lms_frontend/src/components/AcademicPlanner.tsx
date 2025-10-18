@@ -129,7 +129,7 @@ export default function AcademicPlanner({ classId, onClose }: AcademicPlannerPro
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/academic-planner?teacherId=${user.mockUserId}&classId=${classId}&role=${user.role}`);
+      const response = await fetch(`/api/academic-planner?teacherId=${user.userId}&classId=${classId}&role=${user.role}`);
       const data = await response.json();
 
       if (data.success) {
@@ -156,7 +156,7 @@ export default function AcademicPlanner({ classId, onClose }: AcademicPlannerPro
     setUploadLoading(true);
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append('teacherId', user.mockUserId);
+      formDataToSend.append('teacherId', user.userId);
       formDataToSend.append('classId', classId);
       formDataToSend.append('subject', formData.subject);
       formDataToSend.append('grade', formData.grade);
@@ -487,7 +487,7 @@ export default function AcademicPlanner({ classId, onClose }: AcademicPlannerPro
           },
           body: JSON.stringify({
             planId: selectedPlan._id,
-            teacherId: user?.mockUserId,
+            teacherId: user?.userId,
             role: user?.role,
             topicUpdates: [{
               topicId,

@@ -1,99 +1,94 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCollection, COLLECTIONS } from '@/lib/db';
+import { ObjectId } from 'mongodb';
+import { getCollection, COLLECTIONS, Class } from '@/lib/db';
 
-// POST - Student joins a class using join code
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+// POST - Join a classroom using join code
 export async function POST(request: NextRequest) {
   try {
-    const { joinCode, studentId, schoolId, role, studentName, studentEmail } = await request.json();
+    const { joinCode, studentId, studentName, studentEmail } = await request.json();
 
-    if (role !== 'student') {
+    // Validate required parameters
+    if (!joinCode || !studentId) {
       return NextResponse.json(
-        { success: false, error: 'Only students can join classes' },
-        { status: 403 }
-      );
-    }
-
-    if (!joinCode || !studentId || !schoolId) {
-      return NextResponse.json(
-        { success: false, error: 'Join code, student ID, and school ID are required' },
+        { success: false, error: 'Join code and student ID are required' },
         { status: 400 }
       );
     }
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
-    const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
-    
-    // Find class by join code and school ID
-    const classData = await classesCollection.findOne({
-      joinCode,
-      schoolId,
-      isActive: true
-    });
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
 
-    if (!classData) {
+    // Find the classroom with the given join code
+    const classroom = await classesCollection.findOne({
+      joinCode: joinCode,
+      isActive: true
+    }) as unknown as Class | null;
+
+    if (!classroom) {
       return NextResponse.json(
-        { success: false, error: 'Invalid join code or class not found' },
+        { success: false, error: 'Invalid join code or classroom not found' },
         { status: 404 }
       );
     }
 
     // Check if student is already in the class
-    if (classData.studentMockIds.includes(studentId)) {
+    if (classroom.studentIds.includes(studentId)) {
       return NextResponse.json(
-        { success: false, error: 'You are already a member of this class' },
+        { success: false, error: 'You are already enrolled in this class' },
         { status: 400 }
       );
     }
 
-    // Add student to class
-    const result = await classesCollection.updateOne(
-      { _id: classData._id },
+    // Add student to the classroom
+    const updateResult = await classesCollection.updateOne(
+      { _id: classroom._id },
       { 
-        $addToSet: { studentMockIds: studentId },
+        $addToSet: { studentIds: studentId },
         $set: { updatedAt: new Date() }
       }
     );
 
-    if (result.modifiedCount === 0) {
+    if (updateResult.modifiedCount === 0) {
       return NextResponse.json(
-        { success: false, error: 'Failed to join class' },
+        { success: false, error: 'Failed to join classroom' },
         { status: 500 }
       );
     }
 
-    // Create or update student profile with name information
-    if (studentName || studentEmail) {
-      await studentProfilesCollection.updateOne(
-        { studentMockId: studentId },
+    // Update student's classId in users collection (for primary class)
+    if (studentName && studentEmail) {
+      await usersCollection.updateOne(
+        { userId: studentId },
         { 
           $set: { 
-            ...(studentName && { studentName, name: studentName }),
-            ...(studentEmail && { email: studentEmail }),
-            schoolId: schoolId,
+            classId: classroom._id?.toString(),
             updatedAt: new Date()
-          },
-          $setOnInsert: {
-            personalityTestCompleted: false,
-            createdAt: new Date()
           }
-        },
-        { upsert: true }
+        }
       );
     }
 
+    console.log(`Student ${studentId} joined classroom ${classroom.className} (${classroom._id})`);
+
     return NextResponse.json({
       success: true,
-      message: `Successfully joined ${classData.className}`,
       data: {
-        classId: classData._id,
-        className: classData.className,
-        teacherMockId: classData.teacherMockId
-      }
+        classroomId: classroom._id,
+        className: classroom.className,
+        subject: classroom.subject,
+        grade: classroom.grade,
+        teacherId: classroom.teacherId
+      },
+      message: `Successfully joined ${classroom.className}!`
     });
+
   } catch (error) {
-    console.error('Error joining class:', error);
+    console.error('Error joining classroom:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to join class' },
+      { success: false, error: 'Failed to join classroom' },
       { status: 500 }
     );
   }

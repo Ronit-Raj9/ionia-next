@@ -9,7 +9,7 @@ export default function RegisterStudent() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    schoolId: 'demo-school-delhi-2025', // Default to match teacher
+    schoolId: '', // Will be set by user
   });
   const [loading, setLoading] = useState(false);
 
@@ -179,8 +179,8 @@ export default function RegisterStudent() {
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
           <h3 className="font-medium text-blue-800 mb-2">Quick Access:</h3>
           <div className="space-y-2 text-sm">
-            <p><strong>Teacher Login:</strong> teacher.demo@school.com</p>
-            <p><strong>School ID:</strong> demo-school-delhi-2025</p>
+            <p><strong>Note:</strong> Contact your teacher for login credentials</p>
+            <p><strong>School ID:</strong> Contact your school administrator</p>
             <p><strong>Debug Page:</strong> <a href="/debug-flow" className="text-blue-600 hover:underline">/debug-flow</a></p>
           </div>
         </div>

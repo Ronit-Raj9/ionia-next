@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
           _id: c._id,
           className: c.className,
           subject: c.subject,
-          studentCount: c.studentMockIds?.length || 0
+          studentCount: c.studentIdsngth || 0
         }))
       }
     });

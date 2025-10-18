@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCollection, COLLECTIONS } from '@/lib/db';
+import { getCollection, COLLECTIONS, Assignment, AcademicPlan } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { getHomeworkIntegrationSuggestions } from '@/lib/academicPlanGenerator';
 
@@ -48,6 +48,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get the topic from the academic plan
+    const topic = academicPlan.generatedPlan.topics.find((t: any) => t.id === topicId);
+    if (!topic) {
+      return NextResponse.json(
+        { success: false, error: 'Topic not found in academic plan' },
+        { status: 404 }
+      );
+    }
+
     // Get homework integration suggestions
     const suggestions = await getHomeworkIntegrationSuggestions(topicId, academicPlan.generatedPlan);
 
@@ -55,9 +64,10 @@ export async function GET(request: NextRequest) {
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     const relatedAssignments = await assignmentsCollection
       .find({
-        teacherMockId: teacherId,
-        'metadata.academicPlanId': planId,
-        'metadata.topicId': topicId
+        createdBy: teacherId,
+        topic: topic.title,
+        subject: academicPlan.subject,
+        grade: academicPlan.grade
       })
       .toArray();
 
@@ -65,17 +75,26 @@ export async function GET(request: NextRequest) {
     const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
     const topicPerformance = await submissionsCollection.aggregate([
       {
+        $lookup: {
+          from: 'assignments',
+          localField: 'assignmentId',
+          foreignField: '_id',
+          as: 'assignment'
+        }
+      },
+      {
         $match: {
-          'metadata.academicPlanId': new ObjectId(planId),
-          'metadata.topicId': topicId
+          'assignment.topic': topic.title,
+          'assignment.subject': academicPlan.subject,
+          'assignment.grade': academicPlan.grade
         }
       },
       {
         $group: {
-          _id: '$studentMockId',
+          _id: '$studentId',
           averageScore: { $avg: '$grade.score' },
           submissionCount: { $sum: 1 },
-          lastSubmission: { $max: '$submissionTime' }
+          lastSubmission: { $max: '$submittedAt' }
         }
       }
     ]).toArray();
@@ -83,7 +102,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       integrationData: {
-        topic: academicPlan.generatedPlan.topics.find((t: any) => t.id === topicId),
+        topic,
         suggestions,
         relatedAssignments: relatedAssignments.map(assignment => ({
           ...assignment,
@@ -163,27 +182,22 @@ export async function POST(request: NextRequest) {
     // Create assignment with academic plan integration
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     
-    const assignment = {
+    const assignment: Partial<Assignment> = {
       ...assignmentData,
-      teacherMockId: teacherId,
       classId: classId,
-      metadata: {
-        academicPlanId: new ObjectId(planId),
-        topicId: topicId,
-        topicTitle: topic.title,
-        difficulty: topic.difficulty,
-        estimatedHours: topic.estimatedHours,
-        learningObjectives: topic.learningObjectives,
-        keyConceptsToMaster: topic.keyConceptsToMaster,
-        integrationSettings: {
-          topicBasedAssignment: true,
-          difficultyAdaptation: personalizationSettings?.difficultyAdaptation || true,
-          prerequisiteChecking: personalizationSettings?.prerequisiteChecking || true,
-          progressTracking: personalizationSettings?.progressTracking || true
-        }
+      createdBy: teacherId,
+      subject: academicPlan.subject,
+      grade: academicPlan.grade,
+      topic: topic.title,
+      difficulty: topic.difficulty === 'basic' ? 'easy' : topic.difficulty === 'intermediate' ? 'medium' : 'hard',
+      personalizationEnabled: personalizationSettings?.difficultyAdaptation || true,
+      assignmentType: personalizationSettings?.difficultyAdaptation ? 'personalized' : 'standard',
+      studyMaterialReference: {
+        bookTitle: `Academic Plan - ${academicPlan.subject}`,
+        chapter: topic.title,
+        topics: topic.keyConceptsToMaster
       },
-      createdAt: new Date(),
-      updatedAt: new Date()
+      createdAt: new Date()
     };
 
     const result = await assignmentsCollection.insertOne(assignment);
@@ -199,11 +213,13 @@ export async function POST(request: NextRequest) {
       },
       {
         $addToSet: {
-          'homeworkIntegration.topicBasedAssignments': {
+          'topicProgress': {
             topicId: topicId,
+            topicTitle: topic.title,
             assignmentIds: [result.insertedId],
             averageScore: 0,
-            completionRate: 0
+            completionRate: 0,
+            lastUpdated: new Date()
           }
         },
         $set: {

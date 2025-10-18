@@ -64,7 +64,7 @@ export default function ClassManager({ userId, userName, role, schoolId, onClass
           classId: classData._id, // Use _id as classId
           className: classData.className,
           description: '', // Classes don't have description yet
-          participantCount: classData.studentMockIds?.length || 0,
+          participantCount: classData.studentIds.length,
           messageCount: 0, // TODO: Get actual message count from class chats
           isActive: true, // Assume all classes are active
           createdAt: classData.createdAt,

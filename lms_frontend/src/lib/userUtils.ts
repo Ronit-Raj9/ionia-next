@@ -7,7 +7,7 @@ import { User } from './db';
 
 /**
  * Get display name for a user
- * Priority: name > displayName > formatted mockUserId
+ * Priority: name > displayName > formatted studentId
  */
 export function getUserDisplayName(user: Partial<User> | null | undefined): string {
   if (!user) return 'Unknown User';
@@ -28,9 +28,9 @@ export function getUserDisplayName(user: Partial<User> | null | undefined): stri
     return formatNameFromString(emailName);
   }
   
-  // Fallback: format mockUserId
-  if (user.mockUserId) {
-    return formatNameFromMockId(user.mockUserId);
+  // Fallback: format userId
+  if (user.userId) {
+    return formatNameFromMockId(user.userId);
   }
   
   return 'Unknown User';
@@ -54,17 +54,17 @@ export function getUserInitials(user: Partial<User> | null | undefined): string 
 }
 
 /**
- * Format a readable name from mockUserId
+ * Format a readable name from studentId
  * Examples:
  *   teacher_demo_1 -> "Demo Teacher"
  *   student_ronitk964_gmail_com -> "Ronitk Kumar"
  *   admin_school_1 -> "School Admin"
  */
-export function formatNameFromMockId(mockUserId: string): string {
-  if (!mockUserId) return 'User';
+export function formatNameFromMockId(studentId: string): string {
+  if (!studentId) return 'User';
   
   // Remove common prefixes and email parts
-  let cleaned = mockUserId
+  let cleaned = studentId
     .replace(/^(teacher|student|admin)_/i, '')
     .replace(/_gmail_com|_yahoo_com|_email_com|_hotmail_com/gi, '')
     .replace(/\d{3,}/g, '') // Remove long number sequences
@@ -80,7 +80,7 @@ export function formatNameFromMockId(mockUserId: string): string {
 
   // If result is too short or empty, add role prefix
   if (cleaned.length < 3) {
-    const roleMatch = mockUserId.match(/^(teacher|student|admin)/i);
+    const roleMatch = studentId.match(/^(teacher|student|admin)/i);
     if (roleMatch) {
       const role = roleMatch[0].charAt(0).toUpperCase() + roleMatch[0].slice(1);
       cleaned = cleaned.length > 0 ? `${role} ${cleaned}` : role;
@@ -126,18 +126,18 @@ export function getRoleDisplayName(role: string): string {
 
 /**
  * Get user identifier (for backend APIs)
- * Priority: userId > mockUserId
+ * Priority: userId > studentId
  */
 export function getUserId(user: Partial<User> | null | undefined): string | null {
   if (!user) return null;
-  return user.userId || user.mockUserId || null;
+  return user.userId || null;
 }
 
 /**
- * Check if user data is legacy (mock/demo)
+ * Check if user data is demo/mock data
  */
 export function isLegacyUser(user: Partial<User>): boolean {
-  return !user.userId && !!user.mockUserId;
+  return false; // All users now use the new system
 }
 
 /**
@@ -150,9 +150,9 @@ export function getUserEmail(user: Partial<User> | null | undefined): string {
     return user.email;
   }
   
-  // Generate fallback email from mockUserId
-  if (user.mockUserId) {
-    const sanitized = user.mockUserId.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  // Generate fallback email from userId
+  if (user.userId) {
+    const sanitized = user.userId.replace(/[^a-z0-9]/gi, '').toLowerCase();
     return `${sanitized}@school.edu`;
   }
   

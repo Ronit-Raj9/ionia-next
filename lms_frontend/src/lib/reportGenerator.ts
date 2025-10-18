@@ -45,7 +45,7 @@ export interface ReportData {
 export async function generatePDFReport(
   reportData: ReportData,
   reportType: 'progress' | 'analytics' | 'parent_summary',
-  className: string = 'Demo Class'
+  className: string = 'Class'
 ): Promise<Buffer> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
@@ -212,7 +212,7 @@ The Ionia Team
 export async function generateExcelReport(
   reportData: ReportData,
   reportType: 'progress' | 'analytics' | 'parent_summary',
-  className: string = 'Demo Class'
+  className: string = 'Class'
 ): Promise<Buffer> {
   const workbook = XLSX.utils.book_new();
 
@@ -316,7 +316,7 @@ export async function generateAndSaveReport(
   reportData: ReportData,
   format: 'PDF' | 'Excel',
   reportType: 'progress' | 'analytics' | 'parent_summary',
-  className: string = 'Demo Class'
+  className: string = 'Class'
 ): Promise<{ url: string; generatedAt: Date }> {
   try {
     let reportBuffer: Buffer;
@@ -363,10 +363,10 @@ export function prepareReportData(
 
   // Prepare student progress data
   const studentProgress = progressRecords.map((progress, index) => {
-    const profile = studentProfiles.find(p => p.studentMockId === progress.studentMockId);
+    const profile = studentProfiles.find(p => p.studentId === progress.studentId);
     
     return {
-      studentId: progress.studentMockId,
+      studentId: progress.studentId,
       name: `Student ${index + 1}`,
       averageScore: progress.metrics.averageScore || 0,
       completionRate: progress.metrics.completionRate || 0,

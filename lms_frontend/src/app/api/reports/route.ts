@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
 import { getCollection, COLLECTIONS, Progress, StudentProfile, Class } from '@/lib/db';
 import { generateAndSaveReport, prepareReportData } from '@/lib/reportGenerator';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { role, mockUserId, classId, format, reportType } = body;
+    const { role, userId, classId, format, reportType } = body;
+
+    // Validate required fields
+    if (!role || !userId) {
+      return NextResponse.json(
+        { success: false, error: 'Role and userId are required' },
+        { status: 400 }
+      );
+    }
 
     // Validate role permissions
     if (role !== 'teacher' && role !== 'admin') {
@@ -41,19 +50,31 @@ export async function POST(request: NextRequest) {
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
 
-    const classData = await classesCollection.findOne({ 
-      $or: [
-        { teacherMockId: mockUserId },
-        { studentMockIds: { $in: [mockUserId] } }
-      ]
-    }) as unknown as Class | null;
+    // Find class data - teachers can access their classes, admins can access any class
+    let classData: Class | null = null;
+    if (role === 'teacher') {
+      classData = await classesCollection.findOne({ 
+        teacherId: userId
+      }) as unknown as Class | null;
+    } else if (role === 'admin') {
+      classData = await classesCollection.findOne({ 
+        _id: classId ? new ObjectId(classId) : { $exists: true }
+      }) as unknown as Class | null;
+    }
+
+    if (!classData) {
+      return NextResponse.json(
+        { success: false, error: 'Class not found or access denied' },
+        { status: 404 }
+      );
+    }
 
     const progressRecords = await progressCollection.find({ 
-      classId: classId || 'demo-class-1' 
+      classId: classData._id?.toString() || classId || '' 
     }).toArray() as unknown as Progress[];
 
     const studentProfiles = await profilesCollection.find({
-      studentMockId: { $in: progressRecords.map(p => p.studentMockId) }
+      studentId: { $in: progressRecords.map(p => p.studentId) }
     }).toArray() as unknown as StudentProfile[];
 
     if (progressRecords.length === 0) {
@@ -64,10 +85,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare report data
-    const reportData = prepareReportData(progressRecords, studentProfiles, classData || undefined);
+    const reportData = prepareReportData(progressRecords, studentProfiles, classData);
 
     // Generate and save report
-    const className = classData?.className || 'Demo Class';
+    const className = classData.className || 'Class';
     const result = await generateAndSaveReport(reportData, format, reportType, className);
 
     // Save report metadata to database
@@ -76,13 +97,13 @@ export async function POST(request: NextRequest) {
       url: result.url,
       generatedAt: result.generatedAt,
       type: reportType,
-      generatedBy: mockUserId,
-      classId: classId || 'demo-class-1'
+      generatedBy: userId,
+      classId: classData._id?.toString() || classId || ''
     };
 
     // Update progress records with report export info
     await progressCollection.updateMany(
-      { classId: classId || 'demo-class-1' },
+      { classId: classData._id?.toString() || classId || 'demo-class-1' },
       { 
         $push: { 
           reportExports: reportMetadata 
@@ -114,8 +135,16 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
-    const mockUserId = searchParams.get('mockUserId');
-    const classId = searchParams.get('classId') || 'demo-class-1';
+    const userId = searchParams.get('userId');
+    const classId = searchParams.get('classId') || '';
+
+    // Validate required fields
+    if (!role || !userId) {
+      return NextResponse.json(
+        { success: false, error: 'Role and userId are required' },
+        { status: 400 }
+      );
+    }
 
     // Validate role permissions
     if (role !== 'teacher' && role !== 'admin') {
@@ -125,9 +154,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get class data to verify access
+    const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+    let classData: Class | null = null;
+    
+    if (role === 'teacher') {
+      classData = await classesCollection.findOne({ 
+        teacherId: userId
+      }) as unknown as Class | null;
+    } else if (role === 'admin') {
+      classData = await classesCollection.findOne({ 
+        _id: classId ? new ObjectId(classId) : { $exists: true }
+      }) as unknown as Class | null;
+    }
+
+    if (!classData) {
+      return NextResponse.json(
+        { success: false, error: 'Class not found or access denied' },
+        { status: 404 }
+      );
+    }
+
     // Get existing reports
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
-    const progressRecords = await progressCollection.find({ classId }).toArray();
+    const progressRecords = await progressCollection.find({ 
+      classId: classData._id?.toString() || classId 
+    }).toArray();
 
     // Extract all report exports
     const allReports = progressRecords
@@ -142,7 +194,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        reports: allReports
+        reports: allReports,
+        classInfo: {
+          className: classData.className,
+          classId: classData._id?.toString()
+        }
       }
     });
 

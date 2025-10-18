@@ -22,23 +22,23 @@ export async function POST(request: NextRequest) {
     
     for (const profile of profilesWithoutNames) {
       // Try to get name from user collection
-      const user = await usersCollection.findOne({ mockUserId: profile.studentMockId });
+      const user = await usersCollection.findOne({ userId: profile.studentId });
       
       let name = '';
       let email = '';
       
       if (user && user.name) {
         name = user.name;
-        email = user.email || `${profile.studentMockId}@student.com`;
+        email = user.email || `${profile.studentId}@student.com`;
       } else if (user && user.displayName) {
         name = user.displayName;
-        email = user.email || `${profile.studentMockId}@student.com`;
+        email = user.email || `${profile.studentId}@student.com`;
       } else {
-        // Generate from mockUserId
-        const parts = profile.studentMockId.split('_');
+        // Generate from studentId
+        const parts = profile.studentId.split('_');
         if (parts.length >= 2) {
           name = parts.slice(1).map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-          email = `${profile.studentMockId}@student.com`;
+          email = `${profile.studentId}@student.com`;
         }
       }
       

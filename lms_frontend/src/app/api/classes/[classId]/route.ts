@@ -10,11 +10,11 @@ export async function GET(
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
-    const mockUserId = searchParams.get('mockUserId');
+    const userId = searchParams.get('userId');
 
-    if (!role || !mockUserId) {
+    if (!role || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Role and mockUserId are required' },
+        { success: false, error: 'Role and userId are required' },
         { status: 400 }
       );
     }
@@ -46,19 +46,19 @@ export async function GET(
     }
 
     // Check permissions
-    if (role === 'teacher' && classData.teacherMockId !== mockUserId) {
+    if (role === 'teacher' && classData.teacherId !== userId) {
       console.log('Permission denied:', {
-        classTeacherId: classData.teacherMockId,
-        requestingUserId: mockUserId,
-        match: classData.teacherMockId === mockUserId
+        classTeacherId: classData.teacherId,
+        requestingUserId: userId,
+        match: classData.teacherId === userId
       });
       return NextResponse.json(
-        { success: false, error: 'You do not have permission to view this class', debug: { classTeacherId: classData.teacherMockId, requestingUserId: mockUserId } },
+        { success: false, error: 'You do not have permission to view this class', debug: { classTeacherId: classData.teacherId, requestingUserId: userId } },
         { status: 403 }
       );
     }
 
-    if (role === 'student' && !classData.studentMockIds.includes(mockUserId)) {
+    if (role === 'student' && !classData.studentIds.includes(userId)) {
       return NextResponse.json(
         { success: false, error: 'You are not a member of this class' },
         { status: 403 }
@@ -66,10 +66,29 @@ export async function GET(
     }
 
     // Get assignments for this class
+    // Handle both ObjectId format and string format classId
+    const assignmentQuery: any = {
+      $or: [
+        { classId: classId }, // Direct match by classId field
+        { assignedTo: classId }, // Assignments assigned to this class (entire class)
+        { assignedTo: { $in: classData.studentIds } }, // Assignments assigned to students in this class
+        { classId: { $exists: false } }, // Handle assignments without classId
+        { classId: null }
+      ],
+      isPublished: true
+    };
+    
+    console.log('🔍 Fetching assignments for class:', {
+      classId,
+      query: JSON.stringify(assignmentQuery, null, 2)
+    });
+    
     const assignments = await assignmentsCollection
-      .find({ classId: classId })
+      .find(assignmentQuery)
       .sort({ createdAt: -1 })
       .toArray();
+      
+    console.log(`📊 Found ${assignments.length} assignments for class ${classId}`);
 
     // Get recent submissions
     const submissions = await submissionsCollection
@@ -83,7 +102,7 @@ export async function GET(
     // Fetch student details for all students in the class
     const students = await studentProfilesCollection
       .find({ 
-        studentMockId: { $in: classData.studentMockIds }
+        studentId: { $in: classData.studentIds }
       })
       .toArray();
 
@@ -104,29 +123,29 @@ export async function GET(
           description: classData.description,
           subject: classData.subject,
           grade: classData.grade,
-          teacherMockId: classData.teacherMockId,
-          studentMockIds: classData.studentMockIds,
+          teacherId: classData.teacherId,
+          studentIds: classData.studentIds,
           joinCode: classData.joinCode,
           isActive: classData.isActive,
           createdAt: classData.createdAt,
           updatedAt: classData.updatedAt
         },
         students: students.map(s => ({
-          studentMockId: s.studentMockId,
-          name: s.studentName || s.name || s.studentMockId,
-          email: s.email || `${s.studentMockId}@student.com`,
+          studentId: s.studentId,
+          name: s.studentName || s.name || s.studentId,
+          email: s.email || `${s.studentId}@student.com`,
           personalityTestCompleted: s.personalityTestCompleted,
           oceanTraits: s.oceanTraits,
           learningPreferences: s.learningPreferences
         })),
         statistics: {
-          totalStudents: classData.studentMockIds.length,
+          totalStudents: classData.studentIds.length,
           totalAssignments,
           totalSubmissions,
           gradedSubmissions,
           averageScore: Math.round(averageScore * 10) / 10,
           completionRate: totalAssignments > 0 
-            ? Math.round((gradedSubmissions / (classData.studentMockIds.length * totalAssignments)) * 100)
+            ? Math.round((gradedSubmissions / (classData.studentIds.length * totalAssignments)) * 100)
             : 0
         },
         recentAssignments: assignments.map(a => ({
