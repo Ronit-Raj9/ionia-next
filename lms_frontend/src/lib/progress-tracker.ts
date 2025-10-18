@@ -19,17 +19,17 @@ export interface ProgressUpdateResult {
  * Update student mastery after assignment submission
  */
 export async function updateStudentMastery(
-  studentMockId: string,
+  studentId: string,
   assignment: Assignment,
   submission: Submission,
   detailedGrading: any
 ): Promise<ProgressUpdateResult> {
   try {
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
-    const studentProfile = await profilesCollection.findOne({ studentMockId }) as unknown as StudentProfile;
+    const studentProfile = await profilesCollection.findOne({ studentId }) as unknown as StudentProfile;
 
     if (!studentProfile) {
-      throw new Error(`Student profile not found: ${studentMockId}`);
+      throw new Error(`Student profile not found: ${studentId}`);
     }
 
     const subject = assignment.subject || 'Science';
@@ -159,7 +159,7 @@ export async function updateStudentMastery(
 
     // Save updated profile
     await profilesCollection.updateOne(
-      { studentMockId },
+      { studentId },
       {
         $set: {
           subjectMastery: studentProfile.subjectMastery,
@@ -170,7 +170,7 @@ export async function updateStudentMastery(
       }
     );
 
-    console.log(`✓ Updated mastery for ${studentMockId}: ${topic} ${previousMastery}% → ${newMastery}%`);
+    console.log(`✓ Updated mastery for ${studentId}: ${topic} ${previousMastery}% → ${newMastery}%`);
 
     return {
       masteryUpdated: true,

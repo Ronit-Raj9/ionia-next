@@ -1,254 +1,409 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
-import { getCollection, COLLECTIONS, TeacherQuestionSet, Assignment } from '@/lib/db';
-import { analyzeQuestionsBatch } from '@/lib/questionAnalyzer';
+import { getCollection, COLLECTIONS, Assignment, StudentProfile } from '@/lib/db';
+import { personalizeAssignmentWithOcean } from '@/lib/groq';
+import { personalizeAssignmentFallback } from '@/lib/openai';
+import { personalizeAssignment } from '@/lib/gemini-service';
+import { uploadFile } from '@/lib/cloudinary';
 
 /**
  * POST /api/assignments/create-with-questions
- * Create assignment with teacher questions and AI analysis
+ * Create assignment with teacher questions (simplified new system)
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const formData = await request.formData();
     
     console.log('📥 Received assignment creation request');
-    console.log('Body keys:', Object.keys(body));
     
-    const {
-      assignmentId,
-      teacherId,
-      classId,
-      subject,
-      topic,
-      title,
-      description,
-      schoolId,
-      selectedStudents,
-      questions, // Array of { id, questionText, questionType, options?, correctAnswer?, points }
-      assignmentRules, // { totalQuestions, questionsToAttempt, allowStudentChoice, choiceDeadline?, submissionDeadline }
-      personalizationEnabled = true,
-      personalizationLevel = 'moderate',
-      grade
-    } = body;
+    const role = formData.get('role') as string;
+    const teacherId = formData.get('teacherId') as string;
+    const classId = formData.get('classId') as string;
+    const subject = formData.get('subject') as string;
+    const topic = formData.get('topic') as string;
+    const title = formData.get('title') as string || 'New Assignment';
+    const description = formData.get('description') as string || '';
+    const grade = formData.get('grade') as string || '9';
+    const difficulty = formData.get('difficulty') as string || 'medium';
+    const totalMarks = parseInt(formData.get('totalMarks') as string) || 100;
+    const dueDate = formData.get('dueDate') ? new Date(formData.get('dueDate') as string) : undefined;
+    const showMarksToStudents = formData.get('showMarksToStudents') === 'true';
+    const showFeedbackToStudents = formData.get('showFeedbackToStudents') === 'true';
+    const assignedStudents = formData.get('assignedStudents') as string;
+    const enablePersonalization = formData.get('enablePersonalization') !== 'false';
+    const schoolId = formData.get('schoolId') as string;
+    const questions = formData.get('questions') as string;
+    const file = formData.get('file') as File | null;
+    const questionDetails = formData.get('questionDetails') as string;
 
     console.log('Assignment details:', {
-      assignmentId,
       teacherId,
       classId,
       subject,
-      questionCount: questions?.length,
-      selectedStudentsCount: selectedStudents?.length
+      title,
+      grade
     });
 
     // Validate required fields
-    if (!assignmentId || !teacherId || !classId || !subject || !questions || !assignmentRules) {
+    if (!teacherId || !classId || !subject) {
       console.error('❌ Missing required fields:', {
-        hasAssignmentId: !!assignmentId,
         hasTeacherId: !!teacherId,
         hasClassId: !!classId,
-        hasSubject: !!subject,
-        hasQuestions: !!questions,
-        hasAssignmentRules: !!assignmentRules
+        hasSubject: !!subject
       });
       return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
+        { success: false, message: 'Missing required fields: teacherId, classId, and subject are required' },
         { status: 400 }
       );
     }
 
-    if (!Array.isArray(questions) || questions.length === 0) {
+    // Validate classId format
+    if (!ObjectId.isValid(classId)) {
+      console.error('❌ Invalid classId format:', classId);
       return NextResponse.json(
-        { success: false, message: 'Questions array is required and must not be empty' },
+        { success: false, message: 'Invalid class ID format' },
         { status: 400 }
       );
     }
 
-    // Validate assignment rules
-    if (assignmentRules.totalQuestions !== questions.length) {
+    // Validate role
+    if (role !== 'teacher') {
       return NextResponse.json(
-        { success: false, message: 'Total questions must match questions array length' },
-        { status: 400 }
+        { success: false, message: 'Only teachers can create assignments' },
+        { status: 403 }
       );
     }
 
-    if (assignmentRules.questionsToAttempt > assignmentRules.totalQuestions) {
-      return NextResponse.json(
-        { success: false, message: 'Questions to attempt cannot exceed total questions' },
-        { status: 400 }
-      );
-    }
-
-    // Analyze questions using AI
-    console.log(`Analyzing ${questions.length} questions...`);
-    const analyses = await analyzeQuestionsBatch(
-      questions.map(q => ({
-        id: q.id,
-        questionText: q.questionText,
-        questionType: q.questionType,
-        options: q.options
-      })),
-      subject,
-      grade || '10'
-    );
-
-    // Create master questions with AI analysis
-    const masterQuestions = questions.map(q => ({
-      id: q.id,
-      questionText: q.questionText,
-      questionType: q.questionType,
-      options: q.options,
-      correctAnswer: q.correctAnswer,
-      points: q.points || 10,
-      attachments: q.attachments || [],
-      aiAnalysis: analyses[q.id]
-    }));
-
-    // Create TeacherQuestionSet
-    const questionSet: TeacherQuestionSet = {
-      assignmentId: assignmentId, // Store as string, not ObjectId
-      teacherId,
-      classId,
-      subject,
-      topic: topic || subject,
-      masterQuestions,
-      assignmentRules: {
-        totalQuestions: assignmentRules.totalQuestions,
-        questionsToAttempt: assignmentRules.questionsToAttempt,
-        allowStudentChoice: assignmentRules.allowStudentChoice !== false,
-        choiceDeadline: assignmentRules.choiceDeadline ? new Date(assignmentRules.choiceDeadline) : undefined,
-        submissionDeadline: new Date(assignmentRules.submissionDeadline)
-      },
-      personalizationEnabled,
-      personalizationLevel,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    const collection = await getCollection(COLLECTIONS.TEACHER_QUESTION_SETS);
-    const result = await collection.insertOne(questionSet as any);
-
-    // IMPORTANT: Also create an Assignment document so students can see it!
-    // Get student IDs (either selected students or all students in the class)
-    let assignedStudentIds: string[] = [];
-    
-    if (selectedStudents && selectedStudents.length > 0) {
-      // Use selected students
-      assignedStudentIds = selectedStudents;
-      console.log(`✅ Using ${assignedStudentIds.length} selected students`);
-    } else {
-      // Get all students from the class
-      try {
-        const classesCollection = await getCollection(COLLECTIONS.CLASSES);
-        
-        // Try to query by classId as both ObjectId and string
-        let classData: any = null;
-        
-        // First try as ObjectId if it looks like one (24 hex chars)
-        if (classId && classId.length === 24 && /^[0-9a-fA-F]{24}$/.test(classId)) {
-          classData = await classesCollection.findOne({ _id: new ObjectId(classId) });
-        }
-        
-        // If not found, try as string or by other identifiers
-        if (!classData) {
-          classData = await classesCollection.findOne({ 
-            $or: [
-              { _id: classId },
-              { classId: classId },
-              { className: classId }
-            ]
-          } as any);
-        }
-        
-        if (classData && classData.studentMockIds) {
-          assignedStudentIds = classData.studentMockIds;
-          console.log(`✅ Found ${assignedStudentIds.length} students in class`);
-        } else {
-          console.warn(`⚠️ No students found in class ${classId}`);
-        }
-      } catch (error) {
-        console.error('Error fetching class students:', error);
-        // Continue without students - assignment will be created but not assigned
-      }
-    }
-
-    // Calculate total marks (sum of all question points)
-    const totalMarks = questions.reduce((sum: number, q: any) => sum + (q.points || 0), 0);
-
-    // Create the Assignment document
-    const assignmentData: Omit<Assignment, '_id'> = {
-      classId,
-      schoolId: schoolId || '',
-      taskType: subject.toLowerCase(),
-      title: title || `${subject} - ${topic || 'Assignment'}`,
-      description: description || `Adaptive assignment with ${questions.length} questions. Choose ${assignmentRules.questionsToAttempt} to attempt.`,
-      subject,
-      grade: grade || '10',
-      topic: topic || subject,
-      difficulty: 'medium',
-      totalMarks,
-      assignmentType: 'personalized',
-      originalContent: {
-        questions: questions.map((q: any) => q.questionText),
-        questionDetails: questions.map((q: any) => ({
-          id: q.id,
-          text: q.questionText,
-          marks: q.points || 0
-        }))
-      },
-      createdBy: teacherId,
-      assignedTo: assignedStudentIds,
-      gradeSettings: {
-        showMarksToStudents: true,
-        showFeedbackToStudents: true
-      },
-      dueDate: assignmentRules.submissionDeadline ? new Date(assignmentRules.submissionDeadline) : undefined,
-      maxScore: totalMarks,
-      isPublished: true,
-      createdAt: new Date(),
-      personalizationEnabled,
-      personalizedVersions: [],
-      submissionStats: {
-        totalStudents: assignedStudentIds.length,
-        submitted: 0,
-        graded: 0,
-        pending: assignedStudentIds.length
-      }
-    };
-
-    const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
-    const assignmentResult = await assignmentsCollection.insertOne(assignmentData as any);
-
-    console.log(`✅ Created adaptive assignment for ${assignedStudentIds.length} students`);
-    console.log(`Assignment ID: ${assignmentResult.insertedId}`);
-    console.log(`Assigned to students:`, assignedStudentIds);
-    console.log(`Assignment details:`, {
-      title: assignmentData.title,
-      classId: assignmentData.classId,
-      assignedTo: assignmentData.assignedTo,
-      isPublished: assignmentData.isPublished
+    // Validate that the class exists and teacher has permission
+    const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+    const classData = await classesCollection.findOne({
+      _id: new ObjectId(classId),
+      teacherId: teacherId
     });
 
-    // Generate summary statistics
-    const difficultyCount = masterQuestions.reduce((acc, q) => {
-      acc[q.aiAnalysis.difficulty]++;
-      return acc;
-    }, { easy: 0, medium: 0, hard: 0 });
+    if (!classData) {
+      console.error('❌ Class not found or teacher not authorized:', { classId, teacherId });
+      return NextResponse.json(
+        { success: false, message: 'Class not found or you do not have permission to create assignments for this class' },
+        { status: 403 }
+      );
+    }
 
-    const avgBloomsLevel = masterQuestions.reduce((sum, q) => 
-      sum + q.aiAnalysis.bloomsLevel, 0) / masterQuestions.length;
+    console.log('✅ Class validation passed:', {
+      className: classData.className,
+      teacherId: classData.teacherId,
+      studentCount: classData.studentIds?.length || 0
+    });
+
+    if (!questions && !file) {
+      return NextResponse.json(
+        { success: false, message: 'Either questions or file must be provided' },
+        { status: 400 }
+      );
+    }
+
+    let uploadedFileUrl: string | undefined;
+    let questionsList: string[] = [];
+
+    // Handle file upload if provided
+    if (file) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const uploadResult = await uploadFile(buffer, file.name, 'assignments');
+      
+      if (!uploadResult.success) {
+        return NextResponse.json(
+          { success: false, message: uploadResult.error },
+          { status: 500 }
+        );
+      }
+      
+      uploadedFileUrl = uploadResult.url;
+    }
+
+    // Parse questions and question details
+    let detailedQuestions: Array<{id: string, text: string, marks: number}> = [];
+    
+    if (questionDetails) {
+      try {
+        detailedQuestions = JSON.parse(questionDetails);
+        questionsList = detailedQuestions.map(q => q.text).filter(text => text.trim().length > 0);
+      } catch (error) {
+        console.error('Error parsing question details:', error);
+        // Fallback to simple questions parsing
+        if (questions) {
+          questionsList = questions.split('\n').filter(q => q.trim().length > 0);
+        }
+      }
+    } else if (questions) {
+      questionsList = questions.split('\n').filter(q => q.trim().length > 0);
+    } else {
+      // If only file provided, create placeholder questions
+      questionsList = ['Please solve the problems shown in the uploaded file.'];
+    }
+
+    // Parse assigned students
+    let assignedStudentsList: string[] = [];
+    let isEntireClass = false;
+    
+    if (assignedStudents && assignedStudents.trim() !== '') {
+      try {
+        assignedStudentsList = JSON.parse(assignedStudents);
+      } catch {
+        assignedStudentsList = assignedStudents.split(',').map(s => s.trim());
+      }
+    } else {
+      // No specific students assigned = entire class
+      isEntireClass = true;
+    }
+
+    // Get student profiles for personalization
+    const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
+    let studentProfiles: StudentProfile[] = [];
+    
+    if (isEntireClass) {
+      // Get all students in the class
+      studentProfiles = await profilesCollection
+        .find({ classId })
+        .toArray() as unknown as StudentProfile[];
+      assignedStudentsList = studentProfiles.map(p => p.studentId);
+      console.log(`📚 Assignment assigned to ENTIRE CLASS: ${assignedStudentsList.length} students`);
+    } else {
+      // Get only selected students
+      studentProfiles = await profilesCollection
+        .find({ studentId: { $in: assignedStudentsList } })
+        .toArray() as unknown as StudentProfile[];
+      console.log(`👥 Assignment assigned to SELECTED STUDENTS: ${assignedStudentsList.length} students`);
+    }
+
+    if (studentProfiles.length === 0 && assignedStudentsList.length > 0) {
+      // Create basic profiles for students without existing profiles
+      assignedStudentsList.forEach(studentId => {
+        studentProfiles.push({
+          studentId: studentId,
+          // OCEAN Personality Traits (default balanced values)
+          oceanTraits: {
+            openness: 50,
+            conscientiousness: 50,
+            extraversion: 50,
+            agreeableness: 50,
+            neuroticism: 50
+          },
+          // Learning Preferences (default balanced)
+          learningPreferences: {
+            visualLearner: true,
+            kinestheticLearner: false,
+            auditoryLearner: false,
+            readingWritingLearner: false,
+            preferredDifficulty: 'medium' as const,
+            needsStepByStepGuidance: false,
+            respondsToEncouragement: true
+          },
+          // Intellectual Traits (default balanced)
+          intellectualTraits: {
+            analyticalThinking: 50,
+            creativeThinking: 50,
+            criticalThinking: 50,
+            problemSolvingSkill: 50
+          },
+          // Subject Mastery (empty for new students)
+          subjectMastery: [],
+          // Assignment History (empty for new students)
+          assignmentHistory: [],
+          // Personality Test Status
+          personalityTestCompleted: false,
+          // Legacy fields for backward compatibility
+          previousPerformance: {
+            subject: subject,
+            weaknesses: [],
+            masteryScores: {}
+          },
+          personalityProfile: {
+            type: 'balanced',
+            quizResponses: []
+          },
+          intellectualProfile: {
+            strengths: [],
+            responsePatterns: []
+          },
+          updatedAt: new Date()
+        });
+      });
+    }
+
+    // Log assignment creation details
+    console.log('Creating assignment with details:', {
+      classId,
+      schoolId,
+      subject,
+      title,
+      assignedStudentsCount: assignedStudentsList.length
+    });
+
+    // Create assignment document (omit _id to let MongoDB generate it)
+    const assignmentData: Omit<Assignment, '_id'> = {
+      classId: classId, // Store as string (ObjectId string representation)
+      schoolId: classData.schoolId?.toString() || schoolId, // Use class's schoolId or fallback
+      taskType: subject.toLowerCase(),
+      title,
+      description,
+      subject,
+      grade: grade,
+      topic: topic,
+      difficulty: difficulty as 'easy' | 'medium' | 'hard',
+      totalMarks,
+      maxScore: totalMarks,
+      assignmentType: enablePersonalization ? 'personalized' : 'standard',
+      personalizationEnabled: enablePersonalization,
+      originalContent: { 
+        questions: questionsList,
+        questionDetails: detailedQuestions.length > 0 ? detailedQuestions : undefined
+      },
+      uploadedFileUrl,
+      createdBy: teacherId,
+      assignedTo: isEntireClass ? [classId] : assignedStudentsList, // Store classId for entire class, student IDs for selected students
+      gradeSettings: {
+        showMarksToStudents,
+        showFeedbackToStudents,
+      },
+      submissionStats: {
+        totalStudents: assignedStudentsList.length,
+        submitted: 0,
+        graded: 0,
+        pending: assignedStudentsList.length
+      },
+      dueDate,
+      isPublished: true,
+      createdAt: new Date(),
+      personalizedVersions: [],
+    };
+
+    // Personalize for each student if enabled
+    let personalizedVersions: any[] = [];
+    
+    if (enablePersonalization && studentProfiles.length > 0) {
+      console.log(`Personalizing assignment for ${studentProfiles.length} students...`);
+      
+      const personalizationPromises = studentProfiles.map(async (profile) => {
+        try {
+          // Check if student has OCEAN profile
+          const hasOceanProfile = profile.oceanTraits && 
+                                  profile.learningPreferences && 
+                                  profile.personalityTestCompleted;
+          
+          let personalized;
+          
+          if (hasOceanProfile) {
+            // Use advanced OCEAN-based personalization
+            const subjectMastery = profile.subjectMastery?.find(s => s.subject === subject && s.grade === grade);
+            const topicInfo = subjectMastery?.topics.find(t => t.name === topic);
+            const topicMastery = topicInfo?.masteryScore || 50;
+            const weaknesses = topicInfo?.weaknesses || profile.previousPerformance?.weaknesses || [];
+            
+            console.log(`Using OCEAN personalization for ${profile.studentId} (mastery: ${topicMastery}%)`);
+            
+            personalized = await personalizeAssignmentWithOcean({
+              questions: questionsList,
+              studentProfile: {
+                oceanTraits: profile.oceanTraits!,
+                learningPreferences: profile.learningPreferences!,
+                topicMastery,
+                weaknesses
+              },
+              subject,
+              topic,
+              grade
+            });
+            
+            return {
+              studentId: profile.studentId,
+              adaptedContent: {
+                questions: personalized.personalizedQuestions,
+                variations: personalized.variations,
+                difficultyAdjustment: personalized.difficultyAdjustment,
+                visualAids: personalized.visualAids,
+                hints: personalized.hints,
+                remedialQuestions: personalized.remedialQuestions,
+                challengeQuestions: personalized.challengeQuestions,
+                encouragementNote: personalized.encouragementNote
+              },
+              personalizationReason: personalized.personalizationReason
+            };
+          } else {
+            // Fallback to basic personalization
+            console.log(`Using basic personalization for ${profile.studentId} (no OCEAN profile)`);
+            
+            try {
+              personalized = await personalizeAssignment(
+                questionsList,
+                profile,
+                subject,
+                topic,
+                grade
+              );
+            } catch (groqError) {
+              console.warn('Gemini failed, trying OpenAI fallback:', groqError);
+              personalized = await personalizeAssignmentFallback({
+                questions: questionsList,
+                studentProfile: {
+                  weaknesses: profile.previousPerformance?.weaknesses || [],
+                  personalityType: profile.personalityProfile?.type || 'balanced',
+                  intellectualStrengths: profile.intellectualProfile?.strengths || [],
+                },
+              });
+            }
+
+            return {
+              studentId: profile.studentId,
+              adaptedContent: {
+                questions: 'personalizedQuestions' in personalized ? personalized.personalizedQuestions : personalized.questions,
+                variations: personalized.variations,
+                difficultyAdjustment: 'difficultyAdjustment' in personalized ? personalized.difficultyAdjustment : undefined,
+                visualAids: 'visualAids' in personalized ? personalized.visualAids : undefined,
+                hints: 'hints' in personalized ? personalized.hints : undefined,
+                remedialQuestions: 'remedialQuestions' in personalized ? personalized.remedialQuestions : undefined,
+                challengeQuestions: 'challengeQuestions' in personalized ? personalized.challengeQuestions : undefined,
+                encouragementNote: 'encouragementNote' in personalized ? personalized.encouragementNote : undefined
+              },
+              personalizationReason: 'personalizationReason' in personalized ? personalized.personalizationReason : 'Legacy personalization (OCEAN profile incomplete)'
+            };
+          }
+        } catch (error) {
+          console.error(`Failed to personalize for ${profile.studentId}:`, error);
+          // Return original questions as fallback
+          return {
+            studentId: profile.studentId,
+            adaptedContent: {
+              questions: questionsList,
+              variations: 'Using original questions (personalization failed)',
+            },
+            personalizationReason: 'Personalization error - using standard assignment'
+          };
+        }
+      });
+
+      personalizedVersions = await Promise.all(personalizationPromises);
+      console.log(`✓ Personalization complete for ${personalizedVersions.length} students`);
+    } else {
+      console.log('Personalization disabled or no students - creating standard assignment');
+    }
+    
+    assignmentData.personalizedVersions = personalizedVersions;
+
+    // Save assignment to database
+    const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    const result = await assignmentsCollection.insertOne(assignmentData);
 
     return NextResponse.json({
       success: true,
-      message: 'Question set created and analyzed successfully',
-      questionSetId: result.insertedId,
-      summary: {
-        totalQuestions: masterQuestions.length,
-        difficultyDistribution: difficultyCount,
-        averageBloomsLevel: Math.round(avgBloomsLevel * 10) / 10,
-        personalizationEnabled,
-        questionsToAttempt: assignmentRules.questionsToAttempt
-      }
-    }, { status: 201 });
+      data: {
+        assignmentId: result.insertedId,
+        personalizedCount: personalizedVersions.length,
+        assignment: {
+          ...assignmentData,
+          _id: result.insertedId,
+        },
+      },
+    });
 
   } catch (error) {
     console.error('❌ Error creating question set:', error);
@@ -272,49 +427,85 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/assignments/create-with-questions?assignmentId=...
- * Get question set for an assignment
+ * GET /api/assignments/create-with-questions
+ * Get assignment by ID
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const assignmentId = searchParams.get('assignmentId');
-    const questionSetId = searchParams.get('questionSetId');
+    const role = searchParams.get('role');
+    const userId = searchParams.get('userId');
+    const studentId = searchParams.get('studentId');
 
-    if (!assignmentId && !questionSetId) {
+    if (!assignmentId) {
       return NextResponse.json(
-        { success: false, message: 'assignmentId or questionSetId is required' },
+        { success: false, message: 'assignmentId is required' },
         { status: 400 }
       );
     }
 
-    const collection = await getCollection(COLLECTIONS.TEACHER_QUESTION_SETS);
-    
-    let questionSet;
-    if (questionSetId) {
-      questionSet = await collection.findOne({ _id: new ObjectId(questionSetId) });
-    } else {
-      questionSet = await collection.findOne({ assignmentId: assignmentId! }); // assignmentId is string
+    // Validate ObjectId format
+    if (!ObjectId.isValid(assignmentId)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid assignmentId format' },
+        { status: 400 }
+      );
     }
 
-    if (!questionSet) {
+    const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    const assignment = await assignmentsCollection.findOne({ _id: new ObjectId(assignmentId) });
+
+    if (!assignment) {
       return NextResponse.json(
-        { success: false, message: 'Question set not found' },
+        { success: false, message: 'Assignment not found' },
         { status: 404 }
       );
     }
 
+    // Check permissions
+    if (role === 'student') {
+      if (!studentId) {
+        return NextResponse.json(
+          { success: false, message: 'studentId is required for students' },
+          { status: 400 }
+        );
+      }
+      
+      // Check if student is assigned to this assignment
+      if (!assignment.assignedTo.includes(studentId)) {
+        return NextResponse.json(
+          { success: false, message: 'Access denied - not assigned to this assignment' },
+          { status: 403 }
+        );
+      }
+    } else if (role === 'teacher') {
+      // Check if teacher created this assignment
+      if (assignment.createdBy !== userId) {
+        return NextResponse.json(
+          { success: false, message: 'Access denied - not your assignment' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Convert ObjectId to string for JSON serialization
+    const serializedAssignment = {
+      ...assignment,
+      _id: assignment._id?.toString()
+    };
+
     return NextResponse.json({
       success: true,
-      questionSet
+      data: serializedAssignment
     });
 
   } catch (error) {
-    console.error('Error fetching question set:', error);
+    console.error('Error fetching assignment:', error);
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to fetch question set',
+        message: 'Failed to fetch assignment',
         error: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
@@ -324,24 +515,71 @@ export async function GET(request: NextRequest) {
 
 /**
  * PUT /api/assignments/create-with-questions
- * Update question set (e.g., modify assignment rules)
+ * Update assignment
  */
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { questionSetId, updates } = body;
+    const { assignmentId, updates, role, userId } = body;
 
-    if (!questionSetId) {
+    if (!assignmentId) {
       return NextResponse.json(
-        { success: false, message: 'questionSetId is required' },
+        { success: false, message: 'assignmentId is required' },
         { status: 400 }
       );
     }
 
-    const collection = await getCollection(COLLECTIONS.TEACHER_QUESTION_SETS);
+    if (!updates || typeof updates !== 'object') {
+      return NextResponse.json(
+        { success: false, message: 'Valid updates object is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!role || !userId) {
+      return NextResponse.json(
+        { success: false, message: 'role and userId are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate ObjectId format
+    if (!ObjectId.isValid(assignmentId)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid assignmentId format' },
+        { status: 400 }
+      );
+    }
+
+    // Check permissions
+    if (role !== 'teacher' && role !== 'admin') {
+      return NextResponse.json(
+        { success: false, message: 'Only teachers and admins can update assignments' },
+        { status: 403 }
+      );
+    }
+
+    const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     
-    const result = await collection.updateOne(
-      { _id: new ObjectId(questionSetId) },
+    // Check if assignment exists and user has permission
+    const existingAssignment = await assignmentsCollection.findOne({ _id: new ObjectId(assignmentId) });
+    if (!existingAssignment) {
+      return NextResponse.json(
+        { success: false, message: 'Assignment not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user created this assignment (unless admin)
+    if (role === 'teacher' && existingAssignment.createdBy !== userId) {
+      return NextResponse.json(
+        { success: false, message: 'Access denied - not your assignment' },
+        { status: 403 }
+      );
+    }
+
+    const result = await assignmentsCollection.updateOne(
+      { _id: new ObjectId(assignmentId) },
       { 
         $set: {
           ...updates,
@@ -350,27 +588,40 @@ export async function PUT(request: NextRequest) {
       }
     );
 
-    if (result.matchedCount === 0) {
+    if (result.modifiedCount === 0) {
       return NextResponse.json(
-        { success: false, message: 'Question set not found' },
-        { status: 404 }
+        { success: false, message: 'No changes made to assignment' },
+        { status: 400 }
       );
     }
 
-    const updatedSet = await collection.findOne({ _id: new ObjectId(questionSetId) });
+    const updatedAssignment = await assignmentsCollection.findOne({ _id: new ObjectId(assignmentId) });
+
+    if (!updatedAssignment) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to retrieve updated assignment' },
+        { status: 500 }
+      );
+    }
+
+    // Convert ObjectId to string for JSON serialization
+    const serializedAssignment = {
+      ...updatedAssignment,
+      _id: updatedAssignment._id?.toString()
+    };
 
     return NextResponse.json({
       success: true,
-      message: 'Question set updated successfully',
-      questionSet: updatedSet
+      message: 'Assignment updated successfully',
+      data: serializedAssignment
     });
 
   } catch (error) {
-    console.error('Error updating question set:', error);
+    console.error('Error updating assignment:', error);
     return NextResponse.json(
       { 
         success: false, 
-        message: 'Failed to update question set',
+        message: 'Failed to update assignment',
         error: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

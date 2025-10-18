@@ -127,7 +127,7 @@ export default function Dashboard() {
           {user?.schoolId && (
             <div className="mt-2">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                School: {user.schoolId}
+                School: {user.schoolId?.toString()}
               </span>
             </div>
           )}

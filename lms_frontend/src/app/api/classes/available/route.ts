@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCollection, COLLECTIONS } from '@/lib/db';
+import { ObjectId } from 'mongodb';
+import { getCollection, COLLECTIONS, Class } from '@/lib/db';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
     const studentId = searchParams.get('studentId');
     const role = searchParams.get('role');
 
+    // Validate role permissions
     if (role !== 'student') {
       return NextResponse.json(
         { success: false, error: 'Only students can view available classes' },
@@ -19,9 +21,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate required parameters
     if (!schoolId || !studentId) {
       return NextResponse.json(
         { success: false, error: 'School ID and student ID are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate ObjectId format for schoolId
+    if (!ObjectId.isValid(schoolId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid school ID format' },
         { status: 400 }
       );
     }
@@ -31,12 +42,12 @@ export async function GET(request: NextRequest) {
     // Find classes in the same school that the student is not already a member of
     const availableClasses = await classesCollection
       .find({
-        schoolId,
+        schoolId: new ObjectId(schoolId),
         isActive: true,
-        studentMockIds: { $nin: [studentId] }
+        studentIds: { $nin: [studentId] }
       })
       .sort({ createdAt: -1 })
-      .toArray();
+      .toArray() as unknown as Class[];
 
     // Return only basic info needed for joining
     const formattedClasses = availableClasses.map(classData => ({
@@ -45,15 +56,19 @@ export async function GET(request: NextRequest) {
       description: classData.description,
       subject: classData.subject,
       grade: classData.grade,
-      teacherMockId: classData.teacherMockId,
-      studentCount: classData.studentMockIds?.length || 0,
+      teacherId: classData.teacherId,
+      teacherName: classData.teacherName,
+      studentCount: classData.studentIds?.length || 0,
       joinCode: classData.joinCode,
+      currentTopic: classData.currentTopic,
+      syllabus: classData.syllabus,
       createdAt: classData.createdAt
     }));
 
     return NextResponse.json({
       success: true,
-      data: formattedClasses
+      data: formattedClasses,
+      count: formattedClasses.length
     });
   } catch (error) {
     console.error('Error fetching available classes:', error);

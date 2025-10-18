@@ -27,7 +27,7 @@ interface ClassDetails {
     subject?: string;
     grade?: string;
     teacherMockId: string;
-    studentMockIds: string[];
+    studentIds: string[];
     joinCode: string;
     isActive: boolean;
     createdAt: string;
@@ -76,7 +76,7 @@ export default function ClassDetails({ classId, userId, role, onClose }: ClassDe
   const fetchClassDetails = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/classes/${classId}?role=${role}&mockUserId=${userId}`);
+      const response = await fetch(`/api/classes/${classId}?role=${role}&studentId=${userId}`);
       const data = await response.json();
 
       if (data.success) {

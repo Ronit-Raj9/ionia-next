@@ -11,17 +11,13 @@ import {
   Send, 
   CheckCircle, 
   Clock,
-  Star,
   TrendingUp,
   AlertCircle,
-  Upload,
   Eye,
   Award,
   Zap,
   Target,
-  Flame,
   Trophy,
-  Gift,
   Users,
   MessageCircle,
   Home,
@@ -36,64 +32,19 @@ import ClassDiscovery from '@/components/ClassDiscovery';
 import StudentClassroom from '@/components/StudentClassroom';
 import LearningAssessmentQuiz from '@/components/LearningAssessmentQuiz';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
-import { getUserDisplayName, getUserId } from '@/lib/userUtils';
+import JoinClassroom from '@/components/JoinClassroom';
 
-interface Assignment {
-  _id: string;
-  title: string;
-  description: string;
-  subject: string;
-  difficulty: string;
-  totalMarks: number;
-  taskType: string;
-  dueDate?: string;
-  createdAt: string;
-  uploadedFileUrl?: string;
-  questions: Array<string | {question: string; format?: string}>;
-  variations: string;
-  originalQuestions: string[];
-  canSeeGrades: boolean;
-  canSeeFeedback: boolean;
-}
-
-interface Submission {
-  _id: string;
-  assignmentId: string;
-  submissionTime: string;
-  grade?: {
-    score: number;
-    maxScore: number;
-    feedback: string;
-    errors: string[];
-    isPublished: boolean;
-  };
-  status: 'submitted' | 'graded' | 'returned';
-  processed: boolean;
-}
-
-interface StudentProgress {
-  metrics: {
-    totalSubmissions: number;
-    averageScore: number;
-    completionRate: number;
-    weaknesses: string[];
-    strengths: string[];
-    masteryScores: Record<string, number>;
-    timeSaved: number;
-  };
-  recentActivity: {
-    date: string;
-    score: number;
-    feedback: string;
-  }[];
-}
+// Import types from the new system
+import { Assignment, Submission, Progress } from '@/lib/db';
 
 export default function StudentDashboard() {
   const { user } = useRole();
   const router = useRouter();
+  
+  // Core data state
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [progress, setProgress] = useState<StudentProgress | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -102,13 +53,12 @@ export default function StudentDashboard() {
   const [textAnswer, setTextAnswer] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   
-  // Phase 2 gamification state
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  // Gamification state
   const [badges, setBadges] = useState<any[]>([]);
+  const [progressBars, setProgressBars] = useState<Record<string, number>>({});
+  const [adaptivePath, setAdaptivePath] = useState<string[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [recentBadges, setRecentBadges] = useState<string[]>([]);
-  const [adaptivePath, setAdaptivePath] = useState<string[]>([]);
-  const [progressBars, setProgressBars] = useState<Record<string, number>>({});
   
   // Tab state and classes
   const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings' | 'adaptive-assignments'>('assignments');
@@ -146,25 +96,72 @@ export default function StudentDashboard() {
     }
     
     if (user) {
+      console.log('🔍 Student dashboard mounted with user:', user);
       fetchAssignments();
       fetchSubmissions();
       fetchProgress();
-      fetchEnhancedDashboardData();
       fetchStudentClasses();
       checkPersonalityQuizStatus();
+    } else {
+      console.log('❌ No user data available for student dashboard');
     }
   }, [user, router]);
 
+  // Auto-refresh student data every 30 seconds
+  useEffect(() => {
+    if (!user || user.role !== 'student') return;
+
+    const interval = setInterval(() => {
+      fetchAssignments();
+      fetchSubmissions();
+      fetchProgress();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user]);
+
   const fetchAssignments = async () => {
     try {
+      // Debug student user data
+      console.log('🔍 Student user data:', {
+        userId: user?.userId,
+        classId: user?.classId,
+        role: user?.role
+      });
+      
+      // Skip assignment fetching if student has no valid classId
+      if (!user?.classId || user.classId === 'default-class') {
+        console.log('⚠️ Skipping assignment fetch - no valid classId');
+        setAssignments([]);
+        return;
+      }
+      
       // Fetch assignments for all classes the student is enrolled in
-      // Don't pass classId to get assignments from all classes
-      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&studentMockId=${user?.mockUserId}`);
+      const url = `/api/assignments?role=${user?.role}&userId=${user?.userId}&studentId=${user?.userId}&classId=${user.classId}`;
+      console.log('🔍 Student fetching assignments from:', url);
+      
+      const response = await fetch(url);
       const data = await response.json();
+      
+      console.log('📊 Student assignments response:', data);
       
       if (data.success) {
         setAssignments(data.data);
+        console.log(`✅ Loaded ${data.data.length} assignments for student`);
+        
+        // Debug: Log each assignment found
+        if (data.data.length > 0) {
+          console.log('📋 Assignments found:', data.data.map((a: any) => ({
+            id: a._id,
+            title: a.title,
+            classId: a.classId,
+            assignedTo: a.assignedTo
+          })));
+        } else {
+          console.log('❌ No assignments found for student');
+        }
       } else {
+        console.error('❌ Failed to fetch assignments:', data.error);
         toast.error('Failed to fetch assignments');
       }
     } catch (error) {
@@ -175,7 +172,7 @@ export default function StudentDashboard() {
 
   const fetchSubmissions = async () => {
     try {
-      const response = await fetch(`/api/submissions?role=${user?.role}&mockUserId=${user?.mockUserId}`);
+      const response = await fetch(`/api/submissions?role=${user?.role}&userId=${user?.userId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -191,12 +188,24 @@ export default function StudentDashboard() {
 
   const fetchProgress = async () => {
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      // Only fetch progress if we have a valid classId (not 'default-class')
+      if (!user?.classId || user.classId === 'default-class') {
+        console.log('⚠️ Skipping progress fetch - no valid classId');
+        return;
+      }
+      
+      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
         setProgress(data.data);
+        // Extract gamification data from progress
+        if (data.data.gamificationData) {
+          setBadges(data.data.gamificationData.badges || []);
+          setProgressBars(data.data.gamificationData.progressBars || {});
+        }
       } else {
+        console.error('Failed to fetch progress:', data.error);
         toast.error('Failed to fetch progress data');
       }
     } catch (error) {
@@ -205,29 +214,11 @@ export default function StudentDashboard() {
     }
   };
 
-  const fetchEnhancedDashboardData = async () => {
-    try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setDashboardData(data.data);
-        setBadges(data.data.gamification?.badges || []);
-        setAdaptivePath(data.data.adaptivePath || []);
-        setProgressBars(data.data.progress?.progressBars || {});
-      } else {
-        console.error('Failed to fetch enhanced dashboard data');
-      }
-    } catch (error) {
-      console.error('Error fetching enhanced dashboard data:', error);
-    }
-  };
-
   const fetchStudentClasses = async () => {
     setClassesLoading(true);
     try {
       // Fetch classes where this student is a member
-      const response = await fetch(`/api/classes/student?studentId=${user?.mockUserId}&role=${user?.role}`);
+      const response = await fetch(`/api/classes/student?studentId=${user?.userId}&role=${user?.role}`);
       const data = await response.json();
       
       if (data.success) {
@@ -246,7 +237,7 @@ export default function StudentDashboard() {
 
   const checkPersonalityQuizStatus = async () => {
     try {
-      const response = await fetch(`/api/student-profiles?studentId=${user?.mockUserId}`);
+      const response = await fetch(`/api/student-profiles?studentId=${user?.userId}`);
       const data = await response.json();
       
       if (data.success && data.data) {
@@ -270,7 +261,6 @@ export default function StudentDashboard() {
     
     // Refresh data to get personalized assignments
     fetchAssignments();
-    fetchEnhancedDashboardData();
   };
 
   const handleSkipQuiz = () => {
@@ -318,8 +308,8 @@ export default function StudentDashboard() {
     try {
       const formData = new FormData();
       formData.append('role', user?.role || '');
-      formData.append('studentMockId', user?.mockUserId || '');
-      formData.append('assignmentId', selectedAssignment._id);
+      formData.append('studentId', user?.userId || '');
+      formData.append('assignmentId', String(selectedAssignment._id || ''));
       formData.append('textAnswer', textAnswer);
       
       selectedFiles.forEach((file) => {
@@ -334,8 +324,10 @@ export default function StudentDashboard() {
       const data = await response.json();
       
       if (data.success) {
-        const score = data.data.grade.score;
-        if (showScoreNotifications) {
+        const score = data.data.autoGrade?.score || 0;
+        const canSeeGrades = (selectedAssignment as any)?.canSeeGrades || false;
+        
+        if (showScoreNotifications && canSeeGrades) {
           toast.success(`Answer submitted! Score: ${score}%`);
         } else {
           toast.success('Answer submitted successfully!');
@@ -362,7 +354,6 @@ export default function StudentDashboard() {
         setSelectedAssignment(null);
         fetchSubmissions();
         fetchProgress();
-        fetchEnhancedDashboardData(); // Refresh gamification data
       } else {
         toast.error(data.error || 'Failed to submit answer');
       }
@@ -393,7 +384,7 @@ export default function StudentDashboard() {
   if (showPersonalityQuiz) {
     return (
       <PersonalityQuiz
-        studentId={getUserId(user) || ''}
+        studentId={user?.userId || ''}
         onComplete={handleQuizComplete}
         onSkip={handleSkipQuiz}
         isEmbedded={false}
@@ -418,7 +409,7 @@ export default function StudentDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome, {getUserDisplayName(user)}!
+            Welcome, {user?.name || user?.displayName || 'Student'}!
           </h1>
           <p className="text-gray-600">
             Complete your personalized assignments and track your learning progress.
@@ -566,517 +557,527 @@ export default function StudentDashboard() {
 
             {/* Progress Stats */}
             {progress && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600">Assignments Done</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.totalSubmissions}</p>
-                </div>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600">Average Score</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.averageScore}%</p>
-                </div>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600">Completion Rate</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.completionRate}%</p>
-                </div>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm font-medium text-gray-600">Learning Streak</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900">7 days</p>
-                </div>
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Award className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Gamification Section */}
-        {badges.length > 0 && (
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-6">
-              <div className="flex items-center space-x-2 mb-6">
-                <Trophy className="w-6 h-6 text-purple-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Your Achievements</h2>
-                <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-sm font-medium">
-                  {badges.length} Badge{badges.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {badges.map((badge, index) => (
-                  <motion.div
-                    key={badge.key}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`bg-white rounded-lg p-4 text-center border-2 ${
-                      recentBadges.includes(badge.key) 
-                        ? 'border-yellow-300 shadow-lg animate-pulse' 
-                        : 'border-gray-100'
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">{badge.icon}</div>
-                    <h3 className="font-medium text-gray-900 text-sm mb-1">{badge.name}</h3>
-                    <p className="text-xs text-gray-600">{badge.description}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Progress Bars */}
-        {Object.keys(progressBars).length > 0 && (
-          <div className="mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center space-x-2 mb-6">
-                <Target className="w-6 h-6 text-emerald-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Learning Progress</h2>
-              </div>
-              
-              <div className="space-y-4">
-                {Object.entries(progressBars).map(([topic, percentage]) => (
-                  <div key={topic} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700 capitalize">
-                        {topic.replace(/([A-Z])/g, ' $1').trim()}
-                      </span>
-                      <span className="text-sm text-gray-600">{Math.round(percentage)}%</span>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs md:text-sm font-medium text-gray-600">Assignments Done</p>
+                      <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.totalSubmissions || 0}</p>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${percentage}%` }}
-                        transition={{ duration: 1, delay: 0.2 }}
-                        className={`h-3 rounded-full ${
-                          percentage >= 80 ? 'bg-green-500' :
-                          percentage >= 60 ? 'bg-yellow-500' :
-                          percentage >= 40 ? 'bg-orange-500' : 'bg-red-500'
-                        }`}
-                      />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                     </div>
                   </div>
-                ))}
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs md:text-sm font-medium text-gray-600">Average Score</p>
+                      <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.averageScore || 0}%</p>
+                    </div>
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs md:text-sm font-medium text-gray-600">Completion Rate</p>
+                      <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.completionRate || 0}%</p>
+                    </div>
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 hover:shadow-md transition-shadow duration-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs md:text-sm font-medium text-gray-600">Learning Streak</p>
+                      <p className="text-xl md:text-2xl font-bold text-gray-900">7 days</p>
+                    </div>
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Award className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* Adaptive Learning Path */}
-        {adaptivePath.length > 0 && (
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
-              <div className="flex items-center space-x-2 mb-6">
-                <Zap className="w-6 h-6 text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Your Learning Journey</h2>
-              </div>
-              
-              <div className="flex flex-wrap gap-3">
-                {adaptivePath.map((step, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-full border-2 ${
-                      index === 0 ? 'bg-blue-500 text-white border-blue-500' :
-                      index === 1 ? 'bg-blue-100 text-blue-700 border-blue-300' :
-                      'bg-gray-100 text-gray-600 border-gray-300'
-                    }`}
-                  >
-                    <span className="text-sm font-medium">{index + 1}</span>
-                    <span className="text-sm">{step}</span>
-                    {index < adaptivePath.length - 1 && (
-                      <span className="text-gray-400">→</span>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-              
-              <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  🎯 Your personalized learning path adapts based on your performance and learning style!
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Available Assignments */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4 md:mb-6">Available Assignments</h2>
-              
-              {assignments.length > 0 ? (
-                <div className="space-y-4">
-                  {assignments.map((assignment) => {
-                    const submission = getSubmissionForAssignment(assignment._id);
-                    const isCompleted = submission && submission.processed;
-                    
-                    return (
-                      <div 
-                        key={assignment._id} 
-                        className={`border-2 rounded-lg p-3 md:p-4 cursor-pointer transition-all duration-200 ${
-                          selectedAssignment?._id === assignment._id 
-                            ? 'border-emerald-500 bg-emerald-50' 
-                            : isCompleted 
-                              ? 'border-green-200 bg-green-50'
-                              : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+            {/* Gamification Section */}
+            {badges.length > 0 && (
+              <div className="mb-8">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-6">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <Trophy className="w-6 h-6 text-purple-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">Your Achievements</h2>
+                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-sm font-medium">
+                      {badges.length} Badge{badges.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {badges.map((badge: any, index: number) => (
+                      <motion.div
+                        key={badge.key || index}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                        className={`bg-white rounded-lg p-4 text-center border-2 ${
+                          recentBadges.includes(badge.key) 
+                            ? 'border-yellow-300 shadow-lg animate-pulse' 
+                            : 'border-gray-100'
                         }`}
-                        onClick={() => !isCompleted && setSelectedAssignment(assignment)}
                       >
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-3 md:space-y-0">
-                          <div className="flex-1">
-                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-2">
-                              <div className="flex items-center space-x-2">
-                                <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
-                                <span className="font-medium text-gray-900 text-sm md:text-base">
-                                  {assignment.title || 'Math Assignment'}
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs md:text-sm text-gray-500">
-                                  {new Date(assignment.createdAt).toLocaleDateString()}
-                                </span>
-                                {assignment.subject && (
-                                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-                                    {assignment.subject}
-                                  </span>
-                                )}
-                                {assignment.difficulty && (
-                                  <span className={`text-xs px-2 py-1 rounded-full ${
-                                    assignment.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                    assignment.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-red-100 text-red-700'
-                                  }`}>
-                                    {assignment.difficulty}
-                                  </span>
-                                )}
-                                {isCompleted && (
-                                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Personalized Questions */}
-                            <div className="text-sm text-gray-700 mb-2">
-                              <p className="font-medium text-emerald-600 mb-1">
-                                Personalized for you: {assignment.variations}
-                              </p>
-                              {assignment.questions && assignment.questions.slice(0, 2).map((q, i) => (
-                                <div key={i} className="mb-1">
-                                  • {typeof q === 'string' ? q : q.question || 'Question'}
-                                </div>
-                              ))}
-                              {assignment.questions && assignment.questions.length > 2 && (
-                                <div className="text-gray-500">
-                                  ... and {assignment.questions.length - 2} more questions
-                                </div>
-                              )}
-                            </div>
-                            
-                            {assignment.uploadedFileUrl && (
-                              <div className="flex items-center space-x-1 text-sm text-blue-600">
-                                <FileText className="w-4 h-4" />
-                                <span>Reference file attached</span>
-                              </div>
-                            )}
-                          </div>
-                          
-                          <div className="text-right">
-                            {isCompleted ? (
-                              <div className="text-green-600">
-                                {submission.grade && assignment.canSeeGrades && submission.grade.isPublished ? (
-                                  <div className="font-bold text-lg">
-                                    {submission.grade.score}/{submission.grade.maxScore || assignment.totalMarks}
-                                  </div>
-                                ) : (
-                                  <div className="text-sm text-gray-500">Graded</div>
-                                )}
-                                <div className="text-sm">Completed</div>
-                              </div>
-                            ) : (
-                              <div className="text-emerald-600">
-                                <div className="text-sm font-medium">Click to start</div>
-                              </div>
-                            )}
-                          </div>
+                        <div className="text-2xl mb-2">{badge.icon || '🏆'}</div>
+                        <h3 className="font-medium text-gray-900 text-sm mb-1">{badge.name || 'Badge'}</h3>
+                        <p className="text-xs text-gray-600">{badge.description || 'Achievement'}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Progress Bars */}
+            {Object.keys(progressBars).length > 0 && (
+              <div className="mb-8">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <Target className="w-6 h-6 text-emerald-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">Learning Progress</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {Object.entries(progressBars).map(([topic, percentage]) => (
+                      <div key={topic} className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-700 capitalize">
+                            {topic.replace(/([A-Z])/g, ' $1').trim()}
+                          </span>
+                          <span className="text-sm text-gray-600">{Math.round(percentage as number)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percentage}%` }}
+                            transition={{ duration: 1, delay: 0.2 }}
+                            className={`h-3 rounded-full ${
+                              (percentage as number) >= 80 ? 'bg-green-500' :
+                              (percentage as number) >= 60 ? 'bg-yellow-500' :
+                              (percentage as number) >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                            }`}
+                          />
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No assignments available yet.</p>
-                  <p className="text-sm text-gray-400">Check back later for new assignments from your teacher!</p>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Assignment Details */}
-            {selectedAssignment && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mt-4 md:mt-6">
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {selectedAssignment.title}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
-                    <span className="flex items-center">
-                      <BookOpen className="w-4 h-4 mr-1" />
-                      {selectedAssignment.subject}
-                    </span>
-                    <span className="flex items-center">
-                      <Target className="w-4 h-4 mr-1" />
-                      {selectedAssignment.difficulty}
-                    </span>
-                    <span className="flex items-center">
-                      <Trophy className="w-4 h-4 mr-1" />
-                      {selectedAssignment.totalMarks} marks
-                    </span>
-                    {selectedAssignment.dueDate && (
-                      <span className="flex items-center">
-                        <Clock className="w-4 h-4 mr-1" />
-                        Due: {new Date(selectedAssignment.dueDate).toLocaleDateString()}
-                      </span>
-                    )}
+            {/* Adaptive Learning Path */}
+            {adaptivePath.length > 0 && (
+              <div className="mb-8">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+                  <div className="flex items-center space-x-2 mb-6">
+                    <Zap className="w-6 h-6 text-blue-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">Your Learning Journey</h2>
                   </div>
                   
-                  {selectedAssignment.description && (
-                    <p className="text-gray-700 mb-4">{selectedAssignment.description}</p>
-                  )}
-                  
-                  {/* Questions */}
-                  <div className="mb-6">
-                    <h4 className="text-lg font-medium text-gray-900 mb-3">Questions</h4>
-                    <div className="space-y-4">
-                      {selectedAssignment.questions && selectedAssignment.questions.map((q, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg p-4">
-                          <div className="flex items-start space-x-3">
-                            <div className="flex-shrink-0 w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-medium text-emerald-600">{index + 1}</span>
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-gray-800">
-                                {typeof q === 'string' ? q : q.question || 'Question'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {selectedAssignment.uploadedFileUrl && (
-                    <div className="mb-6">
-                      <h4 className="text-lg font-medium text-gray-900 mb-3">Reference File</h4>
-                      <a
-                        href={selectedAssignment.uploadedFileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                  <div className="flex flex-wrap gap-3">
+                    {adaptivePath.map((step: string, index: number) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-full border-2 ${
+                          index === 0 ? 'bg-blue-500 text-white border-blue-500' :
+                          index === 1 ? 'bg-blue-100 text-blue-700 border-blue-300' :
+                          'bg-gray-100 text-gray-600 border-gray-300'
+                        }`}
                       >
-                        <FileText className="w-4 h-4 mr-2" />
-                        View Assignment File
-                      </a>
-                    </div>
-                  )}
+                        <span className="text-sm font-medium">{index + 1}</span>
+                        <span className="text-sm">{step}</span>
+                        {index < adaptivePath.length - 1 && (
+                          <span className="text-gray-400">→</span>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
                   
-                  <div className="border-t border-gray-200 pt-4">
-                    <p className="text-sm text-emerald-600 font-medium">
-                      Personalized for you: {selectedAssignment.variations}
+                  <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      🎯 Your personalized learning path adapts based on your performance and learning style!
                     </p>
                   </div>
                 </div>
-                
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Submit Your Answer
-                </h3>
-                
-                <form onSubmit={handleSubmitAnswer} className="space-y-6">
-                  {/* Text Answer */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Written Answer
-                    </label>
-                    <textarea
-                      value={textAnswer}
-                      onChange={(e) => setTextAnswer(e.target.value)}
-                      placeholder="Type your answers here... Show your work step by step."
-                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                      rows={6}
-                    />
-                  </div>
+              </div>
+            )}
 
-                  {/* Image Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Upload Photos of Your Work
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors duration-200">
-                      <input
-                        type="file"
-                        onChange={handleFileSelect}
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label htmlFor="image-upload" className="cursor-pointer">
-                        <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">
-                          {selectedFiles.length > 0 
-                            ? `${selectedFiles.length} image(s) selected` 
-                            : 'Click to upload photos of your handwritten work'
-                          }
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Images only (max 10MB each)
-                        </p>
-                      </label>
-                    </div>
-                    
-                    {selectedFiles.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {selectedFiles.map((file, index) => (
-                          <div key={index} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
-                            {file.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="flex space-x-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+              {/* Available Assignments */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6">
+                  <div className="flex items-center justify-between mb-4 md:mb-6">
+                    <h2 className="text-lg md:text-xl font-semibold text-gray-900">Available Assignments</h2>
                     <button
-                      type="submit"
-                      disabled={submitLoading || (!textAnswer.trim() && selectedFiles.length === 0)}
-                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                      onClick={() => {
+                        fetchAssignments();
+                        fetchSubmissions();
+                        fetchProgress();
+                        toast.success('Assignments refreshed');
+                      }}
+                      className="flex items-center space-x-2 px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
                     >
-                      {submitLoading ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>Refresh</span>
+                    </button>
+                  </div>
+                  
+                  {assignments.length > 0 ? (
+                    <div className="space-y-4">
+                      {assignments.map((assignment) => {
+                        const assignmentId = assignment._id?.toString() || '';
+                        const submission = getSubmissionForAssignment(assignmentId);
+                        const isCompleted = submission && submission.processed;
+                        
+                        return (
+                          <div 
+                            key={assignmentId} 
+                            className={`border-2 rounded-lg p-3 md:p-4 cursor-pointer transition-all duration-200 ${
+                              selectedAssignment?._id?.toString() === assignmentId 
+                                ? 'border-emerald-500 bg-emerald-50' 
+                                : isCompleted 
+                                  ? 'border-green-200 bg-green-50'
+                                  : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+                            }`}
+                            onClick={() => !isCompleted && setSelectedAssignment(assignment)}
+                          >
+                            <div className="flex flex-col md:flex-row md:items-start md:justify-between space-y-3 md:space-y-0">
+                              <div className="flex-1">
+                                <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mb-2">
+                                  <div className="flex items-center space-x-2">
+                                    <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
+                                    <span className="font-medium text-gray-900 text-sm md:text-base">
+                                      {assignment.title || 'Assignment'}
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs md:text-sm text-gray-500">
+                                      {new Date(assignment.createdAt).toLocaleDateString()}
+                                    </span>
+                                    {assignment.subject && (
+                                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                                        {assignment.subject}
+                                      </span>
+                                    )}
+                                    {assignment.difficulty && (
+                                      <span className={`text-xs px-2 py-1 rounded-full ${
+                                        assignment.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                                        assignment.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-red-100 text-red-700'
+                                      }`}>
+                                        {assignment.difficulty}
+                                      </span>
+                                    )}
+                                    {isCompleted && (
+                                      <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-500" />
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Assignment Description */}
+                                <div className="text-sm text-gray-700 mb-2">
+                                  <p>{assignment.description}</p>
+                                </div>
+                                
+                                {assignment.uploadedFileUrl && (
+                                  <div className="flex items-center space-x-1 text-sm text-blue-600">
+                                    <FileText className="w-4 h-4" />
+                                    <span>Reference file attached</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="text-right">
+                                {isCompleted ? (
+                                  <div className="text-green-600">
+                                    {/* Only show grades if assignment allows it */}
+                                    {submission?.autoGrade && (assignment as any).canSeeGrades && (
+                                      <div className="font-bold text-lg">
+                                        {submission.autoGrade.score}/{submission.autoGrade.maxScore || assignment.totalMarks}
+                                      </div>
+                                    )}
+                                    <div className="text-sm">
+                                      {(assignment as any).canSeeGrades ? 'Completed' : 'Submitted'}
+                                    </div>
+                                    {/* Show feedback if allowed */}
+                                    {submission?.autoGrade?.detailedFeedback && (assignment as any).canSeeFeedback && (
+                                      <div className="text-xs text-gray-500 mt-1 max-w-32 truncate">
+                                        {submission.autoGrade.detailedFeedback}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="text-emerald-600">
+                                    <div className="text-sm font-medium">Click to start</div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      {!user?.classId || user.classId === 'default-class' ? (
                         <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                          Grading...
+                          <p className="text-gray-500 mb-2">No assignments available yet.</p>
+                          <p className="text-sm text-gray-400 mb-4">You need to join a class first to see assignments.</p>
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
+                            <p className="text-sm text-blue-700">
+                              💡 <strong>Tip:</strong> Go to the "My Classes" tab and use a join code from your teacher to join their classroom.
+                            </p>
+                          </div>
                         </>
                       ) : (
                         <>
-                          <Send className="w-5 h-5" />
-                          Submit Answer
+                          <p className="text-gray-500">No assignments available yet.</p>
+                          <p className="text-sm text-gray-400">Check back later for new assignments from your teacher!</p>
                         </>
                       )}
-                    </button>
-                    
-                    <button
-                      type="button"
-                      onClick={() => setSelectedAssignment(null)}
-                      className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-
-          {/* Progress & Recent Activity */}
-          <div className="space-y-6">
-            {/* Strengths & Weaknesses */}
-            {progress && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Learning Profile</h3>
-                
-                {progress.metrics.strengths.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-green-700 mb-2">Strengths</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {progress.metrics.strengths.map((strength) => (
-                        <span key={strength} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                          {strength}
-                        </span>
-                      ))}
                     </div>
-                  </div>
-                )}
-                
-                {progress.metrics.weaknesses.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-orange-700 mb-2">Areas to Improve</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {progress.metrics.weaknesses.map((weakness) => (
-                        <span key={weakness} className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                          {weakness.replace('-', ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
 
-            {/* Recent Activity */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-              
-              {progress && progress.recentActivity.length > 0 ? (
-                <div className="space-y-3">
-                  {progress.recentActivity.slice(0, 5).map((activity, index) => (
-                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">Assignment Completed</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(activity.date).toLocaleDateString()}
-                        </p>
+                {/* Assignment Details */}
+                {selectedAssignment && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mt-4 md:mt-6">
+                    <div className="mb-6">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        {selectedAssignment.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-4">
+                        <span className="flex items-center">
+                          <BookOpen className="w-4 h-4 mr-1" />
+                          {selectedAssignment.subject}
+                        </span>
+                        <span className="flex items-center">
+                          <Target className="w-4 h-4 mr-1" />
+                          {selectedAssignment.difficulty}
+                        </span>
+                        <span className="flex items-center">
+                          <Trophy className="w-4 h-4 mr-1" />
+                          {selectedAssignment.totalMarks} marks
+                        </span>
+                        {selectedAssignment.dueDate && (
+                          <span className="flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            Due: {new Date(selectedAssignment.dueDate).toLocaleDateString()}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <div className={`text-sm font-semibold ${
-                          activity.score >= 80 ? 'text-green-600' :
-                          activity.score >= 60 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {activity.score}%
+                      
+                      {selectedAssignment.description && (
+                        <p className="text-gray-700 mb-4">{selectedAssignment.description}</p>
+                      )}
+                      
+                      {/* Questions */}
+                      <div className="mb-6">
+                        <h4 className="text-lg font-medium text-gray-900 mb-3">Questions</h4>
+                        <div className="space-y-4">
+                          {selectedAssignment.originalContent?.questions?.map((question: string, index: number) => (
+                            <div key={index} className="bg-gray-50 rounded-lg p-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0 w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
+                                  <span className="text-sm font-medium text-emerald-600">{index + 1}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-gray-800">{question}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
+                      
+                      {selectedAssignment.uploadedFileUrl && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-medium text-gray-900 mb-3">Reference File</h4>
+                          <a
+                            href={selectedAssignment.uploadedFileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            View Assignment File
+                          </a>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Submit Your Answer
+                    </h3>
+                    
+                    <form onSubmit={handleSubmitAnswer} className="space-y-6">
+                      {/* Text Answer */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Written Answer
+                        </label>
+                        <textarea
+                          value={textAnswer}
+                          onChange={(e) => setTextAnswer(e.target.value)}
+                          placeholder="Type your answers here... Show your work step by step."
+                          className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                          rows={6}
+                        />
+                      </div>
+
+                      {/* Image Upload */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Upload Photos of Your Work
+                        </label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-emerald-500 transition-colors duration-200">
+                          <input
+                            type="file"
+                            onChange={handleFileSelect}
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            id="image-upload"
+                          />
+                          <label htmlFor="image-upload" className="cursor-pointer">
+                            <Camera className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">
+                              {selectedFiles.length > 0 
+                                ? `${selectedFiles.length} image(s) selected` 
+                                : 'Click to upload photos of your handwritten work'
+                              }
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Images only (max 10MB each)
+                            </p>
+                          </label>
+                        </div>
+                        
+                        {selectedFiles.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {selectedFiles.map((file, index) => (
+                              <div key={index} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
+                                {file.name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Submit Button */}
+                      <div className="flex space-x-4">
+                        <button
+                          type="submit"
+                          disabled={submitLoading || (!textAnswer.trim() && selectedFiles.length === 0)}
+                          className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                        >
+                          {submitLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                              Grading...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-5 h-5" />
+                              Submit Answer
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAssignment(null)}
+                          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+
+              {/* Progress & Recent Activity */}
+              <div className="space-y-6">
+                {/* Strengths & Weaknesses */}
+                {progress && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Learning Profile</h3>
+                    
+                    {progress.metrics.strengths && progress.metrics.strengths.length > 0 && (
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-green-700 mb-2">Strengths</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {progress.metrics.strengths.map((strength: string) => (
+                            <span key={strength} className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                              {strength}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {progress.metrics.weaknesses && progress.metrics.weaknesses.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-orange-700 mb-2">Areas to Improve</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {progress.metrics.weaknesses.map((weakness: string) => (
+                            <span key={weakness} className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                              {weakness.replace('-', ' ')}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Recent Activity */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                  
+                  {progress && progress.updates && progress.updates.length > 0 ? (
+                    <div className="space-y-3">
+                      {progress.updates.slice(0, 5).map((update: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{update.change}</p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(update.timestamp).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">
+                      No activity yet. Complete assignments to see your progress!
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-gray-500 text-center py-4">
-                  No activity yet. Complete assignments to see your progress!
-                </p>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
           </>
         )}
 
@@ -1087,7 +1088,7 @@ export default function StudentDashboard() {
               /* Show detailed classroom view */
               <StudentClassroom
                 classId={selectedClassId}
-                studentId={user?.mockUserId || ''}
+                studentId={user?.userId || ''}
                 studentName={user?.name || user?.displayName || 'Student'}
                 onBack={() => setSelectedClassId(null)}
                 showScoreNotifications={showScoreNotifications}
@@ -1126,7 +1127,7 @@ export default function StudentDashboard() {
                               {classData.className}
                             </h3>
                             <p className="text-sm text-gray-600">
-                              Teacher: {classData.teacherMockId.replace('teacher', 'Teacher ')}
+                              Teacher: {classData.teacherMockId?.replace('teacher', 'Teacher ') || 'Teacher'}
                             </p>
                           </div>
                           {classData.hasUnreadMessages && (
@@ -1138,7 +1139,7 @@ export default function StudentDashboard() {
                           <div className="flex items-center space-x-2">
                             <Users className="w-4 h-4 text-emerald-600" />
                             <span className="text-sm text-gray-700">
-                              {classData.studentCount} students
+                              {classData.studentCount || 0} students
                             </span>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -1185,14 +1186,30 @@ export default function StudentDashboard() {
                   <div className="text-center py-12">
                     <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Yet</h3>
-                    <p className="text-gray-600 mb-4">
-                      You haven't joined any classes yet. Ask your teacher to add you to a class.
+                    <p className="text-gray-600 mb-6">
+                      You haven't joined any classes yet. Use a join code to join your teacher's classroom.
                     </p>
+                    
+                    {/* Join Classroom Component */}
+                    <div className="max-w-md mx-auto mb-6">
+                      <JoinClassroom
+                        userId={user?.userId || ''}
+                        userName={user?.name || user?.displayName || 'Student'}
+                        userEmail={user?.email || ''}
+                        onClassJoined={(classroomData) => {
+                          console.log('Joined classroom:', classroomData);
+                          // Refresh the classes list
+                          fetchStudentClasses();
+                          // Show success message
+                          toast.success(`Welcome to ${classroomData.className}!`);
+                        }}
+                      />
+                    </div>
+
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
                       <p className="text-sm text-blue-700">
-                        💡 <strong>Tip:</strong> Once your teacher creates a class and adds you, 
-                        you'll be able to see class discussions, get personalized assignments, 
-                        and chat with your teacher privately.
+                        💡 <strong>Tip:</strong> Once you join a class, you'll be able to see class discussions, 
+                        get personalized assignments, and chat with your teacher privately.
                       </p>
                     </div>
                   </div>
@@ -1205,20 +1222,52 @@ export default function StudentDashboard() {
         {/* Discover Classes Tab Content */}
         {activeTab === 'discover' && (
           <div className="space-y-6">
-            <ClassDiscovery
-              studentId={getUserId(user) || ''}
-              schoolId={user.schoolId || 'demo-school'}
-              studentName={getUserDisplayName(user)}
-              studentEmail={user.email}
-              onClassJoined={(classId) => {
-                console.log('Joined class:', classId);
-                toast.success('You have successfully joined the class!');
-                // Refresh the classes list
-                fetchStudentClasses();
-                // Switch to My Classes tab
-                setActiveTab('classes');
-              }}
-            />
+            {/* Join Classroom Section */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <Users className="w-5 h-5 text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Join a Classroom</h2>
+              </div>
+              <p className="text-gray-600 mb-4">
+                Use a join code from your teacher to join their classroom and start learning.
+              </p>
+              <JoinClassroom
+                userId={user?.userId || ''}
+                userName={user?.name || user?.displayName || 'Student'}
+                userEmail={user?.email || ''}
+                onClassJoined={(classroomData) => {
+                  console.log('Joined classroom:', classroomData);
+                  // Refresh the classes list
+                  fetchStudentClasses();
+                  // Switch to My Classes tab
+                  setActiveTab('classes');
+                  // Show success message
+                  toast.success(`Welcome to ${classroomData.className}!`);
+                }}
+              />
+            </div>
+
+            {/* Question Chains Section */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <Brain className="w-5 h-5 text-purple-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Discover Question Chains</h2>
+              </div>
+              <ClassDiscovery
+                userId={user?.userId || ''}
+                userRole="student"
+                userName={user?.name || user?.displayName || 'Student'}
+                userEmail={user?.email || ''}
+                onChainJoined={(chainId) => {
+                  console.log('Joined chain:', chainId);
+                  toast.success('You have successfully joined the learning chain!');
+                  // Refresh the chains list
+                  fetchStudentClasses();
+                  // Switch to My Classes tab
+                  setActiveTab('classes');
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -1248,7 +1297,7 @@ export default function StudentDashboard() {
                   This will help us understand your learning style and create perfectly personalized questions for you!
                 </p>
                 <LearningAssessmentQuiz
-                  studentId={user?.mockUserId || ''}
+                  studentId={user?.userId || ''}
                   classId={user?.classId || 'default-class'}
                   grade="10"
                   onComplete={(profile) => {
@@ -1263,7 +1312,7 @@ export default function StudentDashboard() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Your Adaptive Assignments</h3>
               <StudentAssignmentView
-                studentId={user?.mockUserId || ''}
+                studentId={user?.userId || ''}
                 classId={user?.classId || 'default-class'}
               />
             </div>
@@ -1275,8 +1324,8 @@ export default function StudentDashboard() {
           <div className="space-y-6">
             <div className="h-96">
               <StudentMessageTeacher
-                studentId={getUserId(user) || ''}
-                studentName={getUserDisplayName(user)}
+                studentId={user?.userId || ''}
+                studentName={user?.name || user?.displayName || 'Student'}
                 teacherId="teacher1" // For now, defaulting to teacher1
                 teacherName="Teacher"
                 isEmbedded={true}
@@ -1333,14 +1382,14 @@ export default function StudentDashboard() {
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
                     <h4 className="text-sm font-medium text-gray-900">Name</h4>
-                    <p className="text-sm text-gray-600">{getUserDisplayName(user)}</p>
+                    <p className="text-sm text-gray-600">{user?.name || user?.displayName || 'Student'}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
                     <h4 className="text-sm font-medium text-gray-900">School</h4>
-                    <p className="text-sm text-gray-600">{user?.schoolId || 'Not specified'}</p>
+                    <p className="text-sm text-gray-600">{user?.schoolId?.toString() || 'Not specified'}</p>
                   </div>
                 </div>
                 

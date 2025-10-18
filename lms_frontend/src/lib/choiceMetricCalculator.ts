@@ -6,7 +6,7 @@
  */
 
 import { StudentQuestionVariant, StudentLearningProfile } from './db';
-import { QuestionAnalysisResult } from './questionAnalyzer';
+import { QuestionAnalysis } from './questionAnalyzer';
 
 export interface ChoiceAnalysisResult {
   difficultyDistribution: {
@@ -48,7 +48,7 @@ export interface ChoiceAnalysisResult {
 export function analyzeQuestionChoices(
   allVariants: StudentQuestionVariant[],
   chosenVariants: StudentQuestionVariant[],
-  masterQuestions: Array<{ id: string; aiAnalysis: QuestionAnalysisResult }>,
+  masterQuestions: Array<{ id: string; aiAnalysis: QuestionAnalysis }>,
   studentProfile: StudentLearningProfile
 ): ChoiceAnalysisResult {
   
@@ -59,12 +59,12 @@ export function analyzeQuestionChoices(
   const chosenAnalyses = chosenVariants.map(v => {
     const master = masterQuestions.find(q => q.id === v.masterQuestionId);
     return master?.aiAnalysis;
-  }).filter(Boolean) as QuestionAnalysisResult[];
+  }).filter(Boolean) as QuestionAnalysis[];
   
   const avoidedAnalyses = avoidedVariants.map(v => {
     const master = masterQuestions.find(q => q.id === v.masterQuestionId);
     return { variant: v, analysis: master?.aiAnalysis };
-  }).filter(item => item.analysis) as Array<{ variant: StudentQuestionVariant; analysis: QuestionAnalysisResult }>;
+  }).filter(item => item.analysis) as Array<{ variant: StudentQuestionVariant; analysis: QuestionAnalysis }>;
   
   // Calculate distributions
   const difficultyDistribution = calculateDifficultyDistribution(chosenAnalyses);
@@ -97,14 +97,21 @@ export function analyzeQuestionChoices(
 /**
  * Calculate difficulty distribution of chosen questions
  */
-function calculateDifficultyDistribution(analyses: QuestionAnalysisResult[]): {
+function calculateDifficultyDistribution(analyses: QuestionAnalysis[]): {
   easy: number;
   medium: number;
   hard: number;
 } {
   return analyses.reduce(
     (acc, analysis) => {
-      acc[analysis.difficulty]++;
+      const difficultyScore = analysis.difficultyAnalysis.overallScore;
+      if (difficultyScore <= 3) {
+        acc.easy++;
+      } else if (difficultyScore <= 7) {
+        acc.medium++;
+      } else {
+        acc.hard++;
+      }
       return acc;
     },
     { easy: 0, medium: 0, hard: 0 }
@@ -114,18 +121,32 @@ function calculateDifficultyDistribution(analyses: QuestionAnalysisResult[]): {
 /**
  * Calculate Bloom's level distribution
  */
-function calculateBloomsDistribution(analyses: QuestionAnalysisResult[]): Record<number, number> {
+function calculateBloomsDistribution(analyses: QuestionAnalysis[]): Record<number, number> {
   return analyses.reduce((acc, analysis) => {
-    acc[analysis.bloomsLevel] = (acc[analysis.bloomsLevel] || 0) + 1;
+    const bloomsLevel = getBloomsLevelNumber(analysis.bloomTaxonomy.level);
+    acc[bloomsLevel] = (acc[bloomsLevel] || 0) + 1;
     return acc;
   }, {} as Record<number, number>);
+}
+
+// Helper function to convert Bloom's taxonomy level to number
+function getBloomsLevelNumber(level: string): number {
+  const levelMap: Record<string, number> = {
+    'remember': 1,
+    'understand': 2,
+    'apply': 3,
+    'analyze': 4,
+    'evaluate': 5,
+    'create': 6
+  };
+  return levelMap[level] || 1;
 }
 
 /**
  * Analyze avoided questions to understand why
  */
 function analyzeAvoidedQuestions(
-  avoidedItems: Array<{ variant: StudentQuestionVariant; analysis: QuestionAnalysisResult }>,
+  avoidedItems: Array<{ variant: StudentQuestionVariant; analysis: QuestionAnalysis }>,
   profile: StudentLearningProfile
 ): ChoiceAnalysisResult['avoidedQuestions'] {
   
@@ -134,9 +155,9 @@ function analyzeAvoidedQuestions(
     
     return {
       questionId: variant.masterQuestionId,
-      difficulty: analysis.difficulty,
-      bloomsLevel: analysis.bloomsLevel,
-      topics: analysis.identifiedTopics,
+      difficulty: getDifficultyFromScore(analysis.difficultyAnalysis.overallScore),
+      bloomsLevel: getBloomsLevelNumber(analysis.bloomTaxonomy.level),
+      topics: analysis.concepts,
       possibleReason,
       viewCount: variant.viewCount || 0,
       timeSpentViewing: variant.timeSpentViewing || 0
@@ -144,38 +165,47 @@ function analyzeAvoidedQuestions(
   });
 }
 
+// Helper function to convert difficulty score to string
+function getDifficultyFromScore(score: number): string {
+  if (score <= 3) return 'easy';
+  if (score <= 7) return 'medium';
+  return 'hard';
+}
+
 /**
  * Infer why a question was avoided
  */
 function inferAvoidanceReason(
-  analysis: QuestionAnalysisResult,
+  analysis: QuestionAnalysis,
   variant: StudentQuestionVariant,
   profile: StudentLearningProfile
 ): 'too_hard' | 'too_easy' | 'unfamiliar_topic' | 'time_consuming' | 'uncertain' | 'abstract_concepts' {
   
+  const difficulty = getDifficultyFromScore(analysis.difficultyAnalysis.overallScore);
+  
   // Too hard: High difficulty and student has low ZPD
-  if (analysis.difficulty === 'hard' && profile.zpdMetrics.optimal_challenge_level === 'easy') {
+  if (difficulty === 'hard' && profile.zpdMetrics.optimal_challenge_level === 'easy') {
     return 'too_hard';
   }
   
   // Too easy: Low difficulty and student has high ZPD
-  if (analysis.difficulty === 'easy' && profile.zpdMetrics.optimal_challenge_level === 'hard') {
+  if (difficulty === 'easy' && profile.zpdMetrics.optimal_challenge_level === 'hard') {
     return 'too_easy';
   }
   
   // Abstract concepts: High abstraction and student prefers concrete
-  if (analysis.abstractionLevel >= 4 && profile.onboardingMetrics.cognitive_depth_preference <= 2) {
+  if (analysis.cognitiveComplexity.score >= 7 && profile.onboardingMetrics.cognitive_depth_preference <= 2) {
     return 'abstract_concepts';
   }
   
   // Time consuming: High estimated time
-  if (analysis.estimatedTime > 300) {
+  if (analysis.estimatedTime > 5) { // Convert to minutes
     return 'time_consuming';
   }
   
   // Unfamiliar topic: Check if topic is in weakness list
   const hasWeakness = profile.dynamicMetrics.weakness_topics?.some(w =>
-    analysis.identifiedTopics.includes(w.topicName)
+    analysis.concepts.includes(w.topicName)
   );
   if (hasWeakness) {
     return 'unfamiliar_topic';
@@ -194,27 +224,27 @@ function inferAvoidanceReason(
  * Identify behavioral patterns in choices
  */
 function identifyChoicePatterns(
-  chosenAnalyses: QuestionAnalysisResult[],
-  avoidedAnalyses: QuestionAnalysisResult[],
+  chosenAnalyses: QuestionAnalysis[],
+  avoidedAnalyses: QuestionAnalysis[],
   profile: StudentLearningProfile
 ): ChoiceAnalysisResult['patterns'] {
   
   // Avoids high Bloom's level
-  const avgChosenBlooms = chosenAnalyses.reduce((sum, a) => sum + a.bloomsLevel, 0) / chosenAnalyses.length;
-  const avgAvoidedBlooms = avoidedAnalyses.reduce((sum, a) => sum + a.bloomsLevel, 0) / avoidedAnalyses.length;
+  const avgChosenBlooms = chosenAnalyses.reduce((sum, a) => sum + getBloomsLevelNumber(a.bloomTaxonomy.level), 0) / chosenAnalyses.length;
+  const avgAvoidedBlooms = avoidedAnalyses.reduce((sum, a) => sum + getBloomsLevelNumber(a.bloomTaxonomy.level), 0) / avoidedAnalyses.length;
   const avoidsHighBloomsLevel = avgAvoidedBlooms > avgChosenBlooms + 1;
   
   // Prefers concrete
-  const avgChosenAbstraction = chosenAnalyses.reduce((sum, a) => sum + a.abstractionLevel, 0) / chosenAnalyses.length;
-  const avgAvoidedAbstraction = avoidedAnalyses.reduce((sum, a) => sum + a.abstractionLevel, 0) / avoidedAnalyses.length;
+  const avgChosenAbstraction = chosenAnalyses.reduce((sum, a) => sum + a.cognitiveComplexity.score, 0) / chosenAnalyses.length;
+  const avgAvoidedAbstraction = avoidedAnalyses.reduce((sum, a) => sum + a.cognitiveComplexity.score, 0) / avoidedAnalyses.length;
   const prefersConcrete = avgAvoidedAbstraction > avgChosenAbstraction + 0.5;
   
   // Risk averse: Mostly easy/medium
-  const hardCount = chosenAnalyses.filter(a => a.difficulty === 'hard').length;
+  const hardCount = chosenAnalyses.filter(a => getDifficultyFromScore(a.difficultyAnalysis.overallScore) === 'hard').length;
   const riskAverse = hardCount === 0 || (hardCount / chosenAnalyses.length) < 0.2;
   
   // Challenge seeker: Mostly medium/hard
-  const easyCount = chosenAnalyses.filter(a => a.difficulty === 'easy').length;
+  const easyCount = chosenAnalyses.filter(a => getDifficultyFromScore(a.difficultyAnalysis.overallScore) === 'easy').length;
   const challengeSeeker = (hardCount / chosenAnalyses.length) > 0.4;
   
   // Balanced approach: Good mix of difficulties
@@ -224,7 +254,7 @@ function identifyChoicePatterns(
   
   // Strategic diversity: Good topic coverage
   const topicSet = new Set<string>();
-  chosenAnalyses.forEach(a => a.identifiedTopics.forEach(t => topicSet.add(t)));
+  chosenAnalyses.forEach(a => a.concepts.forEach((t: string) => topicSet.add(t)));
   const strategicDiversity = topicSet.size >= Math.min(chosenAnalyses.length, 5);
   
   return {
@@ -274,8 +304,8 @@ function analyzeChoiceTime(variants: StudentQuestionVariant[]): {
  * Calculate metric scores from choices
  */
 function calculateMetricScores(
-  chosenAnalyses: QuestionAnalysisResult[],
-  avoidedAnalyses: QuestionAnalysisResult[],
+  chosenAnalyses: QuestionAnalysis[],
+  avoidedAnalyses: QuestionAnalysis[],
   profile: StudentLearningProfile
 ): {
   confidenceScore: number;
@@ -285,8 +315,9 @@ function calculateMetricScores(
   
   // Confidence score: Based on difficulty of chosen questions
   const difficultyScore = chosenAnalyses.reduce((sum, a) => {
-    if (a.difficulty === 'easy') return sum + 1;
-    if (a.difficulty === 'medium') return sum + 2;
+    const difficulty = getDifficultyFromScore(a.difficultyAnalysis.overallScore);
+    if (difficulty === 'easy') return sum + 1;
+    if (difficulty === 'medium') return sum + 2;
     return sum + 3;
   }, 0);
   const maxDifficultyScore = chosenAnalyses.length * 3;
@@ -295,7 +326,7 @@ function calculateMetricScores(
   // Strategic thinking: Balance and diversity
   const diffDist = calculateDifficultyDistribution(chosenAnalyses);
   const hasBalance = diffDist.easy > 0 && diffDist.medium > 0;
-  const topicCount = new Set(chosenAnalyses.flatMap(a => a.identifiedTopics)).size;
+  const topicCount = new Set(chosenAnalyses.flatMap(a => a.concepts)).size;
   const hasDiversity = topicCount >= Math.min(chosenAnalyses.length - 1, 4);
   
   let strategicScore = 50; // Base
@@ -305,9 +336,10 @@ function calculateMetricScores(
   // Self-awareness: Choosing appropriate difficulty for ZPD
   const optimalLevel = profile.zpdMetrics.optimal_challenge_level;
   const appropriateChoices = chosenAnalyses.filter(a => {
-    if (optimalLevel === 'easy') return a.difficulty === 'easy' || a.difficulty === 'medium';
-    if (optimalLevel === 'hard') return a.difficulty === 'medium' || a.difficulty === 'hard';
-    return a.difficulty === 'medium'; // Medium ZPD
+    const difficulty = getDifficultyFromScore(a.difficultyAnalysis.overallScore);
+    if (optimalLevel === 'easy') return difficulty === 'easy' || difficulty === 'medium';
+    if (optimalLevel === 'hard') return difficulty === 'medium' || difficulty === 'hard';
+    return difficulty === 'medium'; // Medium ZPD
   }).length;
   
   const selfAwarenessScore = Math.round((appropriateChoices / chosenAnalyses.length) * 100);

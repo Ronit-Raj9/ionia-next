@@ -23,39 +23,20 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface AssignmentDetails {
-  _id: string;
-  title: string;
-  description: string;
-  subject: string;
-  grade: string;
-  topic: string;
-  difficulty: string;
-  totalMarks: number;
-  dueDate?: string;
-  createdAt: string;
-  uploadedFileUrl?: string;
-  originalContent: {
-    questions: string[];
-    questionDetails?: Array<{id: string, text: string, marks: number}>;
-  };
-  assignedTo: string[];
+// Import types from the new system
+import { Assignment } from '@/lib/db';
+
+// Use the Assignment type from the new system with proper typing
+interface AssignmentDetails extends Omit<Assignment, 'personalizedVersions'> {
+  // Override personalizedVersions with proper typing
   personalizedVersions: Array<{
-    studentMockId: string;
+    studentId: string;
     studentName?: string;
     personalizationReason: string;
     adaptedContent: any;
   }>;
-  submissionStats: {
-    totalStudents: number;
-    submitted: number;
-    graded: number;
-    pending: number;
-  };
-  gradeSettings: {
-    showMarksToStudents: boolean;
-    showFeedbackToStudents: boolean;
-  };
+  // Additional fields for display
+  personalizedContent?: any;
 }
 
 export default function AssignmentDetailPage() {
@@ -82,7 +63,7 @@ export default function AssignmentDetailPage() {
   const fetchAssignmentDetails = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/assignments/${assignmentId}?role=${user?.role}&mockUserId=${user?.mockUserId}`);
+      const response = await fetch(`/api/assignments/${assignmentId}?role=${user?.role}&userId=${user?.userId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -113,7 +94,7 @@ export default function AssignmentDetailPage() {
         },
         body: JSON.stringify({
           role: user?.role,
-          mockUserId: user?.mockUserId
+          userId: user?.userId
         })
       });
 
@@ -470,7 +451,7 @@ export default function AssignmentDetailPage() {
             {assignment.personalizedVersions && assignment.personalizedVersions.length > 0 ? (
               <div className="divide-y divide-gray-200">
                 {assignment.personalizedVersions.map((version, index) => (
-                  <div key={version.studentMockId} className="px-6 py-4 hover:bg-gray-50">
+                  <div key={version.studentId} className="px-6 py-4 hover:bg-gray-50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold">
@@ -478,7 +459,7 @@ export default function AssignmentDetailPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {version.studentName || version.studentMockId.replace(/_/g, ' ').replace(/student/i, 'Student ').replace(/gmail|com/g, '').trim()}
+                            {version.studentName || version.studentId.replace(/_/g, ' ').replace(/student/i, 'Student ').replace(/gmail|com/g, '').trim()}
                           </p>
                         </div>
                       </div>

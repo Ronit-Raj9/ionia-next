@@ -120,7 +120,7 @@ export default function CurriculumProgressDashboard({ planId, onBack }: Curricul
     
     setLoading(true);
     try {
-      const response = await fetch(`/api/academic-planner/progress?planId=${planId}&teacherId=${user.mockUserId}&role=${user.role}`);
+      const response = await fetch(`/api/academic-planner/progress?planId=${planId}&teacherId=${user.userId}&role=${user.role}`);
       const data = await response.json();
 
       if (data.success) {
@@ -140,7 +140,7 @@ export default function CurriculumProgressDashboard({ planId, onBack }: Curricul
 
   const fetchTopics = async () => {
     try {
-      const response = await fetch(`/api/academic-planner?teacherId=${user?.mockUserId}&role=${user?.role}`);
+      const response = await fetch(`/api/academic-planner?teacherId=${user?.userId}&role=${user?.role}`);
       const data = await response.json();
 
       if (data.success) {
@@ -172,7 +172,7 @@ export default function CurriculumProgressDashboard({ planId, onBack }: Curricul
         },
         body: JSON.stringify({
           planId,
-          teacherId: user.mockUserId,
+          teacherId: user.userId,
           role: user.role,
           topicUpdates
         })

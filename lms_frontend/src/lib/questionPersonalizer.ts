@@ -7,7 +7,7 @@
 
 import { generateAIResponse } from './gemini-service';
 import { StudentLearningProfile } from './db';
-import { QuestionAnalysisResult } from './questionAnalyzer';
+import { QuestionAnalysis } from './questionAnalyzer';
 
 export interface PersonalizedQuestionResult {
   questionText: string;
@@ -50,7 +50,7 @@ export async function personalizeQuestion(
     options?: string[];
     points: number;
   },
-  analysis: QuestionAnalysisResult,
+  analysis: QuestionAnalysis,
   studentProfile: StudentLearningProfile,
   subject: string
 ): Promise<PersonalizedQuestionResult> {
@@ -94,7 +94,7 @@ export async function personalizeQuestion(
  * Determine personalization strategy based on student profile
  */
 function determinePersonalizationStrategy(
-  analysis: QuestionAnalysisResult,
+  analysis: QuestionAnalysis,
   profile: StudentLearningProfile
 ): {
   difficultyAdjustment: 'easier' | 'same' | 'harder';
@@ -155,7 +155,7 @@ function determinePersonalizationStrategy(
  */
 function createPersonalizationPrompt(
   masterQuestion: any,
-  analysis: QuestionAnalysisResult,
+  analysis: QuestionAnalysis,
   profile: StudentLearningProfile,
   strategy: ReturnType<typeof determinePersonalizationStrategy>,
   subject: string
@@ -270,7 +270,7 @@ function parsePersonalizationResponse(aiResponse: string): PersonalizedQuestionR
  */
 function createFallbackPersonalization(
   masterQuestion: any,
-  analysis: QuestionAnalysisResult,
+  analysis: QuestionAnalysis,
   profile: StudentLearningProfile
 ): PersonalizedQuestionResult {
   const strategy = determinePersonalizationStrategy(analysis, profile);
@@ -332,7 +332,7 @@ export async function personalizeQuestionsBatch(
     questionType: string;
     options?: string[];
     points: number;
-    analysis: QuestionAnalysisResult;
+    analysis: QuestionAnalysis;
   }>,
   studentProfile: StudentLearningProfile,
   subject: string
@@ -368,7 +368,7 @@ export async function personalizeQuestionsBatch(
  * Predict student accuracy on personalized question
  */
 export function predictStudentAccuracy(
-  analysis: QuestionAnalysisResult,
+  analysis: QuestionAnalysis,
   profile: StudentLearningProfile,
   personalization: PersonalizedQuestionResult
 ): number {

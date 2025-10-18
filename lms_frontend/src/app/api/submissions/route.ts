@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const role = formData.get('role') as string;
-    const studentMockId = formData.get('studentMockId') as string;
+    const studentId = formData.get('studentId') as string;
     const assignmentId = formData.get('assignmentId') as string;
     const textAnswer = formData.get('textAnswer') as string || '';
     const files = formData.getAll('files') as File[];
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!assignmentId || !studentMockId) {
+    if (!assignmentId || !studentId) {
       return NextResponse.json(
         { success: false, error: 'Assignment ID and student ID are required' },
         { status: 400 }
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
     const submission: Partial<Submission> = {
       assignmentId,
       classId: assignment.classId,
-      studentMockId,
-      studentName: `Student ${studentMockId.replace('student', '')}`,
+      studentId,
+      studentName: `Student ${studentId.replace('student', '')}`,
       subject: assignment.subject,
       topic: assignment.topic,
       submittedContent: {
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
 
       // Update student mastery with detailed feedback
       const progressUpdate = await updateStudentMastery(
-        studentMockId,
+        studentId,
         assignment,
         submission as Submission,
         detailedGrading
@@ -276,9 +276,9 @@ export async function POST(request: NextRequest) {
       
       console.log(`✓ Progress updated: Mastery ${progressUpdate.previousMastery}% → ${progressUpdate.newMastery}%`);
 
-      // Also update legacy progress for backward compatibility
+      // Also update progress tracking
       const gamificationResult = await updateStudentProgress(
-        studentMockId, 
+        studentId, 
         assignment.classId, 
         detailedGrading.score
       ).catch(err => {
@@ -343,13 +343,13 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
-    const mockUserId = searchParams.get('mockUserId');
+    const userId = searchParams.get('userId');
     const assignmentId = searchParams.get('assignmentId');
-    const studentMockId = searchParams.get('studentMockId');
+    const studentId = searchParams.get('studentId');
 
-    if (!role || !mockUserId) {
+    if (!role || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Role and mockUserId are required' },
+        { success: false, error: 'Role and userId are required' },
         { status: 400 }
       );
     }
@@ -359,7 +359,7 @@ export async function GET(request: NextRequest) {
 
     if (role === 'student') {
       // Students can only see their own submissions
-      query.studentMockId = mockUserId;
+      query.studentId = userId;
       if (assignmentId) {
         query.assignmentId = assignmentId;
       }
@@ -368,8 +368,8 @@ export async function GET(request: NextRequest) {
       if (assignmentId) {
         query.assignmentId = assignmentId;
       }
-      if (studentMockId) {
-        query.studentMockId = studentMockId;
+      if (studentId) {
+        query.studentId = studentId;
       }
     } else {
       return NextResponse.json(
@@ -398,7 +398,7 @@ export async function GET(request: NextRequest) {
 
 // Helper function to update student progress with gamification and mastery tracking
 async function updateStudentProgress(
-  studentMockId: string, 
+  studentId: string, 
   classId: string, 
   score: number,
   assignment?: Assignment,
@@ -410,17 +410,17 @@ async function updateStudentProgress(
     const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
     
     // Get current student data
-    const studentProgress = await progressCollection.findOne({ studentMockId, classId }) as unknown as Progress | null;
-    const studentProfile = await profilesCollection.findOne({ studentMockId }) as unknown as StudentProfile | null;
-    const allSubmissions = await submissionsCollection.find({ studentMockId }).toArray() as unknown as Submission[];
+    const studentProgress = await progressCollection.findOne({ studentId, classId }) as unknown as Progress | null;
+    const studentProfile = await profilesCollection.findOne({ studentId }) as unknown as StudentProfile | null;
+    const allSubmissions = await submissionsCollection.find({ studentId }).toArray() as unknown as Submission[];
     
     // Create current submission object for gamification
     const currentSubmission = {
       _id: new ObjectId(),
       assignmentId: 'current',
       classId: assignment?.classId || classId,
-      studentMockId,
-      studentName: `Student ${studentMockId.replace('student', '')}`,
+      studentId,
+      studentName: `Student ${studentId.replace('student', '')}`,
       subject: assignment?.subject || 'General',
       topic: assignment?.topic || 'General',
       submittedContent: { text: '', imageUrls: [] },
@@ -447,7 +447,7 @@ async function updateStudentProgress(
     // Update student profile based on score
     if (score >= 70) {
       await profilesCollection.updateOne(
-        { studentMockId },
+        { studentId },
         {
           $set: { updatedAt: new Date() },
           $inc: { 
@@ -523,7 +523,7 @@ async function updateStudentProgress(
     }
     
     await progressCollection.updateOne(
-      { studentMockId, classId },
+      { studentId, classId },
       updateData,
       { upsert: true }
     );

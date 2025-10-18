@@ -134,7 +134,7 @@ echo "--------------------------------------------------"
 
 assignment_id=$(echo "$response" | jq -r '.data[0]._id')
 
-response=$(curl -s "$BASE_URL/api/assignments?role=student&mockUserId=$TEACHER_ID&studentMockId=$STUDENT_ID")
+response=$(curl -s "$BASE_URL/api/assignments?role=student&mockUserId=$TEACHER_ID&studentId=$STUDENT_ID")
 
 if echo "$response" | grep -q '"success":true'; then
     print_result 0 "GET Student Assignments - Retrieved successfully"
@@ -162,7 +162,7 @@ echo "-------------------------------------"
 # Create a test submission
 response=$(curl -s -X POST "$BASE_URL/api/submissions" \
   -F "role=student" \
-  -F "studentMockId=$STUDENT_ID" \
+  -F "studentId=$STUDENT_ID" \
   -F "assignmentId=$assignment_id" \
   -F "textAnswer=The universal law of gravitation states that every object attracts every other object with a force proportional to the product of their masses and inversely proportional to the square of the distance between them. Formula: F = G × (m1 × m2) / r². For two masses of 80 kg and 1200 kg at 10 m distance: F = 6.7 × 10^-11 × (80 × 1200) / 100 = 6.432 × 10^-8 N")
 

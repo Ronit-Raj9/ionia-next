@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     
     // Fetch classes created by this teacher
     const classes = await classesCollection
-      .find({ teacherMockId: teacherId })
+      .find({ teacherId: teacherId })
       .sort({ createdAt: -1 })
       .toArray() as unknown as Class[];
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ...classData,
-          studentCount: classData.studentMockIds?.length || 0,
+          studentCount: classData.studentIds?.length || 0,
           recentAssignments: assignmentCount
         };
       })
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     // Check if class with same name already exists for this teacher in this school
     const existingClass = await classesCollection.findOne({
-      teacherMockId: teacherId,
+      teacherId: teacherId,
       schoolId: schoolId,
       className: className
     });
@@ -100,9 +100,9 @@ export async function POST(request: NextRequest) {
 
     const newClass: Omit<Class, '_id'> = {
       className,
-      teacherMockId: teacherId,
-      schoolId,
-      studentMockIds: studentIds || [],
+      teacherId: teacherId,
+      schoolId: new ObjectId(schoolId), // Store as ObjectId for consistency
+      studentIds: studentIds || [],
       description,
       subject,
       grade,
@@ -153,10 +153,10 @@ export async function PUT(request: NextRequest) {
 
     const updateData: any = {};
     if (className) updateData.className = className;
-    if (selectedStudents) updateData.studentMockIds = selectedStudents.map((s: any) => s.id);
+    if (selectedStudents) updateData.studentIds = selectedStudents.map((s: any) => s.id);
 
     const result = await classesCollection.updateOne(
-      { _id: new ObjectId(classId), teacherMockId: teacherId },
+      { _id: new ObjectId(classId), teacherId: teacherId },
       { $set: updateData }
     );
 
@@ -206,7 +206,7 @@ export async function DELETE(request: NextRequest) {
 
     const result = await classesCollection.deleteOne({
       _id: new ObjectId(classId),
-      teacherMockId: teacherId
+      teacherId: teacherId
     });
 
     if (result.deletedCount === 0) {

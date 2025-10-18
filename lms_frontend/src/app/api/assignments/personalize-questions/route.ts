@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { getCollection, COLLECTIONS, StudentQuestionVariant, StudentLearningProfile, TeacherQuestionSet } from '@/lib/db';
 import { personalizeQuestionsBatch } from '@/lib/questionPersonalizer';
+import { QuestionAnalysis } from '@/lib/questionAnalyzer';
 
 /**
  * POST /api/assignments/personalize-questions
@@ -17,9 +18,26 @@ export async function POST(request: NextRequest) {
       assignmentId
     } = body;
 
+    // Validate required fields
     if (!questionSetId || !studentIds) {
       return NextResponse.json(
         { success: false, message: 'questionSetId and studentIds are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate ObjectId format
+    if (!ObjectId.isValid(questionSetId)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid questionSetId format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate assignmentId if provided
+    if (assignmentId && !ObjectId.isValid(assignmentId)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid assignmentId format' },
         { status: 400 }
       );
     }
@@ -32,6 +50,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: 'Question set not found' },
         { status: 404 }
+      );
+    }
+
+    if (!questionSet.personalizationEnabled) {
+      return NextResponse.json(
+        { success: false, message: 'Personalization is not enabled for this question set' },
+        { status: 400 }
+      );
+    }
+
+    if (!questionSet.masterQuestions || questionSet.masterQuestions.length === 0) {
+      return NextResponse.json(
+        { success: false, message: 'Question set has no questions' },
+        { status: 400 }
       );
     }
 
@@ -55,27 +87,47 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Personalize questions
+        // Personalize questions using the new system
         const personalizedQuestions = await personalizeQuestionsBatch(
           questionSet.masterQuestions.map(q => ({
-            ...q,
-            analysis: q.aiAnalysis
+            id: q.id,
+            questionText: q.questionText,
+            questionType: q.questionType,
+            options: q.options,
+            points: q.points,
+            analysis: q.aiAnalysis as unknown as QuestionAnalysis
           })),
           profile,
           questionSet.subject
         );
 
+        if (!personalizedQuestions || Object.keys(personalizedQuestions).length === 0) {
+          results[studentId] = { success: false, error: 'Failed to personalize questions - no results returned' };
+          continue;
+        }
+
+        // Validate that all questions were personalized
+        const missingQuestions = questionSet.masterQuestions.filter(q => !personalizedQuestions[q.id]);
+        if (missingQuestions.length > 0) {
+          console.warn(`Missing personalization for questions: ${missingQuestions.map(q => q.id).join(', ')}`);
+        }
+
         // Create student question variants
         const variants: StudentQuestionVariant[] = questionSet.masterQuestions.map(masterQ => {
           const personalizedResult = personalizedQuestions[masterQ.id];
+          
+          if (!personalizedResult) {
+            throw new Error(`No personalization result found for question ${masterQ.id}`);
+          }
+          
           return {
             questionSetId: new ObjectId(questionSetId),
-            assignmentId: assignmentId || questionSet.assignmentId, // Store as string
+            assignmentId: new ObjectId(assignmentId || questionSet.assignmentId.toString()), // Convert to ObjectId
             studentId,
             masterQuestionId: masterQ.id,
             personalizedQuestion: {
               questionText: personalizedResult.questionText,
-              questionType: personalizedResult.questionType as any,
+              questionType: personalizedResult.questionType as 'mcq' | 'short_answer' | 'long_answer' | 'numerical' | 'essay' | 'true_false',
               options: personalizedResult.options,
               hints: personalizedResult.hints,
               scaffolding: personalizedResult.scaffolding,
@@ -83,7 +135,10 @@ export async function POST(request: NextRequest) {
               additionalContext: personalizedResult.additionalContext,
               encouragementNote: personalizedResult.encouragementNote
             },
-            personalizationDetails: personalizedResult.personalizationDetails,
+            personalizationDetails: {
+              ...personalizedResult.personalizationDetails,
+              expectedAccuracy: personalizedResult.personalizationDetails.expectedAccuracy || 75
+            },
             wasPresented: false,
             wasChosen: false,
             timeSpentViewing: 0,
@@ -93,8 +148,19 @@ export async function POST(request: NextRequest) {
           };
         });
 
-        // Insert variants
-        await variantCollection.insertMany(variants as any[]);
+        // Insert variants with error handling
+        if (variants.length > 0) {
+          try {
+            await variantCollection.insertMany(variants as any[]);
+          } catch (insertError) {
+            console.error(`Error inserting variants for student ${studentId}:`, insertError);
+            results[studentId] = { 
+              success: false, 
+              error: 'Failed to save personalized questions to database' 
+            };
+            continue;
+          }
+        }
 
         results[studentId] = {
           success: true,
@@ -148,11 +214,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate studentId format (should be a non-empty string)
+    if (!studentId || studentId.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid studentId format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate ObjectId formats
+    if (questionSetId && !ObjectId.isValid(questionSetId)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid questionSetId format' },
+        { status: 400 }
+      );
+    }
+
+    if (assignmentId && !ObjectId.isValid(assignmentId)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid assignmentId format' },
+        { status: 400 }
+      );
+    }
+
     const collection = await getCollection(COLLECTIONS.STUDENT_QUESTION_VARIANTS);
     
     const query: any = { studentId };
     if (questionSetId) query.questionSetId = new ObjectId(questionSetId);
-    if (assignmentId) query.assignmentId = assignmentId; // assignmentId is string
+    if (assignmentId) query.assignmentId = new ObjectId(assignmentId); // Convert to ObjectId
 
     const variants = await collection.find(query).toArray();
 

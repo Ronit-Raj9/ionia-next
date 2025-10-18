@@ -1,5 +1,4 @@
 import { generateAIResponse } from '@/lib/gemini-service';
-import { gradeSubmission } from '@/lib/groq';
 
 export interface AcademicPlanRequest {
   syllabusText: string;
@@ -857,7 +856,7 @@ function generateDetailedSubtopicsForTopic(topicTitle: string, subject: string):
 }
 
 /**
- * Generate subtopics for a main topic (legacy function for compatibility)
+ * Generate subtopics for a main topic (compatibility function)
  */
 function generateSubtopicsForTopic(topicTitle: string, subject: string): SubTopic[] {
   return generateDetailedSubtopicsForTopic(topicTitle, subject);

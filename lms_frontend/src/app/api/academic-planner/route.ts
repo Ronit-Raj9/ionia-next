@@ -92,8 +92,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file types
+    // Validate file types and size
     const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+
     if (!allowedTypes.includes(syllabusFile.type)) {
       return NextResponse.json(
         { success: false, error: 'Only PDF and DOCX files are supported' },
@@ -101,14 +103,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (syllabusFile.size > maxFileSize) {
+      return NextResponse.json(
+        { success: false, error: 'Syllabus file size must be less than 10MB' },
+        { status: 400 }
+      );
+    }
+
+    // Validate calendar file if provided
+    if (calendarFile) {
+      if (!allowedTypes.includes(calendarFile.type)) {
+        return NextResponse.json(
+          { success: false, error: 'Calendar file must be PDF or DOCX format' },
+          { status: 400 }
+        );
+      }
+
+      if (calendarFile.size > maxFileSize) {
+        return NextResponse.json(
+          { success: false, error: 'Calendar file size must be less than 10MB' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Upload files to Cloudinary
     const syllabusBuffer = Buffer.from(await syllabusFile.arrayBuffer());
     const syllabusUpload = await uploadFile(syllabusBuffer, syllabusFile.name, 'assignments');
-    let calendarUpload = null;
     
+    if (!syllabusUpload.success) {
+      return NextResponse.json(
+        { success: false, error: `Failed to upload syllabus file: ${syllabusUpload.error}` },
+        { status: 500 }
+      );
+    }
+
+    let calendarUpload = null;
     if (calendarFile && allowedTypes.includes(calendarFile.type)) {
       const calendarBuffer = Buffer.from(await calendarFile.arrayBuffer());
       calendarUpload = await uploadFile(calendarBuffer, calendarFile.name, 'assignments');
+      
+      if (!calendarUpload.success) {
+        return NextResponse.json(
+          { success: false, error: `Failed to upload calendar file: ${calendarUpload.error}` },
+          { status: 500 }
+        );
+      }
     }
 
     // Extract text from uploaded files
@@ -140,13 +180,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate academic plan using LLM
-    const academicPlanData = await generateAcademicPlan({
-      syllabusText,
-      calendarText,
-      subject,
-      grade,
-      academicYear
-    });
+    let academicPlanData;
+    try {
+      academicPlanData = await generateAcademicPlan({
+        syllabusText,
+        calendarText,
+        subject,
+        grade,
+        academicYear
+      });
+    } catch (planError) {
+      console.error('Academic plan generation error:', planError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to generate academic plan. Please try again.' },
+        { status: 500 }
+      );
+    }
 
     // Save to database
     const academicPlansCollection = await getCollection(COLLECTIONS.ACADEMIC_PLANS);
@@ -188,6 +237,13 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await academicPlansCollection.insertOne(academicPlan);
+
+    if (!result.insertedId) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to save academic plan to database' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

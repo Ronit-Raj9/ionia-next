@@ -10,21 +10,21 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
-    const mockUserId = searchParams.get('mockUserId');
-    const classId = searchParams.get('classId') || 'demo-class-1';
+    const userId = searchParams.get('userId');
+    const classId = searchParams.get('classId') || '';
     const schoolId = searchParams.get('schoolId') || undefined;
 
-    if (!role || !mockUserId) {
+    if (!role || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Role and mockUserId are required' },
+        { success: false, error: 'Role and userId are required' },
         { status: 400 }
       );
     }
 
     if (role === 'teacher') {
-      return await getTeacherDashboardData(mockUserId, classId, schoolId);
+      return await getTeacherDashboardData(userId, classId, schoolId);
     } else if (role === 'student') {
-      return await getStudentDashboardData(mockUserId, classId, schoolId);
+      return await getStudentDashboardData(userId, classId, schoolId);
     } else if (role === 'admin') {
       return await getAdminDashboardData(classId, schoolId);
     } else {
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function getTeacherDashboardData(teacherMockId: string, classId: string, schoolId?: string) {
+async function getTeacherDashboardData(teacherId: string, classId: string, schoolId?: string) {
   try {
     // Get class progress data
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
@@ -54,7 +54,7 @@ async function getTeacherDashboardData(teacherMockId: string, classId: string, s
 
     // Get recent assignments
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
-    const assignmentsQuery: any = { createdBy: teacherMockId };
+    const assignmentsQuery: any = { createdBy: teacherId };
     if (schoolId) {
       assignmentsQuery.schoolId = schoolId;
     }
@@ -99,8 +99,8 @@ async function getTeacherDashboardData(teacherMockId: string, classId: string, s
     const studentOverview = classProgress.map(progress => {
       const recentActivity = progress.recentActivity?.[0];
       return {
-        studentId: progress.studentMockId,
-        name: `Student ${progress.studentMockId.replace('student', '')}`,
+        studentId: progress.studentId,
+        name: `Student ${progress.studentId.replace('student', '')}`,
         averageScore: progress.metrics.averageScore || 0,
         completionRate: progress.metrics.completionRate || 0,
         strengths: progress.metrics.strengths || [],
@@ -141,12 +141,12 @@ async function getTeacherDashboardData(teacherMockId: string, classId: string, s
   }
 }
 
-async function getStudentDashboardData(studentMockId: string, classId: string, schoolId?: string) {
+async function getStudentDashboardData(studentId: string, classId: string, schoolId?: string) {
   try {
     // Get student progress
     const progressCollection = await getCollection(COLLECTIONS.PROGRESS);
     const progressQuery: any = { 
-      studentMockId, 
+      studentId, 
       classId 
     };
     if (schoolId) {
@@ -156,7 +156,7 @@ async function getStudentDashboardData(studentMockId: string, classId: string, s
 
     // Get student profile
     const profilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
-    const profileQuery: any = { studentMockId };
+    const profileQuery: any = { studentId };
     if (schoolId) {
       profileQuery.schoolId = schoolId;
     }
@@ -176,7 +176,7 @@ async function getStudentDashboardData(studentMockId: string, classId: string, s
     // Get student submissions
     const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
     const submissions = await submissionsCollection
-      .find({ studentMockId })
+      .find({ studentId })
       .sort({ submissionTime: -1 })
       .toArray() as unknown as Submission[];
 
@@ -198,7 +198,7 @@ async function getStudentDashboardData(studentMockId: string, classId: string, s
     // Get personalized assignments
     const personalizedAssignments = assignments.map(assignment => {
       const personalizedVersion = assignment.personalizedVersions?.find(
-        (pv: any) => pv.studentMockId === studentMockId
+        (pv: any) => pv.studentId === studentId
       );
       
       const submission = submissions.find(s => s.assignmentId === assignment._id?.toString());
@@ -226,8 +226,8 @@ async function getStudentDashboardData(studentMockId: string, classId: string, s
       success: true,
       data: {
         studentInfo: {
-          studentId: studentMockId,
-          name: `Student ${studentMockId.replace('student', '')}`,
+          studentId: studentId,
+          name: `Student ${studentId.replace('student', '')}`,
           learningStyle: studentProfile?.personalityProfile.type || 'visual'
         },
         progress: {
@@ -312,12 +312,12 @@ async function getAdminDashboardData(classId: string, schoolId?: string) {
 
     // Student performance details
     const studentPerformance = classProgress.map(progress => {
-      const profile = studentProfiles.find(p => p.studentMockId === progress.studentMockId);
-      const studentSubmissions = allSubmissions.filter(s => s.studentMockId === progress.studentMockId);
+      const profile = studentProfiles.find(p => p.studentId === progress.studentId);
+      const studentSubmissions = allSubmissions.filter(s => s.studentId === progress.studentId);
       
       return {
-        studentId: progress.studentMockId,
-        name: `Student ${progress.studentMockId.replace('student', '')}`,
+        studentId: progress.studentId,
+        name: `Student ${progress.studentId.replace('student', '')}`,
         averageScore: progress.metrics.averageScore || 0,
         completionRate: progress.metrics.completionRate || 0,
         strengths: progress.metrics.strengths || [],

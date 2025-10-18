@@ -6,13 +6,15 @@
 import { StudentProfile } from './db';
 
 // Gemini API Configuration
-const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || '';
+const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || 'AIzaSyD154jRG5vhKnFMgp4xVyzhVtMoWyBDWyw';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-// Model selection
-const GEMINI_PRO_MODEL = 'gemini-1.5-pro-latest';
-const GEMINI_FLASH_MODEL = 'gemini-1.5-flash-latest';
-const GEMINI_VISION_MODEL = 'gemini-1.5-pro-vision-latest';
+console.log('GEMINI_API_KEY', GEMINI_API_KEY);
+
+// Model selection - Updated to Gemini 2.5 (2025) - Pro for quality, Flash for speed
+const GEMINI_PRO_MODEL = 'gemini-2.5-pro';  // High-quality model for complex tasks
+const GEMINI_FLASH_MODEL = 'gemini-2.5-flash'; // Fast model for simple tasks
+const GEMINI_VISION_MODEL = 'gemini-2.5-flash'; // Flash 2.5 supports images
 
 interface GeminiResponse {
   candidates: {
@@ -26,6 +28,7 @@ interface GeminiResponse {
 
 /**
  * Generate AI response using Gemini (exported for academic plan generation)
+ * Defaults to Gemini 2.5 Pro for better quality
  */
 export async function generateAIResponse(prompt: string, useFlashModel = false): Promise<string> {
   return callGemini(prompt, useFlashModel);
@@ -33,10 +36,18 @@ export async function generateAIResponse(prompt: string, useFlashModel = false):
 
 /**
  * Call Gemini API with text prompt
+ * Defaults to Gemini 2.5 Pro for better quality
  */
 async function callGemini(prompt: string, useFlashModel = false): Promise<string> {
   try {
+    // Validate API key
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key is not configured. Please set GOOGLE_GEMINI_API_KEY environment variable.');
+    }
+
     const model = useFlashModel ? GEMINI_FLASH_MODEL : GEMINI_PRO_MODEL;
+    console.log(`🚀 Calling Gemini API with model: ${model}`);
+    
     const response = await fetch(
       `${GEMINI_API_URL}/${model}:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -54,7 +65,7 @@ async function callGemini(prompt: string, useFlashModel = false): Promise<string
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 16384, // Increased to 16K tokens for complex responses
           },
           safetySettings: [
             {
@@ -71,11 +82,35 @@ async function callGemini(prompt: string, useFlashModel = false): Promise<string
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`Gemini API error (${response.status}):`, errorText);
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data: GeminiResponse = await response.json();
-    return data.candidates[0]?.content?.parts[0]?.text || '';
+    
+    console.log('🔍 Gemini API Response:', JSON.stringify(data, null, 2));
+    
+    if (!data || !data.candidates || data.candidates.length === 0) {
+      console.error('❌ No response candidates from Gemini API:', data);
+      throw new Error('No response candidates from Gemini API');
+    }
+    
+    const candidate = data.candidates[0];
+    if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      console.error('❌ Invalid candidate structure:', candidate);
+      throw new Error('Invalid response structure from Gemini API');
+    }
+    
+    // Check for MAX_TOKENS finish reason
+    if ((candidate as any).finishReason === 'MAX_TOKENS') {
+      console.warn('⚠️ Gemini API response truncated due to token limit. Consider reducing prompt size or increasing maxOutputTokens.');
+    }
+    
+    const text = candidate.content.parts[0]?.text || '';
+    console.log('✅ Gemini API Success - Response length:', text.length);
+    
+    return text;
   } catch (error) {
     console.error('Error calling Gemini API:', error);
     throw error;
@@ -87,6 +122,13 @@ async function callGemini(prompt: string, useFlashModel = false): Promise<string
  */
 async function callGeminiVision(imageBase64: string, prompt: string): Promise<string> {
   try {
+    // Validate API key
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key is not configured. Please set GOOGLE_GEMINI_API_KEY environment variable.');
+    }
+
+    console.log(`🚀 Calling Gemini Vision API with model: ${GEMINI_VISION_MODEL}`);
+    
     const response = await fetch(
       `${GEMINI_API_URL}/${GEMINI_VISION_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
@@ -108,22 +150,46 @@ async function callGeminiVision(imageBase64: string, prompt: string): Promise<st
               }
             ]
           }],
-          generationConfig: {
-            temperature: 0.2, // Lower temperature for more accurate OCR
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 4096,
-          }
+                    generationConfig: {
+                      temperature: 0.2, // Lower temperature for more accurate OCR
+                      topK: 40,
+                      topP: 0.95,
+                      maxOutputTokens: 16384, // Increased to 16K tokens for complex responses
+                    }
         }),
       }
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini Vision API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`Gemini Vision API error (${response.status}):`, errorText);
+      throw new Error(`Gemini Vision API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data: GeminiResponse = await response.json();
-    return data.candidates[0]?.content?.parts[0]?.text || '';
+    
+    console.log('🔍 Gemini Vision API Response:', JSON.stringify(data, null, 2));
+    
+    if (!data || !data.candidates || data.candidates.length === 0) {
+      console.error('❌ No response candidates from Gemini Vision API:', data);
+      throw new Error('No response candidates from Gemini Vision API');
+    }
+    
+    const candidate = data.candidates[0];
+    if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+      console.error('❌ Invalid candidate structure in Vision API:', candidate);
+      throw new Error('Invalid response structure from Gemini Vision API');
+    }
+    
+    // Check for MAX_TOKENS finish reason
+    if ((candidate as any).finishReason === 'MAX_TOKENS') {
+      console.warn('⚠️ Gemini Vision API response truncated due to token limit. Consider reducing prompt size or increasing maxOutputTokens.');
+    }
+    
+    const text = candidate.content.parts[0]?.text || '';
+    console.log('✅ Gemini Vision API Success - Response length:', text.length);
+    
+    return text;
   } catch (error) {
     console.error('Error calling Gemini Vision API:', error);
     throw error;
@@ -212,7 +278,7 @@ Output ONLY valid JSON in this exact format:
 }`;
 
   try {
-    const response = await callGemini(prompt, true); // Use flash for speed
+    const response = await callGemini(prompt, false); // Use Pro model for complex personality analysis
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Invalid JSON response from Gemini');
@@ -429,7 +495,7 @@ Output ONLY valid JSON in this format:
 }`;
 
   try {
-    const response = await callGemini(prompt);
+    const response = await callGemini(prompt, false); // Use Pro model for complex personalization
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Invalid JSON response');
@@ -503,7 +569,7 @@ Output ONLY valid JSON:
 }`;
 
   try {
-    const response = await callGemini(prompt, true);
+    const response = await callGemini(prompt, false); // Use Pro model for complex rubric generation
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Invalid JSON response');
@@ -612,7 +678,7 @@ Output ONLY valid JSON in this format:
 }`;
 
   try {
-    const response = await callGemini(prompt);
+    const response = await callGemini(prompt, false); // Use Pro model for complex grading
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Invalid JSON response from grading');
@@ -683,7 +749,7 @@ Output ONLY valid JSON in this format:
 }`;
 
   try {
-    const response = await callGemini(prompt, true);
+    const response = await callGemini(prompt, false); // Use Pro model for complex analytics
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Invalid JSON response');

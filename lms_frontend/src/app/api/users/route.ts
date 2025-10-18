@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCollection, COLLECTIONS } from '@/lib/db';
+import { getCollection, COLLECTIONS, User, StudentProfile } from '@/lib/db';
+import { ObjectId } from 'mongodb';
 
 /**
  * GET - Fetch all users or filter by role
@@ -43,18 +44,20 @@ export async function GET(request: NextRequest) {
       const profiles = await studentProfilesCollection.find({}).toArray();
       const profileMap = new Map();
       profiles.forEach((profile: any) => {
-        profileMap.set(profile.studentMockId, profile);
+        profileMap.set(profile.studentId, profile);
       });
 
-      const enrichedUsers = users.map(user => {
+      const enrichedUsers = users.map((user: any) => {
         if (user.role === 'student') {
-          const profile = profileMap.get(user.mockUserId);
+          const profile = profileMap.get(user.userId);
           return {
             ...user,
             studentProfile: profile ? {
               personalityTestCompleted: profile.personalityTestCompleted,
               oceanTraits: profile.oceanTraits,
-              learningPreferences: profile.learningPreferences
+              learningPreferences: profile.learningPreferences,
+              intellectualTraits: profile.intellectualTraits,
+              subjectMastery: profile.subjectMastery
             } : null
           };
         }
@@ -88,11 +91,112 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * POST - Create a new user
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const { 
+      userId, 
+      role, 
+      name, 
+      email, 
+      classId, 
+      schoolId, 
+      requestingRole,
+      ...additionalData 
+    } = await request.json();
+
+    // Only admins can create users
+    if (requestingRole !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Only admins can create users' },
+        { status: 403 }
+      );
+    }
+
+    // Validate required fields
+    if (!userId || !role || !name || !email) {
+      return NextResponse.json(
+        { success: false, error: 'userId, role, name, and email are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate role
+    if (!['teacher', 'student', 'admin'].includes(role)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid role. Must be teacher, student, or admin' },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
+
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
+
+    // Check if user already exists
+    const existingUser = await usersCollection.findOne({ 
+      $or: [{ userId: userId }, { email: email }] 
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { success: false, error: 'User with this userId or email already exists' },
+        { status: 409 }
+      );
+    }
+
+    // Create new user
+    const newUser = {
+      userId,
+      role,
+      name,
+      email,
+      classId: classId || '',
+      schoolId: schoolId ? new ObjectId(schoolId) : undefined,
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...additionalData
+    };
+
+    const result = await usersCollection.insertOne(newUser);
+
+    return NextResponse.json({
+      success: true,
+      message: 'User created successfully',
+      data: {
+        _id: result.insertedId,
+        ...newUser
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to create user',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * PUT - Update user information
  */
 export async function PUT(request: NextRequest) {
   try {
-    const { userId, mockUserId, updates, requestingRole } = await request.json();
+    const { userId, updates, requestingRole } = await request.json();
 
     // Only admins can update user information
     if (requestingRole !== 'admin') {
@@ -102,29 +206,46 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!userId && !mockUserId) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'userId or mockUserId is required' },
+        { success: false, error: 'userId is required' },
         { status: 400 }
       );
     }
 
     const usersCollection = await getCollection(COLLECTIONS.USERS);
 
-    // Build query
-    const query: any = {};
-    if (userId) {
-      query.userId = userId;
-    } else {
-      query.mockUserId = mockUserId;
+    // Validate updates object
+    if (!updates || typeof updates !== 'object') {
+      return NextResponse.json(
+        { success: false, error: 'Valid updates object is required' },
+        { status: 400 }
+      );
+    }
+
+    // Filter out sensitive fields that shouldn't be updated via this endpoint
+    const allowedFields = ['name', 'displayName', 'phoneNumber', 'profileImage', 'dashboardPreferences', 'status'];
+    const filteredUpdates: any = {};
+    
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key)) {
+        filteredUpdates[key] = updates[key];
+      }
+    });
+
+    if (Object.keys(filteredUpdates).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid fields to update' },
+        { status: 400 }
+      );
     }
 
     // Update user
     const result = await usersCollection.updateOne(
-      query,
+      { userId: userId },
       { 
         $set: {
-          ...updates,
+          ...filteredUpdates,
           updatedAt: new Date()
         }
       }
@@ -138,7 +259,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Fetch updated user
-    const updatedUser = await usersCollection.findOne(query);
+    const updatedUser = await usersCollection.findOne({ userId: userId });
 
     return NextResponse.json({
       success: true,
@@ -149,7 +270,11 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating user:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update user' },
+      { 
+        success: false, 
+        error: 'Failed to update user',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
@@ -162,7 +287,6 @@ export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const mockUserId = searchParams.get('mockUserId');
     const requestingRole = searchParams.get('requestingRole');
 
     // Only admins can delete users
@@ -173,9 +297,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    if (!userId && !mockUserId) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, error: 'userId or mockUserId is required' },
+        { success: false, error: 'userId is required' },
         { status: 400 }
       );
     }
@@ -183,16 +307,8 @@ export async function DELETE(request: NextRequest) {
     const usersCollection = await getCollection(COLLECTIONS.USERS);
     const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
 
-    // Build query
-    const query: any = {};
-    if (userId) {
-      query.userId = userId;
-    } else {
-      query.mockUserId = mockUserId;
-    }
-
-    // Get user to check role
-    const user = await usersCollection.findOne(query);
+    // Get user to check role and get details
+    const user = await usersCollection.findOne({ userId: userId });
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -200,28 +316,51 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete user
-    const result = await usersCollection.deleteOne(query);
+    // Prevent deletion of admin users (safety check)
+    if (user.role === 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot delete admin users' },
+        { status: 403 }
+      );
+    }
 
-    // If student, also delete profile
+    // Delete user
+    const result = await usersCollection.deleteOne({ userId: userId });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to delete user' },
+        { status: 500 }
+      );
+    }
+
+    // If student, also delete profile and related data
     if (user.role === 'student') {
-      await studentProfilesCollection.deleteOne({ studentMockId: user.mockUserId });
+      await studentProfilesCollection.deleteOne({ studentId: user.userId });
+      
+      // Note: In a production system, you might want to soft delete or archive
+      // related data like submissions, progress, etc. instead of hard deletion
     }
 
     return NextResponse.json({
       success: true,
       message: 'User deleted successfully',
       deletedUser: {
-        mockUserId: user.mockUserId,
+        userId: user.userId,
         name: user.name,
-        role: user.role
+        role: user.role,
+        email: user.email
       }
     });
 
   } catch (error) {
     console.error('Error deleting user:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete user' },
+      { 
+        success: false, 
+        error: 'Failed to delete user',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

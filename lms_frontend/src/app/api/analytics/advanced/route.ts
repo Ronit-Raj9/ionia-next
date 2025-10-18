@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCollection, COLLECTIONS } from '@/lib/db';
+import { getCollection, COLLECTIONS, Submission, Progress, StudentProfile } from '@/lib/db';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -43,21 +43,21 @@ export async function GET(request: NextRequest) {
     // Fetch submissions for the time range
     const submissions = await submissionsCollection
       .find({
-        studentMockId: studentId,
-        createdAt: { $gte: startDate }
+        studentId: studentId,
+        submissionTime: { $gte: startDate }
       })
-      .sort({ createdAt: -1 })
-      .toArray();
+      .sort({ submissionTime: -1 })
+      .toArray() as Submission[];
 
     // Fetch progress data
     const progress = await progressCollection.findOne({
-      studentMockId: studentId
-    });
+      studentId: studentId
+    }) as Progress | null;
 
     // Fetch student profile
     const profile = await profilesCollection.findOne({
-      studentMockId: studentId
-    });
+      studentId: studentId
+    }) as StudentProfile | null;
 
     // Calculate analytics data
     const analyticsData = calculateAdvancedAnalytics(submissions, progress, profile, timeRange);
@@ -75,12 +75,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function calculateAdvancedAnalytics(submissions: any[], progress: any, profile: any, timeRange: string) {
+function calculateAdvancedAnalytics(
+  submissions: Submission[], 
+  progress: Progress | null, 
+  profile: StudentProfile | null, 
+  timeRange: string
+) {
   // Calculate performance metrics
   const totalSubmissions = submissions.length;
   const gradedSubmissions = submissions.filter(s => s.grade && s.grade.isPublished);
   const averageScore = gradedSubmissions.length > 0 
-    ? gradedSubmissions.reduce((sum, s) => sum + (s.grade.score / s.grade.maxScore) * 100, 0) / gradedSubmissions.length
+    ? gradedSubmissions.reduce((sum, s) => sum + (s.grade!.score / s.grade!.maxScore) * 100, 0) / gradedSubmissions.length
     : 0;
 
   // Calculate previous period for comparison
@@ -105,7 +110,7 @@ function calculateAdvancedAnalytics(submissions: any[], progress: any, profile: 
   const parentReport = generateParentReport(submissions, progress, profile);
 
   return {
-    studentId: submissions[0]?.studentMockId || '',
+    studentId: submissions[0]?.studentId || '',
     timeRange,
     performance: {
       current: Math.round(averageScore),
@@ -119,7 +124,7 @@ function calculateAdvancedAnalytics(submissions: any[], progress: any, profile: 
   };
 }
 
-function calculatePreviousPeriod(submissions: any[], timeRange: string) {
+function calculatePreviousPeriod(submissions: Submission[], timeRange: string) {
   const now = new Date();
   let previousStart: Date;
   let previousEnd: Date;
@@ -143,19 +148,19 @@ function calculatePreviousPeriod(submissions: any[], timeRange: string) {
   }
 
   const previousSubmissions = submissions.filter(s => {
-    const submissionDate = new Date(s.createdAt);
+    const submissionDate = new Date(s.submissionTime);
     return submissionDate >= previousStart && submissionDate <= previousEnd;
   });
 
   const gradedPrevious = previousSubmissions.filter(s => s.grade && s.grade.isPublished);
   const averageScore = gradedPrevious.length > 0 
-    ? gradedPrevious.reduce((sum, s) => sum + (s.grade.score / s.grade.maxScore) * 100, 0) / gradedPrevious.length
+    ? gradedPrevious.reduce((sum, s) => sum + (s.grade!.score / s.grade!.maxScore) * 100, 0) / gradedPrevious.length
     : 0;
 
   return { averageScore };
 }
 
-function calculateSubjectPerformance(submissions: any[]) {
+function calculateSubjectPerformance(submissions: Submission[]) {
   const subjects = ['Mathematics', 'Science', 'English', 'History'];
   const subjectData: { [key: string]: { scores: number[], lastUpdated: string } } = {};
 
@@ -172,7 +177,7 @@ function calculateSubjectPerformance(submissions: any[]) {
       
       if (subjectData[subject]) {
         subjectData[subject].scores.push(score);
-        const lastUpdated = new Date(submission.createdAt);
+        const lastUpdated = new Date(submission.submissionTime);
         if (lastUpdated > new Date(subjectData[subject].lastUpdated)) {
           subjectData[subject].lastUpdated = lastUpdated.toLocaleDateString();
         }
@@ -208,9 +213,9 @@ function calculateSubjectPerformance(submissions: any[]) {
   });
 }
 
-function calculateLearningPatterns(submissions: any[], profile: any) {
+function calculateLearningPatterns(submissions: Submission[], profile: StudentProfile | null) {
   // Analyze submission times to find peak hours
-  const submissionHours = submissions.map(s => new Date(s.createdAt).getHours());
+  const submissionHours = submissions.map(s => new Date(s.submissionTime).getHours());
   const hourCounts: { [key: number]: number } = {};
   
   submissionHours.forEach(hour => {
@@ -243,7 +248,7 @@ function calculateLearningPatterns(submissions: any[], profile: any) {
   const averageScore = submissions.length > 0 
     ? submissions.reduce((sum, s) => {
         if (s.grade && s.grade.isPublished) {
-          return sum + (s.grade.score / s.grade.maxScore) * 100;
+          return sum + (s.grade!.score / s.grade!.maxScore) * 100;
         }
         return sum;
       }, 0) / submissions.length
@@ -261,12 +266,16 @@ function calculateLearningPatterns(submissions: any[], profile: any) {
   };
 }
 
-function generatePredictions(submissions: any[], subjectPerformance: any[], learningPatterns: any) {
+function generatePredictions(
+  submissions: Submission[], 
+  subjectPerformance: Array<{name: string, score: number, trend: string, lastUpdated: string}>, 
+  learningPatterns: {peakHours: string[], preferredSubjects: string[], difficultyLevel: string, completionRate: number}
+) {
   // Simple prediction based on recent performance
   const recentSubmissions = submissions.slice(0, 5);
   const recentScores = recentSubmissions
     .filter(s => s.grade && s.grade.isPublished)
-    .map(s => (s.grade.score / s.grade.maxScore) * 100);
+    .map(s => (s.grade!.score / s.grade!.maxScore) * 100);
 
   const nextWeekScore = recentScores.length > 0 
     ? Math.round(recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length)
@@ -297,11 +306,11 @@ function generatePredictions(submissions: any[], subjectPerformance: any[], lear
   };
 }
 
-function generateParentReport(submissions: any[], progress: any, profile: any) {
+function generateParentReport(submissions: Submission[], progress: Progress | null, profile: StudentProfile | null) {
   // Calculate overall progress
   const gradedSubmissions = submissions.filter(s => s.grade && s.grade.isPublished);
   const overallProgress = gradedSubmissions.length > 0 
-    ? Math.round(gradedSubmissions.reduce((sum, s) => sum + (s.grade.score / s.grade.maxScore) * 100, 0) / gradedSubmissions.length)
+    ? Math.round(gradedSubmissions.reduce((sum, s) => sum + (s.grade!.score / s.grade!.maxScore) * 100, 0) / gradedSubmissions.length)
     : 0;
 
   // Identify strengths and areas for improvement
@@ -311,17 +320,17 @@ function generateParentReport(submissions: any[], progress: any, profile: any) {
   if (overallProgress >= 85) {
     strengths.push('Excellent academic performance');
   }
-  if (profile?.personalityProfile?.type === 'visual') {
+  if (profile?.learningPreferences?.visualLearner) {
     strengths.push('Strong visual learning abilities');
   }
-  if (profile?.personalityProfile?.type === 'analytical') {
+  if (profile?.intellectualTraits?.analyticalThinking && profile.intellectualTraits.analyticalThinking > 70) {
     strengths.push('Strong analytical thinking');
   }
 
   if (overallProgress < 75) {
     areasForImprovement.push('Overall academic performance');
   }
-  if (profile?.personalityProfile?.collaboration === 'low') {
+  if (profile?.oceanTraits?.extraversion && profile.oceanTraits.extraversion < 30) {
     areasForImprovement.push('Collaborative learning skills');
   }
 

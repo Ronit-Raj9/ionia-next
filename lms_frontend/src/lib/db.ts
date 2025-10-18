@@ -44,6 +44,9 @@ export async function getCollection(collectionName: string): Promise<Collection>
 // Collection names constants
 export const COLLECTIONS = {
   USERS: 'users',
+  SCHOOLS: 'schools',
+  SCHOOL_INVITATIONS: 'schoolInvitations',
+  SCHOOL_CODES: 'schoolCodes',
   CLASSES: 'classes',
   STUDENT_PROFILES: 'studentProfiles',
   STUDENT_LEARNING_PROFILES: 'studentLearningProfiles',
@@ -68,13 +71,12 @@ export const COLLECTIONS = {
 export interface User {
   _id?: ObjectId;
   role: 'teacher' | 'student' | 'admin';
-  mockUserId: string; // Legacy field - to be deprecated
-  userId?: string; // New unique user ID (replaces mockUserId)
+  userId: string; // Unique user ID from new system
   name: string; // Full name of the user (Teacher/Student/Admin)
   email: string; // Email address (required)
   displayName?: string; // Optional display name
   classId: string;
-  schoolId?: string;
+  schoolId?: ObjectId; // Reference to School document
   phoneNumber?: string; // Contact number
   profileImage?: string; // Profile photo URL
   dashboardPreferences?: {
@@ -88,15 +90,95 @@ export interface User {
   updatedAt?: Date;
 }
 
+// School Registration System Interfaces
+export interface School {
+  _id?: ObjectId;
+  schoolId: string; // Unique school identifier (e.g., "SCHOOL-A1B2")
+  schoolName: string;
+  schoolType: 'CBSE' | 'ICSE' | 'State' | 'Private' | 'International' | 'Other';
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+  contact: {
+    email: string;
+    phone: string;
+    website?: string;
+  };
+  admin: {
+    name: string;
+    email: string;
+    phone: string;
+    userId: ObjectId; // Reference to admin user
+  };
+  settings: {
+    timezone: string;
+    academicYear: string;
+    defaultLanguage: string;
+    allowStudentRegistration: boolean;
+    maxTeachers: number;
+    maxStudents: number;
+  };
+  teacherEmails: string[]; // Whitelist of teacher emails
+  studentJoinCode: string; // Code for students to join
+  verification: {
+    status: 'pending' | 'verified' | 'rejected';
+    documents?: string[]; // Uploaded verification docs
+    verifiedAt?: Date;
+    verifiedBy?: string;
+  };
+  subscription: {
+    plan: 'free' | 'basic' | 'premium' | 'enterprise';
+    maxTeachers: number;
+    maxStudents: number;
+    features: string[];
+  };
+  stats: {
+    totalTeachers: number;
+    totalStudents: number;
+    totalClasses: number;
+    lastActivity: Date;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SchoolInvitation {
+  _id?: ObjectId;
+  schoolId: ObjectId; // Reference to School
+  email: string;
+  role: 'teacher' | 'admin';
+  invitedBy: ObjectId; // User ID who sent invitation
+  status: 'pending' | 'accepted' | 'rejected' | 'expired';
+  token: string; // Unique invitation token
+  expiresAt: Date;
+  acceptedAt?: Date;
+  createdAt: Date;
+}
+
+export interface SchoolCode {
+  _id?: ObjectId;
+  schoolId: ObjectId; // Reference to School
+  code: string; // Student join code
+  isActive: boolean;
+  generatedBy: ObjectId; // User ID who generated the code
+  usedBy?: ObjectId[]; // Array of student user IDs who used this code
+  maxUses?: number; // Optional limit on code usage
+  expiresAt?: Date; // Optional expiration
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Class {
   _id?: ObjectId;
   className: string;
-  teacherMockId: string; // Legacy field - to be deprecated
-  teacherId?: string; // New teacher ID (replaces teacherMockId)
+  teacherId: string; // Teacher ID from new system
   teacherName?: string; // Teacher's full name for display
-  schoolId: string; // School ID for filtering
-  studentMockIds: string[]; // Legacy field - to be deprecated
-  studentIds?: string[]; // New student IDs (replaces studentMockIds)
+  schoolId: ObjectId; // Reference to School document
+  studentIds: string[]; // Student IDs from new system
   description?: string;
   subject?: string; // Science, Math, etc.
   grade?: string; // Grade level
@@ -134,7 +216,7 @@ export interface Class {
 
 export interface StudentProfile {
   _id?: ObjectId;
-  studentMockId: string;
+  studentId: string; // Student ID from new system
   studentName?: string; // Full name of the student
   name?: string; // Alternative name field for compatibility
   email?: string; // Student email
@@ -288,7 +370,7 @@ export interface Assignment {
   // Personalization
   personalizationEnabled: boolean;
   personalizedVersions: {
-    studentMockId: string;
+    studentId: string; // Student ID from new system
     adaptedContent: {
       questions: string[];
       variations: string;
@@ -323,7 +405,7 @@ export interface Submission {
   _id?: ObjectId;
   assignmentId: string;
   classId: string;
-  studentMockId: string;
+  studentId: string; // Student ID from new system
   studentName: string;
   subject: string; // For analytics aggregation
   topic: string; // For progress tracking
@@ -446,7 +528,7 @@ export interface Submission {
 
 export interface Progress {
   _id?: ObjectId;
-  studentMockId: string;
+  studentId: string; // Student ID from new system
   classId: string;
   schoolId?: string;
   metrics: {
@@ -711,7 +793,7 @@ export interface ClassAnalytics {
   
   // Student Rankings (optional, privacy-conscious)
   studentRankings?: {
-    studentMockId: string;
+    studentId: string; // Student ID from new system
     studentName: string;
     averageScore: number;
     rank: number;

@@ -28,7 +28,7 @@ interface TeacherAssignmentCreatorProps {
 interface SelectedStudent {
   id: string;
   name: string;
-  mockUserId: string;
+  userId: string; // User ID from new system
   isSelected: boolean;
 }
 
@@ -177,7 +177,7 @@ export default function TeacherAssignmentCreator({
           title,
           description,
           schoolId: teacherSchoolId,
-          selectedStudents: selectedStudents.map(s => s.mockUserId),
+          selectedStudents: selectedStudents.map(s => s.userId),
           grade,
           questions: questions.map(q => ({
             id: q.id,
@@ -574,13 +574,13 @@ export default function TeacherAssignmentCreator({
       {showStudentSelector && (
         <StudentSelector
           onStudentsSelected={(students, selectedClass) => {
-            // Map Student[] to SelectedStudent[] (id is actually mockUserId)
+            // Map Student[] to SelectedStudent[] (id is actually studentId)
             const mapped = students
               .filter(s => s.isSelected)
               .map(s => ({
                 id: s.id,
                 name: s.name,
-                mockUserId: s.id, // In StudentSelector, id IS the mockUserId
+                userId: s.id, // In StudentSelector, id IS the studentId
                 isSelected: s.isSelected
               }));
             setSelectedStudents(mapped);

@@ -31,34 +31,30 @@ import ClassroomManager from '@/components/ClassroomManager';
 import AcademicPlanner from '@/components/AcademicPlanner';
 import TeacherAssignmentCreator from '@/components/TeacherAssignmentCreator';
 import TeacherAnalyticsDashboard from '@/components/TeacherAnalyticsDashboard';
+import StudyMaterialManager from '@/components/StudyMaterialManager';
 import { getUserDisplayName, getUserId } from '@/lib/userUtils';
+import { Assignment, Submission, Progress, User } from '@/lib/db';
+import { analyzeQuestion } from '@/lib/questionAnalyzer';
+// OCR functionality moved to API route
+import { adaptQuestionToLearningStyle } from '@/lib/learningStyleAdapter';
+import { generateResourceRecommendations } from '@/lib/resourceLinker';
 
-interface Assignment {
-  _id: string;
-  title: string;
-  subject: string;
-  taskType: string;
-  originalContent: {
-    questions: string[];
+// Using Assignment interface from new system
+
+// API Response interfaces for teacher dashboard
+interface ClassProgressResponse {
+  classInfo: {
+    classId: string;
+    schoolId: string | null;
+    totalStudents: number;
   };
-  uploadedFileUrl?: string;
-  createdAt: string;
-  personalizedVersions: any[];
-  suggestions?: {
-    recommendedTask: string;
-    basedOn: string;
-    difficulty: 'easy' | 'medium' | 'hard';
-    estimatedTime: number;
-  }[];
-}
-
-interface ProgressData {
   classMetrics: {
     totalStudents: number;
     averageScore: number;
     completionRate: number;
     totalSubmissions: number;
     totalTimeSaved: number;
+    lastUpdated: Date;
   };
   heatmap: {
     topic: string;
@@ -66,13 +62,14 @@ interface ProgressData {
     studentCount: number;
   }[];
   studentProgress: any[];
+  timestamp: string;
 }
 
 export default function TeacherDashboard() {
   const { user } = useRole();
   const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [progressData, setProgressData] = useState<ProgressData | null>(null);
+  const [progressData, setProgressData] = useState<ClassProgressResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadLoading, setUploadLoading] = useState(false);
   
@@ -91,12 +88,37 @@ export default function TeacherDashboard() {
   const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
   const [showStudentSelector, setShowStudentSelector] = useState(false);
   const [useAdvancedQuestions, setUseAdvancedQuestions] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+
+  // Load selected class from localStorage on component mount
+  useEffect(() => {
+    const savedClassId = localStorage.getItem('teacher_selected_class_id');
+    if (savedClassId) {
+      setSelectedClassId(savedClassId);
+    }
+  }, []);
+
+  // Save selected class to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedClassId) {
+      localStorage.setItem('teacher_selected_class_id', selectedClassId);
+    } else {
+      localStorage.removeItem('teacher_selected_class_id');
+    }
+  }, [selectedClassId]);
+  
+  // Enhanced features state
+  const [questionAnalysis, setQuestionAnalysis] = useState<any>(null);
+  const [enhancedOCR, setEnhancedOCR] = useState<any>(null);
+  const [learningStyleAdaptations, setLearningStyleAdaptations] = useState<any[]>([]);
+  const [resourceRecommendations, setResourceRecommendations] = useState<any[]>([]);
+  const [selectedStudyMaterials, setSelectedStudyMaterials] = useState<any[]>([]);
   
   // Phase 2 state
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner' | 'adaptive-assignments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -112,14 +134,45 @@ export default function TeacherDashboard() {
     }
   }, [user, router]);
 
+  // Refetch assignments when selectedClassId changes
+  useEffect(() => {
+    if (user && selectedClassId) {
+      fetchAssignments();
+    }
+  }, [selectedClassId]);
+
+  // Auto-refresh assignment statistics every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      fetchAssignments();
+      fetchProgress();
+      fetchEnhancedDashboardData();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user, selectedClassId]);
+
   const fetchAssignments = async () => {
     try {
-      const response = await fetch(`/api/assignments?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      // Use selectedClassId if available, otherwise fetch all teacher's assignments
+      const url = selectedClassId 
+        ? `/api/assignments?role=${user?.role}&userId=${user?.userId}&classId=${selectedClassId}`
+        : `/api/assignments?role=${user?.role}&userId=${user?.userId}`;
+      
+      console.log('🔍 Teacher fetching assignments from:', url);
+      
+      const response = await fetch(url);
       const data = await response.json();
+      
+      console.log('📊 Teacher assignments response:', data);
       
       if (data.success) {
         setAssignments(data.data);
+        console.log(`✅ Loaded ${data.data.length} assignments for teacher`);
       } else {
+        console.error('❌ Failed to fetch assignments:', data.error);
         toast.error('Failed to fetch assignments');
       }
     } catch (error) {
@@ -135,7 +188,7 @@ export default function TeacherDashboard() {
     }
     
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}`);
+      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
       const data = await response.json();
       
       if (data.success) {
@@ -159,7 +212,7 @@ export default function TeacherDashboard() {
     }
     
     try {
-      const response = await fetch(`/api/dashboard?role=${user?.role}&mockUserId=${user?.mockUserId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
+      const response = await fetch(`/api/dashboard?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}&schoolId=${user?.schoolId || ''}`);
       const data = await response.json();
       
       if (data.success) {
@@ -249,11 +302,74 @@ export default function TeacherDashboard() {
 
     setUploadLoading(true);
     
+    // Enhanced features processing
     try {
+      // Analyze questions for Bloom's taxonomy and cognitive complexity
+      if (finalQuestions.length > 0) {
+        const analysis = await analyzeQuestion(finalQuestions[0], subject, '10');
+        setQuestionAnalysis(analysis);
+        console.log('Question Analysis:', analysis);
+      }
+      
+      // Process file with enhanced OCR if uploaded
+      if (selectedFile) {
+        try {
+          const formData = new FormData();
+          formData.append('image', selectedFile);
+          
+          const response = await fetch('/api/ocr/process', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            setEnhancedOCR(result.data);
+            console.log('Enhanced OCR Result:', result.data);
+          } else {
+            console.error('OCR processing failed');
+          }
+        } catch (error) {
+          console.error('Error processing image:', error);
+        }
+      }
+      
+      // Generate resource recommendations
+      const recommendations = await generateResourceRecommendations({
+        assignmentId: 'temp-' + Date.now(),
+        questions: finalQuestions,
+        subject: subject,
+        grade: '10',
+        topic: 'General',
+        learningObjectives: ['Master key concepts', 'Apply problem-solving skills'],
+        targetDifficulty: difficulty as 'easy' | 'medium' | 'hard'
+      });
+      setResourceRecommendations(recommendations);
+      console.log('Resource Recommendations:', recommendations);
+      
+    } catch (error) {
+      console.error('Enhanced features processing error:', error);
+      // Continue with assignment creation even if enhanced features fail
+    }
+    
+    try {
+      // Determine classId - use selectedClassId if available, otherwise derive from selected students
+      let classIdToUse = selectedClassId;
+      if (!classIdToUse && selectedStudents.length > 0) {
+        // Try to get classId from the first selected student
+        const firstStudent = selectedStudents[0];
+        if (firstStudent.classId) {
+          classIdToUse = firstStudent.classId;
+          console.log('🔍 Derived classId from selected student:', classIdToUse);
+        }
+      }
+      
+      console.log('🔍 Assignment creation - selectedClassId:', selectedClassId, 'classIdToUse:', classIdToUse, 'selectedStudents:', selectedStudents.length);
+      
       const formData = new FormData();
       formData.append('role', user?.role || '');
-      formData.append('mockUserId', user?.mockUserId || '');
-      formData.append('classId', user?.classId || '');
+      formData.append('userId', user?.userId || '');
+      formData.append('classId', classIdToUse || '');
       formData.append('questions', useAdvancedQuestions ? finalQuestions.join('\n') : questions);
       formData.append('title', assignmentTitle);
       formData.append('description', description);
@@ -267,6 +383,20 @@ export default function TeacherDashboard() {
       // Add question details if using advanced mode
       if (useAdvancedQuestions) {
         formData.append('questionDetails', JSON.stringify(questionsList));
+      }
+      
+      // Add enhanced features data
+      if (questionAnalysis) {
+        formData.append('questionAnalysis', JSON.stringify(questionAnalysis));
+      }
+      if (enhancedOCR) {
+        formData.append('enhancedOCR', JSON.stringify(enhancedOCR));
+      }
+      if (resourceRecommendations.length > 0) {
+        formData.append('resourceRecommendations', JSON.stringify(resourceRecommendations));
+      }
+      if (selectedStudyMaterials.length > 0) {
+        formData.append('selectedStudyMaterials', JSON.stringify(selectedStudyMaterials));
       }
       
       if (dueDate) {
@@ -416,6 +546,17 @@ export default function TeacherDashboard() {
                 Adaptive Assignments
               </button>
               <button
+                onClick={() => setActiveTab('study-materials')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'study-materials'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 inline mr-2" />
+                Study Materials
+              </button>
+              <button
                 onClick={() => setActiveTab('inbox')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'inbox'
@@ -489,7 +630,23 @@ export default function TeacherDashboard() {
             {/* Recent Assignments */}
             <div className="mt-8">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Assignments</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Recent Assignments</h2>
+                  <button
+                    onClick={() => {
+                      fetchAssignments();
+                      fetchProgress();
+                      fetchEnhancedDashboardData();
+                      toast.success('Dashboard refreshed');
+                    }}
+                    className="flex items-center space-x-2 px-3 py-1 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Refresh</span>
+                  </button>
+                </div>
                 
                 {assignments.length > 0 ? (
                   <div className="space-y-4">
@@ -550,6 +707,45 @@ export default function TeacherDashboard() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Create New Assignment</h2>
+              
+              {/* Class Selection Indicator */}
+              {selectedClassId || selectedStudents.length > 0 ? (
+                <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 mr-2" />
+                      <span className="text-sm text-emerald-800">
+                        <strong>Ready to Create Assignment:</strong> 
+                        {selectedClassId ? ' Class selected' : ' Students selected'}
+                        {selectedStudents.length > 0 && (
+                          <span className="ml-2 text-emerald-700">
+                            ({selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected)
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedClassId('');
+                        setSelectedStudents([]);
+                        toast.success('Class selection cleared');
+                      }}
+                      className="text-sm text-emerald-600 hover:text-emerald-700 underline"
+                    >
+                      Clear Selection
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="flex items-center">
+                    <Users className="w-5 h-5 text-yellow-600 mr-2" />
+                    <span className="text-sm text-yellow-800">
+                      <strong>No Class Selected:</strong> Please select a class from the "Classrooms" tab first
+                    </span>
+                  </div>
+                </div>
+              )}
               
               <form onSubmit={handleSubmitAssignment} className="space-y-6">
                   {/* Assignment Details */}
@@ -859,7 +1055,7 @@ export default function TeacherDashboard() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={uploadLoading || (useAdvancedQuestions ? questionsList.length === 0 : (!questions.trim() && !selectedFile))}
+                  disabled={uploadLoading || (!selectedClassId && selectedStudents.length === 0) || (useAdvancedQuestions ? questionsList.length === 0 : (!questions.trim() && !selectedFile))}
                   className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
                 >
                   {uploadLoading ? (
@@ -996,7 +1192,7 @@ export default function TeacherDashboard() {
         {activeTab === 'grading' && (
           <div className="h-screen">
             <GradingInterface
-              teacherId={user?.mockUserId || ''}
+              teacherId={user?.userId || ''}
               teacherName={user?.name || user?.displayName || 'Teacher'}
               onGradeSubmitted={() => {
                 toast.success('Grade updated successfully!');
@@ -1022,29 +1218,55 @@ export default function TeacherDashboard() {
         {/* Classrooms Tab */}
         {activeTab === 'classrooms' && (
           <div className="space-y-6">
-            {!user?.mockUserId || !user?.schoolId ? (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-                <p className="text-yellow-800 mb-4">
-                  ⚠️ Please log out and log back in to access classrooms.
-                  Your user data needs to be refreshed.
+            {!user?.userId || !user?.schoolId ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                <p className="text-red-800 mb-4">
+                  ⚠️ Missing user data. Please log out and log back in to access classrooms.
+                  Your user profile needs to be properly set up with school information.
                 </p>
                 <button
                   onClick={() => {
                     localStorage.clear();
                     window.location.href = '/';
                   }}
-                  className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700"
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
                 >
-                  Log Out
+                  Log Out & Refresh
                 </button>
               </div>
             ) : (
-              <ClassroomManager
-                userId={user?.mockUserId || getUserId(user) || ''}
-                userName={getUserDisplayName(user)}
-                role="teacher"
-                schoolId={user?.schoolId || 'demo-school-delhi-2025'}
-              />
+              <>
+                <ClassroomManager
+                  userId={user?.userId || ''}
+                  userName={user?.name || user?.displayName || 'Teacher'}
+                  role="teacher"
+                  schoolId={user?.schoolId?.toString() || ''}
+                  onClassSelected={(classId) => {
+                    setSelectedClassId(classId);
+                    toast.success('Class selected for assignment creation');
+                  }}
+                />
+                
+                {/* Selected Class Indicator */}
+                {selectedClassId && (
+                  <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <CheckCircle className="w-5 h-5 text-emerald-600 mr-2" />
+                        <span className="text-sm text-emerald-800">
+                          <strong>Active Class:</strong> Selected class is active for assignment creation
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setSelectedClassId('')}
+                        className="text-sm text-emerald-600 hover:text-emerald-700 underline"
+                      >
+                        Clear Selection
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -1074,11 +1296,11 @@ export default function TeacherDashboard() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Create New Adaptive Assignment</h3>
               <TeacherAssignmentCreator
-                teacherId={user?.mockUserId || ''}
+                teacherId={user?.userId || ''}
                 classId={user?.classId || 'default-class'}
                 subject={subject || 'Math'}
                 grade="10"
-                teacherSchoolId={user?.schoolId || 'demo-school-delhi-2025'}
+                teacherSchoolId={user?.schoolId?.toString() || 'demo-school-delhi-2025'}
                 onComplete={(assignmentId: string, questionSetId: string) => {
                   toast.success('Adaptive assignment created successfully!');
                   console.log('Created assignment:', assignmentId, questionSetId);
@@ -1100,10 +1322,23 @@ export default function TeacherDashboard() {
           </div>
         )}
 
+        {activeTab === 'study-materials' && (
+          <div className="space-y-6 pb-24">
+            <StudyMaterialManager
+              subject={subject}
+              grade="10"
+              topic="General"
+              onMaterialsChange={setSelectedStudyMaterials}
+              selectedMaterials={selectedStudyMaterials}
+              isCreatingAssignment={true}
+            />
+          </div>
+        )}
+
         {activeTab === 'inbox' && (
           <div className="h-screen">
             <TeacherInbox
-              teacherId={user?.mockUserId || ''}
+              teacherId={user?.userId || ''}
               teacherName={user?.name || user?.displayName || 'Teacher'}
               isEmbedded={true}
             />
@@ -1117,14 +1352,15 @@ export default function TeacherDashboard() {
                 setSelectedStudents(students.filter(s => s.isSelected));
                 setShowStudentSelector(false);
                 if (selectedClass) {
+                  setSelectedClassId(selectedClass._id?.toString() || '');
                   toast.success(`Selected ${students.length} students from ${selectedClass.className}`);
                 }
               }}
               onClose={() => setShowStudentSelector(false)}
               classId={user?.classId || 'default-class'}
-              teacherId={user?.mockUserId || ''}
+              teacherId={user?.userId || ''}
               teacherRole={user?.role || 'teacher'}
-              teacherSchoolId={user?.schoolId || ''}
+              teacherSchoolId={user?.schoolId?.toString() || ''}
             />
         )}
       </div>

@@ -89,11 +89,15 @@ export async function POST(request: NextRequest) {
     // Create choice record
     const choiceRecord: StudentQuestionChoice = {
       questionSetId: new ObjectId(questionSetId),
-      assignmentId: assignmentId, // Store as string
+      assignmentId: new ObjectId(assignmentId), // Store as ObjectId
       studentId,
       presentedQuestions: allVariants.map(v => v.masterQuestionId),
       chosenQuestions: chosenQuestionIds,
-      choiceTimeline: choiceTimeline || [],
+      choiceTimeline: (choiceTimeline || []).map((item: any) => ({
+        questionId: item.questionId,
+        action: item.action,
+        timestamp: new Date(item.timestamp)
+      })),
       choiceAnalysis,
       metricUpdates: choiceAnalysis.metricScores,
       status: 'finalized',
@@ -131,16 +135,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Choices recorded and analyzed successfully',
-      choiceId: choiceResult.insertedId,
-      analysis: {
-        difficultyDistribution: choiceAnalysis.difficultyDistribution,
-        metricScores: choiceAnalysis.metricScores,
-        patterns: choiceAnalysis.patterns,
-        qualityScore: Math.round(
-          (choiceAnalysis.metricScores.confidenceScore * 0.3 +
-           choiceAnalysis.metricScores.strategicThinking * 0.4 +
-           choiceAnalysis.metricScores.selfAwareness * 0.3)
-        )
+      data: {
+        choiceId: choiceResult.insertedId,
+        analysis: {
+          difficultyDistribution: choiceAnalysis.difficultyDistribution,
+          bloomsDistribution: choiceAnalysis.bloomsDistribution,
+          avoidedQuestions: choiceAnalysis.avoidedQuestions,
+          patterns: choiceAnalysis.patterns,
+          timeToMakeChoice: choiceAnalysis.timeToMakeChoice,
+          hesitationIndicators: choiceAnalysis.hesitationIndicators,
+          decisionConfidence: choiceAnalysis.decisionConfidence,
+          metricScores: choiceAnalysis.metricScores,
+          qualityScore: Math.round(
+            (choiceAnalysis.metricScores.confidenceScore * 0.3 +
+             choiceAnalysis.metricScores.strategicThinking * 0.4 +
+             choiceAnalysis.metricScores.selfAwareness * 0.3)
+          )
+        }
       }
     });
 
@@ -177,7 +188,7 @@ export async function GET(request: NextRequest) {
     const collection = await getCollection(COLLECTIONS.STUDENT_QUESTION_CHOICES);
     const choiceRecord = await collection.findOne({
       studentId,
-      assignmentId: assignmentId // assignmentId is string
+      assignmentId: new ObjectId(assignmentId) // assignmentId is ObjectId
     });
 
     if (!choiceRecord) {
@@ -189,7 +200,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      choiceRecord
+      data: {
+        choiceRecord
+      }
     });
 
   } catch (error) {

@@ -12,8 +12,8 @@ Add to "scripts" section in package.json:
   "seed": "curl -X POST http://localhost:3001/api/seed -H 'Content-Type: application/json' -d '{\"action\": \"seed\", \"useScience\": true}'",
   "test:api": "./test-api.sh",
   "test:quick": "curl http://localhost:3001/api/student-profiles?studentId=student_demo_1 | jq",
-  "demo:high": "curl 'http://localhost:3001/api/assignments?role=student&mockUserId=teacher_demo_1&studentMockId=student_demo_1' | jq '.data[0] | {title, difficultyAdjustment, encouragementNote, hints, challengeQuestions}'",
-  "demo:struggling": "curl 'http://localhost:3001/api/assignments?role=student&mockUserId=teacher_demo_1&studentMockId=student_demo_18' | jq '.data[0] | {title, difficultyAdjustment, encouragementNote, hints, remedialQuestions}'"
+  "demo:high": "curl 'http://localhost:3001/api/assignments?role=student&mockUserId=teacher_demo_1&studentId=student_demo_1' | jq '.data[0] | {title, difficultyAdjustment, encouragementNote, hints, challengeQuestions}'",
+  "demo:struggling": "curl 'http://localhost:3001/api/assignments?role=student&mockUserId=teacher_demo_1&studentId=student_demo_18' | jq '.data[0] | {title, difficultyAdjustment, encouragementNote, hints, remedialQuestions}'"
 }
 
 Then you can run:

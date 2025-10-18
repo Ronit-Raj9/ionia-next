@@ -55,24 +55,26 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Return user data (excluding sensitive info)
+    // Return user data in standardized new system format
     return NextResponse.json({
       success: true,
       message: 'Login successful',
       user: {
         _id: user._id,
         role: user.role,
-        mockUserId: user.mockUserId,
         userId: user.userId,
         name: user.name,
         email: user.email,
         displayName: user.displayName,
         classId: user.classId,
-        schoolId: user.schoolId,
+        schoolId: user.schoolId?.toString(),
         phoneNumber: user.phoneNumber,
         profileImage: user.profileImage,
         status: user.status,
-        lastLogin: new Date()
+        dashboardPreferences: user.dashboardPreferences,
+        lastLogin: new Date(),
+        createdAt: user.createdAt,
+        updatedAt: new Date()
       }
     });
 
@@ -90,18 +92,16 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET - Fetch user by mockUserId or userId (for session restoration)
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const mockUserId = searchParams.get('mockUserId');
     const userId = searchParams.get('userId');
     const email = searchParams.get('email');
 
-    if (!mockUserId && !userId && !email) {
+    if (!userId && !email) {
       return NextResponse.json(
-        { success: false, error: 'mockUserId, userId, or email is required' },
+        { success: false, error: 'userId or email is required' },
         { status: 400 }
       );
     }
@@ -114,8 +114,6 @@ export async function GET(request: NextRequest) {
       query.email = email;
     } else if (userId) {
       query.userId = userId;
-    } else if (mockUserId) {
-      query.mockUserId = mockUserId;
     }
 
     const user = await usersCollection.findOne(query);
@@ -127,23 +125,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Return user data
+    // Return user data in standardized new system format
     return NextResponse.json({
       success: true,
       user: {
         _id: user._id,
         role: user.role,
-        mockUserId: user.mockUserId,
         userId: user.userId,
         name: user.name,
         email: user.email,
         displayName: user.displayName,
         classId: user.classId,
-        schoolId: user.schoolId,
+        schoolId: user.schoolId?.toString(),
         phoneNumber: user.phoneNumber,
         profileImage: user.profileImage,
         status: user.status,
-        lastLogin: user.lastLogin
+        dashboardPreferences: user.dashboardPreferences,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
       }
     });
 

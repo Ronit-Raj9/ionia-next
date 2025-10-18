@@ -33,15 +33,22 @@ interface ClassDetails {
     description?: string;
     subject?: string;
     grade?: string;
-    teacherMockId: string;
-    studentMockIds: string[];
-    joinCode: string;
+    teacherId: string;
+    teacherName?: string; // New system field
+    schoolId?: string; // New system field
+    studentIds: string[];
+    joinCode?: string;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
+    // New system fields
+    syllabus?: string;
+    currentTopic?: string;
+    completedTopics?: string[];
+    upcomingTopics?: string[];
   };
   students: Array<{
-    studentMockId: string;
+    studentId: string;
     name: string;
     email: string;
     personalityTestCompleted?: boolean;
@@ -57,7 +64,7 @@ interface ClassDetails {
       auditoryLearner: boolean;
       kinestheticLearner: boolean;
       readingWritingLearner: boolean;
-      preferredDifficulty: string;
+      preferredDifficulty: 'easy' | 'medium' | 'hard';
     };
   }>;
   statistics: {
@@ -79,7 +86,7 @@ interface ClassDetails {
     _id: string;
     studentName: string;
     submissionTime: string;
-    status: string;
+    status: 'submitted' | 'processing' | 'graded' | 'returned' | 'failed';
     score?: number;
   }>;
 }
@@ -112,10 +119,10 @@ export default function ClassroomPage() {
       console.log('Fetching class details:', {
         classId,
         role: user?.role,
-        mockUserId: user?.mockUserId
+        userId: user?.userId
       });
       
-      const response = await fetch(`/api/classes/${classId}?role=${user?.role}&mockUserId=${user?.mockUserId}`);
+      const response = await fetch(`/api/classes/${classId}?role=${user?.role}&userId=${user?.userId}`);
       const data = await response.json();
 
       if (data.success) {
@@ -141,6 +148,10 @@ export default function ClassroomPage() {
   };
 
   const copyJoinCode = (joinCode: string) => {
+    if (!joinCode) {
+      toast.error('No join code available');
+      return;
+    }
     navigator.clipboard.writeText(joinCode);
     setCopiedJoinCode(true);
     toast.success('Join code copied to clipboard!');
@@ -228,30 +239,32 @@ export default function ClassroomPage() {
             </div>
 
             {/* Join Code Card */}
-            <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-emerald-50 text-sm mb-1">Student Join Code</p>
-                  <code className="text-2xl font-mono font-bold">{classInfo.joinCode}</code>
+            {classInfo.joinCode && (
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-emerald-50 text-sm mb-1">Student Join Code</p>
+                    <code className="text-2xl font-mono font-bold">{classInfo.joinCode}</code>
+                  </div>
+                  <button
+                    onClick={() => copyJoinCode(classInfo.joinCode || '')}
+                    className="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    {copiedJoinCode ? (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-5 h-5" />
+                        <span>Copy Code</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-                <button
-                  onClick={() => copyJoinCode(classInfo.joinCode)}
-                  className="bg-white bg-opacity-20 hover:bg-opacity-30 px-6 py-3 rounded-lg transition-colors flex items-center gap-2"
-                >
-                  {copiedJoinCode ? (
-                    <>
-                      <CheckCircle className="w-5 h-5" />
-                      <span>Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-5 h-5" />
-                      <span>Copy Code</span>
-                    </>
-                  )}
-                </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -505,7 +518,7 @@ export default function ClassroomPage() {
             {classDetails?.students && classDetails.students.length > 0 ? (
               <div className="divide-y divide-gray-200">
                 {classDetails.students.map((student, index) => (
-                  <div key={student.studentMockId} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div key={student.studentId} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold">
@@ -514,7 +527,7 @@ export default function ClassroomPage() {
                         <div>
                           <h4 className="text-sm font-medium text-gray-900">{student.name}</h4>
                           <p className="text-sm text-gray-500">{student.email}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">ID: {student.studentMockId}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">ID: {student.studentId}</p>
                         </div>
                       </div>
                       
@@ -576,13 +589,15 @@ export default function ClassroomPage() {
               <p className="text-gray-600 mb-6">
                   Share the join code with students to add them to this classroom
               </p>
-              <button
-                  onClick={() => copyJoinCode(classDetails?.class.joinCode || '')}
+              {classDetails?.class.joinCode && (
+                <button
+                  onClick={() => copyJoinCode(classDetails.class.joinCode || '')}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors inline-flex items-center space-x-2"
-              >
+                >
                   <Copy className="w-4 h-4" />
                   <span>Copy Join Code</span>
-              </button>
+                </button>
+              )}
             </div>
             )}
           </div>
