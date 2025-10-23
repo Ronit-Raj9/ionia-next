@@ -257,7 +257,7 @@ function extractStructuredDataFallback(text: string): {
   const tables: string[] = [];
   
   // Extract questions (lines starting with numbers or Q)
-  const questionPattern = /(?:^|\n)\s*(?:\d+\.|Q\d*\.?|Question\s*\d*\.?)\s*(.+?)(?=\n\s*(?:\d+\.|Q\d*\.?|Question\s*\d*\.?)|$)/gims;
+  const questionPattern = /(?:^|\n)\s*(?:\d+\.|Q\d*\.?|Question\s*\d*\.?)\s*([\s\S]+?)(?=\n\s*(?:\d+\.|Q\d*\.?|Question\s*\d*\.?)|$)/gim;
   let match;
   while ((match = questionPattern.exec(text)) !== null) {
     questions.push(match[1].trim());

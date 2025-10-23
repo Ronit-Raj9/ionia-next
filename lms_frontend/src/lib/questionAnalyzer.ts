@@ -298,7 +298,7 @@ function validateDifficultyAnalysis(difficulty: any): DifficultyAnalysis {
 function validateAndEnhanceAnalysis(analysis: QuestionAnalysis, questionText: string, subject: string, grade: string): QuestionAnalysis {
   // Enhance keywords extraction
   const enhancedKeywords = extractKeywordsFromText(questionText);
-  analysis.keywords = [...new Set([...analysis.keywords, ...enhancedKeywords])];
+  analysis.keywords = Array.from(new Set([...analysis.keywords, ...enhancedKeywords]));
   
   // Adjust estimated time based on complexity
   const timeMultiplier = analysis.cognitiveComplexity.score / 5;
