@@ -1,0 +1,42 @@
+# Core Dependencies for Ionia AI Integration
+pydantic
+rich
+aiohttp>=3.8.0
+
+# LLM - LiteLLM for 100+ AI model support
+litellm>=1.72.6
+openai>=1.30.0
+
+# Vector Database - Qdrant
+qdrant-client>=1.7.0
+
+# Database - Supabase for PostgreSQL
+supabase>=2.0.0
+
+# Document Processing
+markitdown
+chonkie>=1.0.2
+
+# Tool Dependencies (ALL tools preserved)
+pandas
+openpyxl
+xlrd
+duckdb
+arxiv
+wikipedia
+yfinance
+newspaper3k
+beautifulsoup4
+lxml
+pyyaml
+duckduckgo-search
+requests
+
+# Optional: Training (install separately if needed)
+# unsloth[colab-new]>=2024.11.7
+# torch
+# transformers
+# trl
+# datasets
+# psutil
+# opencv-python

@@ -1,0 +1,108 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "praisonaiagents"
+version = "0.0.162"
+description = "Praison AI agents for completing complex tasks with Self Reflection Agents - Integrated for Ionia"
+requires-python = ">=3.10"
+authors = [
+    { name="Mervin Praison" }
+]
+dependencies = [
+    # Core dependencies
+    "pydantic",
+    "rich",
+    "aiohttp>=3.8.0",
+    
+    # LLM - LiteLLM for multi-provider support (100+ models)
+    "litellm>=1.72.6",
+    "openai>=1.30.0",  # Required by litellm and for direct OpenAI calls
+    
+    # Vector Database - Qdrant for RAG
+    "qdrant-client>=1.7.0",
+    
+    # Database - Supabase for persistent storage
+    "supabase>=2.0.0",
+    
+    # Document processing for knowledge/RAG
+    "markitdown",
+    "chonkie>=1.0.2",
+    
+    # Tool dependencies (keep ALL tools as requested)
+    "pandas",  # For analytics, reports
+    "openpyxl",  # For excel_tools
+    "xlrd",  # For reading old Excel files
+    "duckdb",  # For duckdb_tools
+    "arxiv",  # For arxiv_tools
+    "wikipedia",  # For wikipedia_tools
+    "yfinance",  # For yfinance_tools
+    "newspaper3k",  # For newspaper_tools
+    "beautifulsoup4",  # For spider_tools
+    "lxml",  # For xml_tools
+    "pyyaml",  # For yaml_tools
+    "duckduckgo-search",  # For duckduckgo_tools
+    "requests",  # For general web requests
+]
+
+[project.optional-dependencies]
+# MCP (Model Context Protocol) support
+mcp = [
+    "mcp>=1.6.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0"
+]
+
+# Memory with embeddings
+memory = [
+    "litellm>=1.72.6",
+]
+
+# Knowledge/RAG
+knowledge = [
+    "markitdown[all]>=0.1.0",
+    "chonkie>=1.0.2"
+]
+
+# Training support (keep as requested)
+training = [
+    "unsloth[colab-new]>=2024.11.7",
+    "torch",
+    "transformers",
+    "trl",
+    "datasets",
+    "psutil",
+    "opencv-python",  # For vision training
+]
+
+# Telemetry (optional - for usage analytics)
+telemetry = [
+    "posthog>=3.0.0"
+]
+
+# MongoDB support (optional if needed later)
+mongodb = [
+    "pymongo>=4.6.3",
+    "motor>=3.4.0"
+]
+
+# API server
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0"
+]
+
+# Combined - all features
+all = [
+    "praisonaiagents[memory]",
+    "praisonaiagents[knowledge]",
+    "praisonaiagents[mcp]",
+    "praisonaiagents[api]",
+    "praisonaiagents[telemetry]",
+    "praisonaiagents[training]",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["praisonaiagents*"]
