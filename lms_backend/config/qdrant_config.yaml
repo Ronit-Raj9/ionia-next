@@ -1,0 +1,82 @@
+# Qdrant Configuration for Vector Embeddings & RAG
+# Phase 1: Collections for uploads, profiles, and lessons
+
+qdrant:
+  host: ${QDRANT_HOST:-localhost}
+  port: ${QDRANT_PORT:-6333}
+  api_key: ${QDRANT_API_KEY}
+  
+collections:
+  # CBSE Upload Embeddings
+  - name: upload_embeddings
+    description: "Embeddings for uploaded CBSE materials (PDFs, images, audio)"
+    vector_config:
+      size: 768  # all-MiniLM-L6-v2 dimension
+      distance: Cosine
+    optimizers_config:
+      default_segment_number: 2
+    indexes:
+      - field: school_id
+        type: keyword
+      - field: class_level
+        type: integer
+      - field: subject
+        type: keyword
+      - field: upload_date
+        type: datetime
+  
+  # Student Profile Embeddings
+  - name: student_profiles
+    description: "Student learning profiles (performance, personality, preferences)"
+    vector_config:
+      size: 384  # Smaller model for profiles
+      distance: Cosine
+    indexes:
+      - field: student_id
+        type: keyword
+      - field: school_id
+        type: keyword
+      - field: class_level
+        type: integer
+  
+  # Lesson Plan Embeddings
+  - name: lesson_plans
+    description: "Generated and saved lesson plans"
+    vector_config:
+      size: 768
+      distance: Cosine
+    indexes:
+      - field: teacher_id
+        type: keyword
+      - field: school_id
+        type: keyword
+      - field: subject
+        type: keyword
+      - field: week_number
+        type: integer
+
+# Embedding models
+embedding_models:
+  primary:
+    name: "all-MiniLM-L6-v2"
+    dimension: 384
+    max_seq_length: 256
+  
+  large:
+    name: "all-mpnet-base-v2"
+    dimension: 768
+    max_seq_length: 384
+
+# RAG settings
+rag:
+  top_k: 5  # Top 5 similar chunks
+  score_threshold: 0.7  # Minimum similarity score
+  max_chunk_size: 512  # tokens
+  chunk_overlap: 50  # tokens
+  
+# Search settings
+search:
+  limit: 10
+  with_vectors: false
+  with_payload: true
+

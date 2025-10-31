@@ -1,0 +1,63 @@
+# LiteLLMs Configuration for Multi-Model Routing with Failover
+# Phase 1: Groq (primary) → Gemini (fallback) → OpenAI (backup)
+
+model_list:
+  # Primary: Groq (Fast & Cost-effective)
+  - model_name: groq-llama
+    litellm_params:
+      model: groq/llama-3.1-70b-versatile
+      api_key: ${GROQ_API_KEY}
+      timeout: 30
+      max_retries: 2
+    model_info:
+      priority: 1
+      use_case: ["grading", "personalization", "lesson_plans"]
+  
+  # Fallback: Google Gemini
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: ${GOOGLE_API_KEY}
+      timeout: 45
+      max_retries: 2
+    model_info:
+      priority: 2
+      use_case: ["grading", "personalization", "lesson_plans"]
+  
+  # Backup: OpenAI GPT-4
+  - model_name: gpt-4-turbo
+    litellm_params:
+      model: gpt-4-turbo-preview
+      api_key: ${OPENAI_API_KEY}
+      timeout: 60
+      max_retries: 1
+    model_info:
+      priority: 3
+      use_case: ["grading", "personalization"]
+
+# Routing strategy
+router_settings:
+  routing_strategy: "priority"  # Try models by priority order
+  fallback_enabled: true
+  num_retries: 3
+  timeout: 90
+  
+# Rate limiting (per minute)
+rate_limit:
+  groq-llama: 60
+  gemini-pro: 30
+  gpt-4-turbo: 10
+
+# Caching
+cache:
+  enabled: true
+  type: "redis"
+  redis_url: ${REDIS_URL:-redis://localhost:6379}
+  ttl: 3600  # 1 hour
+
+# Logging
+logging:
+  level: INFO
+  log_raw_request_response: false
+  log_only_api_errors: false
+
