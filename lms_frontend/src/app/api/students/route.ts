@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS } from '@/lib/db';
 import { getSessionFromRequest } from '@/lib/sessionManager';
+import { ObjectId } from 'mongodb';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -43,15 +44,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate and convert schoolId to ObjectId
+    let schoolIdObjectId: ObjectId;
+    try {
+      schoolIdObjectId = new ObjectId(targetSchoolId);
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid schoolId format' },
+        { status: 400 }
+      );
+    }
+
     try {
       const usersCollection = await getCollection(COLLECTIONS.USERS);
       const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
       
-      // Get student users filtered by EXACT schoolId match (case-sensitive)
+      // Get student users filtered by EXACT schoolId match (as ObjectId)
       const students = await usersCollection
         .find({ 
           role: 'student',
-          schoolId: targetSchoolId  // Use validated school ID
+          schoolId: schoolIdObjectId  // Use ObjectId for proper MongoDB query
         })
         .sort({ userId: 1 })
         .toArray();

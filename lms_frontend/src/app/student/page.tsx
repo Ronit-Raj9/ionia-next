@@ -33,6 +33,7 @@ import StudentClassroom from '@/components/StudentClassroom';
 import LearningAssessmentQuiz from '@/components/LearningAssessmentQuiz';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
 import JoinClassroom from '@/components/JoinClassroom';
+import ClassChat from '@/components/ClassChat';
 
 // Import types from the new system
 import { Assignment, Submission, Progress } from '@/lib/db';
@@ -61,7 +62,7 @@ export default function StudentDashboard() {
   const [recentBadges, setRecentBadges] = useState<string[]>([]);
   
   // Tab state and classes
-  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings' | 'adaptive-assignments'>('assignments');
+  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings' | 'adaptive-assignments' | 'class-chat'>('assignments');
   const [classes, setClasses] = useState<any[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -477,6 +478,17 @@ export default function StudentDashboard() {
               >
                 <MessageCircle className="w-4 h-4 inline mr-2" />
                 Message Teacher
+              </button>
+              <button
+                onClick={() => setActiveTab('class-chat')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'class-chat'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 inline mr-2" />
+                Class Chat
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -1127,8 +1139,13 @@ export default function StudentDashboard() {
                               {classData.className}
                             </h3>
                             <p className="text-sm text-gray-600">
-                              Teacher: {classData.teacherMockId?.replace('teacher', 'Teacher ') || 'Teacher'}
+                              Teacher: {classData.teacherName || classData.teacherId || 'Teacher'}
                             </p>
+                            {classData.teacherId && (
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                ID: {classData.teacherId}
+                              </p>
+                            )}
                           </div>
                           {classData.hasUnreadMessages && (
                             <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -1330,6 +1347,29 @@ export default function StudentDashboard() {
                 teacherName="Teacher"
                 isEmbedded={true}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Class Chat Tab Content */}
+        {activeTab === 'class-chat' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Classroom Chat</h2>
+                <p className="text-gray-600">
+                  Ask questions, share ideas, and chat with your teacher and classmates
+                </p>
+              </div>
+              <div className="h-[calc(100vh-300px)] min-h-[500px]">
+                <ClassChat
+                  userId={user?.userId || ''}
+                  userName={user?.name || user?.displayName || 'Student'}
+                  role="student"
+                  classId={user?.classId || undefined}
+                  isEmbedded={true}
+                />
+              </div>
             </div>
           </div>
         )}

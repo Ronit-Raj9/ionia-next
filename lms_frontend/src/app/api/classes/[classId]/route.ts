@@ -124,6 +124,7 @@ export async function GET(
           subject: classData.subject,
           grade: classData.grade,
           teacherId: classData.teacherId,
+          teacherName: classData.teacherName || 'Teacher', // Include teacher name
           studentIds: classData.studentIds,
           joinCode: classData.joinCode,
           isActive: classData.isActive,
