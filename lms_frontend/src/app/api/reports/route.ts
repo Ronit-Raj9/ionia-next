@@ -163,9 +163,31 @@ export async function GET(request: NextRequest) {
         teacherId: userId
       }) as unknown as Class | null;
     } else if (role === 'admin') {
-      classData = await classesCollection.findOne({ 
-        _id: classId ? new ObjectId(classId) : { $exists: true }
-      }) as unknown as Class | null;
+      // For admin, get first class or use classId if provided
+      if (classId) {
+        // Validate classId format before creating ObjectId
+        if (typeof classId === 'string' && classId.trim().length === 24) {
+          try {
+            classData = await classesCollection.findOne({ 
+              _id: new ObjectId(classId)
+            }) as unknown as Class | null;
+          } catch (error) {
+            // Invalid ObjectId format, return error
+            return NextResponse.json(
+              { success: false, error: 'Invalid class ID format' },
+              { status: 400 }
+            );
+          }
+        } else {
+          return NextResponse.json(
+            { success: false, error: 'Invalid class ID format' },
+            { status: 400 }
+          );
+        }
+      } else {
+        // No classId provided, get first class (admin can access all)
+        classData = await classesCollection.findOne({}) as unknown as Class | null;
+      }
     }
 
     if (!classData) {

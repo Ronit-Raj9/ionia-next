@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get users collection to fetch teacher names
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
+
     if (chatId) {
       // Get specific class chat
       const classChat = await classChatsCollection.findOne({
@@ -43,6 +46,21 @@ export async function GET(request: NextRequest) {
           { success: false, error: 'Class chat not found or access denied' },
           { status: 404 }
         );
+      }
+
+      // Ensure teacherName is populated
+      if (!classChat.teacherName || classChat.teacherName === 'Teacher') {
+        const teacher = await usersCollection.findOne({ userId: classChat.teacherId });
+        const teacherName = teacher?.name || teacher?.displayName || 'Teacher';
+        
+        // Update the chat document if teacherName was missing
+        if (!classChat.teacherName || classChat.teacherName === 'Teacher') {
+          await classChatsCollection.updateOne(
+            { _id: new ObjectId(chatId) },
+            { $set: { teacherName: teacherName } }
+          );
+          classChat.teacherName = teacherName;
+        }
       }
 
       return NextResponse.json({
@@ -66,9 +84,30 @@ export async function GET(request: NextRequest) {
         .sort({ lastActivity: -1 })
         .toArray() as unknown as ClassChat[];
 
+      // Ensure teacherName is populated for all chats
+      const enrichedChats = await Promise.all(
+        classChats.map(async (chat) => {
+          // If teacherName is missing or is the default "Teacher", fetch from users collection
+          if (!chat.teacherName || chat.teacherName === 'Teacher') {
+            const teacher = await usersCollection.findOne({ userId: chat.teacherId });
+            const teacherName = teacher?.name || teacher?.displayName || 'Teacher';
+            
+            // Update the chat document if teacherName was missing
+            if (!chat.teacherName || chat.teacherName === 'Teacher') {
+              await classChatsCollection.updateOne(
+                { _id: chat._id },
+                { $set: { teacherName: teacherName } }
+              );
+              chat.teacherName = teacherName;
+            }
+          }
+          return chat;
+        })
+      );
+
       return NextResponse.json({
         success: true,
-        data: classChats
+        data: enrichedChats
       });
     }
   } catch (error) {
@@ -141,12 +180,17 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Fetch actual teacher name from users collection
+      const usersCollection = await getCollection(COLLECTIONS.USERS);
+      const teacher = await usersCollection.findOne({ userId: userId });
+      const teacherName = teacher?.name || teacher?.displayName || userName;
+
       const now = new Date();
       const participants = [
         {
           userId,
           role: 'teacher' as const,
-          name: userName,
+          name: teacherName,
           joinedAt: now,
           isActive: true
         },
@@ -162,6 +206,7 @@ export async function POST(request: NextRequest) {
       const newClassChat: ClassChat = {
         classId,
         teacherId: userId,
+        teacherName: teacherName, // Store actual teacher name for traceability
         className,
         description,
         participants,
@@ -258,6 +303,7 @@ export async function POST(request: NextRequest) {
       }
 
       const now = new Date();
+
       const newMessage: ClassChatMessage = {
         _id: new ObjectId(),
         senderId: userId,
@@ -267,7 +313,6 @@ export async function POST(request: NextRequest) {
         content: content || '',
         attachments: attachments.length > 0 ? attachments : undefined,
         timestamp: now,
-        isRead: false,
         reactions: []
       };
 

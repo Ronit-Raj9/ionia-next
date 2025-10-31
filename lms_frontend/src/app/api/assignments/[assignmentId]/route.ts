@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { getCollection, COLLECTIONS } from '@/lib/db';
+import { getSessionFromRequest } from '@/lib/sessionManager';
 
 // GET - Fetch details for a specific assignment
 export async function GET(
@@ -106,11 +107,20 @@ export async function DELETE(
   { params }: { params: { assignmentId: string } }
 ) {
   try {
-    const { role, userId } = await request.json();
-
-    if (role !== 'teacher') {
+    // SECURITY: Require authentication
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
       return NextResponse.json(
-        { success: false, error: 'Only teachers can delete assignments' },
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // SECURITY: Only teachers, admins, and superadmins can delete assignments
+    if (!['teacher', 'admin', 'superadmin'].includes(session.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Only teachers, admins, and superadmins can delete assignments' },
         { status: 403 }
       );
     }
@@ -126,7 +136,7 @@ export async function DELETE(
 
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     
-    // Check if assignment exists and user has permission
+    // Check if assignment exists
     const assignment = await assignmentsCollection.findOne({
       _id: new ObjectId(assignmentId)
     });
@@ -138,12 +148,28 @@ export async function DELETE(
       );
     }
 
-    if (assignment.createdBy !== userId) {
-      return NextResponse.json(
-        { success: false, error: 'You do not have permission to delete this assignment' },
-        { status: 403 }
-      );
+    // SECURITY: Check permissions based on role
+    // Teachers can only delete their own assignments
+    // Admins can delete assignments in their school
+    // Superadmins can delete any assignment
+    if (session.role === 'teacher') {
+      if (assignment.createdBy !== session.userId) {
+        return NextResponse.json(
+          { success: false, error: 'You do not have permission to delete this assignment' },
+          { status: 403 }
+        );
+      }
+    } else if (session.role === 'admin' && session.schoolId) {
+      // Admin can delete assignments in their school
+      const assignmentSchoolId = assignment.schoolId?.toString();
+      if (assignmentSchoolId !== session.schoolId) {
+        return NextResponse.json(
+          { success: false, error: 'You can only delete assignments from your school' },
+          { status: 403 }
+        );
+      }
     }
+    // Superadmin can delete any assignment (no additional check)
 
     // Delete the assignment
     const result = await assignmentsCollection.deleteOne({

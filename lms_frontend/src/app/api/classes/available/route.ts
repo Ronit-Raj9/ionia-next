@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
     
     // Find classes in the same school that the student is not already a member of
     const availableClasses = await classesCollection
@@ -49,20 +50,37 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray() as unknown as Class[];
 
-    // Return only basic info needed for joining
-    const formattedClasses = availableClasses.map(classData => ({
-      _id: classData._id,
-      className: classData.className,
-      description: classData.description,
-      subject: classData.subject,
-      grade: classData.grade,
-      teacherId: classData.teacherId,
-      teacherName: classData.teacherName,
-      studentCount: classData.studentIds?.length || 0,
-      joinCode: classData.joinCode,
-      currentTopic: classData.currentTopic,
-      syllabus: classData.syllabus,
-      createdAt: classData.createdAt
+    // Return only basic info needed for joining, with teacher names populated
+    const formattedClasses = await Promise.all(availableClasses.map(async (classData) => {
+      // Ensure teacherName is populated
+      let teacherName = classData.teacherName;
+      if (!teacherName || teacherName === 'Teacher') {
+        const teacher = await usersCollection.findOne({ userId: classData.teacherId });
+        teacherName = teacher?.name || teacher?.displayName || 'Teacher';
+        
+        // Update class with teacher name if missing
+        if (!classData.teacherName) {
+          await classesCollection.updateOne(
+            { _id: classData._id },
+            { $set: { teacherName: teacherName } }
+          );
+        }
+      }
+
+      return {
+        _id: classData._id,
+        className: classData.className,
+        description: classData.description,
+        subject: classData.subject,
+        grade: classData.grade,
+        teacherId: classData.teacherId,
+        teacherName: teacherName, // Use populated teacher name
+        studentCount: classData.studentIds?.length || 0,
+        joinCode: classData.joinCode,
+        currentTopic: classData.currentTopic,
+        syllabus: classData.syllabus,
+        createdAt: classData.createdAt
+      };
     }));
 
     return NextResponse.json({

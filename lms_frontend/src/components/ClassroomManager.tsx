@@ -17,10 +17,13 @@ import {
   Search,
   Filter,
   BarChart3,
-  Eye
+  Eye,
+  X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import StudentSelector from './StudentSelector';
+import BulkClassEnrollment from './BulkClassEnrollment';
+import StudentManagementModal from './StudentManagementModal';
 
 interface Classroom {
   _id: string;
@@ -50,7 +53,7 @@ interface Classroom {
 interface ClassroomManagerProps {
   userId: string;
   userName: string;
-  role: 'teacher' | 'admin';
+  role: 'teacher' | 'admin' | 'superadmin';
   schoolId: string;
   onClassSelected?: (classId: string) => void;
 }
@@ -61,21 +64,52 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
   const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showStudentSelector, setShowStudentSelector] = useState(false);
+  const [showStudentManagement, setShowStudentManagement] = useState(false);
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
   const [copiedJoinCode, setCopiedJoinCode] = useState<string | null>(null);
+  const [showBulkEnrollment, setShowBulkEnrollment] = useState(false);
 
   // Form state
   const [newClassName, setNewClassName] = useState('');
   const [newClassDescription, setNewClassDescription] = useState('');
   const [newClassSubject, setNewClassSubject] = useState('');
   const [newClassGrade, setNewClassGrade] = useState('');
+  const [newClassTeacherId, setNewClassTeacherId] = useState<string>(''); // For admin to select teacher
   const [creatingClass, setCreatingClass] = useState(false);
+  
+  // Teachers list (for admin role)
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
 
   useEffect(() => {
     fetchClassrooms();
+    // Fetch teachers if admin role
+    if (role === 'admin' || role === 'superadmin') {
+      fetchTeachers();
+    }
   }, [userId, role, schoolId]);
+
+  const fetchTeachers = async () => {
+    setLoadingTeachers(true);
+    try {
+      const response = await fetch(`/api/users?role=teacher&schoolId=${schoolId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setTeachers(data.data || []);
+      } else {
+        console.error('Failed to fetch teachers:', data.error);
+        setTeachers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+      setTeachers([]);
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
 
   const fetchClassrooms = async () => {
     setLoading(true);
@@ -119,12 +153,23 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
       return;
     }
 
+    // For admin, use selected teacherId; for teacher, use their own userId
+    const assignedTeacherId = (role === 'admin' || role === 'superadmin') && newClassTeacherId
+      ? newClassTeacherId
+      : userId;
+
+    if (!assignedTeacherId) {
+      toast.error('Please select a teacher for this class');
+      return;
+    }
+
     console.log('Creating class with:', {
-      teacherId: userId,
+      teacherId: assignedTeacherId,
       className: newClassName,
       schoolId: schoolId,
       subject: newClassSubject,
-      grade: newClassGrade
+      grade: newClassGrade,
+      role: role
     });
 
     setCreatingClass(true);
@@ -135,7 +180,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          teacherId: userId,
+          teacherId: assignedTeacherId,
           className: newClassName.trim(),
           description: newClassDescription.trim() || '',
           subject: newClassSubject || 'General',
@@ -155,6 +200,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
         setNewClassDescription('');
         setNewClassSubject('');
         setNewClassGrade('');
+        setNewClassTeacherId(''); // Reset teacher selection
         fetchClassrooms();
       } else {
         console.error('Failed to create classroom:', data);
@@ -216,13 +262,25 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
           <h2 className="text-2xl font-bold text-gray-900">Classrooms</h2>
           <p className="text-gray-600">Manage your classes and students</p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Create Classroom
-        </button>
+        <div className="flex items-center space-x-3">
+          {(role === 'admin' || role === 'superadmin') && (
+            <button
+              onClick={() => setShowBulkEnrollment(true)}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              title="Bulk enroll students into multiple classes (Admin only)"
+            >
+              <Users className="w-4 h-4" />
+              Bulk Enrollment
+            </button>
+          )}
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Create Classroom
+          </button>
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -285,66 +343,53 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => copyJoinCode(classroom.joinCode)}
-                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Copy join code"
-                  >
-                    {copiedJoinCode === classroom.joinCode ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClass(classroom._id, classroom.className)}
-                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                    title="Delete classroom"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-emerald-600" />
-                  <span className="text-sm text-gray-700">
-                    {classroom.studentCount} students
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <BookOpen className="w-4 h-4 text-emerald-600" />
-                  <span className="text-sm text-gray-700">
-                    {classroom.recentAssignments || 0} assignments
-                  </span>
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-5 h-5 text-emerald-600" />
+                    <span className="text-base font-semibold text-gray-900">
+                      {classroom.studentCount || 0} Students
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <BookOpen className="w-4 h-4" />
+                    <span>{classroom.recentAssignments || 0} assignments</span>
+                  </div>
                 </div>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-3 mb-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-600">Join Code:</span>
-                  <code className="text-sm font-mono bg-white px-2 py-1 rounded border">
+                  <code 
+                    className="text-sm font-mono bg-white px-2 py-1 rounded border cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => copyJoinCode(classroom.joinCode)}
+                    title="Click to copy"
+                  >
                     {classroom.joinCode}
                   </code>
                 </div>
               </div>
 
-              <div className="flex space-x-2">
+              <div className="flex flex-col space-y-2">
                 <button
-                  onClick={() => router.push(`/teacher/classroom/${classroom._id}`)}
-                  className="flex-1 px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-1"
+                  onClick={() => {
+                    setSelectedClassroom(classroom);
+                    setShowStudentManagement(true);
+                  }}
+                  className="w-full px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-2"
                 >
-                  <Eye className="w-4 h-4" />
-                  <span>View Details</span>
+                  <Users className="w-4 h-4" />
+                  <span>Manage Students</span>
                 </button>
                 <button
-                  onClick={() => setSelectedClassroom(classroom)}
-                  className="px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors"
-                  title="Manage students"
+                  onClick={() => router.push(`/teacher/classroom/${classroom._id}`)}
+                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Eye className="w-4 h-4" />
+                  <span>Class Details</span>
                 </button>
               </div>
             </motion.div>
@@ -419,6 +464,38 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                   />
                 </div>
 
+                {/* Teacher Selection (only for admin/superadmin) */}
+                {(role === 'admin' || role === 'superadmin') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assign Teacher *
+                    </label>
+                    {loadingTeachers ? (
+                      <div className="w-full px-3 py-2 border border-gray-300 rounded-md flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                        <span className="ml-2 text-sm text-gray-500">Loading teachers...</span>
+                      </div>
+                    ) : (
+                      <select
+                        value={newClassTeacherId}
+                        onChange={(e) => setNewClassTeacherId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select a Teacher</option>
+                        {teachers.map(teacher => (
+                          <option key={teacher.userId} value={teacher.userId}>
+                            {teacher.name || teacher.displayName || teacher.email || teacher.userId}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {teachers.length === 0 && !loadingTeachers && (
+                      <p className="text-xs text-gray-500 mt-1">No teachers available in your school</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -468,7 +545,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                 </button>
                 <button
                   onClick={handleCreateClass}
-                  disabled={creatingClass || !newClassName.trim()}
+                  disabled={creatingClass || !newClassName.trim() || ((role === 'admin' || role === 'superadmin') && !newClassTeacherId)}
                   className="px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 disabled:bg-gray-300 transition-colors flex items-center gap-2"
                 >
                   {creatingClass ? (
@@ -486,73 +563,55 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
         )}
       </AnimatePresence>
 
-      {/* Student Management Modal */}
-      <AnimatePresence>
-        {selectedClassroom && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4"
-            >
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Manage Students - {selectedClassroom.className}
-                </h3>
-              </div>
-              
-              <div className="p-6">
-                <StudentSelector
-                  onStudentsSelected={async (students) => {
-                    // Handle student selection for existing classroom
-                    console.log('Selected students for classroom:', students);
-                    
-                    try {
-                      const response = await fetch('/api/classes', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          classId: selectedClassroom._id,
-                          teacherId: userId,
-                          selectedStudents: students,
-                          role: role
-                        })
-                      });
+      {/* Unified Student Management Modal */}
+      {showStudentManagement && selectedClassroom && (
+        <StudentManagementModal
+          onClose={() => {
+            setShowStudentManagement(false);
+            setSelectedClassroom(null);
+          }}
+          classId={selectedClassroom._id}
+          className={selectedClassroom.className}
+          teacherId={userId}
+          teacherRole={role}
+          teacherSchoolId={schoolId}
+          currentStudentIds={selectedClassroom.studentIds || []}
+          onUpdate={() => {
+            fetchClassrooms();
+          }}
+        />
+      )}
 
-                      const data = await response.json();
-                      
-                      if (data.success) {
-                        toast.success(`Added ${students.length} students to ${selectedClassroom.className}`);
-                        // Refresh the classrooms list
-                        fetchClassrooms();
-                      } else {
-                        toast.error(data.error || 'Failed to add students to class');
-                      }
-                    } catch (error) {
-                      console.error('Error adding students to class:', error);
-                      toast.error('Failed to add students to class');
-                    }
-                    
-                    setSelectedClassroom(null);
-                  }}
-                  onClose={() => setSelectedClassroom(null)}
-                  classId={selectedClassroom._id}
-                  teacherId={userId}
-                  teacherRole={role}
-                  teacherSchoolId={schoolId}
-                  isCreatingClass={false} // This is for managing existing classroom
-                />
-              </div>
-            </motion.div>
+      {/* Bulk Enrollment Modal */}
+      {showBulkEnrollment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Bulk Class Enrollment</h2>
+              <button
+                onClick={() => setShowBulkEnrollment(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <BulkClassEnrollment
+              adminUserId={userId}
+              role={role === 'superadmin' ? 'superadmin' : 'admin'}
+              schoolId={schoolId}
+              onComplete={() => {
+                setShowBulkEnrollment(false);
+                fetchClassrooms(); // Refresh classrooms list
+              }}
+            />
           </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

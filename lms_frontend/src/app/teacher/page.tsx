@@ -32,6 +32,7 @@ import AcademicPlanner from '@/components/AcademicPlanner';
 import TeacherAssignmentCreator from '@/components/TeacherAssignmentCreator';
 import TeacherAnalyticsDashboard from '@/components/TeacherAnalyticsDashboard';
 import StudyMaterialManager from '@/components/StudyMaterialManager';
+import ClassChat from '@/components/ClassChat';
 import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 import { Assignment, Submission, Progress, User } from '@/lib/db';
 import { analyzeQuestion } from '@/lib/questionAnalyzer';
@@ -118,7 +119,7 @@ export default function TeacherDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials' | 'class-chat'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -566,6 +567,17 @@ export default function TeacherDashboard() {
               >
                 <MessageCircle className="w-4 h-4 inline mr-2" />
                 Student Messages
+              </button>
+              <button
+                onClick={() => setActiveTab('class-chat')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'class-chat'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 inline mr-2" />
+                Class Chat
               </button>
             </nav>
           </div>
@@ -1362,6 +1374,27 @@ export default function TeacherDashboard() {
               teacherRole={user?.role || 'teacher'}
               teacherSchoolId={user?.schoolId?.toString() || ''}
             />
+        )}
+
+        {/* Class Chat Tab */}
+        {activeTab === 'class-chat' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 min-h-[600px]">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Classroom Chat</h2>
+              <p className="text-gray-600">
+                Chat with your students, answer questions, and facilitate class discussions
+              </p>
+            </div>
+            <div className="h-[calc(100vh-300px)] min-h-[500px]">
+              <ClassChat
+                userId={user?.userId || ''}
+                userName={user?.name || user?.displayName || 'Teacher'}
+                role="teacher"
+                classId={selectedClassId || user?.classId || undefined}
+                isEmbedded={true}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

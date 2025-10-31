@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
     const schoolsCollection = await getCollection(COLLECTIONS.SCHOOLS);
     const schoolCodesCollection = await getCollection(COLLECTIONS.SCHOOL_CODES);
 
-    // Get user and verify admin role
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+    // Get user and verify admin role (userId is the custom ID, not MongoDB _id)
+    const user = await usersCollection.findOne({ userId: userId });
     if (!user || user.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - Admin access required' },
@@ -39,8 +39,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Validate schoolId exists and convert to ObjectId
+    if (!user.schoolId) {
+      return NextResponse.json(
+        { success: false, error: 'User is not associated with a school' },
+        { status: 400 }
+      );
+    }
+
     // Get school data
-    const school = await schoolsCollection.findOne({ _id: user.schoolId });
+    const school = await schoolsCollection.findOne({ _id: new ObjectId(user.schoolId) });
     if (!school) {
       return NextResponse.json(
         { success: false, error: 'School not found' },

@@ -642,7 +642,6 @@ export interface ClassChatMessage {
     fileSize: number;
   }[];
   timestamp: Date;
-  isRead: boolean;
   reactions?: {
     userId: string;
     type: 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry';
@@ -654,7 +653,8 @@ export interface ClassChat {
   _id?: ObjectId;
   classId: string;
   teacherId: string;
-  className: string;
+  teacherName: string; // Teacher's actual name for traceability
+  className: string; // Class name for traceability
   description?: string;
   participants: {
     userId: string;

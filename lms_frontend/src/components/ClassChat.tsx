@@ -35,7 +35,6 @@ export interface ClassChatMessage {
     fileSize: number;
   }[];
   timestamp: Date;
-  isRead: boolean;
   reactions?: {
     userId: string;
     type: 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry';
@@ -47,7 +46,8 @@ export interface ClassChat {
   _id: string;
   classId: string;
   teacherId: string;
-  className: string;
+  teacherName?: string; // Teacher's actual name for traceability
+  className: string; // Class name for traceability
   description?: string;
   participants: {
     userId: string;
@@ -90,18 +90,6 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch class chats on load
-  useEffect(() => {
-    if (userId && role) {
-      fetchClassChats();
-    }
-  }, [userId, role, classId]);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    scrollToBottom();
-  }, [activeChat?.messages]);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -120,8 +108,16 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
 
       if (data.success) {
         setClassChats(data.data);
-        if (data.data.length > 0 && !activeChat) {
-          setActiveChat(data.data[0]);
+        if (data.data.length > 0) {
+          // Update active chat if it exists, otherwise set first one
+          if (activeChat) {
+            const updatedChat = data.data.find((chat: ClassChat) => chat._id === activeChat._id);
+            if (updatedChat) {
+              setActiveChat(updatedChat);
+            }
+          } else {
+            setActiveChat(data.data[0]);
+          }
         }
       } else {
         toast.error('Failed to load class chats');
@@ -133,6 +129,31 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
       setLoading(false);
     }
   };
+
+  // Fetch class chats on load
+  useEffect(() => {
+    if (userId && role) {
+      fetchClassChats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, role, classId]);
+
+  // Real-time polling for new messages (every 3 seconds)
+  useEffect(() => {
+    if (!activeChat?._id || !userId) return;
+
+    const pollInterval = setInterval(() => {
+      fetchClassChats();
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChat?._id, userId]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    scrollToBottom();
+  }, [activeChat?.messages]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
