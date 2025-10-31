@@ -109,10 +109,10 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">IONIA</span>
+            <span className="text-xl font-bold text-emerald-700">IONIA</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -122,7 +122,7 @@ export default function Navbar() {
                 <button
                   key={item.name}
                   onClick={item.onClick}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+                  className="flex items-center space-x-1 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
@@ -131,7 +131,7 @@ export default function Navbar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+                  className="flex items-center space-x-1 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
@@ -144,18 +144,18 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-4">
             {isLoading ? (
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                 <span className="text-sm text-gray-600">Loading...</span>
               </div>
             ) : user ? (
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">
                   Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName || 'User'}</span>
-                  <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full capitalize">
+                  <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full capitalize">
                     {user.role}
                   </span>
                   {user.schoolId && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                    <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full">
                       {user.schoolId?.toString()}
                     </span>
                   )}
@@ -163,7 +163,7 @@ export default function Navbar() {
                 <div className="flex items-center space-x-2">
                   <Link
                     href="/profile"
-                    className="p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+                    className="p-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
                   >
                     <User className="w-5 h-5" />
                   </Link>
@@ -179,7 +179,7 @@ export default function Navbar() {
               <div className="flex items-center space-x-4">
                 <Link
                   href="/login"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all duration-200 shadow-md"
+                  className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-6 py-2 rounded-lg transition-all duration-200 shadow-md"
                 >
                   Login
                 </Link>
@@ -191,7 +191,7 @@ export default function Navbar() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200"
+              className="p-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -210,7 +210,7 @@ export default function Navbar() {
                       item.onClick?.();
                       setIsMenuOpen(false);
                     }}
-                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2 w-full text-left"
+                    className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200 py-2 w-full text-left"
                   >
                     <item.icon className="w-5 h-5" />
                     <span>{item.name}</span>
@@ -219,7 +219,7 @@ export default function Navbar() {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
+                    className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200 py-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <item.icon className="w-5 h-5" />
@@ -231,7 +231,7 @@ export default function Navbar() {
               {isLoading ? (
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="flex items-center justify-center space-x-2 py-2">
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                     <span className="text-sm text-gray-600">Loading...</span>
                   </div>
                 </div>
@@ -239,7 +239,7 @@ export default function Navbar() {
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="text-sm text-gray-600 px-2">
                     Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName}</span>
-                    <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full capitalize">
+                    <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full capitalize">
                       {user.role}
                     </span>
                     {user.email && (
@@ -248,7 +248,7 @@ export default function Navbar() {
                   </div>
                   <Link
                     href="/profile"
-                    className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2"
+                    className="flex items-center space-x-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200 py-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <User className="w-5 h-5" />
@@ -267,11 +267,11 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-3 rounded-lg transition-all duration-200 text-center font-medium shadow-md"
+                    className="block w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-4 py-3 rounded-lg transition-all duration-200 text-center font-medium shadow-md"
                   >
                     Login
                   </Link>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                     <p className="text-xs text-gray-700 text-center">
                       <strong>Need an account?</strong> Contact your school administrator
                     </p>
@@ -298,7 +298,7 @@ export default function Navbar() {
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
-                    <MessageCircle className="w-5 h-5 mr-2 text-blue-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-emerald-600" />
                     General Chat
                   </h3>
                   <button
@@ -315,7 +315,7 @@ export default function Navbar() {
                     onClick={() => setActiveTab('class')}
                     className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       activeTab === 'class'
-                        ? 'bg-white text-blue-600 shadow-sm'
+                        ? 'bg-white text-emerald-600 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -326,7 +326,7 @@ export default function Navbar() {
                       onClick={() => setActiveTab('manage')}
                       className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                         activeTab === 'manage'
-                          ? 'bg-white text-blue-600 shadow-sm'
+                          ? 'bg-white text-emerald-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
@@ -337,7 +337,7 @@ export default function Navbar() {
                     onClick={() => setActiveTab('personal')}
                     className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                       activeTab === 'personal'
-                        ? 'bg-white text-blue-600 shadow-sm'
+                        ? 'bg-white text-emerald-600 shadow-sm'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >

@@ -312,7 +312,7 @@ export default function PersonalityQuiz({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center`}
+        className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-emerald-50 flex items-center justify-center`}
       >
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl w-full mx-4">
           <motion.div
@@ -332,7 +332,7 @@ export default function PersonalityQuiz({
             </p>
           </motion.div>
 
-          <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-6 mb-6">
+          <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl p-6 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Your Learning Profile
             </h3>
@@ -402,7 +402,7 @@ export default function PersonalityQuiz({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center`}
+      className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-emerald-50 flex items-center justify-center`}
     >
       <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 max-w-4xl w-full mx-4">
         {/* Header */}

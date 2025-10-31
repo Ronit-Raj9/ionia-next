@@ -326,10 +326,10 @@ export default function BulkStudentCreation({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+      <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-            <Users className="w-6 h-6 text-blue-600" />
+          <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+            <Users className="w-6 h-6 text-emerald-600" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Bulk Student Creation</h2>
@@ -347,7 +347,7 @@ export default function BulkStudentCreation({
             onClick={() => setPasteMode(false)}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               !pasteMode
-                ? 'bg-blue-600 text-white shadow-md'
+                ? 'bg-emerald-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -357,7 +357,7 @@ export default function BulkStudentCreation({
             onClick={() => setPasteMode(true)}
             className={`px-6 py-3 rounded-lg font-medium transition-all ${
               pasteMode
-                ? 'bg-blue-600 text-white shadow-md'
+                ? 'bg-emerald-600 text-white shadow-md'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -371,12 +371,12 @@ export default function BulkStudentCreation({
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Paste Student Data</h3>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-700 font-medium mb-2">Format (one student per line):</p>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+            <p className="text-sm text-emerald-700 font-medium mb-2">Format (one student per line):</p>
             <code className="text-sm text-blue-900 bg-white px-3 py-2 rounded block">
               Name | Email | Class | Section
             </code>
-            <p className="text-xs text-blue-600 mt-2">
+            <p className="text-xs text-emerald-600 mt-2">
               Example: Samuel White | student81@example.com | 10th | A
             </p>
           </div>
@@ -390,7 +390,7 @@ Samuel White | student81@example.com | 10th | A
 Grace Miller | student82@example.com | 10th | A
 Olivia Brown | student83@example.com | 10th | A
 Christopher Harris | student84@example.com | 10th | A"
-            className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none"
+            className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono text-sm resize-none"
           />
 
           <div className="mt-4 flex items-center justify-between">
@@ -410,7 +410,7 @@ Christopher Harris | student84@example.com | 10th | A"
               <button
                 onClick={handlePasteImport}
                 disabled={!pasteData.trim()}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition-colors"
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition-colors"
               >
                 Import Students
               </button>
@@ -433,7 +433,7 @@ Christopher Harris | student84@example.com | 10th | A"
               </button>
               <button
                 onClick={addStudent}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center space-x-2"
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Student</span>
@@ -465,7 +465,7 @@ Christopher Harris | student84@example.com | 10th | A"
                     className="grid grid-cols-12 gap-2 items-center p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <div className="col-span-1 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full font-medium text-sm">
+                      <span className="inline-flex items-center justify-center w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full font-medium text-sm">
                         {index + 1}
                       </span>
                     </div>
@@ -476,7 +476,7 @@ Christopher Harris | student84@example.com | 10th | A"
                         value={student.name}
                         onChange={(e) => updateStudent(student.id, 'name', e.target.value)}
                         placeholder="John Doe"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
                     
@@ -486,7 +486,7 @@ Christopher Harris | student84@example.com | 10th | A"
                         value={student.email}
                         onChange={(e) => updateStudent(student.id, 'email', e.target.value)}
                         placeholder="student@example.com"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
                     
@@ -496,7 +496,7 @@ Christopher Harris | student84@example.com | 10th | A"
                         value={student.class}
                         onChange={(e) => updateStudent(student.id, 'class', e.target.value)}
                         placeholder="10th"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
                     
@@ -506,7 +506,7 @@ Christopher Harris | student84@example.com | 10th | A"
                         value={student.section}
                         onChange={(e) => updateStudent(student.id, 'section', e.target.value)}
                         placeholder="A"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
                     
@@ -564,10 +564,10 @@ Christopher Harris | student84@example.com | 10th | A"
         </div>
 
         {/* Info Box */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="mt-6 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
           <div className="flex items-start">
-            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-            <div className="text-sm text-blue-700">
+            <AlertCircle className="w-5 h-5 text-emerald-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="text-sm text-emerald-700">
               <p className="font-medium mb-1">How it works:</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>Fill in student details for all students</li>
@@ -588,7 +588,7 @@ Christopher Harris | student84@example.com | 10th | A"
           <button
             onClick={handleBulkCreate}
             disabled={loading}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-lg transition-all duration-200 flex items-center space-x-2"
+            className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-lg transition-all duration-200 flex items-center space-x-2"
           >
             {loading ? (
               <>
@@ -694,7 +694,7 @@ Christopher Harris | student84@example.com | 10th | A"
                 </button>
                 <button
                   onClick={downloadCredentialsPDF}
-                  className="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
                 >
                   <Download className="w-5 h-5" />
                   <span>Download Text</span>
@@ -703,14 +703,14 @@ Christopher Harris | student84@example.com | 10th | A"
               <div className="flex items-center space-x-3">
                 <button
                   onClick={copyAllCredentials}
-                  className="flex-1 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
                 >
                   <Copy className="w-5 h-5" />
                   <span>Copy (Formatted)</span>
                 </button>
                 <button
                   onClick={copyPipeFormat}
-                  className="flex-1 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  className="flex-1 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
                 >
                   <Copy className="w-5 h-5" />
                   <span>Copy (Name | Email | ID | Pass)</span>
@@ -736,7 +736,7 @@ Christopher Harris | student84@example.com | 10th | A"
                           Class {cred.class}-{cred.section} • {cred.email}
                         </p>
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-blue-800">
                         Student #{index + 1}
                       </span>
                     </div>

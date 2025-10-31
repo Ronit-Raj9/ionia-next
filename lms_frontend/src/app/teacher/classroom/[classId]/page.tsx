@@ -192,7 +192,7 @@ export default function ClassroomPage() {
             Back to Classrooms
           </button>
 
-          <div className="bg-gradient-to-r from-emerald-500 to-blue-500 rounded-xl shadow-lg p-8 text-white">
+          <div className="bg-gradient-to-r from-emerald-500 to-emerald-500 rounded-xl shadow-lg p-8 text-white">
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-3">{classInfo.className}</h1>
@@ -275,8 +275,8 @@ export default function ClassroomPage() {
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-emerald-600" />
               </div>
               <TrendingUp className="w-5 h-5 text-blue-400" />
             </div>
@@ -303,10 +303,10 @@ export default function ClassroomPage() {
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Award className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Award className="w-6 h-6 text-emerald-600" />
               </div>
-              <BarChart3 className="w-5 h-5 text-purple-400" />
+              <BarChart3 className="w-5 h-5 text-emerald-400" />
             </div>
             <p className="text-sm text-gray-600 mb-1">Average Score</p>
             <p className="text-3xl font-bold text-gray-900">{statistics.averageScore}%</p>
@@ -422,7 +422,7 @@ export default function ClassroomPage() {
                         <div className="flex-1">
                           <p className="font-medium text-gray-900">{assignment.title}</p>
                           <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            <span className="bg-emerald-100 text-blue-800 px-2 py-1 rounded">
                               {assignment.subject}
                             </span>
                             {assignment.dueDate && (
@@ -458,12 +458,12 @@ export default function ClassroomPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-600" />
+                  <FileText className="w-5 h-5 text-emerald-600" />
                   Recent Submissions
                 </h3>
                 <button
                   onClick={() => router.push('/teacher#grading')}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
                 >
                   View All
                 </button>
@@ -563,11 +563,11 @@ export default function ClassroomPage() {
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Conscient.</div>
-                          <div className="text-sm font-semibold text-blue-600">{student.oceanTraits.conscientiousness}</div>
+                          <div className="text-sm font-semibold text-emerald-600">{student.oceanTraits.conscientiousness}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Extraver.</div>
-                          <div className="text-sm font-semibold text-purple-600">{student.oceanTraits.extraversion}</div>
+                          <div className="text-sm font-semibold text-emerald-600">{student.oceanTraits.extraversion}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Agreeable.</div>
@@ -633,7 +633,7 @@ export default function ClassroomPage() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <h4 className="text-base font-medium text-gray-900">{assignment.title}</h4>
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                          <span className="bg-emerald-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
                             {assignment.subject}
                           </span>
                         </div>
@@ -668,7 +668,7 @@ export default function ClassroomPage() {
                             e.stopPropagation();
                             router.push(`/teacher/assignment/${assignment._id}`);
                           }}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          className="text-gray-400 hover:text-emerald-600 transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-5 h-5" />

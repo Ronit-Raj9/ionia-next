@@ -104,7 +104,7 @@ export default function ProfilePage() {
           <p className="text-gray-600 mb-4">You need to be logged in to view your profile.</p>
           <button
             onClick={() => router.push('/login')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
           >
             Go to Login
           </button>
@@ -114,7 +114,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -127,13 +127,13 @@ export default function ProfilePage() {
           </button>
 
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-full flex items-center justify-center">
               <User className="w-8 h-8 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{user.name || user.displayName}</h1>
               <p className="text-gray-600 flex items-center space-x-2">
-                <span className="capitalize px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                <span className="capitalize px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
                   {user.role}
                 </span>
                 <span className="text-sm">{user.email}</span>
@@ -149,7 +149,7 @@ export default function ProfilePage() {
               onClick={() => setActiveTab('info')}
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'info'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-emerald-500 text-emerald-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -160,7 +160,7 @@ export default function ProfilePage() {
               onClick={() => setActiveTab('password')}
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                 activeTab === 'password'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-emerald-500 text-emerald-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -203,7 +203,7 @@ export default function ProfilePage() {
                     Role
                   </label>
                   <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <span className="capitalize px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                    <span className="capitalize px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
                       {user.role}
                     </span>
                   </div>
@@ -244,10 +244,10 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                 <div className="flex items-start">
-                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-                  <div className="text-sm text-blue-700">
+                  <AlertCircle className="w-5 h-5 text-emerald-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="text-sm text-emerald-700">
                     <p className="font-medium mb-1">Account Details</p>
                     <p>To update your email or name, please contact your administrator.</p>
                   </div>
@@ -277,7 +277,7 @@ export default function ProfilePage() {
                     required
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Enter your current password"
                   />
                   <button
@@ -308,7 +308,7 @@ export default function ProfilePage() {
                     required
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Enter your new password"
                   />
                   <button
@@ -414,7 +414,7 @@ export default function ProfilePage() {
                     required
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Confirm your new password"
                   />
                   <button
@@ -464,7 +464,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={loading || passwordForm.newPassword !== passwordForm.confirmPassword}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-lg transition-all duration-200 flex items-center space-x-2"
+                  className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-blue-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-lg transition-all duration-200 flex items-center space-x-2"
                 >
                   {loading ? (
                     <>

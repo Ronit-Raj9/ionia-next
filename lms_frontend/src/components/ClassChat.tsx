@@ -395,14 +395,14 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
                   animate={{ opacity: 1, y: 0 }}
                   className={`rounded-lg p-3 ${
                     message.senderRole === 'teacher' 
-                      ? 'bg-blue-50 border-l-4 border-blue-500' 
+                      ? 'bg-emerald-50 border-l-4 border-emerald-500' 
                       : 'bg-emerald-50 border-l-4 border-emerald-500'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        message.senderRole === 'teacher' ? 'bg-blue-600' : 'bg-emerald-600'
+                        message.senderRole === 'teacher' ? 'bg-emerald-600' : 'bg-emerald-600'
                       }`}>
                         {message.senderRole === 'teacher' ? (
                           <Crown className="w-4 h-4 text-white" />
@@ -416,7 +416,7 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
                         </span>
                         <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
                           message.senderRole === 'teacher' 
-                            ? 'bg-blue-100 text-blue-700' 
+                            ? 'bg-emerald-100 text-emerald-700' 
                             : 'bg-emerald-100 text-emerald-700'
                         }`}>
                           {message.senderRole}
@@ -496,7 +496,7 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
                 {getActiveParticipants().map((participant) => (
                   <div key={participant.userId} className="flex items-center space-x-2 p-2 bg-white rounded border">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      participant.role === 'teacher' ? 'bg-blue-600' : 'bg-emerald-600'
+                      participant.role === 'teacher' ? 'bg-emerald-600' : 'bg-emerald-600'
                     }`}>
                       {participant.role === 'teacher' ? (
                         <Crown className="w-4 h-4 text-white" />

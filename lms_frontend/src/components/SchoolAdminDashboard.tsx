@@ -260,7 +260,7 @@ export default function SchoolAdminDashboard({ userId }: SchoolAdminDashboardPro
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+        <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
       </div>
     );
   }
@@ -292,7 +292,7 @@ export default function SchoolAdminDashboard({ userId }: SchoolAdminDashboardPro
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Building2 className="w-8 h-8 text-blue-600" />
+            <Building2 className="w-8 h-8 text-emerald-600" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{schoolData?.schoolName}</h1>
               <p className="text-gray-600">School ID: {schoolData?.schoolId}</p>
@@ -300,7 +300,7 @@ export default function SchoolAdminDashboard({ userId }: SchoolAdminDashboardPro
           </div>
           <button
             onClick={fetchSchoolData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -330,7 +330,7 @@ export default function SchoolAdminDashboard({ userId }: SchoolAdminDashboardPro
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-blue-600" />
+              <Users className="w-8 h-8 text-emerald-600" />
               <div>
                 <p className="text-2xl font-bold text-gray-900">{teachers.length}</p>
                 <p className="text-gray-600">Teachers</p>
@@ -348,7 +348,7 @@ export default function SchoolAdminDashboard({ userId }: SchoolAdminDashboardPro
           </div>
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center gap-3">
-              <Key className="w-8 h-8 text-purple-600" />
+              <Key className="w-8 h-8 text-emerald-600" />
               <div>
                 <p className="text-2xl font-bold text-gray-900">{schoolCodes.filter(code => code.isActive).length}</p>
                 <p className="text-gray-600">Active Codes</p>
@@ -376,7 +376,7 @@ export default function SchoolAdminDashboard({ userId }: SchoolAdminDashboardPro
               </h2>
               <button
                 onClick={() => setShowAddTeacher(!showAddTeacher)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 Add Teacher
@@ -391,7 +391,7 @@ export default function SchoolAdminDashboard({ userId }: SchoolAdminDashboardPro
                     value={newTeacherEmail}
                     onChange={(e) => setNewTeacherEmail(e.target.value)}
                     placeholder="teacher@school.com"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                   <button
                     onClick={handleAddTeacherEmail}

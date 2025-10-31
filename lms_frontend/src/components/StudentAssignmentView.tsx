@@ -86,7 +86,7 @@ export default function StudentAssignmentView({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 p-6">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">My Assignments</h1>
 
@@ -112,7 +112,7 @@ export default function StudentAssignmentView({
                       ? 'bg-green-100 text-green-700'
                       : assignment.status === 'in_progress'
                       ? 'bg-yellow-100 text-yellow-700'
-                      : 'bg-blue-100 text-blue-700'
+                      : 'bg-emerald-100 text-emerald-700'
                   }`}>
                     {assignment.status === 'submitted' ? 'Submitted' :
                      assignment.status === 'in_progress' ? 'In Progress' : 'Available'}
@@ -140,7 +140,7 @@ export default function StudentAssignmentView({
                 {assignment.status === 'available' && (
                   <button
                     onClick={() => handleStartAssignment(assignment._id)}
-                    className="w-full flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 transition"
+                    className="w-full flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-emerald-500 to-emerald-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 transition"
                   >
                     <PlayCircle className="w-5 h-5" />
                     <span>Start Assignment</span>

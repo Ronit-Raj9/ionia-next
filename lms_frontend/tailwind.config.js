@@ -50,7 +50,31 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // LMS specific colors - matching Ionia theme
+        // IONIA Green Color Palette (from design)
+        ionia: {
+          // Light bright green (mint/light emerald) - for accent text like "Beyond Horizon"
+          light: '#6ee7b7',
+          // Bright emerald/teal green - primary brand color
+          primary: '#10b981',
+          // Bright emerald variant - for gradients
+          bright: '#14b8a6',
+          // Dark green (forest/teal) - for dark elements, button text
+          dark: '#047857',
+          // Darker green - for darkest elements
+          darker: '#065f46',
+          // Shades for gradients and backgrounds
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7', // light accent
+          400: '#34d399',
+          500: '#10b981', // primary
+          600: '#059669',
+          700: '#047857', // dark
+          800: '#065f46', // darker
+          900: '#064e3b',
+        },
+        // Alias for compatibility
         emerald: {
           50: '#ecfdf5',
           100: '#d1fae5',
@@ -64,16 +88,16 @@ module.exports = {
           900: '#064e3b',
         },
         teal: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          200: '#99f6e4',
-          300: '#5eead4',
-          400: '#2dd4bf',
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
           500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
         },
       },
       borderRadius: {

@@ -123,8 +123,8 @@ export default function StudentMessageTeacher({
     <div className="h-full bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
       {/* Header */}
       <div className="flex items-center space-x-3 p-4 border-b border-gray-200">
-        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-          <User className="w-5 h-5 text-blue-600" />
+        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+          <User className="w-5 h-5 text-emerald-600" />
         </div>
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Message Your Teacher</h3>
@@ -183,8 +183,8 @@ export default function StudentMessageTeacher({
 
       {/* Message Input */}
       <div className="border-t border-gray-200 p-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-          <p className="text-sm text-blue-700">
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3">
+          <p className="text-sm text-emerald-700">
             💡 <strong>Tip:</strong> Your teacher will see your message in their inbox. 
             Be clear and specific about what you need help with!
           </p>

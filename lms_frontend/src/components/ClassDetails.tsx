@@ -124,7 +124,7 @@ export default function ClassDetails({ classId, userId, role, onClose }: ClassDe
         className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-500 to-blue-500 text-white p-6">
+        <div className="bg-gradient-to-r from-emerald-500 to-emerald-500 text-white p-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h2 className="text-2xl font-bold mb-2">{classInfo.className}</h2>
@@ -190,12 +190,12 @@ export default function ClassDetails({ classId, userId, role, onClose }: ClassDe
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-250px)]">
           {/* Statistics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6">
+            <div className="bg-gradient-to-br from-emerald-50 to-blue-100 rounded-lg p-6">
               <div className="flex items-center justify-between mb-3">
-                <Users className="w-8 h-8 text-blue-600" />
+                <Users className="w-8 h-8 text-emerald-600" />
                 <TrendingUp className="w-5 h-5 text-blue-400" />
               </div>
-              <p className="text-sm text-blue-600 mb-1">Total Students</p>
+              <p className="text-sm text-emerald-600 mb-1">Total Students</p>
               <p className="text-3xl font-bold text-blue-900">{statistics.totalStudents}</p>
             </div>
 
@@ -208,13 +208,13 @@ export default function ClassDetails({ classId, userId, role, onClose }: ClassDe
               <p className="text-3xl font-bold text-emerald-900">{statistics.totalAssignments}</p>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6">
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-6">
               <div className="flex items-center justify-between mb-3">
-                <Award className="w-8 h-8 text-purple-600" />
-                <BarChart3 className="w-5 h-5 text-purple-400" />
+                <Award className="w-8 h-8 text-emerald-600" />
+                <BarChart3 className="w-5 h-5 text-emerald-400" />
               </div>
-              <p className="text-sm text-purple-600 mb-1">Average Score</p>
-              <p className="text-3xl font-bold text-purple-900">{statistics.averageScore}%</p>
+              <p className="text-sm text-emerald-600 mb-1">Average Score</p>
+              <p className="text-3xl font-bold text-emerald-900">{statistics.averageScore}%</p>
             </div>
           </div>
 
@@ -284,7 +284,7 @@ export default function ClassDetails({ classId, userId, role, onClose }: ClassDe
             {/* Recent Submissions */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
+                <FileText className="w-5 h-5 text-emerald-600" />
                 Recent Submissions
               </h3>
               {recentSubmissions.length > 0 ? (

@@ -271,7 +271,7 @@ export default function ClassManager({ userId, userName, role, schoolId, onClass
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <MessageCircle className="w-4 h-4 text-blue-600" />
+                    <MessageCircle className="w-4 h-4 text-emerald-600" />
                     <span className="text-sm text-gray-700">
                       {classInfo.messageCount} messages
                     </span>

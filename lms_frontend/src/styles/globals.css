@@ -10,8 +10,8 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 158 64% 52%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 158 64% 52%; /* emerald-500 #10b981 */
+    --primary-foreground: 0 0% 100%; /* white */
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
@@ -58,13 +58,21 @@
   }
 }
 
-/* LMS Specific Styles */
+/* IONIA Green Gradient Styles - Matching design */
 .lms-gradient {
-  background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+  background: linear-gradient(180deg, #065f46 0%, #047857 50%, #10b981 100%);
 }
 
 .lms-gradient-text {
   background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Light accent green for special text */
+.lms-gradient-light {
+  background: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

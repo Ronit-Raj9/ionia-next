@@ -274,7 +274,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                   )}
                   <div className="flex items-center gap-4 text-xs text-gray-500">
                     {classroom.subject && (
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      <span className="bg-emerald-100 text-blue-800 px-2 py-1 rounded">
                         {classroom.subject}
                       </span>
                     )}
@@ -315,7 +315,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <BookOpen className="w-4 h-4 text-emerald-600" />
                   <span className="text-sm text-gray-700">
                     {classroom.recentAssignments || 0} assignments
                   </span>
@@ -341,7 +341,7 @@ export default function ClassroomManager({ userId, userName, role, schoolId, onC
                 </button>
                 <button
                   onClick={() => setSelectedClassroom(classroom)}
-                  className="px-3 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 transition-colors"
+                  className="px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors"
                   title="Manage students"
                 >
                   <Settings className="w-4 h-4" />

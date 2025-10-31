@@ -270,8 +270,8 @@ export default function TeacherInbox({ teacherId, teacherName, isEmbedded = fals
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {selectedConversation.messages.map((message, index) => (
                 <div key={index} className="flex space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-blue-600" />
+                  <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div className="flex-1">
                     <div className="bg-gray-100 rounded-lg p-3">
@@ -292,8 +292,8 @@ export default function TeacherInbox({ teacherId, teacherName, isEmbedded = fals
 
             {/* Reply Section */}
             <div className="border-t border-gray-200 p-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                <p className="text-sm text-blue-700">
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3">
+                <p className="text-sm text-emerald-700">
                   💡 <strong>Tip:</strong> You can reply to students through the General Chat → Personal Notes section for now. 
                   Full reply functionality is coming soon!
                 </p>
