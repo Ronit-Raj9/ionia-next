@@ -1,36 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS, User, StudentProfile } from '@/lib/db';
 import { ObjectId } from 'mongodb';
+import { getSessionFromRequest } from '@/lib/sessionManager';
 
 /**
  * GET - Fetch all users or filter by role
  * Used by admin dashboard and teacher class management
+ * SECURE: Requires valid session authentication
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const role = searchParams.get('role'); // Filter by role
-    const schoolId = searchParams.get('schoolId'); // Filter by school
-    const requestingRole = searchParams.get('requestingRole'); // Who is making the request
-
-    // Only teachers and admins can access user lists
-    if (requestingRole !== 'teacher' && requestingRole !== 'admin') {
+    // SECURITY: Validate session from HTTP-only cookie
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Only superadmin, admin, and teachers can access user lists
+    if (!['superadmin', 'admin', 'teacher'].includes(session.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions' },
         { status: 403 }
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get('role'); // Filter by role
+    const schoolId = searchParams.get('schoolId'); // Filter by school
+
     const usersCollection = await getCollection(COLLECTIONS.USERS);
     const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
 
-    // Build query
+    // Build query with school scoping for non-superadmins
     const query: any = {};
+    
+    // Superadmin can see all users
+    // Admin and Teacher can only see users from their school
+    if (session.role !== 'superadmin' && session.schoolId) {
+      query.schoolId = new ObjectId(session.schoolId);
+    }
+    
     if (role) {
       query.role = role;
     }
-    if (schoolId) {
-      query.schoolId = schoolId;
+    if (schoolId && session.role === 'superadmin') {
+      // Only superadmin can filter by any school
+      query.schoolId = new ObjectId(schoolId);
     }
 
     // Fetch users
@@ -92,9 +111,28 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST - Create a new user
+ * SECURE: Requires valid session authentication
  */
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Validate session from HTTP-only cookie
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Only superadmin and admin can create users
+    if (!['superadmin', 'admin'].includes(session.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Only admins can create users' },
+        { status: 403 }
+      );
+    }
+
     const { 
       userId, 
       role, 
@@ -102,17 +140,8 @@ export async function POST(request: NextRequest) {
       email, 
       classId, 
       schoolId, 
-      requestingRole,
       ...additionalData 
     } = await request.json();
-
-    // Only admins can create users
-    if (requestingRole !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Only admins can create users' },
-        { status: 403 }
-      );
-    }
 
     // Validate required fields
     if (!userId || !role || !name || !email) {
@@ -193,18 +222,29 @@ export async function POST(request: NextRequest) {
 
 /**
  * PUT - Update user information
+ * SECURE: Requires valid session authentication
  */
 export async function PUT(request: NextRequest) {
   try {
-    const { userId, updates, requestingRole } = await request.json();
+    // SECURITY: Validate session from HTTP-only cookie
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
-    // Only admins can update user information
-    if (requestingRole !== 'admin') {
+    // Only superadmin and admin can update user information
+    if (!['superadmin', 'admin'].includes(session.role)) {
       return NextResponse.json(
         { success: false, error: 'Only admins can update user information' },
         { status: 403 }
       );
     }
+
+    const { userId, updates } = await request.json();
 
     if (!userId) {
       return NextResponse.json(
@@ -282,20 +322,30 @@ export async function PUT(request: NextRequest) {
 
 /**
  * DELETE - Delete a user
+ * SECURE: Requires valid session authentication
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const requestingRole = searchParams.get('requestingRole');
+    // SECURITY: Validate session from HTTP-only cookie
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
-    // Only admins can delete users
-    if (requestingRole !== 'admin') {
+    // Only superadmin and admin can delete users
+    if (!['superadmin', 'admin'].includes(session.role)) {
       return NextResponse.json(
         { success: false, error: 'Only admins can delete users' },
         { status: 403 }
       );
     }
+
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
 
     if (!userId) {
       return NextResponse.json(

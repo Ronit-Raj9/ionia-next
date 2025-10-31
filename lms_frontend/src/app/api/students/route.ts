@@ -1,26 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS } from '@/lib/db';
+import { getSessionFromRequest } from '@/lib/sessionManager';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 // GET - Retrieve list of students filtered by schoolId
+// SECURE: Requires valid session authentication
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const role = searchParams.get('role');
-    const schoolId = searchParams.get('schoolId');
-
-    // Only teachers and admins can access student list
-    if (role !== 'teacher' && role !== 'admin') {
+    // SECURITY: Validate session from HTTP-only cookie
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Only superadmin, admin, and teachers can access student list
+    if (!['superadmin', 'admin', 'teacher'].includes(session.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions' },
         { status: 403 }
       );
     }
 
-    // Require schoolId for filtering
-    if (!schoolId) {
+    const { searchParams } = new URL(request.url);
+    const schoolId = searchParams.get('schoolId');
+
+    // For non-superadmins, enforce school scoping
+    let targetSchoolId = schoolId;
+    if (session.role !== 'superadmin') {
+      targetSchoolId = session.schoolId || ''; // Force own school
+    }
+
+    if (!targetSchoolId) {
       return NextResponse.json(
         { success: false, error: 'schoolId is required to filter students' },
         { status: 400 }
@@ -35,7 +51,7 @@ export async function GET(request: NextRequest) {
       const students = await usersCollection
         .find({ 
           role: 'student',
-          schoolId: schoolId  // Exact match, case-sensitive
+          schoolId: targetSchoolId  // Use validated school ID
         })
         .sort({ userId: 1 })
         .toArray();

@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS } from '@/lib/db';
+import { verifyPassword } from '@/lib/authUtils';
+import { createSessionResponse } from '@/lib/sessionManager';
 
 /**
- * Login endpoint - Fetch user from database by email
+ * Login endpoint - Authenticate user with email and password
+ * Creates secure HTTP-only cookie session
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+    const { email, password } = await request.json();
 
-    if (!email) {
+    // Validate required fields
+    if (!email || !password) {
       return NextResponse.json(
-        { success: false, error: 'Email is required' },
+        { 
+          success: false, 
+          error: 'Email and password are required' 
+        },
         { status: 400 }
       );
     }
@@ -31,9 +38,23 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'User not found. Please register first.' },
-        { status: 404 }
+        { success: false, error: 'Invalid email or password' },
+        { status: 401 }
       );
+    }
+
+    // Verify password (if user has password field)
+    if (user.password) {
+      if (!verifyPassword(password, user.password)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid email or password' },
+          { status: 401 }
+      );
+      }
+    } else {
+      // Legacy user without password - for backward compatibility
+      // In production, you might want to force password reset for these users
+      console.warn(`User ${user.email} has no password set - legacy account`);
     }
 
     // Check if user is active
@@ -55,12 +76,21 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Return user data in standardized new system format
-    return NextResponse.json({
+    // Create session data (minimal, non-sensitive data only)
+    const sessionData = {
+      userId: user.userId,
+      email: user.email,
+      role: user.role,
+      schoolId: user.schoolId?.toString(),
+      name: user.name,
+    };
+
+    // Create secure HTTP-only cookie session and return response
+    return await createSessionResponse(sessionData, {
       success: true,
       message: 'Login successful',
       user: {
-        _id: user._id,
+        _id: user._id?.toString(),
         role: user.role,
         userId: user.userId,
         name: user.name,
@@ -68,13 +98,9 @@ export async function POST(request: NextRequest) {
         displayName: user.displayName,
         classId: user.classId,
         schoolId: user.schoolId?.toString(),
-        phoneNumber: user.phoneNumber,
         profileImage: user.profileImage,
         status: user.status,
-        dashboardPreferences: user.dashboardPreferences,
-        lastLogin: new Date(),
-        createdAt: user.createdAt,
-        updatedAt: new Date()
+        // Note: Sensitive data like password is NEVER returned
       }
     });
 
@@ -92,66 +118,9 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * GET endpoint removed for security reasons
+ * 
+ * SECURITY ISSUE: This endpoint allowed querying user data without authentication
+ * 
+ * Use /api/auth/session instead to get current authenticated user's data
  */
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const email = searchParams.get('email');
-
-    if (!userId && !email) {
-      return NextResponse.json(
-        { success: false, error: 'userId or email is required' },
-        { status: 400 }
-      );
-    }
-
-    const usersCollection = await getCollection(COLLECTIONS.USERS);
-
-    // Build query
-    const query: any = {};
-    if (email) {
-      query.email = email;
-    } else if (userId) {
-      query.userId = userId;
-    }
-
-    const user = await usersCollection.findOne(query);
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Return user data in standardized new system format
-    return NextResponse.json({
-      success: true,
-      user: {
-        _id: user._id,
-        role: user.role,
-        userId: user.userId,
-        name: user.name,
-        email: user.email,
-        displayName: user.displayName,
-        classId: user.classId,
-        schoolId: user.schoolId?.toString(),
-        phoneNumber: user.phoneNumber,
-        profileImage: user.profileImage,
-        status: user.status,
-        dashboardPreferences: user.dashboardPreferences,
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }
-    });
-
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch user' },
-      { status: 500 }
-    );
-  }
-}
