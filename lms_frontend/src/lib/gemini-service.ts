@@ -6,10 +6,16 @@
 import { StudentProfile } from './db';
 
 // Gemini API Configuration
-const GEMINI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY || 'AIzaSyD154jRG5vhKnFMgp4xVyzhVtMoWyBDWyw';
+// SECURITY: This service should ONLY be used server-side (API routes)
+// NEVER import this in client components
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-console.log('GEMINI_API_KEY', GEMINI_API_KEY);
+// Validate API key exists (fail fast if not configured)
+if (!GEMINI_API_KEY) {
+  console.error('❌ GEMINI_API_KEY not configured in environment variables');
+  console.error('⚠️  Add GEMINI_API_KEY to your .env.local file');
+}
 
 // Model selection - Updated to Gemini 2.5 (2025) - Pro for quality, Flash for speed
 const GEMINI_PRO_MODEL = 'gemini-2.5-pro';  // High-quality model for complex tasks

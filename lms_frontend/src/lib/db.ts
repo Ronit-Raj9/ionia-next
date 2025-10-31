@@ -70,22 +70,35 @@ export const COLLECTIONS = {
 // Database schemas/interfaces
 export interface User {
   _id?: ObjectId;
-  role: 'teacher' | 'student' | 'admin';
-  userId: string; // Unique user ID from new system
-  name: string; // Full name of the user (Teacher/Student/Admin)
+  role: 'superadmin' | 'admin' | 'teacher' | 'student';
+  userId: string; // Unique user ID (auto-generated)
+  password: string; // Hashed password (auto-generated on creation)
+  name: string; // Full name of the user (Superadmin/Admin/Teacher/Student)
   email: string; // Email address (required)
   displayName?: string; // Optional display name
-  classId: string;
-  schoolId?: ObjectId; // Reference to School document
+  classId?: string; // Optional for superadmin and admin
+  schoolId?: ObjectId; // Reference to School document (required for admin, teacher, student)
   phoneNumber?: string; // Contact number
   profileImage?: string; // Profile photo URL
   dashboardPreferences?: {
     theme: string;
     preferredSubjects: string[];
   };
+  // RBAC Permissions
+  permissions?: {
+    canCreateSchools?: boolean; // Superadmin only
+    canManageAllSchools?: boolean; // Superadmin only
+    canCreateAdmins?: boolean; // Superadmin and Admin
+    canCreateTeachers?: boolean; // Superadmin and Admin
+    canCreateStudents?: boolean; // Superadmin and Admin
+    canManageClasses?: boolean; // Admin and Teacher
+    canViewAllData?: boolean; // Superadmin only
+    scopedToSchool?: ObjectId; // For Admin and Teacher
+  };
   // Additional fields for proper user management
   status?: 'active' | 'inactive' | 'suspended';
   lastLogin?: Date;
+  createdBy?: string; // User ID of who created this account (not ObjectId - stores custom userId)
   createdAt: Date;
   updatedAt?: Date;
 }

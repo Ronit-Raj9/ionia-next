@@ -16,6 +16,8 @@ import {
   Upload,
   GraduationCap,
   MessageCircle,
+  Building2,
+  Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -40,36 +42,45 @@ export default function Navbar() {
 
   const redirectToRolePage = (role: UserRole) => {
     switch (role) {
+      case 'superadmin':
+        router.push('/superadmin');
+        break;
+      case 'admin':
+        router.push('/admin');
+        break;
       case 'teacher':
         router.push('/teacher');
         break;
       case 'student':
         router.push('/student');
         break;
-      case 'admin':
-        router.push('/admin');
-        break;
       default:
         router.push('/dashboard');
     }
   };
 
-  const teacherNavigation = [
+  const superadminNavigation: Array<{ name: string; href: string; icon: any; onClick?: () => void }> = [
+    { name: 'Dashboard', href: '/superadmin', icon: Settings },
+    { name: 'Schools', href: '/superadmin#schools', icon: Building2 },
+    { name: 'Users', href: '/superadmin#users', icon: Users },
+  ];
+
+  const adminNavigation: Array<{ name: string; href: string; icon: any; onClick?: () => void }> = [
+    { name: 'Dashboard', href: '/admin', icon: BarChart3 },
+    { name: 'Users', href: '/admin#users', icon: Users },
+    { name: 'Analytics', href: '/admin#analytics', icon: Brain },
+    { name: 'General', href: '#', icon: MessageCircle, onClick: () => setIsGeneralOpen(true) },
+  ];
+
+  const teacherNavigation: Array<{ name: string; href: string; icon: any; onClick?: () => void }> = [
     { name: 'Dashboard', href: '/teacher', icon: GraduationCap },
     { name: 'Create Assignment', href: '/teacher#create', icon: Upload },
     { name: 'General', href: '#', icon: MessageCircle, onClick: () => setIsGeneralOpen(true) },
   ];
 
-  const studentNavigation = [
+  const studentNavigation: Array<{ name: string; href: string; icon: any; onClick?: () => void }> = [
     { name: 'Assignments', href: '/student', icon: BookOpen },
     { name: 'Progress', href: '/student#progress', icon: BarChart3 },
-    { name: 'General', href: '#', icon: MessageCircle, onClick: () => setIsGeneralOpen(true) },
-  ];
-
-  const adminNavigation = [
-    { name: 'Dashboard', href: '/admin', icon: BarChart3 },
-    { name: 'Analytics', href: '/admin#analytics', icon: Brain },
-    { name: 'System', href: '/admin#system', icon: Settings },
     { name: 'General', href: '#', icon: MessageCircle, onClick: () => setIsGeneralOpen(true) },
   ];
 
@@ -77,12 +88,14 @@ export default function Navbar() {
     if (!user) return [];
     
     switch (user.role) {
+      case 'superadmin':
+        return superadminNavigation;
+      case 'admin':
+        return adminNavigation;
       case 'teacher':
         return teacherNavigation;
       case 'student':
         return studentNavigation;
-      case 'admin':
-        return adminNavigation;
       default:
         return [];
     }
@@ -165,14 +178,8 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center space-x-4">
                 <Link
-                  href="/register"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg transition-all duration-200"
-                >
-                  Register
-                </Link>
-                <Link
                   href="/login"
-                  className="bg-white hover:bg-gray-50 text-blue-600 border border-blue-600 px-4 py-2 rounded-lg transition-colors duration-200"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all duration-200 shadow-md"
                 >
                   Login
                 </Link>
@@ -200,7 +207,7 @@ export default function Navbar() {
                   <button
                     key={item.name}
                     onClick={() => {
-                      item.onClick();
+                      item.onClick?.();
                       setIsMenuOpen(false);
                     }}
                     className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors duration-200 py-2 w-full text-left"
@@ -258,19 +265,17 @@ export default function Navbar() {
               ) : (
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <Link
-                    href="/register"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block w-full bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 text-center"
-                  >
-                    Register
-                  </Link>
-                  <Link
                     href="/login"
                     onClick={() => setIsMenuOpen(false)}
-                    className="block w-full bg-white hover:bg-gray-50 text-blue-600 border border-emerald-600 px-4 py-2 rounded-lg transition-colors duration-200 text-center"
+                    className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-3 rounded-lg transition-all duration-200 text-center font-medium shadow-md"
                   >
                     Login
                   </Link>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-gray-700 text-center">
+                      <strong>Need an account?</strong> Contact your school administrator
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

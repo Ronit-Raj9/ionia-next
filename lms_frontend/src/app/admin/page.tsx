@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast';
 import ClassroomManager from '@/components/ClassroomManager';
 import SchoolAdminDashboard from '@/components/SchoolAdminDashboard';
+import AdminUserCreation from '@/components/AdminUserCreation';
 
 interface ProgressData {
   classMetrics: {
@@ -56,7 +57,7 @@ export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
-  const [activeSection, setActiveSection] = useState<'overview' | 'classrooms' | 'analytics' | 'school'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'classrooms' | 'analytics' | 'school' | 'users'>('overview');
 
   // Check if user is admin
   useEffect(() => {
@@ -374,6 +375,17 @@ export default function AdminDashboard() {
             >
               <Brain className="w-4 h-4 inline mr-2" />
               Analytics
+            </button>
+            <button
+              onClick={() => setActiveSection('users')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSection === 'users'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="w-4 h-4 inline mr-2" />
+              User Management
             </button>
             <button
               onClick={() => setActiveSection('school')}
@@ -792,6 +804,25 @@ export default function AdminDashboard() {
                 Advanced analytics and reporting features will be available here.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* User Management Section */}
+        {activeSection === 'users' && user && user.schoolId && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-6 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">User Management</h2>
+              <p className="text-gray-600">
+                Create and manage teachers, students, and admins for your school.
+                All accounts will have auto-generated credentials that you must save securely.
+              </p>
+            </div>
+            
+            <AdminUserCreation
+              adminUserId={user.userId || ''}
+              adminRole={user.role}
+              schoolId={user.schoolId.toString()}
+            />
           </div>
         )}
 

@@ -61,9 +61,9 @@ export default function Home() {
         console.log('User exists, redirecting to:', user.role);
         redirectToRolePage(user.role);
       } else {
-        // Redirect to registration page
-        console.log('No user, redirecting to registration');
-        router.push('/register');
+        // Redirect to login page (registration now handled by admins)
+        console.log('No user, redirecting to login');
+        router.push('/login');
       }
     } catch (error) {
       console.error('Error in handleGetStarted:', error);
@@ -73,14 +73,17 @@ export default function Home() {
 
   const redirectToRolePage = (role: string) => {
     switch (role) {
+      case 'superadmin':
+        router.push('/superadmin');
+        break;
+      case 'admin':
+        router.push('/admin');
+        break;
       case 'teacher':
         router.push('/teacher');
         break;
       case 'student':
         router.push('/student');
-        break;
-      case 'admin':
-        router.push('/admin');
         break;
       default:
         router.push('/');
