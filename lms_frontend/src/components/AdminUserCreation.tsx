@@ -258,8 +258,8 @@ export default function AdminUserCreation({
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-700">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <p className="text-sm text-emerald-700">
                 <strong>Note:</strong> A unique User ID and password will be automatically generated for this user.
               </p>
             </div>

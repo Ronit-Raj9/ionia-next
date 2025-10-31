@@ -277,12 +277,12 @@ export default function SuperadminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-emerald-600 to-emerald-600 rounded-xl flex items-center justify-center">
               <Shield className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -302,7 +302,7 @@ export default function SuperadminDashboard() {
                 onClick={() => setActiveTab('overview')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'overview'
-                    ? 'border-purple-500 text-purple-600'
+                    ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -313,7 +313,7 @@ export default function SuperadminDashboard() {
                 onClick={() => setActiveTab('create-school')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'create-school'
-                    ? 'border-purple-500 text-purple-600'
+                    ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -324,7 +324,7 @@ export default function SuperadminDashboard() {
                 onClick={() => setActiveTab('create-user')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'create-user'
-                    ? 'border-purple-500 text-purple-600'
+                    ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -335,7 +335,7 @@ export default function SuperadminDashboard() {
                 onClick={() => setActiveTab('bulk-students')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'bulk-students'
-                    ? 'border-purple-500 text-purple-600'
+                    ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -346,7 +346,7 @@ export default function SuperadminDashboard() {
                 onClick={() => setActiveTab('schools')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'schools'
-                    ? 'border-purple-500 text-purple-600'
+                    ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -357,7 +357,7 @@ export default function SuperadminDashboard() {
                 onClick={() => setActiveTab('users')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'users'
-                    ? 'border-purple-500 text-purple-600'
+                    ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
@@ -379,8 +379,8 @@ export default function SuperadminDashboard() {
                     <p className="text-sm font-medium text-gray-600">Total Schools</p>
                     <p className="text-2xl font-bold text-gray-900">{schools.length}</p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
               </div>
@@ -393,8 +393,8 @@ export default function SuperadminDashboard() {
                       {users.filter(u => u.role === 'admin').length}
                     </p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
               </div>
@@ -435,8 +435,8 @@ export default function SuperadminDashboard() {
                 {schools.slice(0, 5).map((school) => (
                   <div key={school._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <School className="w-5 h-5 text-blue-600" />
+                      <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                        <School className="w-5 h-5 text-emerald-600" />
                       </div>
                       <div>
                         <h3 className="font-medium text-gray-900">{school.schoolName}</h3>
@@ -595,8 +595,8 @@ export default function SuperadminDashboard() {
                 {/* Admin Details */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">School Admin Details</h3>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-blue-700">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-emerald-700">
                       <strong>Note:</strong> A unique User ID and password will be automatically generated for the admin.
                     </p>
                   </div>
@@ -647,7 +647,7 @@ export default function SuperadminDashboard() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-600 hover:from-emerald-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -751,8 +751,8 @@ export default function SuperadminDashboard() {
                   />
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-700">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                  <p className="text-sm text-emerald-700">
                     <strong>Note:</strong> A unique User ID and password will be automatically generated.
                   </p>
                 </div>
@@ -760,7 +760,7 @@ export default function SuperadminDashboard() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-600 hover:from-emerald-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -791,7 +791,7 @@ export default function SuperadminDashboard() {
                 </p>
                 <button
                   onClick={() => setActiveTab('create-school')}
-                  className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                 >
                   Create School First
                 </button>
@@ -847,8 +847,8 @@ export default function SuperadminDashboard() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <School className="w-5 h-5 text-blue-600" />
+                        <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                          <School className="w-5 h-5 text-emerald-600" />
                         </div>
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900">{school.schoolName}</h3>
@@ -965,9 +965,9 @@ export default function SuperadminDashboard() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                          user.role === 'admin' ? 'bg-emerald-100 text-emerald-800' :
                           user.role === 'teacher' ? 'bg-green-100 text-green-800' :
-                          user.role === 'student' ? 'bg-blue-100 text-blue-800' :
+                          user.role === 'student' ? 'bg-emerald-100 text-blue-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
@@ -1135,7 +1135,7 @@ export default function SuperadminDashboard() {
                   setShowCredentials(false);
                   setGeneratedCredentials(null);
                 }}
-                className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+                className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
               >
                 I've Saved the Credentials
               </button>

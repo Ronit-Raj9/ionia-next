@@ -208,7 +208,7 @@ export default function LearningAssessmentQuiz({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center`}
+        className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center`}
       >
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full mx-4">
           <motion.div
@@ -240,11 +240,11 @@ export default function LearningAssessmentQuiz({
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className="bg-gradient-to-r from-blue-50 to-emerald-50 rounded-lg p-4 border border-blue-200"
+                  className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-lg p-4 border border-emerald-200"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                         {metricIcons[metric]}
                       </div>
                       <div>
@@ -252,7 +252,7 @@ export default function LearningAssessmentQuiz({
                         <p className="text-xs text-gray-600">Level {String(value)}/5</p>
                       </div>
                     </div>
-                    <span className="text-lg font-bold text-blue-600">{Number(value) * 20}%</span>
+                    <span className="text-lg font-bold text-emerald-600">{Number(value) * 20}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <motion.div
@@ -261,7 +261,7 @@ export default function LearningAssessmentQuiz({
                       transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
                       className={`h-2 rounded-full ${
                         Number(value) >= 4 ? 'bg-green-500' :
-                        Number(value) >= 3 ? 'bg-blue-500' :
+                        Number(value) >= 3 ? 'bg-emerald-500' :
                         'bg-yellow-500'
                       }`}
                     />
@@ -272,10 +272,10 @@ export default function LearningAssessmentQuiz({
           </div>
 
           {/* Subject Interests */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 mb-6 border border-purple-200">
+          <div className="bg-gradient-to-r from-emerald-50 to-pink-50 rounded-xl p-6 mb-6 border border-emerald-200">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Your Subject Interests</h3>
@@ -288,7 +288,7 @@ export default function LearningAssessmentQuiz({
                 .map(([subject, score]) => (
                   <span 
                     key={subject}
-                    className="px-3 py-1 bg-white rounded-full text-sm font-medium text-purple-700 border border-purple-200"
+                    className="px-3 py-1 bg-white rounded-full text-sm font-medium text-emerald-700 border border-emerald-200"
                   >
                     {subject.replace('_', ' ').toUpperCase()} ({String(score)}/10)
                   </span>
@@ -321,23 +321,23 @@ export default function LearningAssessmentQuiz({
           </div>
 
           {/* What Happens Next */}
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
             <h4 className="font-semibold text-gray-900 mb-3">What Happens Next:</h4>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex items-start space-x-2">
-                <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                 <span>Questions will be <strong>automatically adjusted</strong> to your optimal difficulty level</span>
               </li>
               <li className="flex items-start space-x-2">
-                <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                 <span>Your <strong>learning pace</strong> will be tracked and adapted in real-time</span>
               </li>
               <li className="flex items-start space-x-2">
-                <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                 <span>You'll receive <strong>personalized recommendations</strong> based on your progress</span>
               </li>
               <li className="flex items-start space-x-2">
-                <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                 <span>Your teacher will see <strong>insights</strong> to better support your learning</span>
               </li>
             </ul>
@@ -349,7 +349,7 @@ export default function LearningAssessmentQuiz({
                 initial={{ width: 0 }}
                 animate={{ width: "100%" }}
                 transition={{ duration: 3 }}
-                className="bg-gradient-to-r from-emerald-500 to-blue-500 h-2 rounded-full"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-500 h-2 rounded-full"
               />
             </div>
             <p className="text-sm text-gray-500 mt-4">
@@ -365,7 +365,7 @@ export default function LearningAssessmentQuiz({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center py-8`}
+      className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center py-8`}
     >
       <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-4xl w-full mx-4">
         {/* Header */}
@@ -394,7 +394,7 @@ export default function LearningAssessmentQuiz({
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
-              className="bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 h-3 rounded-full"
+              className="bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-500 h-3 rounded-full"
             />
           </div>
           <p className="text-sm text-gray-500">
@@ -414,7 +414,7 @@ export default function LearningAssessmentQuiz({
           >
             {/* Metric Indicator */}
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                 {metricIcons[currentQ.metric]}
               </div>
               <span className="text-sm font-medium text-gray-600">
@@ -449,7 +449,7 @@ export default function LearningAssessmentQuiz({
                     className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left hover:scale-102 ${
                       isSelected
                         ? 'border-emerald-500 bg-emerald-50 shadow-lg scale-102'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-emerald-50'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -517,7 +517,7 @@ export default function LearningAssessmentQuiz({
                   return !resp || (Array.isArray(resp) && resp.length === 0) || isSubmitting;
                 })()
               }
-              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
             >
               {isSubmitting ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

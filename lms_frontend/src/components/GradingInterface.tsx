@@ -195,7 +195,7 @@ export default function GradingInterface({
       case 'graded':
         return grade?.isPublished ? 
           <CheckCircle className="w-4 h-4 text-green-600" /> :
-          <EyeOff className="w-4 h-4 text-blue-600" />;
+          <EyeOff className="w-4 h-4 text-emerald-600" />;
       case 'returned':
         return <CheckCircle className="w-4 h-4 text-green-600" />;
       default:

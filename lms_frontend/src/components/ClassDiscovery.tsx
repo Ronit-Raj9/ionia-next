@@ -198,7 +198,7 @@ export default function ClassDiscovery({ userId, userRole, userName, userEmail, 
                   </p>
                 )}
                 <div className="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  <span className="bg-emerald-100 text-blue-800 px-2 py-1 rounded">
                     {chain.subject.charAt(0).toUpperCase() + chain.subject.slice(1).replace('_', ' ')}
                   </span>
                   <span className={`px-2 py-1 rounded ${
@@ -219,7 +219,7 @@ export default function ClassDiscovery({ userId, userRole, userName, userEmail, 
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Target className="w-4 h-4 text-blue-600" />
+                  <Target className="w-4 h-4 text-emerald-600" />
                   <span className="text-sm text-gray-700">
                     {chain.estimatedTime} min
                   </span>

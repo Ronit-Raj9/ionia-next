@@ -89,7 +89,7 @@ export default function JoinClassroom({ userId, userName, userEmail, onClassJoin
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           onClick={() => setShowForm(true)}
-          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-4 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
+          className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-4 rounded-lg font-semibold hover:from-blue-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl"
         >
           <Plus className="w-5 h-5" />
           <span>Join Classroom with Code</span>
@@ -107,7 +107,7 @@ export default function JoinClassroom({ userId, userName, userEmail, onClassJoin
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-blue-600" />
+                <Users className="w-5 h-5 text-emerald-600" />
                 <h3 className="text-lg font-semibold text-gray-900">Join a Classroom</h3>
               </div>
               {onClose && (
@@ -131,7 +131,7 @@ export default function JoinClassroom({ userId, userName, userEmail, onClassJoin
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   onKeyPress={handleKeyPress}
                   placeholder="e.g., 68F9BQZNF"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-mono tracking-wider"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-center text-lg font-mono tracking-wider"
                   maxLength={10}
                 />
                 <p className="text-sm text-gray-500 mt-2 text-center">
@@ -149,7 +149,7 @@ export default function JoinClassroom({ userId, userName, userEmail, onClassJoin
                 <button
                   onClick={handleJoinClass}
                   disabled={joining || !joinCode.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
+                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 transition-colors flex items-center justify-center space-x-2"
                 >
                   {joining ? (
                     <>
@@ -167,10 +167,10 @@ export default function JoinClassroom({ userId, userName, userEmail, onClassJoin
             </div>
 
             {/* Help Text */}
-            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
               <div className="flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-blue-700">
+                <AlertCircle className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-emerald-700">
                   <p className="font-medium mb-1">How to get a join code:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
                     <li>Ask your teacher for the classroom join code</li>

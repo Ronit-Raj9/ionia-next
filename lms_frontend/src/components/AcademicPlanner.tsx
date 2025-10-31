@@ -594,15 +594,15 @@ export default function AcademicPlanner({ classId, onClose }: AcademicPlannerPro
               <div className="text-sm text-emerald-600 mt-1">Curriculum topics</div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div className="bg-gradient-to-br from-emerald-50 to-blue-100 rounded-xl p-6 border border-emerald-200">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="p-2 bg-blue-500 rounded-lg">
+                <div className="p-2 bg-emerald-500 rounded-lg">
                   <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <span className="font-semibold text-blue-900 text-lg">Completed</span>
               </div>
-              <div className="text-3xl font-bold text-blue-700">{selectedPlan.progress.completedTopics}</div>
-              <div className="text-sm text-blue-600 mt-1">Topics finished</div>
+              <div className="text-3xl font-bold text-emerald-700">{selectedPlan.progress.completedTopics}</div>
+              <div className="text-sm text-emerald-600 mt-1">Topics finished</div>
             </div>
 
             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
@@ -633,11 +633,11 @@ export default function AcademicPlanner({ classId, onClose }: AcademicPlannerPro
                   <div className="text-sm text-gray-600">Weeks Duration</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{selectedPlan.generatedPlan.overview.totalHours}</div>
+                  <div className="text-2xl font-bold text-emerald-600">{selectedPlan.generatedPlan.overview.totalHours}</div>
                   <div className="text-sm text-gray-600">Total Hours</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-2xl font-bold text-emerald-600">
                     {Math.round(selectedPlan.generatedPlan.overview.totalHours / selectedPlan.generatedPlan.overview.totalWeeks)}
                   </div>
                   <div className="text-sm text-gray-600">Hours per Week</div>

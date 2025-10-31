@@ -306,7 +306,7 @@ export default function AdvancedAnalytics({
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Subject Scores</h3>
-                <BookOpen className="w-6 h-6 text-blue-600" />
+                <BookOpen className="w-6 h-6 text-emerald-600" />
               </div>
               <div className="space-y-3">
                 {analyticsData.subjects.map((subject, index) => (
@@ -330,14 +330,14 @@ export default function AdvancedAnalytics({
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Learning Patterns</h3>
-                <Clock className="w-6 h-6 text-purple-600" />
+                <Clock className="w-6 h-6 text-emerald-600" />
               </div>
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">Peak Learning Hours</p>
                   <div className="flex flex-wrap gap-2">
                     {analyticsData.learningPatterns.peakHours.map((hour, index) => (
-                      <span key={index} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+                      <span key={index} className="px-2 py-1 bg-emerald-100 text-emerald-700 text-xs rounded-full">
                         {hour}
                       </span>
                     ))}
@@ -351,7 +351,7 @@ export default function AdvancedAnalytics({
                         initial={{ width: 0 }}
                         animate={{ width: `${analyticsData.learningPatterns.completionRate}%` }}
                         transition={{ duration: 1, delay: 0.2 }}
-                        className="bg-purple-500 h-2 rounded-full"
+                        className="bg-emerald-500 h-2 rounded-full"
                       />
                     </div>
                     <span className="text-sm font-semibold text-gray-900">
@@ -388,7 +388,7 @@ export default function AdvancedAnalytics({
                         transition={{ duration: 1, delay: index * 0.1 }}
                         className={`h-3 rounded-full ${
                           subject.score >= 90 ? 'bg-green-500' :
-                          subject.score >= 80 ? 'bg-blue-500' :
+                          subject.score >= 80 ? 'bg-emerald-500' :
                           subject.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'
                         }`}
                       />
@@ -403,8 +403,8 @@ export default function AdvancedAnalytics({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Learning Insights</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Eye className="w-8 h-8 text-blue-600" />
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Eye className="w-8 h-8 text-emerald-600" />
                   </div>
                   <h4 className="font-semibold text-gray-900 mb-2">Preferred Subjects</h4>
                   <div className="space-y-1">
@@ -423,8 +423,8 @@ export default function AdvancedAnalytics({
                   </div>
                 </div>
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Clock className="w-8 h-8 text-purple-600" />
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Clock className="w-8 h-8 text-emerald-600" />
                   </div>
                   <h4 className="font-semibold text-gray-900 mb-2">Completion Rate</h4>
                   <div className="text-2xl font-bold text-gray-900">
@@ -475,8 +475,8 @@ export default function AdvancedAnalytics({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Recommendations</h3>
               <div className="space-y-3">
                 {analyticsData.predictions.recommendations.map((recommendation, index) => (
-                  <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+                  <div key={index} className="flex items-start space-x-3 p-3 bg-emerald-50 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5" />
                     <span className="text-gray-700">{recommendation}</span>
                   </div>
                 ))}
@@ -538,7 +538,7 @@ export default function AdvancedAnalytics({
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Engagement Level</h3>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
+                  <div className="text-3xl font-bold text-emerald-600 mb-2">
                     {analyticsData.parentReport.engagement}%
                   </div>
                   <p className="text-gray-600">Active participation in learning</p>

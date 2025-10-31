@@ -189,7 +189,7 @@ export default function QuestionAttempt({
   const isLastQuestion = currentIndex === questions.length - 1;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -208,7 +208,7 @@ export default function QuestionAttempt({
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
-              className="bg-gradient-to-r from-emerald-500 to-blue-500 h-2 rounded-full"
+              className="bg-gradient-to-r from-emerald-500 to-emerald-500 h-2 rounded-full"
             />
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function QuestionAttempt({
                   onClick={() => handleConfidenceChange(level)}
                   className={`flex-1 py-2 px-4 rounded-lg border-2 transition-all ${
                     confidence.get(currentQuestion.masterQuestionId) === level
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                       : 'border-gray-200 text-gray-600 hover:border-blue-300'
                   }`}
                 >
@@ -296,7 +296,7 @@ export default function QuestionAttempt({
             <div className="border-t pt-6">
               <button
                 onClick={() => setShowHints(!showHints)}
-                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium mb-4"
+                className="flex items-center space-x-2 text-emerald-600 hover:text-emerald-700 font-medium mb-4"
               >
                 <Lightbulb className="w-5 h-5" />
                 <span>{showHints ? 'Hide Hints' : `Show Hints (${currentQuestion.personalizedQuestion.hints.length})`}</span>
@@ -334,7 +334,7 @@ export default function QuestionAttempt({
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 disabled:opacity-50 transition shadow-lg"
+              className="flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 disabled:opacity-50 transition shadow-lg"
             >
               <span>{submitting ? 'Submitting...' : 'Submit Assignment'}</span>
               <Send className="w-5 h-5" />

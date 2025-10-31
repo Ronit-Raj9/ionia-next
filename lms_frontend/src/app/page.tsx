@@ -22,22 +22,22 @@ import toast from 'react-hot-toast';
 
 const features = [
   {
-    icon: <Brain className="w-8 h-8 text-blue-600" />,
+    icon: <Brain className="w-8 h-8 text-emerald-500" />,
     title: "AI-Powered Learning",
     description: "Personalized learning paths adapted to each student's unique needs and learning style."
   },
   {
-    icon: <Zap className="w-8 h-8 text-yellow-600" />,
+    icon: <Zap className="w-8 h-8 text-emerald-400" />,
     title: "Instant Feedback",
     description: "Real-time grading and feedback to accelerate learning and improve performance."
   },
   {
-    icon: <Shield className="w-8 h-8 text-green-600" />,
+    icon: <Shield className="w-8 h-8 text-emerald-600" />,
     title: "Secure & Reliable",
     description: "Enterprise-grade security with 99.9% uptime for uninterrupted learning."
   },
   {
-    icon: <Globe className="w-8 h-8 text-purple-600" />,
+    icon: <Globe className="w-8 h-8 text-emerald-500" />,
     title: "Global Access",
     description: "Access your learning materials and progress from anywhere, anytime."
   }
@@ -99,7 +99,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-900 via-emerald-700 to-emerald-500">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -109,13 +109,13 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-                The Future of
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent block">
-                  Education
+              <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+                Enquire
+                <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-300 bg-clip-text text-transparent block">
+                  Beyond Horizon
                 </span>
               </h1>
-              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              <p className="text-xl text-emerald-50 mb-8 max-w-3xl mx-auto">
                 Transform learning with AI-powered personalization, instant feedback, and adaptive curriculum designed for the modern classroom.
               </p>
             </motion.div>
@@ -128,14 +128,14 @@ export default function Home() {
             >
               <button
                 onClick={handleGetStarted}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
+                className="bg-white text-emerald-700 border border-emerald-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-50 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
               >
-                <span>Get Started</span>
+                <span>Start Free</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button
                 onClick={handleLearnMore}
-                className="bg-white text-gray-700 border border-gray-300 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-50 transition-all duration-200 flex items-center space-x-2"
+                className="bg-transparent text-white border border-white/30 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/10 transition-all duration-200 flex items-center space-x-2"
               >
                 <span>Learn More</span>
                 <Lightbulb className="w-5 h-5" />
@@ -150,12 +150,12 @@ export default function Home() {
               className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto"
             >
               {stats.map((stat, index) => (
-                <div key={index} className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-gray-200">
-                  <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-100 to-purple-100 rounded-lg mx-auto mb-4">
+                <div key={index} className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-emerald-300/30">
+                  <div className="flex items-center justify-center w-12 h-12 bg-emerald-100/30 rounded-lg mx-auto mb-4">
                     {stat.icon}
                   </div>
-                  <div className="text-3xl font-bold text-gray-900 mb-2">{stat.value}</div>
-                  <div className="text-gray-600">{stat.label}</div>
+                  <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
+                  <div className="text-emerald-50">{stat.label}</div>
                 </div>
               ))}
             </motion.div>
@@ -182,9 +182,9 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-all duration-300"
+                className="bg-white rounded-xl p-6 border border-emerald-200 hover:shadow-lg transition-all duration-300"
               >
-                <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl mb-4">
+                <div className="flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-xl mb-4">
                   {feature.icon}
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
@@ -196,7 +196,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+      <section className="py-20 bg-gradient-to-r from-emerald-700 to-emerald-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -206,12 +206,12 @@ export default function Home() {
             <h2 className="text-4xl font-bold text-white mb-6">
               Ready to Transform Your Learning?
             </h2>
-            <p className="text-xl text-blue-100 mb-8">
+            <p className="text-xl text-emerald-100 mb-8">
               Join thousands of students and teachers who are already experiencing the future of education.
             </p>
             <button
               onClick={handleGetStarted}
-              className="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 transition-all duration-200 flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl"
+              className="bg-white text-emerald-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-50 transition-all duration-200 flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl"
             >
               <span>Start Your Journey</span>
               <ArrowRight className="w-5 h-5" />
@@ -225,7 +225,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg flex items-center justify-center">
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold">IONIA</span>
