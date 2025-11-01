@@ -42,8 +42,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate creator permissions
+    // Only superadmin can create superadmins
+    if (targetRole === 'superadmin' && creatorRole !== 'superadmin') {
+      return NextResponse.json({
+        success: false,
+        error: 'Only superadmins can create superadmin accounts'
+      }, { status: 403 });
+    }
+
     const permissionCheck = validatePermission(
       creatorRole as 'superadmin' | 'admin' | 'teacher' | 'student',
+      targetRole === 'superadmin' ? 'createSchool' : // Superadmins can create superadmins (handled by superadmin check)
       targetRole === 'admin' ? 'createAdmin' :
       targetRole === 'teacher' ? 'createTeacher' :
       targetRole === 'student' ? 'createStudent' :

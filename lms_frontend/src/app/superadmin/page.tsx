@@ -25,6 +25,9 @@ import {
   Edit,
   X,
   Trash2,
+  BookOpen,
+  Calendar,
+  FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import BulkStudentCreation from '@/components/BulkStudentCreation';
@@ -98,6 +101,12 @@ export default function SuperadminDashboard() {
   const [loadingSchoolUsers, setLoadingSchoolUsers] = useState(false);
   const [activeRoleTab, setActiveRoleTab] = useState<'admins' | 'teachers' | 'students'>('admins');
   const [schoolUsersSearchTerm, setSchoolUsersSearchTerm] = useState('');
+
+  // School classes modal state
+  const [showSchoolClassesModal, setShowSchoolClassesModal] = useState(false);
+  const [schoolClasses, setSchoolClasses] = useState<any[]>([]);
+  const [loadingSchoolClasses, setLoadingSchoolClasses] = useState(false);
+  const [classesSearchTerm, setClassesSearchTerm] = useState('');
   
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -437,6 +446,34 @@ export default function SuperadminDashboard() {
     }
   };
 
+  const handleViewSchoolClasses = async (school: School) => {
+    setSelectedSchool(school);
+    setLoadingSchoolClasses(true);
+    setShowSchoolClassesModal(true);
+    setClassesSearchTerm('');
+
+    try {
+      const response = await fetch(
+        `/api/classes/school?schoolId=${school._id}&role=superadmin`
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSchoolClasses(data.data || []);
+      } else {
+        toast.error(data.error || 'Failed to fetch school classes');
+        setSchoolClasses([]);
+      }
+    } catch (error) {
+      console.error('Error fetching school classes:', error);
+      toast.error('Failed to fetch school classes');
+      setSchoolClasses([]);
+    } finally {
+      setLoadingSchoolClasses(false);
+    }
+  };
+
   const handleBlockSchoolUser = async (userId: string, currentStatus: string) => {
     if (!confirm(`Are you sure you want to block this user?`)) {
       return;
@@ -763,7 +800,7 @@ export default function SuperadminDashboard() {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -772,6 +809,20 @@ export default function SuperadminDashboard() {
                   </div>
                   <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
                     <Building2 className="w-6 h-6 text-emerald-600" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Superadmins</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {users.filter(u => u.role === 'superadmin').length}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-purple-600" />
                   </div>
                 </div>
               </div>
@@ -1071,9 +1122,10 @@ export default function SuperadminDashboard() {
                   <select
                     required
                     value={userForm.role}
-                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value, schoolId: e.target.value === 'superadmin' ? '' : userForm.schoolId })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
+                    <option value="superadmin">Superadmin</option>
                     <option value="admin">Admin</option>
                     <option value="teacher">Teacher</option>
                     <option value="student">Student</option>
@@ -1236,8 +1288,7 @@ export default function SuperadminDashboard() {
               {schools.map((school) => (
                 <div 
                   key={school._id} 
-                  className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleViewSchoolUsers(school)}
+                  className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -1248,7 +1299,6 @@ export default function SuperadminDashboard() {
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900">{school.schoolName}</h3>
                           <p className="text-sm text-gray-500">{school.schoolId}</p>
-                          <p className="text-xs text-emerald-600 mt-1">Click to view users →</p>
                         </div>
                       </div>
                       
@@ -1270,13 +1320,39 @@ export default function SuperadminDashboard() {
                           <p className="text-sm text-gray-600">Students</p>
                           <p className="font-medium text-gray-900">{school.stats.totalStudents}</p>
                         </div>
+                        <div>
+                          <p className="text-sm text-gray-600">Classes</p>
+                          <p className="font-medium text-gray-900">{school.stats.totalClasses}</p>
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end space-y-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         Active
                       </span>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewSchoolUsers(school);
+                          }}
+                          className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                        >
+                          <Users className="w-3.5 h-3.5 mr-1.5" />
+                          Users
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewSchoolClasses(school);
+                          }}
+                          className="inline-flex items-center px-3 py-1.5 border border-emerald-300 shadow-sm text-xs font-medium rounded-md text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+                          Classes
+                        </button>
+                      </div>
                       <p className="text-xs text-gray-500 mt-2">
                         Created: {new Date(school.createdAt).toLocaleDateString()}
                       </p>
@@ -1319,6 +1395,7 @@ export default function SuperadminDashboard() {
                   className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="all">All Roles</option>
+                  <option value="superadmin">Superadmins</option>
                   <option value="admin">Admins</option>
                   <option value="teacher">Teachers</option>
                   <option value="student">Students</option>
@@ -1364,6 +1441,7 @@ export default function SuperadminDashboard() {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
                           user.role === 'admin' ? 'bg-emerald-100 text-emerald-800' :
                           user.role === 'teacher' ? 'bg-green-100 text-green-800' :
                           user.role === 'student' ? 'bg-emerald-100 text-blue-800' :
@@ -1648,12 +1726,12 @@ export default function SuperadminDashboard() {
                     disabled={selectedUser.role === 'superadmin'}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="student">Student</option>
                     {selectedUser.role === 'superadmin' && (
                       <option value="superadmin">Superadmin</option>
                     )}
+                    <option value="admin">Admin</option>
+                    <option value="teacher">Teacher</option>
+                    <option value="student">Student</option>
                   </select>
                   {selectedUser.role === 'superadmin' && (
                     <p className="mt-1 text-xs text-gray-500">Superadmin role cannot be changed</p>
@@ -2031,6 +2109,197 @@ export default function SuperadminDashboard() {
           </div>
         )}
 
+        {/* School Classes Modal */}
+        {showSchoolClassesModal && selectedSchool && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 my-8 max-h-[90vh] flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-semibold text-gray-900">Classes</h3>
+                  <p className="text-sm text-gray-500 mt-1">{selectedSchool.schoolName} ({selectedSchool.schoolId})</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSchoolClassesModal(false);
+                    setSelectedSchool(null);
+                    setSchoolClasses([]);
+                    setClassesSearchTerm('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {loadingSchoolClasses ? (
+                <div className="flex items-center justify-center py-12 flex-1">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                  <span className="ml-3 text-gray-600">Loading classes...</span>
+                </div>
+              ) : (
+                <div className="flex flex-col flex-1 min-h-0">
+                  {/* Search Bar */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search classes by name, teacher, or subject..."
+                        value={classesSearchTerm}
+                        onChange={(e) => setClassesSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Classes List */}
+                  <div className="flex-1 overflow-auto">
+                    {schoolClasses
+                      .filter((classItem) => {
+                        if (!classesSearchTerm.trim()) return true;
+                        const searchLower = classesSearchTerm.toLowerCase();
+                        return (
+                          classItem.className?.toLowerCase().includes(searchLower) ||
+                          classItem.teacherName?.toLowerCase().includes(searchLower) ||
+                          classItem.subject?.toLowerCase().includes(searchLower) ||
+                          classItem.grade?.toLowerCase().includes(searchLower)
+                        );
+                      })
+                      .length > 0 ? (
+                      <div className="bg-gray-50 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-100 sticky top-0 z-10">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Class Name</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Teacher</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Subject</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Grade</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Students</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Assignments</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Join Code</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Created</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 bg-white">
+                            {schoolClasses
+                              .filter((classItem) => {
+                                if (!classesSearchTerm.trim()) return true;
+                                const searchLower = classesSearchTerm.toLowerCase();
+                                return (
+                                  classItem.className?.toLowerCase().includes(searchLower) ||
+                                  classItem.teacherName?.toLowerCase().includes(searchLower) ||
+                                  classItem.subject?.toLowerCase().includes(searchLower) ||
+                                  classItem.grade?.toLowerCase().includes(searchLower)
+                                );
+                              })
+                              .map((classItem) => (
+                                <tr key={classItem._id?.toString()} className="hover:bg-gray-50">
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center space-x-2">
+                                      <BookOpen className="w-4 h-4 text-emerald-600" />
+                                      <span className="text-sm font-medium text-gray-900">{classItem.className || 'N/A'}</span>
+                                    </div>
+                                    {classItem.description && (
+                                      <p className="text-xs text-gray-500 mt-1">{classItem.description}</p>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center space-x-2">
+                                      <GraduationCap className="w-4 h-4 text-green-600" />
+                                      <span className="text-sm text-gray-900">{classItem.teacherName || 'N/A'}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className="text-sm text-gray-900">{classItem.subject || 'N/A'}</span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className="text-sm text-gray-900">{classItem.grade || 'N/A'}</span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center space-x-1">
+                                      <Users className="w-4 h-4 text-gray-400" />
+                                      <span className="text-sm font-medium text-gray-900">{classItem.studentCount || 0}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center space-x-1">
+                                      <FileText className="w-4 h-4 text-gray-400" />
+                                      <span className="text-sm font-medium text-gray-900">{classItem.recentAssignments || 0}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-emerald-700">
+                                      {classItem.joinCode || 'N/A'}
+                                    </code>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className="text-xs text-gray-500">
+                                      {classItem.createdAt ? new Date(classItem.createdAt).toLocaleDateString() : 'N/A'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-12 text-center">
+                        <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-gray-500 text-lg font-medium">
+                          {classesSearchTerm
+                            ? `No classes found matching "${classesSearchTerm}"`
+                            : 'No classes found for this school'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Summary Footer */}
+                  <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-900">{schoolClasses.length}</p>
+                        <p className="text-sm text-emerald-700">Total Classes</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-900">
+                          {schoolClasses.reduce((sum, c) => sum + (c.studentCount || 0), 0)}
+                        </p>
+                        <p className="text-sm text-emerald-700">Total Students</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-900">
+                          {schoolClasses.reduce((sum, c) => sum + (c.recentAssignments || 0), 0)}
+                        </p>
+                        <p className="text-sm text-emerald-700">Total Assignments</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end border-t pt-4">
+                <button
+                  onClick={() => {
+                    setShowSchoolClassesModal(false);
+                    setSelectedSchool(null);
+                    setSchoolClasses([]);
+                    setClassesSearchTerm('');
+                  }}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md font-medium transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {/* Delete User Confirmation Modal */}
         {showDeleteModal && userToDelete && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -2103,6 +2372,9 @@ export default function SuperadminDashboard() {
                       <li>User account and all associated data</li>
                       <li>All submissions and progress records</li>
                       <li>Class enrollments and assignments</li>
+                      {userToDelete?.role === 'superadmin' && (
+                        <li className="font-bold text-red-900">⚠️ WARNING: Deleting a superadmin will remove system-wide access!</li>
+                      )}
                     </ul>
                   </div>
 
