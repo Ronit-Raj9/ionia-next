@@ -28,6 +28,8 @@ import {
   BookOpen,
   Calendar,
   FileText,
+  Snowflake,
+  RefreshCw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import BulkStudentCreation from '@/components/BulkStudentCreation';
@@ -37,6 +39,18 @@ interface School {
   schoolId: string;
   schoolName: string;
   schoolType: string;
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+  };
+  contact?: {
+    email: string;
+    phone: string;
+    website?: string;
+  };
   admin: {
     name: string;
     email: string;
@@ -46,6 +60,8 @@ interface School {
     totalStudents: number;
     totalClasses: number;
   };
+  status?: 'active' | 'frozen' | 'deleted';
+  isDeleted?: boolean;
   createdAt: Date;
 }
 
@@ -123,6 +139,23 @@ export default function SuperadminDashboard() {
     phoneNumber: '',
   });
 
+  // School management modal states
+  const [showEditSchoolModal, setShowEditSchoolModal] = useState(false);
+  const [showFreezeSchoolModal, setShowFreezeSchoolModal] = useState(false);
+  const [showDeleteSchoolModal, setShowDeleteSchoolModal] = useState(false);
+  const [selectedSchoolForAction, setSelectedSchoolForAction] = useState<School | null>(null);
+  const [editSchoolForm, setEditSchoolForm] = useState({
+    schoolName: '',
+    schoolType: 'CBSE' as 'CBSE' | 'ICSE' | 'State' | 'Private' | 'International' | 'Other',
+    addressStreet: '',
+    addressCity: '',
+    addressState: '',
+    addressPincode: '',
+    contactEmail: '',
+    contactPhone: '',
+  });
+  const [processingSchoolAction, setProcessingSchoolAction] = useState(false);
+
   // School form
   const [schoolForm, setSchoolForm] = useState({
     schoolName: '',
@@ -167,7 +200,8 @@ export default function SuperadminDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        setSchools(data.data);
+        // Include deleted schools for superadmin (they can see everything)
+        setSchools(data.data || []);
       } else {
         toast.error('Failed to fetch schools');
       }
@@ -610,6 +644,184 @@ export default function SuperadminDashboard() {
       toast.error('Failed to delete user');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  // School management handlers
+  const handleEditSchool = (school: School) => {
+    setSelectedSchoolForAction(school);
+    setEditSchoolForm({
+      schoolName: school.schoolName,
+      schoolType: school.schoolType as 'CBSE' | 'ICSE' | 'State' | 'Private' | 'International' | 'Other',
+      addressStreet: school.address?.street || '',
+      addressCity: school.address?.city || '',
+      addressState: school.address?.state || '',
+      addressPincode: school.address?.pincode || '',
+      contactEmail: school.contact?.email || '',
+      contactPhone: school.contact?.phone || '',
+    });
+    setShowEditSchoolModal(true);
+  };
+
+  const handleUpdateSchool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSchoolForAction) return;
+
+    setProcessingSchoolAction(true);
+    try {
+      const response = await fetch('/api/schools/manage', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolId: selectedSchoolForAction._id,
+          updates: {
+            schoolName: editSchoolForm.schoolName,
+            schoolType: editSchoolForm.schoolType,
+            address: {
+              street: editSchoolForm.addressStreet,
+              city: editSchoolForm.addressCity,
+              state: editSchoolForm.addressState,
+              pincode: editSchoolForm.addressPincode,
+              country: selectedSchoolForAction.address?.country || 'India',
+            },
+            contact: {
+              email: editSchoolForm.contactEmail,
+              phone: editSchoolForm.contactPhone,
+              website: selectedSchoolForAction.contact?.website,
+            },
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('School updated successfully');
+        setShowEditSchoolModal(false);
+        setSelectedSchoolForAction(null);
+        fetchSchools();
+      } else {
+        toast.error(data.error || 'Failed to update school');
+      }
+    } catch (error) {
+      console.error('Error updating school:', error);
+      toast.error('Failed to update school');
+    } finally {
+      setProcessingSchoolAction(false);
+    }
+  };
+
+  const handleFreezeSchool = (school: School) => {
+    setSelectedSchoolForAction(school);
+    setShowFreezeSchoolModal(true);
+  };
+
+  const handleFreezeSchoolConfirm = async () => {
+    if (!selectedSchoolForAction || !user) return;
+
+    setProcessingSchoolAction(true);
+    try {
+      const response = await fetch('/api/schools/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.userId,
+          action: 'freezeSchool',
+          schoolId: selectedSchoolForAction._id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message || 'School frozen successfully');
+        setShowFreezeSchoolModal(false);
+        setSelectedSchoolForAction(null);
+        fetchSchools();
+        fetchUsers(); // Refresh users to show status changes
+      } else {
+        toast.error(data.error || 'Failed to freeze school');
+      }
+    } catch (error) {
+      console.error('Error freezing school:', error);
+      toast.error('Failed to freeze school');
+    } finally {
+      setProcessingSchoolAction(false);
+    }
+  };
+
+  const handleUnfreezeSchool = async (school: School) => {
+    if (!user) return;
+
+    if (!confirm(`Are you sure you want to unfreeze "${school.schoolName}"? All users will be reactivated.`)) {
+      return;
+    }
+
+    setProcessingSchoolAction(true);
+    try {
+      const response = await fetch('/api/schools/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.userId,
+          action: 'unfreezeSchool',
+          schoolId: school._id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message || 'School unfrozen successfully');
+        fetchSchools();
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'Failed to unfreeze school');
+      }
+    } catch (error) {
+      console.error('Error unfreezing school:', error);
+      toast.error('Failed to unfreeze school');
+    } finally {
+      setProcessingSchoolAction(false);
+    }
+  };
+
+  const handleDeleteSchool = (school: School) => {
+    setSelectedSchoolForAction(school);
+    setShowDeleteSchoolModal(true);
+  };
+
+  const handleDeleteSchoolConfirm = async () => {
+    if (!selectedSchoolForAction || !user) return;
+
+    setProcessingSchoolAction(true);
+    try {
+      const response = await fetch('/api/schools/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.userId,
+          action: 'deleteSchool',
+          schoolId: selectedSchoolForAction._id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message || 'School deleted successfully');
+        setShowDeleteSchoolModal(false);
+        setSelectedSchoolForAction(null);
+        fetchSchools();
+        fetchUsers();
+      } else {
+        toast.error(data.error || 'Failed to delete school');
+      }
+    } catch (error) {
+      console.error('Error deleting school:', error);
+      toast.error('Failed to delete school');
+    } finally {
+      setProcessingSchoolAction(false);
     }
   };
 
@@ -1328,10 +1540,16 @@ export default function SuperadminDashboard() {
                     </div>
                     
                     <div className="text-right flex flex-col items-end space-y-2">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                        school.status === 'frozen' ? 'bg-blue-100 text-blue-800' :
+                        school.status === 'deleted' || school.isDeleted ? 'bg-red-100 text-red-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {school.status === 'frozen' ? 'Frozen' :
+                         school.status === 'deleted' || school.isDeleted ? 'Deleted' :
+                         'Active'}
                       </span>
-                      <div className="flex space-x-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1352,6 +1570,58 @@ export default function SuperadminDashboard() {
                           <BookOpen className="w-3.5 h-3.5 mr-1.5" />
                           Classes
                         </button>
+                        {/* Show edit/freeze/delete buttons for all schools except deleted ones */}
+                        {(!school.status || school.status !== 'deleted') && !school.isDeleted && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditSchool(school);
+                              }}
+                              className="inline-flex items-center px-3 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              title="Edit School"
+                            >
+                              <Edit className="w-3.5 h-3.5 mr-1.5" />
+                              Edit
+                            </button>
+                            {school.status === 'frozen' ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleUnfreezeSchool(school);
+                                }}
+                                className="inline-flex items-center px-3 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                title="Unfreeze School"
+                              >
+                                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                Unfreeze
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFreezeSchool(school);
+                                }}
+                                className="inline-flex items-center px-3 py-1.5 border border-blue-300 shadow-sm text-xs font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                title="Freeze School"
+                              >
+                                <Snowflake className="w-3.5 h-3.5 mr-1.5" />
+                                Freeze
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSchool(school);
+                              }}
+                              className="inline-flex items-center px-3 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              title="Delete School"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                              Delete
+                            </button>
+                          </>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
                         Created: {new Date(school.createdAt).toLocaleDateString()}
@@ -2424,6 +2694,302 @@ export default function SuperadminDashboard() {
                   </div>
                 </>
               )}
+            </motion.div>
+          </div>
+        )}
+
+        {/* Edit School Modal */}
+        {showEditSchoolModal && selectedSchoolForAction && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Edit School Details</h3>
+                <button
+                  onClick={() => {
+                    setShowEditSchoolModal(false);
+                    setSelectedSchoolForAction(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSchool} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    School Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editSchoolForm.schoolName}
+                    onChange={(e) => setEditSchoolForm(prev => ({ ...prev, schoolName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    School Type *
+                  </label>
+                  <select
+                    required
+                    value={editSchoolForm.schoolType}
+                    onChange={(e) => setEditSchoolForm(prev => ({ ...prev, schoolType: e.target.value as any }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="CBSE">CBSE</option>
+                    <option value="ICSE">ICSE</option>
+                    <option value="State">State Board</option>
+                    <option value="Private">Private</option>
+                    <option value="International">International</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Street Address
+                    </label>
+                    <input
+                      type="text"
+                      value={editSchoolForm.addressStreet}
+                      onChange={(e) => setEditSchoolForm(prev => ({ ...prev, addressStreet: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editSchoolForm.addressCity}
+                      onChange={(e) => setEditSchoolForm(prev => ({ ...prev, addressCity: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      State *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editSchoolForm.addressState}
+                      onChange={(e) => setEditSchoolForm(prev => ({ ...prev, addressState: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pincode *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editSchoolForm.addressPincode}
+                      onChange={(e) => setEditSchoolForm(prev => ({ ...prev, addressPincode: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contact Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={editSchoolForm.contactEmail}
+                      onChange={(e) => setEditSchoolForm(prev => ({ ...prev, contactEmail: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contact Phone *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={editSchoolForm.contactPhone}
+                      onChange={(e) => setEditSchoolForm(prev => ({ ...prev, contactPhone: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditSchoolModal(false);
+                      setSelectedSchoolForAction(null);
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={processingSchoolAction}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processingSchoolAction ? 'Updating...' : 'Update School'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Freeze School Confirmation Modal */}
+        {showFreezeSchoolModal && selectedSchoolForAction && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Snowflake className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Freeze School</h3>
+                  <p className="text-sm text-gray-600">This action will suspend all users and disable all classes</p>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium mb-1">Warning: This will affect all users in the school</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>All admins, teachers, and students will be suspended</li>
+                      <li>All classes will be disabled</li>
+                      <li>Users will not be able to log in</li>
+                      <li>This action can be reversed by unfreezing the school</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm font-medium text-gray-900 mb-2">School Details:</p>
+                <p className="text-sm text-gray-700"><strong>Name:</strong> {selectedSchoolForAction.schoolName}</p>
+                <p className="text-sm text-gray-700"><strong>ID:</strong> {selectedSchoolForAction.schoolId}</p>
+                <p className="text-sm text-gray-700"><strong>Teachers:</strong> {selectedSchoolForAction.stats.totalTeachers}</p>
+                <p className="text-sm text-gray-700"><strong>Students:</strong> {selectedSchoolForAction.stats.totalStudents}</p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowFreezeSchoolModal(false);
+                    setSelectedSchoolForAction(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleFreezeSchoolConfirm}
+                  disabled={processingSchoolAction}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processingSchoolAction ? (
+                    <>
+                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                      Freezing...
+                    </>
+                  ) : (
+                    'Freeze School'
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Delete School Confirmation Modal */}
+        {showDeleteSchoolModal && selectedSchoolForAction && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete School</h3>
+                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div className="text-sm text-red-800">
+                    <p className="font-medium mb-1">Danger: This is a permanent action</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>All admins, teachers, and students will be deactivated</li>
+                      <li>All classes will be disabled</li>
+                      <li>The school will be marked as deleted</li>
+                      <li>All data will be preserved but inaccessible</li>
+                      <li>This action cannot be reversed</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm font-medium text-gray-900 mb-2">School Details:</p>
+                <p className="text-sm text-gray-700"><strong>Name:</strong> {selectedSchoolForAction.schoolName}</p>
+                <p className="text-sm text-gray-700"><strong>ID:</strong> {selectedSchoolForAction.schoolId}</p>
+                <p className="text-sm text-gray-700"><strong>Teachers:</strong> {selectedSchoolForAction.stats.totalTeachers}</p>
+                <p className="text-sm text-gray-700"><strong>Students:</strong> {selectedSchoolForAction.stats.totalStudents}</p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteSchoolModal(false);
+                    setSelectedSchoolForAction(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteSchoolConfirm}
+                  disabled={processingSchoolAction}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processingSchoolAction ? (
+                    <>
+                      <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete School Permanently'
+                  )}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

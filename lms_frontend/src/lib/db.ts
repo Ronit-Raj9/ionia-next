@@ -155,6 +155,13 @@ export interface School {
     totalClasses: number;
     lastActivity: Date;
   };
+  // School management status
+  status?: 'active' | 'frozen' | 'deleted';
+  isDeleted?: boolean;
+  deletedAt?: Date;
+  deletedBy?: string;
+  frozenAt?: Date;
+  frozenBy?: string;
   createdAt: Date;
   updatedAt: Date;
 }
