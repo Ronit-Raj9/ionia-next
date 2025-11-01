@@ -26,14 +26,12 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Confetti from 'react-confetti';
-import StudentMessageTeacher from '@/components/StudentMessageTeacher';
 import PersonalityQuiz from '@/components/PersonalityQuiz';
 import ClassDiscovery from '@/components/ClassDiscovery';
 import StudentClassroom from '@/components/StudentClassroom';
 import LearningAssessmentQuiz from '@/components/LearningAssessmentQuiz';
 import StudentAssignmentView from '@/components/StudentAssignmentView';
 import JoinClassroom from '@/components/JoinClassroom';
-import ClassChat from '@/components/ClassChat';
 
 // Import types from the new system
 import { Assignment, Submission, Progress } from '@/lib/db';
@@ -62,7 +60,7 @@ export default function StudentDashboard() {
   const [recentBadges, setRecentBadges] = useState<string[]>([]);
   
   // Tab state and classes
-  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings' | 'adaptive-assignments' | 'class-chat'>('assignments');
+  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'settings' | 'adaptive-assignments'>('assignments');
   const [classes, setClasses] = useState<any[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -467,28 +465,6 @@ export default function StudentDashboard() {
               >
                 <Brain className="w-4 h-4 inline mr-2" />
                 Adaptive Assignments
-              </button>
-              <button
-                onClick={() => setActiveTab('message')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'message'
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <MessageCircle className="w-4 h-4 inline mr-2" />
-                Message Teacher
-              </button>
-              <button
-                onClick={() => setActiveTab('class-chat')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'class-chat'
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <MessageCircle className="w-4 h-4 inline mr-2" />
-                Class Chat
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -1147,9 +1123,6 @@ export default function StudentDashboard() {
                               </p>
                             )}
                           </div>
-                          {classData.hasUnreadMessages && (
-                            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                          )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -1169,9 +1142,6 @@ export default function StudentDashboard() {
 
                         <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
                           <span>Joined {new Date(classData.createdAt).toLocaleDateString()}</span>
-                          {classData.hasUnreadMessages && (
-                            <span className="text-emerald-600 font-medium">New messages</span>
-                          )}
                         </div>
 
                         <div className="flex space-x-2">
@@ -1180,20 +1150,10 @@ export default function StudentDashboard() {
                               e.stopPropagation();
                               setSelectedClassId(classData._id);
                             }}
-                            className="flex-1 px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-1"
+                            className="w-full px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-1"
                           >
                             <Eye className="w-4 h-4" />
                             <span>View Class</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveTab('message');
-                            }}
-                            className="px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors"
-                            title="Message teacher"
-                          >
-                            <MessageCircle className="w-4 h-4" />
                           </button>
                         </div>
                       </motion.div>
@@ -1336,43 +1296,6 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* Message Teacher Tab Content */}
-        {activeTab === 'message' && (
-          <div className="space-y-6">
-            <div className="h-96">
-              <StudentMessageTeacher
-                studentId={user?.userId || ''}
-                studentName={user?.name || user?.displayName || 'Student'}
-                teacherId="teacher1" // For now, defaulting to teacher1
-                teacherName="Teacher"
-                isEmbedded={true}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Class Chat Tab Content */}
-        {activeTab === 'class-chat' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Classroom Chat</h2>
-                <p className="text-gray-600">
-                  Ask questions, share ideas, and chat with your teacher and classmates
-                </p>
-              </div>
-              <div className="h-[calc(100vh-300px)] min-h-[500px]">
-                <ClassChat
-                  userId={user?.userId || ''}
-                  userName={user?.name || user?.displayName || 'Student'}
-                  role="student"
-                  classId={user?.classId || undefined}
-                  isEmbedded={true}
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Settings Tab Content */}
         {activeTab === 'settings' && (

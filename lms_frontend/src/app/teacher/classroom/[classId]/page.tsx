@@ -22,9 +22,11 @@ import {
   Trash2,
   MessageCircle,
   Eye,
-  Download
+  Download,
+  MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ClassChat from '@/components/ClassChat';
 
 interface ClassDetails {
   class: {
@@ -100,7 +102,7 @@ export default function ClassroomPage() {
   const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedJoinCode, setCopiedJoinCode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'assignments' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'assignments' | 'analytics' | 'chat'>('overview');
 
   useEffect(() => {
     if (user && user.role !== 'teacher') {
@@ -392,6 +394,17 @@ export default function ClassroomPage() {
             >
               <BarChart3 className="w-4 h-4 inline mr-2" />
               Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'chat'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4 inline mr-2" />
+              Chat
             </button>
           </nav>
         </div>
@@ -712,6 +725,17 @@ export default function ClassroomPage() {
                 View Analytics
               </button>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'chat' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style={{ height: '700px' }}>
+            <ClassChat
+              classId={classId}
+              userId={user?.userId || ''}
+              userRole="teacher"
+              userName={user?.name || user?.displayName || 'Teacher'}
+            />
           </div>
         )}
       </div>

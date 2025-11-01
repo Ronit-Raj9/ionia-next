@@ -20,9 +20,11 @@ import {
   Target,
   X,
   Download,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ClassChat from './ClassChat';
 
 interface Assignment {
   _id: string;
@@ -127,7 +129,7 @@ export default function StudentClassroom({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   
   // View state
-  const [view, setView] = useState<'assignments' | 'grades' | 'submission'>('assignments');
+  const [view, setView] = useState<'assignments' | 'grades' | 'submission' | 'chat'>('assignments');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
 
   useEffect(() => {
@@ -399,6 +401,17 @@ export default function StudentClassroom({
           >
             <Award className="w-4 h-4 inline mr-2" />
             Grades
+          </button>
+          <button
+            onClick={() => setView('chat')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              view === 'chat'
+                ? 'bg-white text-emerald-600 shadow-sm font-medium'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4 inline mr-2" />
+            Chat
           </button>
         </div>
 
@@ -938,6 +951,18 @@ export default function StudentClassroom({
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Chat View */}
+      {view === 'chat' && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" style={{ height: '600px' }}>
+          <ClassChat
+            classId={classId}
+            userId={studentId}
+            userRole="student"
+            userName={studentName}
+          />
         </div>
       )}
     </div>
