@@ -21,17 +21,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!role || !userId) {
+    // Superadmin doesn't need userId
+    if (!role) {
       return NextResponse.json(
-        { success: false, error: 'Role and userId are required' },
+        { success: false, error: 'Role is required' },
         { status: 400 }
       );
     }
 
     // Validate role
-    if (!['teacher', 'student', 'admin'].includes(role)) {
+    if (!['teacher', 'student', 'admin', 'superadmin'].includes(role)) {
       return NextResponse.json(
         { success: false, error: 'Invalid role' },
+        { status: 400 }
+      );
+    }
+
+    // For non-superadmin roles, userId is required
+    if (role !== 'superadmin' && !userId) {
+      return NextResponse.json(
+        { success: false, error: 'UserId is required for non-superadmin roles' },
         { status: 400 }
       );
     }
@@ -57,12 +66,12 @@ export async function GET(request: NextRequest) {
     };
     
     // Filter based on role
-    if (role === 'teacher') {
+    if (role === 'teacher' && userId) {
       query.teacherId = userId;
-    } else if (role === 'student') {
+    } else if (role === 'student' && userId) {
       query.studentIds = { $in: [userId] };
     }
-    // Admin can see all classes in the school
+    // Admin and superadmin can see all classes in the school (no additional filter)
 
     console.log('Querying classes with query:', JSON.stringify(query, null, 2));
     
@@ -81,18 +90,20 @@ export async function GET(request: NextRequest) {
           classId: classData._id?.toString()
         });
 
-        // Get real unread message status from class chats
-        const classChat = await classChatsCollection.findOne({
-          classId: classData._id?.toString()
-        });
-
+        // Get real unread message status from class chats (only for non-superadmin)
         let hasUnreadMessages = false;
-        if (classChat && classChat.messages) {
-          // Check if there are unread messages for this user
-          const unreadCount = classChat.messages.filter((message: any) => 
-            !message.isRead && message.senderId !== userId
-          ).length;
-          hasUnreadMessages = unreadCount > 0;
+        if (role !== 'superadmin' && userId) {
+          const classChat = await classChatsCollection.findOne({
+            classId: classData._id?.toString()
+          });
+
+          if (classChat && classChat.messages) {
+            // Check if there are unread messages for this user
+            const unreadCount = classChat.messages.filter((message: any) => 
+              !message.isRead && message.senderId !== userId
+            ).length;
+            hasUnreadMessages = unreadCount > 0;
+          }
         }
 
         return {

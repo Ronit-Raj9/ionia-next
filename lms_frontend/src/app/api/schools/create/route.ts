@@ -146,6 +146,8 @@ export async function POST(req: NextRequest) {
         totalClasses: 0,
         lastActivity: new Date(),
       },
+      status: 'active',
+      isDeleted: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -223,6 +225,12 @@ export async function GET(req: NextRequest) {
         success: false,
         error: 'Insufficient permissions to view schools'
       }, { status: 403 });
+    }
+
+    // Filter out deleted schools for non-superadmin users
+    if (requestorRole !== 'superadmin') {
+      query.isDeleted = { $ne: true };
+      query.status = { $ne: 'deleted' };
     }
 
     const schools = await schoolsCollection
