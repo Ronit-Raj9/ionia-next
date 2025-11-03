@@ -6,6 +6,7 @@ const nextConfig = {
   env: {
     LMS_API_URL: process.env.LMS_API_URL || 'http://localhost:5000',
     IONIA_API_URL: process.env.IONIA_API_URL || 'http://localhost:4000',
+    AI_API_URL: process.env.AI_API_URL || 'http://localhost:8000',
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
@@ -44,6 +45,10 @@ const nextConfig = {
       {
         source: '/api/ionia/:path*',
         destination: `${process.env.IONIA_API_URL || 'http://localhost:4000'}/api/v1/:path*`,
+      },
+      {
+        source: '/api/ai/:path*',
+        destination: `${process.env.AI_API_URL || 'http://localhost:8000'}/api/:path*`,
       },
     ];
   },
