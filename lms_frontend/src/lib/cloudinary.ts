@@ -121,15 +121,21 @@ export function extractPublicId(cloudinaryUrl: string): string | null {
 // Validate file type and size
 export function validateFile(file: File): { valid: boolean; error?: string } {
   const maxSize = 10 * 1024 * 1024; // 10MB
-  const allowedTypes = [
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'application/pdf',
-    'text/plain',
-  ];
+  
+  // Allow images
+  const isImage = file.type.startsWith('image/');
+  
+  // Allow documents (PDF, Word, Excel, PowerPoint, Text)
+  const isDocument = 
+    file.type === 'application/pdf' ||
+    file.type === 'text/plain' ||
+    file.type.includes('document') ||
+    file.type.includes('msword') ||
+    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    file.type === 'application/vnd.ms-excel' ||
+    file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    file.type === 'application/vnd.ms-powerpoint' ||
+    file.type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
   if (file.size > maxSize) {
     return {
@@ -138,10 +144,10 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
     };
   }
 
-  if (!allowedTypes.includes(file.type)) {
+  if (!isImage && !isDocument) {
     return {
       valid: false,
-      error: 'File type not supported. Please upload images, PDFs, or text files.',
+      error: 'File type not supported. Please upload images (JPG, PNG, GIF, WebP) or documents (PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT).',
     };
   }
 

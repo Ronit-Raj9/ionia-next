@@ -57,9 +57,22 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error getting session:', error);
+    
+    // Provide more helpful error messages
+    let errorMessage = 'Failed to get session';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('MongoClient') || error.message.includes('MongoDB')) {
+        errorMessage = 'Database connection error';
+      } else if (error.message.includes('JWT_SECRET')) {
+        errorMessage = 'Server configuration error';
+      }
+    }
+    
     return NextResponse.json({
       success: false,
-      error: 'Failed to get session'
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
     }, { status: 500 });
   }
 }

@@ -1,36 +1,45 @@
 import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your MongoDB URI to .env.local');
-}
+// Lazy initialization - don't create client at module load time
+// This allows the module to be imported during build without requiring MONGODB_URI
+let client: MongoClient | undefined;
+let clientPromise: Promise<MongoClient> | undefined;
 
-const uri = process.env.MONGODB_URI;
-const options = {};
-
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
-
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  let globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+function getClientPromise(): Promise<MongoClient> {
+  // Validate MONGODB_URI only when actually connecting
+  if (!process.env.MONGODB_URI) {
+    throw new Error('Please add your MongoDB URI to .env.local');
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+
+  const uri = process.env.MONGODB_URI;
+  const options = {};
+
+  if (process.env.NODE_ENV === 'development') {
+    // In development mode, use a global variable so that the value
+    // is preserved across module reloads caused by HMR (Hot Module Replacement).
+    let globalWithMongo = global as typeof globalThis & {
+      _mongoClientPromise?: Promise<MongoClient>;
+    };
+
+    if (!globalWithMongo._mongoClientPromise) {
+      client = new MongoClient(uri, options);
+      globalWithMongo._mongoClientPromise = client.connect();
+    }
+    return globalWithMongo._mongoClientPromise;
+  } else {
+    // In production mode, it's best to not use a global variable.
+    // Create a new client if one doesn't exist
+    if (!clientPromise) {
+      client = new MongoClient(uri, options);
+      clientPromise = client.connect();
+    }
+    return clientPromise;
+  }
 }
 
 // Database connection helper
 export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
-  const client = await clientPromise;
+  const client = await getClientPromise();
   const db = client.db('IoniaDB');
   return { client, db };
 }
@@ -59,6 +68,7 @@ export const COLLECTIONS = {
   ANALYTICS: 'analytics',
   CHAT_CONVERSATIONS: 'chatConversations',
   CLASS_CHATS: 'classChats',
+  ONE_TO_ONE_CHATS: 'oneToOneChats',
   QUESTION_BANK: 'questionBank',
   QUESTION_ATTEMPTS: 'questionAttempts',
   TEACHER_PERFORMANCE: 'teacherPerformance',
@@ -678,6 +688,49 @@ export interface ClassChat {
     moderationEnabled: boolean;
     allowReactions: boolean;
   };
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// One-to-One Chat interfaces (Teacher ↔ Student)
+export interface OneToOneChatMessage {
+  _id?: ObjectId;
+  senderId: string;
+  senderRole: 'teacher' | 'student';
+  senderName: string;
+  messageType: 'text' | 'image' | 'document';
+  content: string;
+  attachments?: {
+    type: 'image' | 'document';
+    url: string;
+    fileName: string;
+    fileSize: number;
+  }[];
+  timestamp: Date;
+  isDeleted?: boolean; // For soft deletion
+  deletedAt?: Date;
+  deletedBy?: string; // Who deleted it
+}
+
+export interface OneToOneChat {
+  _id?: ObjectId;
+  teacherId: string;
+  teacherName: string;
+  studentId: string;
+  studentName: string;
+  schoolId: ObjectId; // Both users must be from same school
+  messages: OneToOneChatMessage[];
+  lastActivity: Date;
+  lastMessage?: OneToOneChatMessage;
+  
+  // Blocking
+  blockedBy?: string; // userId who blocked
+  isBlocked: boolean;
+  blockedAt?: Date;
+  
+  // Metadata
+  createdBy: string; // userId who initiated the chat
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -1700,4 +1753,7 @@ export interface StudentQuestionChoice {
   updatedAt: Date;
 }
 
-export default clientPromise;
+// Export a getter function instead of the promise to avoid build-time initialization
+export default function getDefaultClientPromise(): Promise<MongoClient> {
+  return getClientPromise();
+}

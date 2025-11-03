@@ -68,23 +68,16 @@ NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_SECRET=your_secret
 ```
 
-### **3. Create Superadmin**
-```bash
-npm run seed:superadmin
-```
-
-**Save the credentials!** They're shown only once.
-
-### **4. Start Development Server**
+### **3. Start Development Server**
 ```bash
 npm run dev
 ```
 
-### **5. Login**
+### **4. Login**
 ```
 Go to: http://localhost:3001/login
 Email: superadmin@ionia.edu
-Password: (from seed script)
+Password: (use your saved credentials)
 ```
 
 ---
@@ -244,7 +237,6 @@ npm run build           # Build for production
 npm run start           # Start production server
 
 # Utilities
-npm run seed:superadmin # Create initial superadmin
 npm run lint            # Run ESLint
 ```
 
@@ -351,8 +343,8 @@ export async function GET(request: NextRequest) {
 
 ### **First Time Setup:**
 1. Configure `.env.local` with all required variables
-2. Run `npm run seed:superadmin` to create first admin
-3. Login and create your first school
+2. Login with your superadmin credentials (already created)
+3. Create your first school
 4. Start onboarding users
 
 ### **Security Requirements:**
