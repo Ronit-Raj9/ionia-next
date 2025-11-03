@@ -20,21 +20,59 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Only superadmin, admin, and teachers can access user lists
-    if (!['superadmin', 'admin', 'teacher'].includes(session.role)) {
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get('role'); // Filter by role
+    const schoolId = searchParams.get('schoolId'); // Filter by school
+    const userId = searchParams.get('userId'); // Get specific user by userId
+
+    // Allow students to get specific user info (for chat features)
+    // Only superadmin, admin, and teachers can access full user lists
+    const allowSingleUserQuery = userId && ['student', 'teacher', 'admin', 'superadmin'].includes(session.role);
+    const allowListQuery = ['superadmin', 'admin', 'teacher'].includes(session.role);
+    
+    if (!allowSingleUserQuery && !allowListQuery) {
       return NextResponse.json(
         { success: false, error: 'Insufficient permissions' },
         { status: 403 }
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const role = searchParams.get('role'); // Filter by role
-    const schoolId = searchParams.get('schoolId'); // Filter by school
-
     const usersCollection = await getCollection(COLLECTIONS.USERS);
     const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
 
+    // If userId is provided, return that specific user
+    if (userId) {
+      const usersCollection = await getCollection(COLLECTIONS.USERS);
+      const user = await usersCollection.findOne({ userId });
+      
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      
+      // Check permissions (must be from same school unless superadmin)
+      if (session.role !== 'superadmin' && session.schoolId) {
+        if (user.schoolId?.toString() !== session.schoolId) {
+          return NextResponse.json(
+            { success: false, error: 'Insufficient permissions' },
+            { status: 403 }
+          );
+        }
+      }
+      
+      return NextResponse.json({
+        success: true,
+        user: {
+          userId: user.userId,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
+    }
+    
     // Build query with school scoping for non-superadmins
     const query: any = {};
     

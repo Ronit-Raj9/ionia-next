@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -17,7 +18,9 @@ import {
   FileText,
   Image as ImageIcon,
   Download,
-  Paperclip
+  Paperclip,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -59,6 +62,7 @@ export default function ClassChat({
   userRole,
   userName
 }: ClassChatProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -71,18 +75,50 @@ export default function ClassChat({
   const [searching, setSearching] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<string[]>([]);
+  const [hoveredTeacherId, setHoveredTeacherId] = useState<string | null>(null);
+  const [hoveredTeacherInfo, setHoveredTeacherInfo] = useState<{id: string, name: string, email: string} | null>(null);
+  const [hoveredStudentId, setHoveredStudentId] = useState<string | null>(null);
+  const [hoveredStudentInfo, setHoveredStudentInfo] = useState<{id: string, name: string, email: string} | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [userHasScrolled, setUserHasScrolled] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isHoveringRef = useRef<boolean>(false);
+  const hoveredUserIdRef = useRef<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousMessageCountRef = useRef<number>(0);
 
   const MAX_MESSAGE_LENGTH = 1000;
   const POLLING_INTERVAL = 3000; // 3 seconds
 
-  // Scroll to bottom
+  // Scroll to bottom only if user hasn't manually scrolled up
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldAutoScroll && !userHasScrolled) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Check if user is near bottom of scroll
+  const isNearBottom = () => {
+    if (!messagesContainerRef.current) return true;
+    const container = messagesContainerRef.current;
+    const threshold = 100; // pixels from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
+
+  // Handle scroll events to detect user intent
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const nearBottom = isNearBottom();
+      setUserHasScrolled(!nearBottom);
+      // If user scrolls back to bottom, re-enable auto-scroll
+      if (nearBottom) {
+        setShouldAutoScroll(true);
+      }
+    }
   };
 
   // Fetch messages
@@ -349,12 +385,42 @@ export default function ClassChat({
     };
   }, [classId, loading]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change, but only if:
+  // 1. It's a new message (count increased)
+  // 2. User hasn't manually scrolled up
+  // 3. It's the user's own message (they just sent it)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const currentCount = messages.length;
+    const previousCount = previousMessageCountRef.current;
+    
+    // Check if it's a new message
+    if (currentCount > previousCount) {
+      const lastMessage = messages[messages.length - 1];
+      const nearBottom = isNearBottom();
+      
+      // Auto-scroll if: user sent the message OR user is already at bottom
+      if (lastMessage?.senderId === userId || nearBottom) {
+        setShouldAutoScroll(true);
+        setUserHasScrolled(false);
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+      } else {
+        // New message from someone else and user scrolled up - don't auto-scroll
+        setUserHasScrolled(true);
+      }
+    } else if (currentCount === 0 && previousCount === 0) {
+      // Initial load - scroll to bottom
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    }
+    
+    previousMessageCountRef.current = currentCount;
+  }, [messages, userId]);
 
-  // Cleanup file previews on unmount
+  // Cleanup file previews and timeouts on unmount
   useEffect(() => {
     return () => {
       filePreviews.forEach(url => {
@@ -366,6 +432,9 @@ export default function ClassChat({
           }
         }
       });
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -497,6 +566,7 @@ export default function ClassChat({
       {/* Messages */}
       <div
         ref={messagesContainerRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
       >
         {messages.length === 0 ? (
@@ -505,7 +575,13 @@ export default function ClassChat({
             <p>No messages yet. Start the conversation!</p>
           </div>
         ) : (
-          messages.map((message) => (
+          messages.map((message, messageIndex) => {
+            // Check if this is the message we're currently hovering over
+            const isHovered = 
+              (userRole === 'student' && message.senderRole === 'teacher' && message.senderId !== userId && hoveredTeacherId === message.senderId) ||
+              (userRole === 'teacher' && message.senderRole === 'student' && message.senderId !== userId && hoveredStudentId === message.senderId);
+            
+            return (
             <div
               key={message._id || `msg-${message.timestamp}-${message.senderId}`}
               id={`message-${message._id}`}
@@ -521,15 +597,238 @@ export default function ClassChat({
                 }`}
               >
                 <div className="flex items-center space-x-2 mb-1">
-                  <div className="flex items-center space-x-1">
+                  <div 
+                    className="flex items-center space-x-1 relative"
+                    onMouseEnter={() => {
+                      // Clear any pending hide timeout
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current);
+                        hoverTimeoutRef.current = null;
+                      }
+                      
+                      isHoveringRef.current = true;
+                      hoveredUserIdRef.current = message.senderId;
+                      
+                      // For students: hover over teacher names
+                      if (message.senderRole === 'teacher' && message.senderId !== userId && userRole === 'student') {
+                        // Set immediately with available data to prevent blinking
+                        setHoveredTeacherId(message.senderId);
+                        setHoveredTeacherInfo({
+                          id: message.senderId,
+                          name: message.senderName,
+                          email: ''
+                        });
+                        
+                        // Then fetch full info and update
+                        fetch(`/api/users?userId=${message.senderId}`)
+                          .then(res => res.json())
+                          .then(data => {
+                            // Only update if still hovering over same user
+                            if (hoveredUserIdRef.current === message.senderId && isHoveringRef.current) {
+                              if (data.success && data.user) {
+                                setHoveredTeacherInfo({
+                                  id: message.senderId,
+                                  name: data.user.name || message.senderName,
+                                  email: data.user.email || ''
+                                });
+                              }
+                            }
+                          })
+                          .catch(() => {
+                            // Info already set above, so ignore error
+                          });
+                      }
+                      // For teachers: hover over student names
+                      if (message.senderRole === 'student' && message.senderId !== userId && userRole === 'teacher') {
+                        // Set immediately with available data to prevent blinking
+                        setHoveredStudentId(message.senderId);
+                        setHoveredStudentInfo({
+                          id: message.senderId,
+                          name: message.senderName,
+                          email: ''
+                        });
+                        
+                        // Then fetch full info and update
+                        fetch(`/api/users?userId=${message.senderId}`)
+                          .then(res => res.json())
+                          .then(data => {
+                            // Only update if still hovering over same user
+                            if (hoveredUserIdRef.current === message.senderId && isHoveringRef.current) {
+                              if (data.success && data.user) {
+                                setHoveredStudentInfo({
+                                  id: message.senderId,
+                                  name: data.user.name || message.senderName,
+                                  email: data.user.email || ''
+                                });
+                              }
+                            }
+                          })
+                          .catch(() => {
+                            // Info already set above, so ignore error
+                          });
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      // When mouse leaves the name, use a delay before hiding
+                      // This allows mouse to move to popup
+                      hoverTimeoutRef.current = setTimeout(() => {
+                        // Only hide if not hovering over popup (popup's onMouseEnter will prevent this)
+                        if (!isHoveringRef.current) {
+                          setHoveredTeacherId(null);
+                          setHoveredTeacherInfo(null);
+                          setHoveredStudentId(null);
+                          setHoveredStudentInfo(null);
+                          hoveredUserIdRef.current = null;
+                        }
+                      }, 100);
+                    }}
+                  >
                     {message.senderRole === 'teacher' ? (
                       <GraduationCap className="w-3 h-3" />
                     ) : (
                       <User className="w-3 h-3" />
                     )}
-                    <span className="text-xs font-medium opacity-90">
+                    <span className="text-xs font-medium opacity-90 cursor-pointer hover:underline">
                       {message.senderId === userId ? 'You' : message.senderName}
                     </span>
+                    
+                    {/* Hover Profile for Teachers (only for students) - Only show once for the hovered teacher */}
+                    {userRole === 'student' && message.senderRole === 'teacher' && message.senderId !== userId && hoveredTeacherId === message.senderId && hoveredTeacherInfo && hoveredTeacherInfo.id === message.senderId && messageIndex === messages.findIndex((m) => m.senderId === hoveredTeacherId && m.senderRole === 'teacher' && m.senderId !== userId) && (
+                      <div 
+                        className="hover-profile-popup absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-64"
+                        onMouseEnter={() => {
+                          // Keep popup visible when hovering over it - clear any pending hide timeout
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                            hoverTimeoutRef.current = null;
+                          }
+                          isHoveringRef.current = true;
+                        }}
+                        onMouseLeave={() => {
+                          // Hide popup when mouse leaves it completely
+                          isHoveringRef.current = false;
+                          hoveredUserIdRef.current = null;
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                          }
+                          setHoveredTeacherId(null);
+                          setHoveredTeacherInfo(null);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
+                            {hoveredTeacherInfo.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{hoveredTeacherInfo.name}</h4>
+                            <p className="text-xs text-gray-500">Teacher</p>
+                          </div>
+                        </div>
+                        {hoveredTeacherInfo.email && (
+                          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-3">
+                            <Mail className="w-4 h-4" />
+                            <span>{hoveredTeacherInfo.email}</span>
+                          </div>
+                        )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch('/api/chats', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ targetUserId: hoveredTeacherInfo.id })
+                              });
+                              
+                              const data = await response.json();
+                              if (data.success) {
+                                // Redirect to chats page with the new chat
+                                router.push(`/student/chats?chatId=${data.data.chat.chatId}`);
+                              } else {
+                                toast.error(data.error || 'Failed to start chat');
+                              }
+                            } catch (error) {
+                              console.error('Error starting chat:', error);
+                              toast.error('Failed to start chat');
+                            }
+                          }}
+                          className="w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-2"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Message Privately</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Hover Profile for Students (only for teachers) - Only show once for the hovered student */}
+                    {userRole === 'teacher' && message.senderRole === 'student' && message.senderId !== userId && hoveredStudentId === message.senderId && hoveredStudentInfo && hoveredStudentInfo.id === message.senderId && messageIndex === messages.findIndex((m) => m.senderId === hoveredStudentId && m.senderRole === 'student' && m.senderId !== userId) && (
+                      <div 
+                        className="hover-profile-popup absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-64"
+                        onMouseEnter={() => {
+                          // Keep popup visible when hovering over it - clear any pending hide timeout
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                            hoverTimeoutRef.current = null;
+                          }
+                          isHoveringRef.current = true;
+                        }}
+                        onMouseLeave={() => {
+                          // Hide popup when mouse leaves it completely
+                          isHoveringRef.current = false;
+                          hoveredUserIdRef.current = null;
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                          }
+                          setHoveredStudentId(null);
+                          setHoveredStudentInfo(null);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
+                            {hoveredStudentInfo.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{hoveredStudentInfo.name}</h4>
+                            <p className="text-xs text-gray-500">Student</p>
+                          </div>
+                        </div>
+                        {hoveredStudentInfo.email && (
+                          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-3">
+                            <Mail className="w-4 h-4" />
+                            <span>{hoveredStudentInfo.email}</span>
+                          </div>
+                        )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch('/api/chats', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ targetUserId: hoveredStudentInfo.id })
+                              });
+                              
+                              const data = await response.json();
+                              if (data.success) {
+                                // Redirect to chats page with the new chat
+                                router.push(`/teacher/chats?chatId=${data.data.chat.chatId}`);
+                              } else {
+                                toast.error(data.error || 'Failed to start chat');
+                              }
+                            } catch (error) {
+                              console.error('Error starting chat:', error);
+                              toast.error('Failed to start chat');
+                            }
+                          }}
+                          className="w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-2"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Message Privately</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {(userRole === 'teacher' || message.senderId === userId) && (
                     <button
@@ -599,7 +898,8 @@ export default function ClassChat({
                 </div>
               </div>
             </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

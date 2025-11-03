@@ -40,6 +40,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.className}>
       <head>
+        {/* Favicon */}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        
         {/* DNS Prefetch for performance */}
         <link rel="dns-prefetch" href="//fonts.googleapis.com" />
         <link rel="dns-prefetch" href="//fonts.gstatic.com" />
@@ -119,7 +122,12 @@ export default function RootLayout({
                       console.log('SW registered: ', registration);
                     })
                     .catch(function(registrationError) {
-                      console.log('SW registration failed: ', registrationError);
+                      // Silently fail if SW file doesn't exist - not critical
+                      if (registrationError.message && registrationError.message.includes('404')) {
+                        console.debug('ServiceWorker not available (404) - continuing without SW');
+                      } else {
+                        console.log('SW registration failed: ', registrationError);
+                      }
                     });
                 });
               }
@@ -152,19 +160,27 @@ export default function RootLayout({
             const currentPath = window.location.pathname;
             const preloadRoutes = [];
             
+            // Only prefetch actual page routes, not API endpoints
             if (currentPath === '/') {
-              preloadRoutes.push('/dashboard');
-            } else if (currentPath === '/dashboard') {
-              preloadRoutes.push('/learn', '/progress', '/profile');
+              preloadRoutes.push('/login', '/student', '/teacher', '/admin', '/superadmin');
             } else if (currentPath.startsWith('/admin')) {
-              preloadRoutes.push('/admin/chains', '/admin/questions', '/admin/analytics');
+              // Admin routes exist
+            } else if (currentPath.startsWith('/teacher')) {
+              // Teacher routes exist
+            } else if (currentPath.startsWith('/student')) {
+              // Student routes exist
             }
             
+            // Only prefetch routes that likely exist
             preloadRoutes.forEach(route => {
-              const link = document.createElement('link');
-              link.rel = 'prefetch';
-              link.href = route;
-              document.head.appendChild(link);
+              try {
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = route;
+                document.head.appendChild(link);
+              } catch (e) {
+                // Silently fail prefetch errors
+              }
             });
           `
         }} />

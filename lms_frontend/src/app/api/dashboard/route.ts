@@ -35,8 +35,24 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('Dashboard data error:', error);
+    
+    // Provide more helpful error messages
+    let errorMessage = 'Failed to fetch dashboard data';
+    
+    if (error instanceof Error) {
+      if (error.message.includes('MongoClient') || error.message.includes('MongoDB')) {
+        errorMessage = 'Database connection error';
+      } else if (error.message.includes('JWT_SECRET')) {
+        errorMessage = 'Server configuration error';
+      }
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch dashboard data' },
+      { 
+        success: false, 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
+      },
       { status: 500 }
     );
   }

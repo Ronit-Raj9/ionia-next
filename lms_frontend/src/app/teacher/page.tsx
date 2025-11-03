@@ -117,7 +117,7 @@ export default function TeacherDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials' | 'chats'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -554,6 +554,17 @@ export default function TeacherDashboard() {
               >
                 <BookOpen className="w-4 h-4 inline mr-2" />
                 Study Materials
+              </button>
+              <button
+                onClick={() => router.push('/teacher/chats')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'chats'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 inline mr-2" />
+                Chat
               </button>
             </nav>
           </div>

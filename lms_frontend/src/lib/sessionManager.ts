@@ -6,16 +6,19 @@ import { NextRequest, NextResponse } from 'next/server';
 const SESSION_COOKIE_NAME = 'ionia_session';
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-// SECURITY: JWT_SECRET must be set in environment variables
-if (!process.env.JWT_SECRET) {
-  throw new Error(
-    '❌ CRITICAL: JWT_SECRET not configured!\n' +
-    '⚠️  Add JWT_SECRET to your .env.local file\n' +
-    '💡 Generate one with: openssl rand -base64 32'
-  );
+// Lazy initialization - don't check JWT_SECRET at module load time
+// This allows the module to be imported during build without requiring JWT_SECRET
+// SECURITY: JWT_SECRET will be validated when functions are actually called
+function getJwtSecret(): Uint8Array {
+  if (!process.env.JWT_SECRET) {
+    throw new Error(
+      '❌ CRITICAL: JWT_SECRET not configured!\n' +
+      '⚠️  Add JWT_SECRET to your .env.local file\n' +
+      '💡 Generate one with: openssl rand -base64 32'
+    );
+  }
+  return new TextEncoder().encode(process.env.JWT_SECRET);
 }
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface SessionData {
   userId: string;
@@ -30,6 +33,7 @@ export interface SessionData {
  * Create a new session token
  */
 export async function createSession(userData: SessionData): Promise<string> {
+  const jwtSecret = getJwtSecret();
   const token = await new SignJWT({
     userId: userData.userId,
     email: userData.email,
@@ -40,7 +44,7 @@ export async function createSession(userData: SessionData): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('24h')
-    .sign(JWT_SECRET);
+    .sign(jwtSecret);
 
   return token;
 }
@@ -50,7 +54,8 @@ export async function createSession(userData: SessionData): Promise<string> {
  */
 export async function verifySession(token: string): Promise<SessionData | null> {
   try {
-    const verified = await jwtVerify(token, JWT_SECRET);
+    const jwtSecret = getJwtSecret();
+    const verified = await jwtVerify(token, jwtSecret);
     const payload = verified.payload;
     
     // Validate payload has required fields

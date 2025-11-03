@@ -533,12 +533,38 @@ export default function ClassroomPage() {
                 {classDetails.students.map((student, index) => (
                   <div key={student.studentId} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-4 flex-1">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold">
                           {index + 1}
                         </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900">{student.name}</h4>
+                        <div className="flex-1">
+                          <h4 
+                            className="text-sm font-medium text-gray-900 cursor-pointer hover:text-emerald-600 hover:underline"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/chats', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({ targetUserId: student.studentId })
+                                });
+                                
+                                const data = await response.json();
+                                if (data.success) {
+                                  window.location.href = `/teacher/chats?chatId=${data.data.chat.chatId}`;
+                                } else {
+                                  toast.error(data.error || 'Failed to start chat');
+                                }
+                              } catch (error) {
+                                console.error('Error starting chat:', error);
+                                toast.error('Failed to start chat');
+                              }
+                            }}
+                            title="Click to message privately"
+                          >
+                            {student.name}
+                          </h4>
                           <p className="text-sm text-gray-500">{student.email}</p>
                           <p className="text-xs text-gray-400 mt-0.5">ID: {student.studentId}</p>
                         </div>
