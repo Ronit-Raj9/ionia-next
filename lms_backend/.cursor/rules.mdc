@@ -1,39 +1,12 @@
-# IONIA Backend - MVP Coding Standards
-# FastAPI + Supabase + SQLAlchemy + Alembic + Pydantic
-
-## 📋 Context
-EdTech LMS for Indian schools (CBSE/ICSE) with AI-powered grading and personalized assignments.
-
-## 🧱 Tech Stack
-- Framework: FastAPI (async)
-- Database: Supabase Postgres
-- ORM: SQLAlchemy 2.0+ (async)
-- Migrations: Alembic
-- Validation: Pydantic v2
-- Auth: Supabase (Email + Google OAuth)
-- AI: LiteLLM, PraisonAI, Qdrant, Google Vision
-- Logging: Loguru
-- Background: Celery + Redis
-
 ---
-
-## 🏗️ Architecture
-
-```
-Request → Route (validate) → Service (logic) → Model (database) → Response
-```
-
-**Data Flow**:
-- Request → Pydantic Schema (validation)
-- Service → SQLAlchemy Model (database)
-- Response → Pydantic Schema (serialization)
-
+alwaysApply: true
 ---
-
 ## ✅ ALWAYS: Standardized Responses
 
 ```python
 from app.api.responses import success_response, error_response
+
+
 
 # Success (200/201)
 return success_response(

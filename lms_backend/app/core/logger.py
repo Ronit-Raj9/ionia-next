@@ -131,5 +131,24 @@ def log_ai_operation(
     )
 
 
-# Export logger instance
-__all__ = ["logger", "log_audit", "log_ai_operation"]
+# ============================================================================
+# GET LOGGER FUNCTION (for compatibility with imports)
+# ============================================================================
+
+def get_logger(name: str = None):
+    """
+    Get a logger instance with optional module name binding.
+    
+    Args:
+        name: Module name (usually __name__)
+        
+    Returns:
+        Logger instance with module name bound
+    """
+    if name:
+        return logger.bind(name=name)
+    return logger
+
+
+# Export logger instance and functions
+__all__ = ["logger", "get_logger", "log_audit", "log_ai_operation"]

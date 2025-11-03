@@ -28,10 +28,10 @@ class Settings(BaseSettings):
     # ============================================================================
     # SUPABASE
     # ============================================================================
-    SUPABASE_URL: str = Field(...)
-    SUPABASE_KEY: str = Field(...)  # Anon key
-    SUPABASE_SERVICE_ROLE_KEY: str = Field(...)  # Admin key
-    SUPABASE_JWT_SECRET: str = Field(...)  # JWT verification
+    SUPABASE_URL: Optional[str] = Field(default=None)
+    SUPABASE_KEY: Optional[str] = Field(default=None)  # Anon key
+    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = Field(default=None)  # Admin key
+    SUPABASE_JWT_SECRET: Optional[str] = Field(default=None)  # JWT verification
     
     # ============================================================================
     # JWT & AUTHENTICATION
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # ============================================================================
     # DATABASE (Supabase Postgres)
     # ============================================================================
-    DATABASE_URL: str = Field(...)  # postgresql://...
+    DATABASE_URL: Optional[str] = Field(default=None)  # postgresql://...
     ASYNC_DATABASE_URL: Optional[str] = Field(default=None)  # Auto-generated if not provided
     DB_POOL_SIZE: int = Field(default=10)
     DB_MAX_OVERFLOW: int = Field(default=20)
@@ -198,13 +198,9 @@ def get_settings() -> Settings:
 
 
 # ============================================================================
-# CONVENIENCE EXPORTS
+# CONVENIENCE EXPORTS (Lazy - only created after settings initialization)
 # ============================================================================
-SUPABASE_URL = settings.SUPABASE_URL
-SUPABASE_KEY = settings.SUPABASE_KEY
-SUPABASE_SERVICE_ROLE_KEY = settings.SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_JWT_SECRET = settings.SUPABASE_JWT_SECRET
-JWT_ALGORITHM = settings.JWT_ALGORITHM
-API_V1_PREFIX = settings.API_V1_PREFIX
+# Note: These are properties that access settings instance
+# Access via settings.SUPABASE_URL instead of module-level SUPABASE_URL
 
 __all__ = ["settings", "get_settings", "Settings"]
