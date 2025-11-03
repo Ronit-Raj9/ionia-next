@@ -95,25 +95,8 @@ export default function ClassManager({ userId, userName, role, schoolId, onClass
     setShowStudentSelector(true);
   };
 
-  const cleanupDemoClasses = async () => {
-    try {
-      const response = await fetch(`/api/classes/cleanup?teacherId=${userId}&role=${role}`, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success(`Removed ${data.deletedCount} demo classes`);
-        await fetchClasses(); // Refresh the list
-      } else {
-        toast.error(data.error || 'Failed to cleanup demo classes');
-      }
-    } catch (error) {
-      console.error('Error cleaning up demo classes:', error);
-      toast.error('Failed to cleanup demo classes');
-    }
-  };
+  // SECURITY: Removed cleanupDemoClasses - cleanup functionality should only be done
+  // through proper admin interface with proper authentication and authorization
 
   const createClassWithStudents = async (selectedStudents: any[]) => {
     if (selectedStudents.length === 0) {
@@ -192,16 +175,7 @@ export default function ClassManager({ userId, userName, role, schoolId, onClass
           <p className="text-sm text-gray-600">Create and manage your classes</p>
         </div>
         <div className="flex items-center space-x-2">
-          {classes.some(c => c.className.toLowerCase().includes('demo')) && (
-            <button
-              onClick={cleanupDemoClasses}
-              className="inline-flex items-center px-3 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
-              title="Remove demo classes"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clean Demo
-            </button>
-          )}
+          {/* SECURITY: Removed cleanup demo classes button - no direct database clearing from UI */}
           <button
             onClick={() => setShowCreateForm(true)}
             className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
@@ -271,7 +245,7 @@ export default function ClassManager({ userId, userName, role, schoolId, onClass
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <MessageCircle className="w-4 h-4 text-blue-600" />
+                    <MessageCircle className="w-4 h-4 text-emerald-600" />
                     <span className="text-sm text-gray-700">
                       {classInfo.messageCount} messages
                     </span>

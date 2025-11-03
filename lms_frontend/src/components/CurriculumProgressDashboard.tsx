@@ -279,11 +279,11 @@ export default function CurriculumProgressDashboard({ planId, onBack }: Curricul
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Completed Topics</p>
-              <p className="text-3xl font-bold text-blue-600">{progressData?.completedTopics || 0}</p>
+              <p className="text-3xl font-bold text-emerald-600">{progressData?.completedTopics || 0}</p>
               <p className="text-sm text-gray-500">of {progressData?.totalTopics || 0}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <CheckCircle className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-emerald-100 rounded-full">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
           </div>
         </div>

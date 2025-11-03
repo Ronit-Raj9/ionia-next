@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Confetti from 'react-confetti';
-import StudentMessageTeacher from '@/components/StudentMessageTeacher';
 import PersonalityQuiz from '@/components/PersonalityQuiz';
 import ClassDiscovery from '@/components/ClassDiscovery';
 import StudentClassroom from '@/components/StudentClassroom';
@@ -61,7 +60,7 @@ export default function StudentDashboard() {
   const [recentBadges, setRecentBadges] = useState<string[]>([]);
   
   // Tab state and classes
-  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'message' | 'settings' | 'adaptive-assignments'>('assignments');
+  const [activeTab, setActiveTab] = useState<'assignments' | 'classes' | 'discover' | 'settings' | 'adaptive-assignments' | 'chats'>('assignments');
   const [classes, setClasses] = useState<any[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -468,17 +467,6 @@ export default function StudentDashboard() {
                 Adaptive Assignments
               </button>
               <button
-                onClick={() => setActiveTab('message')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'message'
-                    ? 'border-emerald-500 text-emerald-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <MessageCircle className="w-4 h-4 inline mr-2" />
-                Message Teacher
-              </button>
-              <button
                 onClick={() => setActiveTab('settings')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'settings'
@@ -488,6 +476,17 @@ export default function StudentDashboard() {
               >
                 <Settings className="w-4 h-4 inline mr-2" />
                 Settings
+              </button>
+              <button
+                onClick={() => router.push('/student/chats')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'chats'
+                    ? 'border-emerald-500 text-emerald-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4 inline mr-2" />
+                Chat
               </button>
             </nav>
           </div>
@@ -499,11 +498,11 @@ export default function StudentDashboard() {
             {/* Personality Quiz Prompt */}
             {!hasCompletedQuiz && (
               <div className="mb-8">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+                <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Brain className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                        <Brain className="w-6 h-6 text-emerald-600" />
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">
@@ -516,7 +515,7 @@ export default function StudentDashboard() {
                     </div>
                     <button
                       onClick={() => setShowPersonalityQuiz(true)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2"
                     >
                       <Brain className="w-4 h-4" />
                       <span>Start Quiz</span>
@@ -564,8 +563,8 @@ export default function StudentDashboard() {
                       <p className="text-xs md:text-sm font-medium text-gray-600">Assignments Done</p>
                       <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.totalSubmissions || 0}</p>
                     </div>
-                    <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                      <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" />
                     </div>
                   </div>
                 </div>
@@ -588,8 +587,8 @@ export default function StudentDashboard() {
                       <p className="text-xs md:text-sm font-medium text-gray-600">Completion Rate</p>
                       <p className="text-xl md:text-2xl font-bold text-gray-900">{progress.metrics.completionRate || 0}%</p>
                     </div>
-                    <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" />
                     </div>
                   </div>
                 </div>
@@ -611,11 +610,11 @@ export default function StudentDashboard() {
             {/* Gamification Section */}
             {badges.length > 0 && (
               <div className="mb-8">
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-6">
+                <div className="bg-gradient-to-r from-emerald-50 to-pink-50 rounded-xl border border-emerald-200 p-6">
                   <div className="flex items-center space-x-2 mb-6">
-                    <Trophy className="w-6 h-6 text-purple-600" />
+                    <Trophy className="w-6 h-6 text-emerald-600" />
                     <h2 className="text-xl font-semibold text-gray-900">Your Achievements</h2>
-                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-sm font-medium">
+                    <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-sm font-medium">
                       {badges.length} Badge{badges.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -683,9 +682,9 @@ export default function StudentDashboard() {
             {/* Adaptive Learning Path */}
             {adaptivePath.length > 0 && (
               <div className="mb-8">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+                <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
                   <div className="flex items-center space-x-2 mb-6">
-                    <Zap className="w-6 h-6 text-blue-600" />
+                    <Zap className="w-6 h-6 text-emerald-600" />
                     <h2 className="text-xl font-semibold text-gray-900">Your Learning Journey</h2>
                   </div>
                   
@@ -697,8 +696,8 @@ export default function StudentDashboard() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-full border-2 ${
-                          index === 0 ? 'bg-blue-500 text-white border-blue-500' :
-                          index === 1 ? 'bg-blue-100 text-blue-700 border-blue-300' :
+                          index === 0 ? 'bg-emerald-500 text-white border-emerald-500' :
+                          index === 1 ? 'bg-emerald-100 text-emerald-700 border-blue-300' :
                           'bg-gray-100 text-gray-600 border-gray-300'
                         }`}
                       >
@@ -711,8 +710,8 @@ export default function StudentDashboard() {
                     ))}
                   </div>
                   
-                  <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-                    <p className="text-sm text-blue-700">
+                  <div className="mt-4 p-3 bg-emerald-100 rounded-lg">
+                    <p className="text-sm text-emerald-700">
                       🎯 Your personalized learning path adapts based on your performance and learning style!
                     </p>
                   </div>
@@ -775,7 +774,7 @@ export default function StudentDashboard() {
                                       {new Date(assignment.createdAt).toLocaleDateString()}
                                     </span>
                                     {assignment.subject && (
-                                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                                      <span className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full">
                                         {assignment.subject}
                                       </span>
                                     )}
@@ -800,7 +799,7 @@ export default function StudentDashboard() {
                                 </div>
                                 
                                 {assignment.uploadedFileUrl && (
-                                  <div className="flex items-center space-x-1 text-sm text-blue-600">
+                                  <div className="flex items-center space-x-1 text-sm text-emerald-600">
                                     <FileText className="w-4 h-4" />
                                     <span>Reference file attached</span>
                                   </div>
@@ -844,8 +843,8 @@ export default function StudentDashboard() {
                         <>
                           <p className="text-gray-500 mb-2">No assignments available yet.</p>
                           <p className="text-sm text-gray-400 mb-4">You need to join a class first to see assignments.</p>
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                            <p className="text-sm text-blue-700">
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 max-w-md mx-auto">
+                            <p className="text-sm text-emerald-700">
                               💡 <strong>Tip:</strong> Go to the "My Classes" tab and use a join code from your teacher to join their classroom.
                             </p>
                           </div>
@@ -918,7 +917,7 @@ export default function StudentDashboard() {
                             href={selectedAssignment.uploadedFileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                            className="inline-flex items-center px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors"
                           >
                             <FileText className="w-4 h-4 mr-2" />
                             View Assignment File
@@ -1116,7 +1115,7 @@ export default function StudentDashboard() {
                       <motion.div
                         key={classData._id}
                         whileHover={{ scale: 1.02 }}
-                        className="bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition-all"
+                        className="bg-gradient-to-br from-emerald-50 to-emerald-50 border border-emerald-200 rounded-lg p-6 cursor-pointer hover:shadow-md transition-all"
                         onClick={() => {
                           setSelectedClassId(classData._id);
                         }}
@@ -1127,12 +1126,14 @@ export default function StudentDashboard() {
                               {classData.className}
                             </h3>
                             <p className="text-sm text-gray-600">
-                              Teacher: {classData.teacherMockId?.replace('teacher', 'Teacher ') || 'Teacher'}
+                              Teacher: {classData.teacherName || classData.teacherId || 'Teacher'}
                             </p>
+                            {classData.teacherId && (
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                ID: {classData.teacherId}
+                              </p>
+                            )}
                           </div>
-                          {classData.hasUnreadMessages && (
-                            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                          )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -1143,7 +1144,7 @@ export default function StudentDashboard() {
                             </span>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <BookOpen className="w-4 h-4 text-blue-600" />
+                            <BookOpen className="w-4 h-4 text-emerald-600" />
                             <span className="text-sm text-gray-700">
                               {classData.recentAssignments || 0} assignments
                             </span>
@@ -1152,9 +1153,6 @@ export default function StudentDashboard() {
 
                         <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
                           <span>Joined {new Date(classData.createdAt).toLocaleDateString()}</span>
-                          {classData.hasUnreadMessages && (
-                            <span className="text-emerald-600 font-medium">New messages</span>
-                          )}
                         </div>
 
                         <div className="flex space-x-2">
@@ -1163,20 +1161,10 @@ export default function StudentDashboard() {
                               e.stopPropagation();
                               setSelectedClassId(classData._id);
                             }}
-                            className="flex-1 px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-1"
+                            className="w-full px-3 py-2 bg-emerald-500 text-white text-sm font-medium rounded-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-1"
                           >
                             <Eye className="w-4 h-4" />
                             <span>View Class</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveTab('message');
-                            }}
-                            className="px-3 py-2 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 transition-colors"
-                            title="Message teacher"
-                          >
-                            <MessageCircle className="w-4 h-4" />
                           </button>
                         </div>
                       </motion.div>
@@ -1206,8 +1194,8 @@ export default function StudentDashboard() {
                       />
                     </div>
 
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                      <p className="text-sm text-blue-700">
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 max-w-md mx-auto">
+                      <p className="text-sm text-emerald-700">
                         💡 <strong>Tip:</strong> Once you join a class, you'll be able to see class discussions, 
                         get personalized assignments, and chat with your teacher privately.
                       </p>
@@ -1225,7 +1213,7 @@ export default function StudentDashboard() {
             {/* Join Classroom Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="flex items-center space-x-2 mb-4">
-                <Users className="w-5 h-5 text-blue-600" />
+                <Users className="w-5 h-5 text-emerald-600" />
                 <h2 className="text-xl font-semibold text-gray-900">Join a Classroom</h2>
               </div>
               <p className="text-gray-600 mb-4">
@@ -1250,7 +1238,7 @@ export default function StudentDashboard() {
             {/* Question Chains Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="flex items-center space-x-2 mb-4">
-                <Brain className="w-5 h-5 text-purple-600" />
+                <Brain className="w-5 h-5 text-emerald-600" />
                 <h2 className="text-xl font-semibold text-gray-900">Discover Question Chains</h2>
               </div>
               <ClassDiscovery
@@ -1274,9 +1262,9 @@ export default function StudentDashboard() {
         {/* Adaptive Assignments Tab Content */}
         {activeTab === 'adaptive-assignments' && (
           <div className="space-y-8 pb-24">
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-6">
+            <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
               <div className="flex items-center space-x-3 mb-2">
-                <Brain className="w-6 h-6 text-purple-600" />
+                <Brain className="w-6 h-6 text-emerald-600" />
                 <h2 className="text-2xl font-bold text-gray-900">Adaptive Learning Assignments</h2>
               </div>
               <p className="text-gray-600">
@@ -1319,20 +1307,6 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* Message Teacher Tab Content */}
-        {activeTab === 'message' && (
-          <div className="space-y-6">
-            <div className="h-96">
-              <StudentMessageTeacher
-                studentId={user?.userId || ''}
-                studentName={user?.name || user?.displayName || 'Student'}
-                teacherId="teacher1" // For now, defaulting to teacher1
-                teacherName="Teacher"
-                isEmbedded={true}
-              />
-            </div>
-          </div>
-        )}
 
         {/* Settings Tab Content */}
         {activeTab === 'settings' && (
@@ -1357,14 +1331,14 @@ export default function StudentDashboard() {
                   </label>
                 </div>
                 
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
-                      <AlertCircle className="w-5 h-5 text-blue-600" />
+                      <AlertCircle className="w-5 h-5 text-emerald-600" />
                     </div>
                     <div className="ml-3">
                       <h4 className="text-sm font-medium text-blue-900">About Score Notifications</h4>
-                      <p className="text-sm text-blue-700 mt-1">
+                      <p className="text-sm text-emerald-700 mt-1">
                         When enabled, you'll see your assignment score immediately after submission. 
                         When disabled, you'll only see a confirmation that your assignment was submitted successfully.
                         You can always view your scores later in the assignments section.

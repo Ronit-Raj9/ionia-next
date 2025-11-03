@@ -161,7 +161,7 @@ export default function OceanPersonalityQuiz({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center`}
+        className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-emerald-50 flex items-center justify-center`}
       >
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl w-full mx-4">
           <motion.div
@@ -191,11 +191,11 @@ export default function OceanPersonalityQuiz({
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
-                  className="bg-gradient-to-r from-blue-50 to-emerald-50 rounded-lg p-4 border border-blue-200"
+                  className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-lg p-4 border border-emerald-200"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                         {traitIcons[trait]}
                       </div>
                       <div>
@@ -203,7 +203,7 @@ export default function OceanPersonalityQuiz({
                         <p className="text-xs text-gray-600">{traitDescriptions[trait]}</p>
                       </div>
                     </div>
-                    <span className="text-lg font-bold text-blue-600">{Number(score)}%</span>
+                    <span className="text-lg font-bold text-emerald-600">{Number(score)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <motion.div
@@ -212,7 +212,7 @@ export default function OceanPersonalityQuiz({
                       transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
                       className={`h-2 rounded-full ${
                         Number(score) >= 75 ? 'bg-green-500' :
-                        Number(score) >= 50 ? 'bg-blue-500' :
+                        Number(score) >= 50 ? 'bg-emerald-500' :
                         Number(score) >= 25 ? 'bg-yellow-500' : 'bg-red-500'
                       }`}
                     />
@@ -254,29 +254,29 @@ export default function OceanPersonalityQuiz({
           </div>
 
           {/* Learning Preferences */}
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
             <h4 className="font-semibold text-gray-900 mb-3">How This Helps You:</h4>
             <ul className="space-y-2 text-sm text-gray-700">
               {learningPreferences.needsStepByStepGuidance && (
                 <li className="flex items-start space-x-2">
-                  <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <span>You'll receive <strong>step-by-step guidance</strong> in your assignments</span>
                 </li>
               )}
               {learningPreferences.visualLearner && (
                 <li className="flex items-start space-x-2">
-                  <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <span>Assignments will include <strong>visual aids and diagrams</strong></span>
                 </li>
               )}
               {learningPreferences.respondsToEncouragement && (
                 <li className="flex items-start space-x-2">
-                  <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <span>You'll get <strong>encouraging feedback</strong> to boost your confidence</span>
                 </li>
               )}
               <li className="flex items-start space-x-2">
-                <Zap className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <Zap className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                 <span>Difficulty level adjusted to <strong>{learningPreferences.preferredDifficulty}</strong></span>
               </li>
             </ul>
@@ -304,7 +304,7 @@ export default function OceanPersonalityQuiz({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center`}
+      className={`${isEmbedded ? 'p-4' : 'min-h-screen'} bg-gradient-to-br from-emerald-50 to-emerald-50 flex items-center justify-center`}
     >
       <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 max-w-4xl w-full mx-4">
         {/* Header */}
@@ -330,7 +330,7 @@ export default function OceanPersonalityQuiz({
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
-              className="bg-gradient-to-r from-emerald-500 to-blue-500 h-3 rounded-full"
+              className="bg-gradient-to-r from-emerald-500 to-emerald-500 h-3 rounded-full"
             />
           </div>
           <p className="text-sm text-gray-500">
@@ -350,7 +350,7 @@ export default function OceanPersonalityQuiz({
           >
             {/* Trait Indicator */}
             <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
                 {traitIcons[currentQ.trait]}
               </div>
               <span className="text-sm font-medium text-gray-600">
@@ -374,7 +374,7 @@ export default function OceanPersonalityQuiz({
                   className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left hover:scale-102 ${
                     responses[currentQ.id] === option.value
                       ? `${option.color} border-current shadow-lg scale-102`
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-emerald-50'
                   }`}
                 >
                   <div className="flex items-center justify-between">

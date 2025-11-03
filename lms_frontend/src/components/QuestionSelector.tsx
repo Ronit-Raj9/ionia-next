@@ -31,7 +31,7 @@ interface QuestionSelectorProps {
 
 const difficultyColors = {
   easier: 'bg-green-100 text-green-700 border-green-300',
-  same: 'bg-blue-100 text-blue-700 border-blue-300',
+  same: 'bg-emerald-100 text-emerald-700 border-blue-300',
   harder: 'bg-red-100 text-red-700 border-red-300'
 };
 
@@ -158,7 +158,7 @@ export default function QuestionSelector({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -183,7 +183,7 @@ export default function QuestionSelector({
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${(selectedIds.size / totalQuestionsToSelect) * 100}%` }}
-                className="bg-gradient-to-r from-emerald-500 to-blue-500 h-3 rounded-full"
+                className="bg-gradient-to-r from-emerald-500 to-emerald-500 h-3 rounded-full"
               />
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function QuestionSelector({
                       e.stopPropagation();
                       handleQuestionView(question);
                     }}
-                    className="flex items-center text-blue-600 hover:text-blue-700 font-medium"
+                    className="flex items-center text-emerald-600 hover:text-emerald-700 font-medium"
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     Preview
@@ -264,7 +264,7 @@ export default function QuestionSelector({
           <button
             onClick={handleSubmit}
             disabled={selectedIds.size !== totalQuestionsToSelect || submitting}
-            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg font-semibold text-lg hover:from-emerald-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-500 text-white rounded-lg font-semibold text-lg hover:from-emerald-600 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
           >
             {submitting ? 'Submitting...' : `Continue with ${selectedIds.size} Questions`}
           </button>
@@ -306,7 +306,7 @@ export default function QuestionSelector({
 
               {previewQuestion.personalizedQuestion.hints && 
                previewQuestion.personalizedQuestion.hints.length > 0 && (
-                <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                <div className="bg-emerald-50 rounded-lg p-4 mb-4">
                   <h3 className="font-semibold text-blue-900 mb-2">Available Hints:</h3>
                   <ul className="space-y-1 text-sm text-blue-800">
                     {previewQuestion.personalizedQuestion.hints.map((hint, i) => (

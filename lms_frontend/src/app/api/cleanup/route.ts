@@ -1,12 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCollection, COLLECTIONS } from '@/lib/db';
+import { getSessionFromRequest } from '@/lib/sessionManager';
 
 /**
- * Development-only API to clean up test data
+ * SECURITY: Development-only API to clean up test data
  * WARNING: This will delete data from the database
+ * DISABLED IN PRODUCTION for security
  */
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Disable in production
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { success: false, error: 'This endpoint is disabled in production for security reasons.' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Require authentication
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // SECURITY: Only admin and superadmin can perform cleanup
+    if (!['admin', 'superadmin'].includes(session.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions. Only admin and superadmin can perform cleanup actions.' },
+        { status: 403 }
+      );
+    }
+
     const { action, classId } = await request.json();
 
     if (!action) {
@@ -105,9 +133,38 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET endpoint to check database state
+/**
+ * SECURITY: GET endpoint to check database state
+ * Requires authentication
+ */
 export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Disable in production
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { success: false, error: 'This endpoint is disabled in production for security reasons.' },
+        { status: 403 }
+      );
+    }
+
+    // SECURITY: Require authentication
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // SECURITY: Only admin and superadmin can check database state
+    if (!['admin', 'superadmin'].includes(session.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);

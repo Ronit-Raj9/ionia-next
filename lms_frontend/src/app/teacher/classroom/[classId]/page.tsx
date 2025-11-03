@@ -22,9 +22,11 @@ import {
   Trash2,
   MessageCircle,
   Eye,
-  Download
+  Download,
+  MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ClassChat from '@/components/ClassChat';
 
 interface ClassDetails {
   class: {
@@ -100,7 +102,7 @@ export default function ClassroomPage() {
   const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedJoinCode, setCopiedJoinCode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'assignments' | 'analytics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'assignments' | 'analytics' | 'chat'>('overview');
 
   useEffect(() => {
     if (user && user.role !== 'teacher') {
@@ -192,7 +194,7 @@ export default function ClassroomPage() {
             Back to Classrooms
           </button>
 
-          <div className="bg-gradient-to-r from-emerald-500 to-blue-500 rounded-xl shadow-lg p-8 text-white">
+          <div className="bg-gradient-to-r from-emerald-500 to-emerald-500 rounded-xl shadow-lg p-8 text-white">
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-3">{classInfo.className}</h1>
@@ -275,8 +277,8 @@ export default function ClassroomPage() {
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-emerald-600" />
               </div>
               <TrendingUp className="w-5 h-5 text-blue-400" />
             </div>
@@ -303,10 +305,10 @@ export default function ClassroomPage() {
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Award className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Award className="w-6 h-6 text-emerald-600" />
               </div>
-              <BarChart3 className="w-5 h-5 text-purple-400" />
+              <BarChart3 className="w-5 h-5 text-emerald-400" />
             </div>
             <p className="text-sm text-gray-600 mb-1">Average Score</p>
             <p className="text-3xl font-bold text-gray-900">{statistics.averageScore}%</p>
@@ -393,6 +395,17 @@ export default function ClassroomPage() {
               <BarChart3 className="w-4 h-4 inline mr-2" />
               Analytics
             </button>
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'chat'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4 inline mr-2" />
+              Chat
+            </button>
           </nav>
         </div>
 
@@ -422,7 +435,7 @@ export default function ClassroomPage() {
                         <div className="flex-1">
                           <p className="font-medium text-gray-900">{assignment.title}</p>
                           <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            <span className="bg-emerald-100 text-blue-800 px-2 py-1 rounded">
                               {assignment.subject}
                             </span>
                             {assignment.dueDate && (
@@ -458,12 +471,12 @@ export default function ClassroomPage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-600" />
+                  <FileText className="w-5 h-5 text-emerald-600" />
                   Recent Submissions
                 </h3>
                 <button
                   onClick={() => router.push('/teacher#grading')}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
                 >
                   View All
                 </button>
@@ -520,12 +533,38 @@ export default function ClassroomPage() {
                 {classDetails.students.map((student, index) => (
                   <div key={student.studentId} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-4 flex-1">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-semibold">
                           {index + 1}
                         </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-900">{student.name}</h4>
+                        <div className="flex-1">
+                          <h4 
+                            className="text-sm font-medium text-gray-900 cursor-pointer hover:text-emerald-600 hover:underline"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/chats', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({ targetUserId: student.studentId })
+                                });
+                                
+                                const data = await response.json();
+                                if (data.success) {
+                                  window.location.href = `/teacher/chats?chatId=${data.data.chat.chatId}`;
+                                } else {
+                                  toast.error(data.error || 'Failed to start chat');
+                                }
+                              } catch (error) {
+                                console.error('Error starting chat:', error);
+                                toast.error('Failed to start chat');
+                              }
+                            }}
+                            title="Click to message privately"
+                          >
+                            {student.name}
+                          </h4>
                           <p className="text-sm text-gray-500">{student.email}</p>
                           <p className="text-xs text-gray-400 mt-0.5">ID: {student.studentId}</p>
                         </div>
@@ -563,11 +602,11 @@ export default function ClassroomPage() {
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Conscient.</div>
-                          <div className="text-sm font-semibold text-blue-600">{student.oceanTraits.conscientiousness}</div>
+                          <div className="text-sm font-semibold text-emerald-600">{student.oceanTraits.conscientiousness}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Extraver.</div>
-                          <div className="text-sm font-semibold text-purple-600">{student.oceanTraits.extraversion}</div>
+                          <div className="text-sm font-semibold text-emerald-600">{student.oceanTraits.extraversion}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Agreeable.</div>
@@ -633,7 +672,7 @@ export default function ClassroomPage() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <h4 className="text-base font-medium text-gray-900">{assignment.title}</h4>
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                          <span className="bg-emerald-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
                             {assignment.subject}
                           </span>
                         </div>
@@ -668,7 +707,7 @@ export default function ClassroomPage() {
                             e.stopPropagation();
                             router.push(`/teacher/assignment/${assignment._id}`);
                           }}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          className="text-gray-400 hover:text-emerald-600 transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-5 h-5" />
@@ -712,6 +751,17 @@ export default function ClassroomPage() {
                 View Analytics
               </button>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'chat' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style={{ height: '700px' }}>
+            <ClassChat
+              classId={classId}
+              userId={user?.userId || ''}
+              userRole="teacher"
+              userName={user?.name || user?.displayName || 'Teacher'}
+            />
           </div>
         )}
       </div>

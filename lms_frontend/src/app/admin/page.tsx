@@ -13,11 +13,20 @@ import {
   RefreshCw,
   Download,
   Settings,
-  Brain
+  Brain,
+  Edit,
+  Ban,
+  Unlock,
+  Trash2,
+  Search,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ClassroomManager from '@/components/ClassroomManager';
 import SchoolAdminDashboard from '@/components/SchoolAdminDashboard';
+import AdminUserCreation from '@/components/AdminUserCreation';
+import BulkClassEnrollment from '@/components/BulkClassEnrollment';
 
 interface ProgressData {
   classMetrics: {
@@ -56,7 +65,27 @@ export default function AdminDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reports, setReports] = useState<any[]>([]);
-  const [activeSection, setActiveSection] = useState<'overview' | 'classrooms' | 'analytics' | 'school'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'classrooms' | 'analytics' | 'school' | 'users'>('overview');
+  
+  // User management state
+  const [schoolUsers, setSchoolUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState<string>('all');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    phoneNumber: '',
+    role: '',
+    status: 'active',
+  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [deleteConfirmationStep, setDeleteConfirmationStep] = useState<'confirm' | 'type'>('confirm');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -69,8 +98,11 @@ export default function AdminDashboard() {
       fetchProgressData();
       fetchEnhancedDashboardData();
       fetchReports();
+      if (activeSection === 'users') {
+        fetchSchoolUsers();
+      }
     }
-  }, [user, router]);
+  }, [user, router, activeSection]);
 
   const fetchProgressData = async () => {
     setLoading(true);
@@ -159,29 +191,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleClearDatabase = async () => {
-    try {
-      const response = await fetch('/api/seed', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action: 'clear' }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success('Database cleared successfully!');
-        fetchProgressData();
-      } else {
-        toast.error('Failed to clear database');
-      }
-    } catch (error) {
-      console.error('Error clearing database:', error);
-      toast.error('Failed to clear database');
-    }
-  };
 
   const fetchEnhancedDashboardData = async () => {
     try {
@@ -274,6 +283,188 @@ export default function AdminDashboard() {
     toast.success('Progress report exported successfully');
   };
 
+  const fetchSchoolUsers = async () => {
+    if (!user?.schoolId) return;
+    
+    setLoadingUsers(true);
+    try {
+      // Fetch students and teachers from the admin's school
+      const [studentsRes, teachersRes] = await Promise.all([
+        fetch(`/api/users?schoolId=${user.schoolId}&role=student`),
+        fetch(`/api/users?schoolId=${user.schoolId}&role=teacher`),
+      ]);
+
+      const studentsData = await studentsRes.json();
+      const teachersData = await teachersRes.json();
+
+      const allUsers = [
+        ...(studentsData.success ? studentsData.data || [] : []),
+        ...(teachersData.success ? teachersData.data || [] : []),
+      ];
+
+      setSchoolUsers(allUsers);
+    } catch (error) {
+      console.error('Error fetching school users:', error);
+      toast.error('Failed to fetch users');
+      setSchoolUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleBlockUser = async (userId: string, currentStatus: string) => {
+    if (!confirm(`Are you sure you want to block this user?`)) {
+      return;
+    }
+
+    try {
+      const status = currentStatus === 'suspended' ? 'suspended' : 'inactive';
+      const response = await fetch('/api/users/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, status }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(`User blocked successfully`);
+        fetchSchoolUsers();
+      } else {
+        toast.error(data.error || 'Failed to block user');
+      }
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      toast.error('Failed to block user');
+    }
+  };
+
+  const handleUnblockUser = async (userId: string) => {
+    try {
+      const response = await fetch('/api/users/unblock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('User unblocked successfully');
+        fetchSchoolUsers();
+      } else {
+        toast.error(data.error || 'Failed to unblock user');
+      }
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      toast.error('Failed to unblock user');
+    }
+  };
+
+  const handleEditUser = (userAccount: any) => {
+    setSelectedUser(userAccount);
+    setEditForm({
+      name: userAccount.name,
+      email: userAccount.email,
+      phoneNumber: userAccount.phoneNumber || '',
+      role: userAccount.role,
+      status: userAccount.status,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.userId,
+          updates: editForm,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('User updated successfully');
+        setShowEditModal(false);
+        setSelectedUser(null);
+        fetchSchoolUsers();
+      } else {
+        toast.error(data.error || 'Failed to update user');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Failed to update user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = (userAccount: any) => {
+    setUserToDelete(userAccount);
+    setDeleteConfirmationStep('confirm');
+    setDeleteConfirmText('');
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirmStep1 = () => {
+    if (deleteConfirmationStep === 'confirm') {
+      setDeleteConfirmationStep('type');
+    }
+  };
+
+  const handleDeleteConfirmStep2 = async () => {
+    if (!userToDelete) return;
+
+    if (deleteConfirmText.trim().toLowerCase() !== 'delete this user') {
+      toast.error('Please type "delete this user" exactly to confirm');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/users?userId=${userToDelete.userId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('User deleted successfully');
+        setShowDeleteModal(false);
+        setUserToDelete(null);
+        setDeleteConfirmationStep('confirm');
+        setDeleteConfirmText('');
+        fetchSchoolUsers();
+      } else {
+        toast.error(data.error || 'Failed to delete user');
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Filter users based on search term and role filter
+  const filteredUsers = schoolUsers.filter((userAccount) => {
+    const matchesSearch = !searchTerm.trim() || 
+      userAccount.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userAccount.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userAccount.userId.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRole = filterRole === 'all' || userAccount.role === filterRole;
+    
+    return matchesSearch && matchesRole;
+  });
+
   if (!user || user.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -312,14 +503,6 @@ export default function AdminDashboard() {
           
           <div className="flex space-x-4">
             <button
-              onClick={handleClearDatabase}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Clear Database
-            </button>
-            
-            <button
               onClick={handleRefreshData}
               disabled={refreshing}
               className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
@@ -331,7 +514,7 @@ export default function AdminDashboard() {
             <button
               onClick={exportProgressReport}
               disabled={!progressData}
-              className="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
+              className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               Export Report
@@ -376,6 +559,17 @@ export default function AdminDashboard() {
               Analytics
             </button>
             <button
+              onClick={() => setActiveSection('users')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeSection === 'users'
+                  ? 'border-emerald-500 text-emerald-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="w-4 h-4 inline mr-2" />
+              User Management
+            </button>
+            <button
               onClick={() => setActiveSection('school')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
                 activeSection === 'school'
@@ -400,8 +594,8 @@ export default function AdminDashboard() {
                     <p className="text-sm font-medium text-gray-600">Total Students</p>
                     <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.totalStudents || 0}</p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <Users className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Users className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
               </div>
@@ -424,8 +618,8 @@ export default function AdminDashboard() {
                     <p className="text-sm font-medium text-gray-600">Completion Rate</p>
                     <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.completionRate || 0}%</p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Award className="w-6 h-6 text-purple-600" />
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Award className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
               </div>
@@ -528,7 +722,7 @@ export default function AdminDashboard() {
                                 <div className="text-xs text-gray-500">{student.studentId}</div>
                               </td>
                               <td className="text-center py-3 px-2">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-emerald-100 text-blue-800">
                                   {student.metrics.totalSubmissions || 0}
                                 </span>
                               </td>
@@ -542,7 +736,7 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="text-center py-3 px-2">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800 capitalize">
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800 capitalize">
                                   {student.metrics.personalityType || 'Unknown'}
                                 </span>
                               </td>
@@ -599,8 +793,8 @@ export default function AdminDashboard() {
                   </div>
                   
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Clock className="w-8 h-8 text-blue-600" />
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Clock className="w-8 h-8 text-emerald-600" />
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Time Efficiency</h3>
                     <p className="text-sm text-gray-600">
@@ -609,8 +803,8 @@ export default function AdminDashboard() {
                   </div>
                   
                   <div className="text-center">
-                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <BarChart3 className="w-8 h-8 text-purple-600" />
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <BarChart3 className="w-8 h-8 text-emerald-600" />
                     </div>
                     <h3 className="font-semibold text-gray-900 mb-2">Engagement Rate</h3>
                     <p className="text-sm text-gray-600">
@@ -623,15 +817,15 @@ export default function AdminDashboard() {
 
             {/* Report Generation Section */}
             <div className="mt-8">
-              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-6">
+              <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
                 <div className="flex items-center space-x-2 mb-6">
-                  <Download className="w-6 h-6 text-indigo-600" />
+                  <Download className="w-6 h-6 text-emerald-600" />
                   <h2 className="text-xl font-semibold text-gray-900">Generate Reports</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Analytics Report */}
-                  <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                  <div className="bg-white rounded-lg p-4 border border-emerald-100">
                     <h3 className="font-medium text-gray-900 mb-2">Analytics Report</h3>
                     <p className="text-sm text-gray-600 mb-4">
                       Comprehensive class performance and learning analytics
@@ -655,7 +849,7 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Progress Report */}
-                  <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                  <div className="bg-white rounded-lg p-4 border border-emerald-100">
                     <h3 className="font-medium text-gray-900 mb-2">Progress Report</h3>
                     <p className="text-sm text-gray-600 mb-4">
                       Individual student progress and performance tracking
@@ -679,7 +873,7 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Parent Summary */}
-                  <div className="bg-white rounded-lg p-4 border border-indigo-100">
+                  <div className="bg-white rounded-lg p-4 border border-emerald-100">
                     <h3 className="font-medium text-gray-900 mb-2">Parent Summary</h3>
                     <p className="text-sm text-gray-600 mb-4">
                       Parent-friendly progress summaries and recommendations
@@ -709,7 +903,7 @@ export default function AdminDashboard() {
                     <h3 className="font-medium text-gray-900 mb-3">Recent Reports</h3>
                     <div className="space-y-2">
                       {reports.slice(0, 5).map((report, index) => (
-                        <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-indigo-100">
+                        <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-emerald-100">
                           <div className="flex items-center space-x-3">
                             <Download className="w-4 h-4 text-gray-500" />
                             <div>
@@ -725,7 +919,7 @@ export default function AdminDashboard() {
                             href={report.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                            className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
                           >
                             Download
                           </a>
@@ -746,20 +940,12 @@ export default function AdminDashboard() {
             </p>
             <ul className="text-sm text-gray-500 mb-8 space-y-2">
               <li>• No students have submitted assignments yet</li>
-              <li>• The database is empty - no users or data</li>
               <li>• There was an error loading the data</li>
             </ul>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
-                onClick={handleClearDatabase}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2"
-              >
-                <Settings className="w-5 h-5" />
-                Clear Database to Get Started
-              </button>
-              <button
                 onClick={handleRefreshData}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2"
               >
                 <RefreshCw className="w-5 h-5" />
                 Refresh Data
@@ -792,6 +978,385 @@ export default function AdminDashboard() {
                 Advanced analytics and reporting features will be available here.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* User Management Section */}
+        {activeSection === 'users' && user && user.schoolId && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-6 mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">User Management</h2>
+              <p className="text-gray-600">
+                Create and manage teachers and students for your school.
+                All accounts will have auto-generated credentials that you must save securely.
+              </p>
+            </div>
+            
+            {/* Create Users Section */}
+            <AdminUserCreation
+              adminUserId={user.userId || ''}
+              adminRole={user.role}
+              schoolId={user.schoolId.toString()}
+            />
+
+            {/* Manage Existing Users Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Manage Users</h2>
+                
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <select
+                    value={filterRole}
+                    onChange={(e) => setFilterRole(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="teacher">Teachers</option>
+                    <option value="student">Students</option>
+                  </select>
+                </div>
+              </div>
+
+              {loadingUsers ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading users...</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          User ID
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Role
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Created
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredUsers.map((userAccount) => (
+                        <tr key={userAccount._id} className="hover:bg-gray-50">
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{userAccount.name}</div>
+                              <div className="text-sm text-gray-500">{userAccount.email}</div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm font-mono text-gray-900">{userAccount.userId}</div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              userAccount.role === 'teacher' ? 'bg-green-100 text-green-800' :
+                              userAccount.role === 'student' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {userAccount.role.charAt(0).toUpperCase() + userAccount.role.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              userAccount.status === 'active' ? 'bg-green-100 text-green-800' :
+                              userAccount.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {userAccount.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(userAccount.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleEditUser(userAccount)}
+                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                                title="Edit User"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              {userAccount.status === 'active' ? (
+                                <button
+                                  onClick={() => handleBlockUser(userAccount.userId, userAccount.status)}
+                                  className="inline-flex items-center px-3 py-1.5 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                  title="Block User"
+                                >
+                                  <Ban className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleUnblockUser(userAccount.userId)}
+                                  className="inline-flex items-center px-3 py-1.5 border border-green-300 shadow-sm text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                  title="Unblock User"
+                                >
+                                  <Unlock className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteUser(userAccount)}
+                                className="inline-flex items-center px-3 py-1.5 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                title="Delete User"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {filteredUsers.length === 0 && (
+                    <div className="text-center py-12">
+                      <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-gray-500">No users found.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Edit User Modal */}
+            {showEditModal && selectedUser && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-semibold text-gray-900">Edit User</h3>
+                    <button
+                      onClick={() => {
+                        setShowEditModal(false);
+                        setSelectedUser(null);
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleUpdateUser} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.name}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={editForm.email}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={editForm.phoneNumber}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Status *
+                      </label>
+                      <select
+                        required
+                        value={editForm.status}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-end space-x-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowEditModal(false);
+                          setSelectedUser(null);
+                        }}
+                        className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Updating...' : 'Update User'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Delete User Confirmation Modal */}
+            {showDeleteModal && userToDelete && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                  {deleteConfirmationStep === 'confirm' ? (
+                    <>
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                          <AlertCircle className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Are you sure?</h3>
+                          <p className="text-sm text-gray-600">This action cannot be undone</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-red-800">
+                          <strong>Warning:</strong> You are about to permanently delete this user:
+                        </p>
+                        <div className="mt-2 text-sm text-red-900">
+                          <p><strong>Name:</strong> {userToDelete.name}</p>
+                          <p><strong>Email:</strong> {userToDelete.email}</p>
+                          <p><strong>User ID:</strong> {userToDelete.userId}</p>
+                          <p><strong>Role:</strong> {userToDelete.role.charAt(0).toUpperCase() + userToDelete.role.slice(1)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end space-x-3">
+                        <button
+                          onClick={() => {
+                            setShowDeleteModal(false);
+                            setUserToDelete(null);
+                            setDeleteConfirmationStep('confirm');
+                            setDeleteConfirmText('');
+                          }}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleDeleteConfirmStep1}
+                          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          Yes, Continue
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                          <Trash2 className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Final Confirmation</h3>
+                          <p className="text-sm text-gray-600">Type "delete this user" to confirm</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <p className="text-sm text-red-800 mb-2">
+                          <strong>This is a destructive action!</strong> Deleting this user will permanently remove:
+                        </p>
+                        <ul className="list-disc list-inside text-sm text-red-900 space-y-1">
+                          <li>User account and all associated data</li>
+                          <li>All submissions and progress records</li>
+                          <li>Class enrollments and assignments</li>
+                        </ul>
+                      </div>
+
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Type "delete this user" to confirm:
+                        </label>
+                        <input
+                          type="text"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          placeholder="delete this user"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          autoFocus
+                        />
+                        {deleteConfirmText.trim().toLowerCase() !== 'delete this user' && deleteConfirmText.length > 0 && (
+                          <p className="mt-1 text-xs text-red-600">Text doesn't match. Please type exactly: "delete this user"</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end space-x-3">
+                        <button
+                          onClick={() => {
+                            setShowDeleteModal(false);
+                            setUserToDelete(null);
+                            setDeleteConfirmationStep('confirm');
+                            setDeleteConfirmText('');
+                          }}
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleDeleteConfirmStep2}
+                          disabled={deleting || deleteConfirmText.trim().toLowerCase() !== 'delete this user'}
+                          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {deleting ? (
+                            <>
+                              <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                              Deleting...
+                            </>
+                          ) : (
+                            'Delete User Permanently'
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

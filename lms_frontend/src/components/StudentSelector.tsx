@@ -298,7 +298,12 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
                   )}
                   {isCreatingClass && (
                     <p className="text-sm text-gray-500">
-                      Choose students to add to your new class
+                      Choose students from your school to add to your new class
+                    </p>
+                  )}
+                  {step === 'selectStudents' && selectedClass && !isCreatingClass && (
+                    <p className="text-sm text-emerald-600 font-medium">
+                      Selecting students from: {selectedClass.className}
                     </p>
                   )}
                 </div>
@@ -420,9 +425,10 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
                       <button
                         onClick={selectEntireClass}
                         className="flex items-center justify-center px-3 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+                        title={isCreatingClass ? "Select all students from your school" : "Select all students in this class"}
                       >
                         <Crown className="w-4 h-4 mr-2" />
-                        Entire Class
+                        {isCreatingClass ? "Entire School" : "Entire Class"}
                       </button>
                       <button
                         onClick={selectAll}
@@ -443,14 +449,21 @@ export default function StudentSelector({ onStudentsSelected, onClose, classId, 
                   
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      {selectedCount === students.length ? (
+                      {selectedCount === students.length && students.length > 0 ? (
                         <div className="flex items-center text-emerald-600">
                           <Crown className="w-4 h-4 mr-1" />
-                          <span className="text-sm font-medium">Entire class selected</span>
+                          <span className="text-sm font-medium">
+                            {isCreatingClass ? "Entire school selected" : "Entire class selected"}
+                          </span>
                         </div>
                       ) : (
                         <span className="text-sm text-gray-600">
                           {selectedCount} of {students.length} student{students.length !== 1 ? 's' : ''} selected
+                          {isCreatingClass && students.length > 0 && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              (from school)
+                            </span>
+                          )}
                         </span>
                       )}
                     </div>

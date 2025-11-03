@@ -20,9 +20,11 @@ import {
   Target,
   X,
   Download,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ClassChat from './ClassChat';
 
 interface Assignment {
   _id: string;
@@ -127,7 +129,7 @@ export default function StudentClassroom({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   
   // View state
-  const [view, setView] = useState<'assignments' | 'grades' | 'submission'>('assignments');
+  const [view, setView] = useState<'assignments' | 'grades' | 'submission' | 'chat'>('assignments');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
 
   useEffect(() => {
@@ -304,7 +306,7 @@ export default function StudentClassroom({
     
     if (!submission) return 'border-orange-300 bg-orange-50';
     if (submission.status === 'graded') return 'border-green-300 bg-green-50';
-    if (submission.status === 'submitted') return 'border-blue-300 bg-blue-50';
+    if (submission.status === 'submitted') return 'border-blue-300 bg-emerald-50';
     return 'border-gray-300 bg-gray-50';
   };
 
@@ -313,7 +315,7 @@ export default function StudentClassroom({
     
     if (!submission) return <Clock className="w-5 h-5 text-orange-500" />;
     if (submission.status === 'graded') return <CheckCircle className="w-5 h-5 text-green-500" />;
-    if (submission.status === 'submitted') return <AlertCircle className="w-5 h-5 text-blue-500" />;
+    if (submission.status === 'submitted') return <AlertCircle className="w-5 h-5 text-emerald-500" />;
     return <Clock className="w-5 h-5 text-gray-500" />;
   };
 
@@ -337,7 +339,7 @@ export default function StudentClassroom({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-500 to-blue-500 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-emerald-500 to-emerald-500 rounded-xl p-6 text-white">
         <button
           onClick={onBack}
           className="mb-4 flex items-center gap-2 text-white/90 hover:text-white transition-colors"
@@ -399,6 +401,17 @@ export default function StudentClassroom({
           >
             <Award className="w-4 h-4 inline mr-2" />
             Grades
+          </button>
+          <button
+            onClick={() => setView('chat')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              view === 'chat'
+                ? 'bg-white text-emerald-600 shadow-sm font-medium'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4 inline mr-2" />
+            Chat
           </button>
         </div>
 
@@ -479,7 +492,7 @@ export default function StudentClassroom({
 
                       {/* Personalized content preview */}
                       {assignment.encouragementNote && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-3">
                           <p className="text-sm text-blue-800 italic">
                             💡 {assignment.encouragementNote}
                           </p>
@@ -488,7 +501,7 @@ export default function StudentClassroom({
 
                       {/* Show grade if available and enabled */}
                       {submission && submission.status === 'graded' && assignment.canSeeGrades && (
-                        <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg p-4 mb-3">
+                        <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-lg p-4 mb-3">
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="text-sm text-gray-600 mb-1">Your Score</p>
@@ -532,7 +545,7 @@ export default function StudentClassroom({
                             setSelectedAssignment(assignment);
                             setView('submission');
                           }}
-                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                          className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2"
                         >
                           <Eye className="w-4 h-4" />
                           View
@@ -630,7 +643,7 @@ export default function StudentClassroom({
 
               {/* Show grade if available */}
               {selectedSubmission.status === 'graded' && selectedAssignment.canSeeGrades && (
-                <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-lg p-6">
+                <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-lg p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-semibold text-gray-900">Your Score</h3>
                     <div className="text-3xl font-bold text-emerald-600">
@@ -672,13 +685,13 @@ export default function StudentClassroom({
                       {selectedSubmission.autoGrade.areasForImprovement && selectedSubmission.autoGrade.areasForImprovement.length > 0 && (
                         <div>
                           <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                            <Target className="w-5 h-5 text-blue-500" />
+                            <Target className="w-5 h-5 text-emerald-500" />
                             Areas for Improvement
                           </h4>
                           <ul className="space-y-2">
                             {selectedSubmission.autoGrade.areasForImprovement.map((area, index) => (
                               <li key={index} className="flex items-start gap-2 text-gray-700">
-                                <AlertCircle className="w-4 h-4 text-blue-500 mt-1 flex-shrink-0" />
+                                <AlertCircle className="w-4 h-4 text-emerald-500 mt-1 flex-shrink-0" />
                                 <span>{area}</span>
                               </li>
                             ))}
@@ -711,12 +724,12 @@ export default function StudentClassroom({
               )}
 
               {selectedSubmission.status === 'submitted' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 text-blue-800">
                     <Clock className="w-5 h-5" />
                     <p className="font-medium">Waiting for grading</p>
                   </div>
-                  <p className="text-sm text-blue-600 mt-2">
+                  <p className="text-sm text-emerald-600 mt-2">
                     Your teacher will grade this soon. You'll be notified when it's ready.
                   </p>
                 </div>
@@ -901,7 +914,7 @@ export default function StudentClassroom({
                               </div>
                               <div className={`text-sm font-medium px-3 py-1 rounded-full ${
                                 percentage >= 80 ? 'bg-green-100 text-green-800' :
-                                percentage >= 60 ? 'bg-blue-100 text-blue-800' :
+                                percentage >= 60 ? 'bg-emerald-100 text-blue-800' :
                                 percentage >= 40 ? 'bg-yellow-100 text-yellow-800' :
                                 'bg-red-100 text-red-800'
                               }`}>
@@ -918,7 +931,7 @@ export default function StudentClassroom({
                               setSelectedAssignment(assignment);
                               setView('submission');
                             }}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                            className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2"
                           >
                             <Eye className="w-4 h-4" />
                             View Details
@@ -938,6 +951,18 @@ export default function StudentClassroom({
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Chat View */}
+      {view === 'chat' && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" style={{ height: '600px' }}>
+          <ClassChat
+            classId={classId}
+            userId={studentId}
+            userRole="student"
+            userName={studentName}
+          />
         </div>
       )}
     </div>

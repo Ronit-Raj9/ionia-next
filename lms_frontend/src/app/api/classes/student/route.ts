@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
     
     const classes = await classesCollection
       .find({ studentIds: { $in: [studentId] } })
@@ -35,6 +36,14 @@ export async function GET(request: NextRequest) {
 
     // Transform to include additional info for student view with real assignment counts
     const formattedClasses = await Promise.all(classes.map(async classData => {
+      // Get teacher information
+      let teacherName = classData.teacherName || 'Teacher';
+      if (!teacherName || teacherName === 'Teacher') {
+        // Fetch teacher info if not stored in class
+        const teacher = await usersCollection.findOne({ userId: classData.teacherId });
+        teacherName = teacher?.name || teacher?.displayName || 'Teacher';
+      }
+      
       // Get actual assignment count for this class
       const assignmentQuery = {
         $or: [
@@ -55,6 +64,7 @@ export async function GET(request: NextRequest) {
         _id: classData._id,
         className: classData.className,
         teacherId: classData.teacherId,
+        teacherName: teacherName, // Include actual teacher name
         studentCount: classData.studentIds.length,
         createdAt: classData.createdAt,
         // Real data instead of mock data

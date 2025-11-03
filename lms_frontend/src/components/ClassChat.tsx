@@ -1,213 +1,279 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Send, 
-  Paperclip, 
-  Image, 
-  FileText, 
-  X, 
-  MessageCircle,
-  Users,
-  Settings,
-  Plus,
-  Crown,
+import {
+  Send,
+  Search,
+  X,
+  Trash2,
+  MessageSquare,
+  Volume2,
+  VolumeX,
+  AlertCircle,
   User,
-  Heart,
-  ThumbsUp,
-  Smile
+  GraduationCap,
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  Download,
+  Paperclip,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import StudentSelector from './StudentSelector';
 
-export interface ClassChatMessage {
-  _id: string;
+interface ChatMessage {
+  _id?: string;
   senderId: string;
   senderRole: 'teacher' | 'student';
   senderName: string;
-  messageType: 'text' | 'image' | 'document' | 'announcement';
+  messageType: 'text' | 'image' | 'document';
   content: string;
-  attachments?: {
+  attachments?: Array<{
     type: 'image' | 'document';
     url: string;
     fileName: string;
     fileSize: number;
-  }[];
-  timestamp: Date;
-  isRead: boolean;
-  reactions?: {
-    userId: string;
-    type: 'like' | 'love' | 'laugh' | 'wow' | 'sad' | 'angry';
-    timestamp: Date;
-  }[];
+  }>;
+  timestamp: Date | string;
+  reactions?: any[];
 }
 
-export interface ClassChat {
-  _id: string;
-  classId: string;
-  teacherId: string;
-  className: string;
-  description?: string;
-  participants: {
-    userId: string;
-    role: 'teacher' | 'student';
-    name: string;
-    joinedAt: Date;
-    isActive: boolean;
-  }[];
-  messages: ClassChatMessage[];
-  lastActivity: Date;
-  settings: {
-    allowStudentMessages: boolean;
-    allowFileSharing: boolean;
-    moderationEnabled: boolean;
-    allowReactions: boolean;
-  };
+interface Participant {
+  userId: string;
+  role: 'teacher' | 'student';
+  name: string;
+  joinedAt: Date | string;
   isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 interface ClassChatProps {
+  classId: string;
   userId: string;
+  userRole: 'teacher' | 'student';
   userName: string;
-  role: 'teacher' | 'student' | 'admin';
-  classId?: string;
-  isEmbedded?: boolean;
 }
 
-export default function ClassChat({ userId, userName, role, classId, isEmbedded = false }: ClassChatProps) {
-  const [classChats, setClassChats] = useState<ClassChat[]>([]);
-  const [activeChat, setActiveChat] = useState<ClassChat | null>(null);
-  const [messageText, setMessageText] = useState('');
+export default function ClassChat({
+  classId,
+  userId,
+  userRole,
+  userName
+}: ClassChatProps) {
+  const router = useRouter();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageInput, setMessageInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
+  const [searching, setSearching] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [showParticipants, setShowParticipants] = useState(false);
-  const [showStudentSelector, setShowStudentSelector] = useState(false);
-
+  const [filePreviews, setFilePreviews] = useState<string[]>([]);
+  const [hoveredTeacherId, setHoveredTeacherId] = useState<string | null>(null);
+  const [hoveredTeacherInfo, setHoveredTeacherInfo] = useState<{id: string, name: string, email: string} | null>(null);
+  const [hoveredStudentId, setHoveredStudentId] = useState<string | null>(null);
+  const [hoveredStudentInfo, setHoveredStudentInfo] = useState<{id: string, name: string, email: string} | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [userHasScrolled, setUserHasScrolled] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isHoveringRef = useRef<boolean>(false);
+  const hoveredUserIdRef = useRef<string | null>(null);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousMessageCountRef = useRef<number>(0);
 
-  // Fetch class chats on load
-  useEffect(() => {
-    if (userId && role) {
-      fetchClassChats();
-    }
-  }, [userId, role, classId]);
+  const MAX_MESSAGE_LENGTH = 1000;
+  const POLLING_INTERVAL = 3000; // 3 seconds
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    scrollToBottom();
-  }, [activeChat?.messages]);
-
+  // Scroll to bottom only if user hasn't manually scrolled up
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldAutoScroll && !userHasScrolled) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
-  const fetchClassChats = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        role,
-        userId,
-        ...(classId && { classId })
-      });
+  // Check if user is near bottom of scroll
+  const isNearBottom = () => {
+    if (!messagesContainerRef.current) return true;
+    const container = messagesContainerRef.current;
+    const threshold = 100; // pixels from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
 
-      const response = await fetch(`/api/class-chat?${params}`);
+  // Handle scroll events to detect user intent
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const nearBottom = isNearBottom();
+      setUserHasScrolled(!nearBottom);
+      // If user scrolls back to bottom, re-enable auto-scroll
+      if (nearBottom) {
+        setShouldAutoScroll(true);
+      }
+    }
+  };
+
+  // Fetch messages
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch(`/api/class-chat/${classId}`);
       const data = await response.json();
 
       if (data.success) {
-        setClassChats(data.data);
-        if (data.data.length > 0 && !activeChat) {
-          setActiveChat(data.data[0]);
-        }
+        setMessages(data.data.messages || []);
+        setIsMuted(data.data.isMuted || false);
+        setParticipants(data.data.participants || []);
       } else {
-        toast.error('Failed to load class chats');
+        if (response.status !== 404) {
+          console.error('Failed to fetch messages:', data.error);
+        }
       }
     } catch (error) {
-      console.error('Error fetching class chats:', error);
-      toast.error('Failed to load class chats');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching messages:', error);
     }
   };
 
+  // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     
     // Validate files
-    const validFiles = files.filter(file => {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} is too large (max 10MB)`);
-        return false;
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+    
+    files.forEach(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name} exceeds 10MB limit`);
+        return;
       }
       
-      const allowedTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-        'application/pdf', 'text/plain', 'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      ];
+      // Check if file type is allowed (image or document)
+      const isImage = file.type.startsWith('image/');
+      const isDocument = file.type === 'application/pdf' || 
+                        file.type === 'text/plain' ||
+                        file.type.includes('document') ||
+                        file.type.includes('msword') ||
+                        file.type.includes('spreadsheet') ||
+                        file.type.includes('presentation');
       
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(`${file.name} is not a supported file format`);
-        return false;
+      if (!isImage && !isDocument) {
+        toast.error(`${file.name} is not a supported file type`);
+        return;
       }
       
-      return true;
+      validFiles.push(file);
+      
+      // Create preview for images
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            const result = e.target.result as string;
+            newPreviews.push(result);
+            setFilePreviews(prev => [...prev, result]);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     });
     
     setSelectedFiles(prev => [...prev, ...validFiles]);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
+  // Remove file from selection
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    const newPreviews = filePreviews.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    setFilePreviews(newPreviews);
+    
+    // Revoke object URL if it exists
+    if (filePreviews[index]) {
+      URL.revokeObjectURL(filePreviews[index]);
+    }
   };
 
+  // Format file size
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // Send message
   const sendMessage = async () => {
-    if (!messageText.trim() && selectedFiles.length === 0) {
-      toast.error('Please enter a message or attach files');
+    if (!messageInput.trim() && selectedFiles.length === 0) {
       return;
     }
 
-    if (!activeChat) {
-      toast.error('Please select a class chat');
+    if (messageInput.trim().length > MAX_MESSAGE_LENGTH) {
+      toast.error('Message exceeds 1000 characters');
       return;
     }
 
-    setSendingMessage(true);
+    if (isMuted && userRole === 'student') {
+      toast.error('You are muted and cannot send messages');
+      return;
+    }
 
+    setSending(true);
     try {
-      const formData = new FormData();
-      formData.append('action', 'send_message');
-      formData.append('role', role);
-      formData.append('userId', userId);
-      formData.append('userName', userName);
-      formData.append('chatId', activeChat._id);
-      formData.append('content', messageText);
-      formData.append('messageType', selectedFiles.length > 0 ? 'document' : 'text');
-
-      selectedFiles.forEach(file => {
-        formData.append('files', file);
-      });
-
-      const response = await fetch('/api/class-chat', {
-        method: 'POST',
-        body: formData
-      });
+      let response: Response;
+      
+      if (selectedFiles.length > 0) {
+        // Send with files using FormData
+        const formData = new FormData();
+        formData.append('content', messageInput.trim());
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+        
+        response = await fetch(`/api/class-chat/${classId}`, {
+          method: 'POST',
+          body: formData
+        });
+      } else {
+        // Send text only using JSON
+        response = await fetch(`/api/class-chat/${classId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            content: messageInput.trim()
+          })
+        });
+      }
 
       const data = await response.json();
 
       if (data.success) {
-        // Clear form
-        setMessageText('');
+        setMessageInput('');
         setSelectedFiles([]);
-        
-        // Refresh chat to get updated messages
-        await fetchClassChats();
-        
-        toast.success('Message sent successfully');
+        // Clean up preview URLs
+        filePreviews.forEach(url => {
+          if (url.startsWith('blob:') || url.startsWith('data:')) {
+            URL.revokeObjectURL(url);
+          }
+        });
+        setFilePreviews([]);
+        // Refresh messages immediately
+        await fetchMessages();
+        scrollToBottom();
       } else {
         toast.error(data.error || 'Failed to send message');
       }
@@ -215,403 +281,751 @@ export default function ClassChat({ userId, userName, role, classId, isEmbedded 
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
     } finally {
-      setSendingMessage(false);
+      setSending(false);
     }
   };
 
-  const createClassChat = async (selectedStudents: any[]) => {
-    try {
-      const formData = new FormData();
-      formData.append('action', 'create_chat');
-      formData.append('role', role);
-      formData.append('userId', userId);
-      formData.append('userName', userName);
-      formData.append('classId', classId || 'default-class');
-      formData.append('className', `${userName}'s Class`);
-      formData.append('description', 'Class discussion and collaboration space');
-      formData.append('selectedStudents', JSON.stringify(selectedStudents.map(s => ({ id: s.id, name: s.name }))));
+  // Delete message
+  const deleteMessage = async (messageId: string) => {
+    if (!confirm('Are you sure you want to delete this message?')) {
+      return;
+    }
 
-      const response = await fetch('/api/class-chat', {
-        method: 'POST',
-        body: formData
+    try {
+      const response = await fetch(`/api/class-chat/${classId}/message/${messageId}`, {
+        method: 'DELETE'
       });
 
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Class chat created successfully!');
-        setShowStudentSelector(false);
-        await fetchClassChats();
+        toast.success('Message deleted');
+        await fetchMessages();
       } else {
-        toast.error(data.error || 'Failed to create class chat');
+        toast.error(data.error || 'Failed to delete message');
       }
     } catch (error) {
-      console.error('Error creating class chat:', error);
-      toast.error('Failed to create class chat');
+      console.error('Error deleting message:', error);
+      toast.error('Failed to delete message');
     }
   };
+
+  // Mute/unmute student
+  const toggleMuteStudent = async (studentId: string, currentMuteStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/class-chat/${classId}/mute`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          studentId,
+          mute: !currentMuteStatus
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message);
+        await fetchMessages();
+      } else {
+        toast.error(data.error || 'Failed to update mute status');
+      }
+    } catch (error) {
+      console.error('Error muting/unmuting student:', error);
+      toast.error('Failed to update mute status');
+    }
+  };
+
+  // Search messages
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/class-chat/${classId}/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setSearchResults(data.data.results || []);
+      } else {
+        toast.error(data.error || 'Search failed');
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error searching:', error);
+      toast.error('Search failed');
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchMessages().finally(() => setLoading(false));
+  }, [classId]);
+
+  // Polling for new messages
+  useEffect(() => {
+    if (!loading && classId) {
+      pollingIntervalRef.current = setInterval(() => {
+        fetchMessages();
+      }, POLLING_INTERVAL);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [classId, loading]);
+
+  // Scroll to bottom when messages change, but only if:
+  // 1. It's a new message (count increased)
+  // 2. User hasn't manually scrolled up
+  // 3. It's the user's own message (they just sent it)
+  useEffect(() => {
+    const currentCount = messages.length;
+    const previousCount = previousMessageCountRef.current;
+    
+    // Check if it's a new message
+    if (currentCount > previousCount) {
+      const lastMessage = messages[messages.length - 1];
+      const nearBottom = isNearBottom();
+      
+      // Auto-scroll if: user sent the message OR user is already at bottom
+      if (lastMessage?.senderId === userId || nearBottom) {
+        setShouldAutoScroll(true);
+        setUserHasScrolled(false);
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+      } else {
+        // New message from someone else and user scrolled up - don't auto-scroll
+        setUserHasScrolled(true);
+      }
+    } else if (currentCount === 0 && previousCount === 0) {
+      // Initial load - scroll to bottom
+      requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+    }
+    
+    previousMessageCountRef.current = currentCount;
+  }, [messages, userId]);
+
+  // Cleanup file previews and timeouts on unmount
+  useEffect(() => {
+    return () => {
+      filePreviews.forEach(url => {
+        if (url.startsWith('blob:') || url.startsWith('data:')) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch (e) {
+            // Ignore errors during cleanup
+          }
+        }
+      });
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Handle search query changes
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const timeoutId = setTimeout(() => {
+        handleSearch();
+      }, 500); // Debounce search
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
 
   const formatTimestamp = (timestamp: Date | string) => {
     const date = new Date(timestamp);
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
     
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getActiveParticipants = () => {
-    return activeChat?.participants.filter(p => p.isActive) || [];
-  };
-
-  const containerClass = isEmbedded 
-    ? "h-full flex flex-col bg-white" 
-    : "fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col z-50";
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className={containerClass}>
+    <div className="flex flex-col h-full bg-white rounded-lg border border-gray-200">
       {/* Header */}
-      <div className="bg-emerald-600 text-white p-4 rounded-t-lg flex items-center justify-between">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center space-x-2">
-          <MessageCircle className="w-5 h-5" />
-          <div>
-            <h3 className="font-semibold">
-              {activeChat ? activeChat.className : 'Class Chat'}
-            </h3>
-            <p className="text-emerald-100 text-sm">
-              {activeChat ? `${getActiveParticipants().length} participants` : 'Select a class'}
-            </p>
-          </div>
+          <MessageSquare className="w-5 h-5 text-emerald-600" />
+          <h3 className="font-semibold text-gray-900">Class Chat</h3>
         </div>
         <div className="flex items-center space-x-2">
-          {activeChat && (
-            <button
-              onClick={() => setShowParticipants(!showParticipants)}
-              className="text-emerald-100 hover:text-white p-1 rounded"
-            >
-              <Users className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Chat List */}
-      {!activeChat && (
-        <div className="flex-1 overflow-y-auto p-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-            </div>
-          ) : classChats.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <div className="text-center">
-                <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>No class chats available</p>
-                <p className="text-sm mb-4">
-                  {role === 'teacher' 
-                    ? 'Create a class chat to get started' 
-                    : 'Wait for your teacher to add you to a class chat'
-                  }
-                </p>
-                {role === 'teacher' && (
-                  <button
-                    onClick={() => setShowStudentSelector(true)}
-                    className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Class Chat
-                  </button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {classChats.map((chat) => (
-                <motion.div
-                  key={chat._id}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => setActiveChat(chat)}
-                  className="p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-medium text-gray-900 truncate flex-1">
-                      {chat.className}
-                    </h4>
-                    <span className="text-xs text-gray-500 ml-2">
-                      {formatTimestamp(chat.lastActivity)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 truncate">
-                    {chat.messages.length > 0 
-                      ? chat.messages[chat.messages.length - 1].content || 'File attachment'
-                      : 'No messages yet'
-                    }
-                  </p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-xs text-gray-500">
-                      {getActiveParticipants().length} participants
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {chat.messages.length} messages
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Messages View */}
-      {activeChat && (
-        <div className="flex-1 flex">
-          {/* Messages */}
-          <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${showParticipants ? 'border-r border-gray-200' : ''}`}>
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={() => setActiveChat(null)}
-                className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-              >
-                ← Back to chats
-              </button>
-            </div>
-
-            <AnimatePresence>
-              {activeChat.messages.map((message, index) => (
-                <motion.div
-                  key={`${message._id}-${index}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`rounded-lg p-3 ${
-                    message.senderRole === 'teacher' 
-                      ? 'bg-blue-50 border-l-4 border-blue-500' 
-                      : 'bg-emerald-50 border-l-4 border-emerald-500'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        message.senderRole === 'teacher' ? 'bg-blue-600' : 'bg-emerald-600'
-                      }`}>
-                        {message.senderRole === 'teacher' ? (
-                          <Crown className="w-4 h-4 text-white" />
-                        ) : (
-                          <User className="w-4 h-4 text-white" />
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {message.senderName}
-                        </span>
-                        <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                          message.senderRole === 'teacher' 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-emerald-100 text-emerald-700'
-                        }`}>
-                          {message.senderRole}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {formatTimestamp(message.timestamp)}
-                    </span>
-                  </div>
-
-                  {message.content && (
-                    <p className="text-gray-700 mb-2">{message.content}</p>
-                  )}
-
-                  {message.attachments && message.attachments.length > 0 && (
-                    <div className="space-y-2">
-                      {message.attachments.map((attachment, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center space-x-3 p-2 bg-white rounded border"
-                        >
-                          {attachment.type === 'image' ? (
-                            <Image className="w-5 h-5 text-emerald-600" />
-                          ) : (
-                            <FileText className="w-5 h-5 text-emerald-600" />
-                          )}
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {attachment.fileName}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatFileSize(attachment.fileSize)}
-                            </p>
-                          </div>
-                          <a
-                            href={attachment.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-emerald-600 hover:text-emerald-700 text-sm"
-                          >
-                            View
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Reactions */}
-                  {activeChat.settings.allowReactions && message.reactions && message.reactions.length > 0 && (
-                    <div className="flex items-center space-x-2 mt-2">
-                      <div className="flex items-center space-x-1">
-                        <ThumbsUp className="w-4 h-4 text-gray-500" />
-                        <span className="text-xs text-gray-500">
-                          {message.reactions.filter(r => r.type === 'like').length}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Heart className="w-4 h-4 text-red-500" />
-                        <span className="text-xs text-gray-500">
-                          {message.reactions.filter(r => r.type === 'love').length}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Participants Sidebar */}
-          {showParticipants && (
-            <div className="w-64 p-4 bg-gray-50">
-              <h4 className="font-medium text-gray-900 mb-3">Participants</h4>
-              <div className="space-y-2">
-                {getActiveParticipants().map((participant) => (
-                  <div key={participant.userId} className="flex items-center space-x-2 p-2 bg-white rounded border">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      participant.role === 'teacher' ? 'bg-blue-600' : 'bg-emerald-600'
-                    }`}>
-                      {participant.role === 'teacher' ? (
-                        <Crown className="w-4 h-4 text-white" />
-                      ) : (
-                        <User className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{participant.name}</p>
-                      <p className="text-xs text-gray-500 capitalize">{participant.role}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* File Preview */}
-      {activeChat && selectedFiles.length > 0 && (
-        <div className="p-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center space-x-2 mb-2">
-            <Paperclip className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">
-              {selectedFiles.length} file(s) selected
-            </span>
-          </div>
-          <div className="space-y-2 max-h-20 overflow-y-auto">
-            {selectedFiles.map((file, index) => (
-              <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
-                <div className="flex items-center space-x-2">
-                  {file.type.startsWith('image/') ? (
-                    <Image className="w-4 h-4 text-emerald-600" />
-                  ) : (
-                    <FileText className="w-4 h-4 text-emerald-600" />
-                  )}
-                  <span className="text-sm text-gray-700 truncate max-w-48">
-                    {file.name}
-                  </span>
-                </div>
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            title="Search messages"
+          >
+            <Search className="w-4 h-4 text-gray-600" />
+          </button>
+          {showSearch && (
+            <div className="absolute top-16 right-4 z-10 bg-white border border-gray-200 rounded-lg shadow-lg p-4 w-80">
+              <div className="flex items-center space-x-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Search messages..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
                 <button
-                  onClick={() => removeFile(index)}
-                  className="text-red-500 hover:text-red-700"
+                  onClick={() => {
+                    setShowSearch(false);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-            ))}
+              {searching && (
+                <div className="text-sm text-gray-500 text-center py-2">Searching...</div>
+              )}
+              {searchResults.length > 0 && (
+                <div className="max-h-60 overflow-y-auto">
+                  <div className="text-xs text-gray-500 mb-2">
+                    Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                  </div>
+                  {searchResults.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 mb-2 bg-gray-50 rounded text-sm hover:bg-gray-100 cursor-pointer"
+                      onClick={() => {
+                        // Scroll to message in main chat
+                        const msgId = msg._id || `msg-${msg.timestamp}-${msg.senderId}`;
+                        const messageElement = document.getElementById(`message-${msgId}`);
+                        if (messageElement) {
+                          messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          messageElement.classList.add('ring-2', 'ring-emerald-500');
+                          setTimeout(() => {
+                            messageElement.classList.remove('ring-2', 'ring-emerald-500');
+                          }, 2000);
+                        }
+                        setShowSearch(false);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                      }}
+                    >
+                      <div className="font-medium text-xs text-gray-600">{msg.senderName}</div>
+                      <div className="text-gray-800">{msg.content}</div>
+                      <div className="text-xs text-gray-400 mt-1">{formatTimestamp(msg.timestamp)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {searchQuery && !searching && searchResults.length === 0 && (
+                <div className="text-sm text-gray-500 text-center py-2">No results found</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Muted warning */}
+      {isMuted && userRole === 'student' && (
+        <div className="bg-amber-50 border-l-4 border-amber-400 p-4 flex items-center space-x-2">
+          <AlertCircle className="w-5 h-5 text-amber-600" />
+          <span className="text-sm text-amber-800">You are muted and cannot send messages</span>
+        </div>
+      )}
+
+      {/* Messages */}
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+      >
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <MessageSquare className="w-12 h-12 mb-2" />
+            <p>No messages yet. Start the conversation!</p>
+          </div>
+        ) : (
+          messages.map((message, messageIndex) => {
+            // Check if this is the message we're currently hovering over
+            const isHovered = 
+              (userRole === 'student' && message.senderRole === 'teacher' && message.senderId !== userId && hoveredTeacherId === message.senderId) ||
+              (userRole === 'teacher' && message.senderRole === 'student' && message.senderId !== userId && hoveredStudentId === message.senderId);
+            
+            return (
+            <div
+              key={message._id || `msg-${message.timestamp}-${message.senderId}`}
+              id={`message-${message._id}`}
+              className={`flex ${message.senderId === userId ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[75%] rounded-lg p-3 ${
+                  message.senderId === userId
+                    ? 'bg-emerald-600 text-white'
+                    : message.senderRole === 'teacher'
+                    ? 'bg-blue-100 text-blue-900'
+                    : 'bg-white text-gray-900 border border-gray-200'
+                }`}
+              >
+                <div className="flex items-center space-x-2 mb-1">
+                  <div 
+                    className="flex items-center space-x-1 relative"
+                    onMouseEnter={() => {
+                      // Clear any pending hide timeout
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current);
+                        hoverTimeoutRef.current = null;
+                      }
+                      
+                      isHoveringRef.current = true;
+                      hoveredUserIdRef.current = message.senderId;
+                      
+                      // For students: hover over teacher names
+                      if (message.senderRole === 'teacher' && message.senderId !== userId && userRole === 'student') {
+                        // Set immediately with available data to prevent blinking
+                        setHoveredTeacherId(message.senderId);
+                        setHoveredTeacherInfo({
+                          id: message.senderId,
+                          name: message.senderName,
+                          email: ''
+                        });
+                        
+                        // Then fetch full info and update
+                        fetch(`/api/users?userId=${message.senderId}`)
+                          .then(res => res.json())
+                          .then(data => {
+                            // Only update if still hovering over same user
+                            if (hoveredUserIdRef.current === message.senderId && isHoveringRef.current) {
+                              if (data.success && data.user) {
+                                setHoveredTeacherInfo({
+                                  id: message.senderId,
+                                  name: data.user.name || message.senderName,
+                                  email: data.user.email || ''
+                                });
+                              }
+                            }
+                          })
+                          .catch(() => {
+                            // Info already set above, so ignore error
+                          });
+                      }
+                      // For teachers: hover over student names
+                      if (message.senderRole === 'student' && message.senderId !== userId && userRole === 'teacher') {
+                        // Set immediately with available data to prevent blinking
+                        setHoveredStudentId(message.senderId);
+                        setHoveredStudentInfo({
+                          id: message.senderId,
+                          name: message.senderName,
+                          email: ''
+                        });
+                        
+                        // Then fetch full info and update
+                        fetch(`/api/users?userId=${message.senderId}`)
+                          .then(res => res.json())
+                          .then(data => {
+                            // Only update if still hovering over same user
+                            if (hoveredUserIdRef.current === message.senderId && isHoveringRef.current) {
+                              if (data.success && data.user) {
+                                setHoveredStudentInfo({
+                                  id: message.senderId,
+                                  name: data.user.name || message.senderName,
+                                  email: data.user.email || ''
+                                });
+                              }
+                            }
+                          })
+                          .catch(() => {
+                            // Info already set above, so ignore error
+                          });
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      // When mouse leaves the name, use a delay before hiding
+                      // This allows mouse to move to popup
+                      hoverTimeoutRef.current = setTimeout(() => {
+                        // Only hide if not hovering over popup (popup's onMouseEnter will prevent this)
+                        if (!isHoveringRef.current) {
+                          setHoveredTeacherId(null);
+                          setHoveredTeacherInfo(null);
+                          setHoveredStudentId(null);
+                          setHoveredStudentInfo(null);
+                          hoveredUserIdRef.current = null;
+                        }
+                      }, 100);
+                    }}
+                  >
+                    {message.senderRole === 'teacher' ? (
+                      <GraduationCap className="w-3 h-3" />
+                    ) : (
+                      <User className="w-3 h-3" />
+                    )}
+                    <span className="text-xs font-medium opacity-90 cursor-pointer hover:underline">
+                      {message.senderId === userId ? 'You' : message.senderName}
+                    </span>
+                    
+                    {/* Hover Profile for Teachers (only for students) - Only show once for the hovered teacher */}
+                    {userRole === 'student' && message.senderRole === 'teacher' && message.senderId !== userId && hoveredTeacherId === message.senderId && hoveredTeacherInfo && hoveredTeacherInfo.id === message.senderId && messageIndex === messages.findIndex((m) => m.senderId === hoveredTeacherId && m.senderRole === 'teacher' && m.senderId !== userId) && (
+                      <div 
+                        className="hover-profile-popup absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-64"
+                        onMouseEnter={() => {
+                          // Keep popup visible when hovering over it - clear any pending hide timeout
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                            hoverTimeoutRef.current = null;
+                          }
+                          isHoveringRef.current = true;
+                        }}
+                        onMouseLeave={() => {
+                          // Hide popup when mouse leaves it completely
+                          isHoveringRef.current = false;
+                          hoveredUserIdRef.current = null;
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                          }
+                          setHoveredTeacherId(null);
+                          setHoveredTeacherInfo(null);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
+                            {hoveredTeacherInfo.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{hoveredTeacherInfo.name}</h4>
+                            <p className="text-xs text-gray-500">Teacher</p>
+                          </div>
+                        </div>
+                        {hoveredTeacherInfo.email && (
+                          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-3">
+                            <Mail className="w-4 h-4" />
+                            <span>{hoveredTeacherInfo.email}</span>
+                          </div>
+                        )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch('/api/chats', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ targetUserId: hoveredTeacherInfo.id })
+                              });
+                              
+                              const data = await response.json();
+                              if (data.success) {
+                                // Redirect to chats page with the new chat
+                                router.push(`/student/chats?chatId=${data.data.chat.chatId}`);
+                              } else {
+                                toast.error(data.error || 'Failed to start chat');
+                              }
+                            } catch (error) {
+                              console.error('Error starting chat:', error);
+                              toast.error('Failed to start chat');
+                            }
+                          }}
+                          className="w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-2"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Message Privately</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Hover Profile for Students (only for teachers) - Only show once for the hovered student */}
+                    {userRole === 'teacher' && message.senderRole === 'student' && message.senderId !== userId && hoveredStudentId === message.senderId && hoveredStudentInfo && hoveredStudentInfo.id === message.senderId && messageIndex === messages.findIndex((m) => m.senderId === hoveredStudentId && m.senderRole === 'student' && m.senderId !== userId) && (
+                      <div 
+                        className="hover-profile-popup absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-64"
+                        onMouseEnter={() => {
+                          // Keep popup visible when hovering over it - clear any pending hide timeout
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                            hoverTimeoutRef.current = null;
+                          }
+                          isHoveringRef.current = true;
+                        }}
+                        onMouseLeave={() => {
+                          // Hide popup when mouse leaves it completely
+                          isHoveringRef.current = false;
+                          hoveredUserIdRef.current = null;
+                          if (hoverTimeoutRef.current) {
+                            clearTimeout(hoverTimeoutRef.current);
+                          }
+                          setHoveredStudentId(null);
+                          setHoveredStudentInfo(null);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
+                            {hoveredStudentInfo.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{hoveredStudentInfo.name}</h4>
+                            <p className="text-xs text-gray-500">Student</p>
+                          </div>
+                        </div>
+                        {hoveredStudentInfo.email && (
+                          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-3">
+                            <Mail className="w-4 h-4" />
+                            <span>{hoveredStudentInfo.email}</span>
+                          </div>
+                        )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const response = await fetch('/api/chats', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ targetUserId: hoveredStudentInfo.id })
+                              });
+                              
+                              const data = await response.json();
+                              if (data.success) {
+                                // Redirect to chats page with the new chat
+                                router.push(`/teacher/chats?chatId=${data.data.chat.chatId}`);
+                              } else {
+                                toast.error(data.error || 'Failed to start chat');
+                              }
+                            } catch (error) {
+                              console.error('Error starting chat:', error);
+                              toast.error('Failed to start chat');
+                            }
+                          }}
+                          className="w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-2"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Message Privately</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {(userRole === 'teacher' || message.senderId === userId) && (
+                    <button
+                      onClick={() => {
+                        if (message._id) {
+                          deleteMessage(message._id);
+                        }
+                      }}
+                      className="opacity-70 hover:opacity-100 transition-opacity ml-auto"
+                      title="Delete message"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                <div className="text-sm whitespace-pre-wrap break-words">
+                  {message.content}
+                </div>
+                
+                {/* Attachments */}
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {message.attachments.map((attachment, idx) => (
+                      <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
+                        {attachment.type === 'image' ? (
+                          <div className="relative">
+                            <img
+                              src={attachment.url}
+                              alt={attachment.fileName}
+                              className="max-w-full max-h-64 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(attachment.url, '_blank')}
+                              onError={(e) => {
+                                // Fallback if image fails to load
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EImage%3C/text%3E%3C/svg%3E';
+                              }}
+                            />
+                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 px-2">
+                              {attachment.fileName} ({formatFileSize(attachment.fileSize)})
+                            </div>
+                          </div>
+                        ) : (
+                          <a
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center space-x-2 p-3 hover:bg-gray-100 transition-colors"
+                          >
+                            <FileText className="w-5 h-5 text-blue-600" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                {attachment.fileName}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {formatFileSize(attachment.fileSize)}
+                              </div>
+                            </div>
+                            <Download className="w-4 h-4 text-gray-400" />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="text-xs opacity-70 mt-1">
+                  {formatTimestamp(message.timestamp)}
+                </div>
+              </div>
+            </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Teacher controls */}
+      {userRole === 'teacher' && participants.length > 0 && (
+        <div className="border-t border-gray-200 p-3 bg-gray-50">
+          <div className="text-xs font-medium text-gray-600 mb-2">Manage Students:</div>
+          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+            {participants
+              .filter(p => p.role === 'student')
+              .map((participant) => (
+                <button
+                  key={participant.userId}
+                  onClick={() => toggleMuteStudent(participant.userId, !participant.isActive)}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded text-xs transition-colors ${
+                    participant.isActive
+                      ? 'bg-white text-gray-700 hover:bg-gray-100'
+                      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                  }`}
+                >
+                  {participant.isActive ? (
+                    <Volume2 className="w-3 h-3" />
+                  ) : (
+                    <VolumeX className="w-3 h-3" />
+                  )}
+                  <span>{participant.name}</span>
+                </button>
+              ))}
           </div>
         </div>
       )}
 
-      {/* Input Area */}
-      {activeChat && (activeChat.settings.allowStudentMessages || role === 'teacher') && (
-        <div className="p-4 border-t border-gray-200">
+      {/* Input */}
+      {(!isMuted || userRole === 'teacher') && (
+        <div className="border-t border-gray-200 p-4 bg-white">
+          {/* File previews */}
+          {selectedFiles.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {selectedFiles.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  {filePreviews[index] ? (
+                    <img
+                      src={filePreviews[index]}
+                      alt={file.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">
+                      {file.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatFileSize(file.size)}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeFile(index)}
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    title="Remove file"
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-end space-x-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-upload-input"
+            />
+            <label
+              htmlFor="file-upload-input"
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors flex items-center space-x-1"
+              title="Upload file (max 10MB)"
+            >
+              <Paperclip className="w-4 h-4 text-gray-600" />
+            </label>
             <div className="flex-1">
               <textarea
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                placeholder="Type your message here..."
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                rows={2}
-                onKeyPress={(e) => {
+                value={messageInput}
+                onChange={(e) => {
+                  if (e.target.value.length <= MAX_MESSAGE_LENGTH) {
+                    setMessageInput(e.target.value);
+                  }
+                }}
+                onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                   }
                 }}
+                placeholder="Type your message..."
+                rows={1}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                style={{ minHeight: '44px', maxHeight: '120px' }}
               />
+              <div className="text-xs text-gray-400 mt-1 text-right">
+                {messageInput.length}/{MAX_MESSAGE_LENGTH}
+              </div>
             </div>
-            {(activeChat.settings.allowFileSharing || role === 'teacher') && (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="p-3 text-gray-500 hover:text-emerald-600 transition-colors"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
-            )}
             <button
               onClick={sendMessage}
-              disabled={sendingMessage || (!messageText.trim() && selectedFiles.length === 0)}
-              className="p-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={(!messageInput.trim() && selectedFiles.length === 0) || sending || messageInput.length > MAX_MESSAGE_LENGTH}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
             >
-              {sendingMessage ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
+              <Send className="w-4 h-4" />
             </button>
           </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFileSelect}
-            accept="image/*,.pdf,.txt,.doc,.docx"
-            className="hidden"
-          />
         </div>
-      )}
-
-      {/* Student Selector Modal */}
-      {showStudentSelector && (
-        <StudentSelector
-          onStudentsSelected={createClassChat}
-          onClose={() => setShowStudentSelector(false)}
-          classId={classId || 'default-class'}
-          teacherId={userId}
-          teacherRole={role}
-          teacherSchoolId="demo-school-delhi-2025"
-        />
       )}
     </div>
   );
 }
+

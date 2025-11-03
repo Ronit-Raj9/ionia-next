@@ -31,6 +31,7 @@ export async function GET(
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     const submissionsCollection = await getCollection(COLLECTIONS.SUBMISSIONS);
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
     const studentProfilesCollection = await getCollection(COLLECTIONS.STUDENT_PROFILES);
     
     // Find the class
@@ -100,11 +101,39 @@ export async function GET(
       .toArray();
 
     // Fetch student details for all students in the class
-    const students = await studentProfilesCollection
+    // First, get basic user info from users collection (this includes ALL students)
+    const studentUsers = await usersCollection
+      .find({ 
+        userId: { $in: classData.studentIds },
+        role: 'student'
+      })
+      .toArray();
+
+    // Then, get profiles for students who have them
+    const studentProfiles = await studentProfilesCollection
       .find({ 
         studentId: { $in: classData.studentIds }
       })
       .toArray();
+
+    // Create a map of profiles by studentId for quick lookup
+    const profileMap = new Map();
+    studentProfiles.forEach(profile => {
+      profileMap.set(profile.studentId, profile);
+    });
+
+    // Merge user data with profile data
+    const students = studentUsers.map(user => {
+      const profile = profileMap.get(user.userId);
+      return {
+        studentId: user.userId,
+        name: user.name || user.displayName || user.userId,
+        email: user.email || `${user.userId}@student.com`,
+        personalityTestCompleted: profile?.personalityTestCompleted || false,
+        oceanTraits: profile?.oceanTraits,
+        learningPreferences: profile?.learningPreferences
+      };
+    });
 
     // Calculate class statistics
     const totalAssignments = assignments.length;
@@ -124,6 +153,7 @@ export async function GET(
           subject: classData.subject,
           grade: classData.grade,
           teacherId: classData.teacherId,
+          teacherName: classData.teacherName || 'Teacher', // Include teacher name
           studentIds: classData.studentIds,
           joinCode: classData.joinCode,
           isActive: classData.isActive,
@@ -132,7 +162,7 @@ export async function GET(
         },
         students: students.map(s => ({
           studentId: s.studentId,
-          name: s.studentName || s.name || s.studentId,
+          name: s.name || s.studentId,
           email: s.email || `${s.studentId}@student.com`,
           personalityTestCompleted: s.personalityTestCompleted,
           oceanTraits: s.oceanTraits,

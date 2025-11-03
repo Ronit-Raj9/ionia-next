@@ -224,7 +224,7 @@ export default function AssignmentWorkflow({
   // Render different states
   if (status.state === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-16 h-16 text-emerald-500 animate-spin mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading Assignment...</h2>
@@ -236,7 +236,7 @@ export default function AssignmentWorkflow({
 
   if (status.state === 'no_questions') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">No Questions Available</h2>
@@ -256,11 +256,11 @@ export default function AssignmentWorkflow({
 
   if (status.state === 'analyzing') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
-            <Loader2 className="w-16 h-16 text-blue-500 animate-spin mx-auto mb-4" />
-            <Brain className="w-8 h-8 text-blue-600 absolute top-4 left-1/2 transform -translate-x-1/2" />
+            <Loader2 className="w-16 h-16 text-emerald-500 animate-spin mx-auto mb-4" />
+            <Brain className="w-8 h-8 text-emerald-600 absolute top-4 left-1/2 transform -translate-x-1/2" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">AI Analyzing Questions...</h2>
           <p className="text-gray-600">This may take a moment</p>
@@ -271,15 +271,15 @@ export default function AssignmentWorkflow({
 
   if (status.state === 'personalizing') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-16 h-16 text-purple-500 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-16 h-16 text-emerald-500 animate-spin mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Personalizing Questions...</h2>
           <p className="text-gray-600">Creating questions tailored to your learning style</p>
           <div className="mt-6 flex items-center justify-center space-x-2">
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
           </div>
         </div>
       </div>
@@ -288,7 +288,7 @@ export default function AssignmentWorkflow({
 
   if (status.state === 'error') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Something Went Wrong</h2>
@@ -337,7 +337,7 @@ export default function AssignmentWorkflow({
 
   if (status.state === 'submitted') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 flex items-center justify-center p-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}

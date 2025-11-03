@@ -160,10 +160,10 @@ export default function AssignmentDetailPage() {
               )}
               
               <div className="flex items-center gap-4 mt-4">
-                <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-emerald-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
                   {assignment.subject}
                 </span>
-                <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-medium">
                   Grade {assignment.grade}
                 </span>
                 {assignment.topic && (
@@ -210,7 +210,7 @@ export default function AssignmentDetailPage() {
                 <p className="text-sm text-gray-600">Total Students</p>
                 <p className="text-2xl font-bold text-gray-900">{assignment.submissionStats.totalStudents}</p>
               </div>
-              <Users className="w-10 h-10 text-blue-500" />
+              <Users className="w-10 h-10 text-emerald-500" />
             </div>
           </div>
 
@@ -228,9 +228,9 @@ export default function AssignmentDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Graded</p>
-                <p className="text-2xl font-bold text-purple-600">{assignment.submissionStats.graded}</p>
+                <p className="text-2xl font-bold text-emerald-600">{assignment.submissionStats.graded}</p>
               </div>
-              <BarChart3 className="w-10 h-10 text-purple-500" />
+              <BarChart3 className="w-10 h-10 text-emerald-500" />
             </div>
           </div>
 
@@ -373,7 +373,7 @@ export default function AssignmentDetailPage() {
                           </div>
                           {questionDetail && (
                             <div className="ml-4 text-right">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-blue-800">
                                 {questionDetail.marks} marks
                               </span>
                             </div>
@@ -384,8 +384,8 @@ export default function AssignmentDetailPage() {
                   })}
                   
                   {assignment.originalContent?.questionDetails && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-700">
+                    <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <p className="text-sm text-emerald-700">
                         <strong>Total Questions:</strong> {assignment.originalContent.questions.length} | 
                         <strong> Total Marks:</strong> {assignment.originalContent.questionDetails.reduce((sum: number, q: any) => sum + q.marks, 0)}
                       </p>

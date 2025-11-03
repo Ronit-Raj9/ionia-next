@@ -94,7 +94,7 @@ export default function TeacherAnalyticsDashboard({
   const studentsNeedingHelp = analytics.filter(a => a.needsIntervention).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 p-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Student Choice Analytics</h1>
 
@@ -102,7 +102,7 @@ export default function TeacherAnalyticsDashboard({
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-2">
-              <Users className="w-8 h-8 text-blue-600" />
+              <Users className="w-8 h-8 text-emerald-600" />
               <span className="text-3xl font-bold text-gray-900">{analytics.length}</span>
             </div>
             <p className="text-sm text-gray-600">Total Students</p>
@@ -150,7 +150,7 @@ export default function TeacherAnalyticsDashboard({
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
                       {student.studentName.charAt(0)}
                     </div>
                     <div>

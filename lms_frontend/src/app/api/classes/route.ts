@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
-import { getCollection, COLLECTIONS, Class } from '@/lib/db';
+import { getCollection, COLLECTIONS, Class, ClassChat } from '@/lib/db';
+import { getSessionFromRequest } from '@/lib/sessionManager';
 
 // GET - Fetch classes for a teacher
 export async function GET(request: NextRequest) {
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
 
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
     
     // Fetch classes created by this teacher
     const classes = await classesCollection
@@ -32,15 +34,31 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .toArray() as unknown as Class[];
 
-    // For each class, count the assignments
+    // For each class, count the assignments and ensure teacherName is populated
     const classesWithCounts = await Promise.all(
       classes.map(async (classData) => {
         const assignmentCount = await assignmentsCollection.countDocuments({
           classId: classData._id?.toString()
         });
 
+        // Ensure teacherName is set (populate if missing)
+        let teacherName = classData.teacherName;
+        if (!teacherName || teacherName === 'Teacher') {
+          const teacher = await usersCollection.findOne({ userId: classData.teacherId });
+          teacherName = teacher?.name || teacher?.displayName || 'Teacher';
+          
+          // Update class with teacher name if missing
+          if (!classData.teacherName) {
+            await classesCollection.updateOne(
+              { _id: classData._id },
+              { $set: { teacherName: teacherName } }
+            );
+          }
+        }
+
         return {
           ...classData,
+          teacherName: teacherName, // Ensure teacher name is included
           studentCount: classData.studentIds?.length || 0,
           recentAssignments: assignmentCount
         };
@@ -82,9 +100,10 @@ export async function POST(request: NextRequest) {
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
 
     // Check if class with same name already exists for this teacher in this school
+    const schoolIdObjectId = new ObjectId(schoolId);
     const existingClass = await classesCollection.findOne({
       teacherId: teacherId,
-      schoolId: schoolId,
+      schoolId: schoolIdObjectId,
       className: className
     });
 
@@ -98,9 +117,15 @@ export async function POST(request: NextRequest) {
     // Generate a unique join code
     const joinCode = `${schoolId.slice(0, 3).toUpperCase()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
+    // Get teacher information to store actual name
+    const usersCollection = await getCollection(COLLECTIONS.USERS);
+    const teacher = await usersCollection.findOne({ userId: teacherId });
+    const teacherName = teacher?.name || teacher?.displayName || 'Teacher';
+
     const newClass: Omit<Class, '_id'> = {
       className,
       teacherId: teacherId,
+      teacherName: teacherName, // Store actual teacher name
       schoolId: new ObjectId(schoolId), // Store as ObjectId for consistency
       studentIds: studentIds || [],
       description,
@@ -113,6 +138,88 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await classesCollection.insertOne(newClass);
+
+    // Auto-create class chat for this class
+    try {
+      const classChatsCollection = await getCollection(COLLECTIONS.CLASS_CHATS);
+      const usersCollection = await getCollection(COLLECTIONS.USERS);
+      
+      // Verify teacher exists and get actual teacher name
+      const teacher = await usersCollection.findOne({ userId: teacherId });
+      if (!teacher) {
+        throw new Error(`Teacher with userId ${teacherId} not found`);
+      }
+      const teacherName = teacher.name || teacher.displayName || 'Teacher';
+      
+      if (!teacherName || teacherName === 'Teacher') {
+        console.error(`Warning: Teacher name not properly set for ${teacherId}`);
+      }
+      
+      // Get students info if provided
+      const studentParticipants = [];
+      if (studentIds && studentIds.length > 0) {
+        const students = await usersCollection.find({ 
+          userId: { $in: studentIds } 
+        }).toArray();
+        
+        studentParticipants.push(...students.map((s: any) => ({
+          userId: s.userId,
+          role: 'student' as const,
+          name: s.name || s.displayName || 'Student',
+          joinedAt: new Date(),
+          isActive: true
+        })));
+      }
+      
+      // Use classId as string (ObjectId.toString()) for consistency
+      const classIdString = result.insertedId.toString();
+      const now = new Date();
+      
+      // Check if chat already exists (shouldn't happen, but safety check)
+      const existingChat = await classChatsCollection.findOne({
+        classId: classIdString,
+        teacherId: teacherId
+      });
+      
+      if (existingChat) {
+        console.log(`Class chat already exists for class ${className}, skipping creation`);
+      } else {
+        const newClassChat: ClassChat = {
+          classId: classIdString,
+          teacherId: teacherId, // Store teacher ID
+          teacherName: teacherName, // Store actual teacher name from users collection
+          className: className, // Store class name for traceability
+          description: description || `Chat for ${className}`,
+          participants: [
+            {
+              userId: teacherId,
+              role: 'teacher' as const,
+              name: teacherName, // Use actual teacher name
+              joinedAt: now,
+              isActive: true
+            },
+            ...studentParticipants
+          ],
+          messages: [],
+          lastActivity: now,
+          settings: {
+            allowStudentMessages: true,
+            allowFileSharing: true,
+            moderationEnabled: false,
+            allowReactions: true
+          },
+          isActive: true,
+          createdAt: now,
+          updatedAt: now
+        };
+        
+        await classChatsCollection.insertOne(newClassChat);
+        console.log(`Auto-created class chat for class ${className} (ID: ${classIdString}, Teacher: ${teacherName} (${teacherId}))`);
+      }
+    } catch (chatError) {
+      // Log error but don't fail class creation
+      console.error('Failed to auto-create class chat:', chatError);
+    }
 
     return NextResponse.json({
       success: true,
@@ -183,31 +290,53 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete a class
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const classId = searchParams.get('classId');
-    const teacherId = searchParams.get('teacherId');
-    const role = searchParams.get('role');
-
-    if (!classId || !teacherId) {
+    // SECURITY: Require authentication
+    const session = await getSessionFromRequest(request);
+    
+    if (!session) {
       return NextResponse.json(
-        { success: false, error: 'ClassId and teacherId are required' },
-        { status: 400 }
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
       );
     }
 
-    if (role !== 'teacher' && role !== 'admin') {
+    // SECURITY: Only teachers and admins can delete classes
+    if (!['teacher', 'admin', 'superadmin'].includes(session.role)) {
       return NextResponse.json(
         { success: false, error: 'Only teachers and admins can delete classes' },
         { status: 403 }
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const classId = searchParams.get('classId');
+
+    if (!classId) {
+      return NextResponse.json(
+        { success: false, error: 'ClassId is required' },
+        { status: 400 }
+      );
+    }
+
     const classesCollection = await getCollection(COLLECTIONS.CLASSES);
 
-    const result = await classesCollection.deleteOne({
-      _id: new ObjectId(classId),
-      teacherId: teacherId
-    });
+    // SECURITY: Build query based on user role
+    const deleteQuery: any = {
+      _id: new ObjectId(classId)
+    };
+
+    // Teachers can only delete their own classes
+    // Admins can delete classes in their school
+    // Superadmin can delete any class
+    if (session.role === 'teacher') {
+      deleteQuery.teacherId = session.userId;
+    } else if (session.role === 'admin' && session.schoolId) {
+      // Admin can delete classes in their school
+      deleteQuery.schoolId = new ObjectId(session.schoolId);
+    }
+    // Superadmin can delete any class (no additional filter)
+
+    const result = await classesCollection.deleteOne(deleteQuery);
 
     if (result.deletedCount === 0) {
       return NextResponse.json(

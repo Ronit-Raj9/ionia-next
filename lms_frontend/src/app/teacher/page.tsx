@@ -25,7 +25,6 @@ import {
 import toast from 'react-hot-toast';
 import GradingInterface from '@/components/GradingInterface';
 import StudentSelector from '@/components/StudentSelector';
-import TeacherInbox from '@/components/TeacherInbox';
 import AdvancedAnalytics from '@/components/AdvancedAnalytics';
 import ClassroomManager from '@/components/ClassroomManager';
 import AcademicPlanner from '@/components/AcademicPlanner';
@@ -118,7 +117,7 @@ export default function TeacherDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'inbox' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials' | 'chats'>('overview');
 
   // Check if user is teacher
   useEffect(() => {
@@ -557,15 +556,15 @@ export default function TeacherDashboard() {
                 Study Materials
               </button>
               <button
-                onClick={() => setActiveTab('inbox')}
+                onClick={() => router.push('/teacher/chats')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'inbox'
+                  activeTab === 'chats'
                     ? 'border-emerald-500 text-emerald-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <MessageCircle className="w-4 h-4 inline mr-2" />
-                Student Messages
+                Chat
               </button>
             </nav>
           </div>
@@ -583,8 +582,8 @@ export default function TeacherDashboard() {
                   <p className="text-sm font-medium text-gray-600">Total Students</p>
                   <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.totalStudents}</p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <Users className="w-6 h-6 text-emerald-600" />
                 </div>
               </div>
             </div>
@@ -607,8 +606,8 @@ export default function TeacherDashboard() {
                   <p className="text-sm font-medium text-gray-600">Submissions</p>
                   <p className="text-2xl font-bold text-gray-900">{progressData.classMetrics.totalSubmissions}</p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                  <BookOpen className="w-6 h-6 text-emerald-600" />
                 </div>
               </div>
             </div>
@@ -678,7 +677,7 @@ export default function TeacherDashboard() {
                               <span>{assignment.personalizedVersions.length} personalized</span>
                             </div>
                             {assignment.uploadedFileUrl && (
-                              <div className="flex items-center space-x-1 text-sm text-blue-600 mt-1">
+                              <div className="flex items-center space-x-1 text-sm text-emerald-600 mt-1">
                                 <Image className="w-4 h-4" />
                                 <span>File attached</span>
                               </div>
@@ -1008,8 +1007,8 @@ export default function TeacherDashboard() {
                       </button>
                       
                       {questionsList.length > 0 && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                          <p className="text-sm text-blue-700">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                          <p className="text-sm text-emerald-700">
                             <strong>Total Questions:</strong> {questionsList.length} | 
                             <strong> Total Marks:</strong> {questionsList.reduce((sum, q) => sum + q.marks, 0)}
                           </p>
@@ -1281,9 +1280,9 @@ export default function TeacherDashboard() {
 
         {activeTab === 'adaptive-assignments' && (
           <div className="space-y-8 pb-24">
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-6">
+            <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
               <div className="flex items-center space-x-3 mb-2">
-                <Brain className="w-6 h-6 text-purple-600" />
+                <Brain className="w-6 h-6 text-emerald-600" />
                 <h2 className="text-2xl font-bold text-gray-900">Adaptive Learning Assignments</h2>
               </div>
               <p className="text-gray-600">
@@ -1331,16 +1330,6 @@ export default function TeacherDashboard() {
               onMaterialsChange={setSelectedStudyMaterials}
               selectedMaterials={selectedStudyMaterials}
               isCreatingAssignment={true}
-            />
-          </div>
-        )}
-
-        {activeTab === 'inbox' && (
-          <div className="h-screen">
-            <TeacherInbox
-              teacherId={user?.userId || ''}
-              teacherName={user?.name || user?.displayName || 'Teacher'}
-              isEmbedded={true}
             />
           </div>
         )}

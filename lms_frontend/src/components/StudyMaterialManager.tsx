@@ -360,7 +360,7 @@ export default function StudyMaterialManager({
           </button>
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
           >
             <Plus className="w-4 h-4" />
             <span>Add Material</span>
@@ -377,14 +377,14 @@ export default function StudyMaterialManager({
             placeholder="Search materials..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
           />
         </div>
         
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
         >
           <option value="all">All Types</option>
           <option value="textbook">Textbook</option>
@@ -398,7 +398,7 @@ export default function StudyMaterialManager({
         <select
           value={filterDifficulty}
           onChange={(e) => setFilterDifficulty(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
         >
           <option value="all">All Difficulties</option>
           <option value="basic">Basic</option>
@@ -424,7 +424,7 @@ export default function StudyMaterialManager({
               animate={{ opacity: 1, y: 0 }}
               className={`bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow ${
                 isCreatingAssignment && selectedMaterials.some(m => m.id === material.id)
-                  ? 'ring-2 ring-blue-500 border-blue-500'
+                  ? 'ring-2 ring-emerald-500 border-emerald-500'
                   : ''
               }`}
             >
@@ -450,7 +450,7 @@ export default function StudyMaterialManager({
                       </button>
                       <button
                         onClick={() => setEditingMaterial(material)}
-                        className="p-1 text-gray-400 hover:text-blue-500"
+                        className="p-1 text-gray-400 hover:text-emerald-500"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -513,7 +513,7 @@ export default function StudyMaterialManager({
                           href={material.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1 text-gray-400 hover:text-blue-500"
+                          className="p-1 text-gray-400 hover:text-emerald-500"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </a>
@@ -522,7 +522,7 @@ export default function StudyMaterialManager({
                         onClick={() => handleMaterialSelect(material)}
                         className={`px-3 py-1 rounded text-sm font-medium ${
                           isCreatingAssignment && selectedMaterials.some(m => m.id === material.id)
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-emerald-600 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -576,7 +576,7 @@ export default function StudyMaterialManager({
                     </button>
                     <button
                       onClick={() => setEditingMaterial(material)}
-                      className="p-1 text-gray-400 hover:text-blue-500"
+                      className="p-1 text-gray-400 hover:text-emerald-500"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
@@ -590,7 +590,7 @@ export default function StudyMaterialManager({
                       onClick={() => handleMaterialSelect(material)}
                       className={`px-3 py-1 rounded text-sm font-medium ${
                         isCreatingAssignment && selectedMaterials.some(m => m.id === material.id)
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-emerald-600 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -639,7 +639,7 @@ export default function StudyMaterialManager({
                         ? setEditingMaterial({...editingMaterial, title: e.target.value})
                         : setFormData({...formData, title: e.target.value})
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       placeholder="Enter material title"
                     />
                   </div>
@@ -654,7 +654,7 @@ export default function StudyMaterialManager({
                         ? setEditingMaterial({...editingMaterial, type: e.target.value as StudyMaterial['type']})
                         : setFormData({...formData, type: e.target.value as StudyMaterial['type']})
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     >
                       <option value="textbook">Textbook</option>
                       <option value="video">Video</option>
@@ -678,7 +678,7 @@ export default function StudyMaterialManager({
                       : setFormData({...formData, description: e.target.value})
                     }
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="Enter material description"
                   />
                 </div>
@@ -695,7 +695,7 @@ export default function StudyMaterialManager({
                         ? setEditingMaterial({...editingMaterial, url: e.target.value})
                         : setFormData({...formData, url: e.target.value})
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       placeholder="https://example.com"
                     />
                   </div>
@@ -710,7 +710,7 @@ export default function StudyMaterialManager({
                         ? setEditingMaterial({...editingMaterial, difficulty: e.target.value as StudyMaterial['difficulty']})
                         : setFormData({...formData, difficulty: e.target.value as StudyMaterial['difficulty']})
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     >
                       <option value="basic">Basic</option>
                       <option value="intermediate">Intermediate</option>
@@ -731,7 +731,7 @@ export default function StudyMaterialManager({
                         ? setEditingMaterial({...editingMaterial, author: e.target.value})
                         : setFormData({...formData, author: e.target.value})
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       placeholder="Author name"
                     />
                   </div>
@@ -747,7 +747,7 @@ export default function StudyMaterialManager({
                         ? setEditingMaterial({...editingMaterial, estimatedTime: parseInt(e.target.value)})
                         : setFormData({...formData, estimatedTime: parseInt(e.target.value)})
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       min="1"
                     />
                   </div>
@@ -761,7 +761,7 @@ export default function StudyMaterialManager({
                     {(editingMaterial ? editingMaterial.tags : formData.tags).map((tag) => (
                       <span
                         key={tag}
-                        className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
+                        className="flex items-center space-x-1 px-2 py-1 bg-emerald-100 text-blue-800 rounded text-sm"
                       >
                         <span>{tag}</span>
                         <button
@@ -769,7 +769,7 @@ export default function StudyMaterialManager({
                             ? setEditingMaterial({...editingMaterial, tags: editingMaterial.tags.filter(t => t !== tag)})
                             : removeTag(tag)
                           }
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-emerald-600 hover:text-blue-800"
                         >
                           ×
                         </button>
@@ -782,12 +782,12 @@ export default function StudyMaterialManager({
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && addTag()}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       placeholder="Add tag"
                     />
                     <button
                       onClick={addTag}
-                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                     >
                       Add
                     </button>
@@ -811,7 +811,7 @@ export default function StudyMaterialManager({
                     ? handleEditMaterial(editingMaterial)
                     : handleAddMaterial()
                   }
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                 >
                   {editingMaterial ? 'Update' : 'Add'} Material
                 </button>

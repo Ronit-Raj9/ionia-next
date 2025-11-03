@@ -224,7 +224,7 @@ export default function TeacherAssignmentCreator({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-emerald-50 to-emerald-50 p-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -522,7 +522,7 @@ export default function TeacherAssignmentCreator({
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="ml-auto flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 transition disabled:opacity-50 shadow-lg"
+              className="ml-auto flex items-center space-x-2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-500 text-white rounded-lg hover:from-emerald-600 hover:to-blue-600 transition disabled:opacity-50 shadow-lg"
             >
               {isSubmitting ? (
                 <>
