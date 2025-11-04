@@ -82,20 +82,55 @@ class SchoolAccessGuard:
         return user
 
 
+# ==================== Hierarchical Role Guard ====================
+
+class MinimumRoleGuard:
+    """
+    Dependency for hierarchical role checking.
+    Allows any role at or above the minimum role in hierarchy.
+    """
+    
+    def __init__(self, min_role: UserRole):
+        self.min_role = min_role
+    
+    def __call__(self, user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        """
+        Check if user meets minimum role requirement.
+        """
+        if not user.meets_minimum_role(self.min_role.value):
+            logger.warning(
+                f"Role hierarchy violation for user {user.user_id}. "
+                f"Required minimum: {self.min_role.value}, User highest: {user.roles}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient role level. Minimum required: {self.min_role.value}"
+            )
+        return user
+
+
 # ==================== Pre-configured Role Guards ====================
 
-# Admin only
-require_admin = RoleGuard([UserRole.ADMIN])
+# School Admin only (highest level)
+require_school_admin = RoleGuard([UserRole.SCHOOL_ADMIN])
+require_admin = require_school_admin  # Alias for compatibility
 
-# Principal or admin
-require_principal = RoleGuard([UserRole.ADMIN, UserRole.PRINCIPAL])
+# Principal or above
+require_principal = RoleGuard([UserRole.SCHOOL_ADMIN, UserRole.PRINCIPAL])
 
-# Teacher, class teacher, principal, or admin
-require_teacher = RoleGuard([
-    UserRole.ADMIN,
+# Class teacher or above  
+require_class_teacher = RoleGuard([
+    UserRole.SCHOOL_ADMIN,
     UserRole.PRINCIPAL,
-    UserRole.TEACHER,
     UserRole.CLASS_TEACHER
+])
+
+# Any teacher (class teacher or regular) or above
+require_teacher = RoleGuard([
+    UserRole.SCHOOL_ADMIN,
+    UserRole.PRINCIPAL,
+    UserRole.CLASS_TEACHER,
+    UserRole.TEACHER
 ])
 
 # Student only
@@ -106,6 +141,17 @@ require_authenticated = get_current_user
 
 # School access verification
 require_school_access = SchoolAccessGuard()
+
+# ==================== Minimum Role Guards (Hierarchical) ====================
+
+# Minimum class teacher level (allows class_teacher, principal, school_admin)
+require_min_class_teacher = MinimumRoleGuard(UserRole.CLASS_TEACHER)
+
+# Minimum teacher level (allows teacher, class_teacher, principal, school_admin)
+require_min_teacher = MinimumRoleGuard(UserRole.TEACHER)
+
+# Minimum principal level (allows principal, school_admin)
+require_min_principal = MinimumRoleGuard(UserRole.PRINCIPAL)
 
 
 # ==================== Helper Functions ====================
@@ -137,4 +183,20 @@ def require_any_role(*roles: UserRole) -> RoleGuard:
             return {"message": "Access granted"}
     """
     return RoleGuard(list(roles))
+
+
+def require_min_role(min_role: UserRole) -> MinimumRoleGuard:
+    """
+    Create a minimum role guard for hierarchical access.
+    Allows any role at or above the specified minimum role.
+    
+    Usage:
+        @router.get("/analytics")
+        async def view_analytics(
+            user: CurrentUser = Depends(require_min_role(UserRole.CLASS_TEACHER))
+        ):
+            # Allows class_teacher, principal, school_admin
+            return {"message": "Access granted"}
+    """
+    return MinimumRoleGuard(min_role)
 

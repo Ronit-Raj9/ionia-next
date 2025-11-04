@@ -292,14 +292,100 @@ export async function POST(request: NextRequest) {
           
           let personalized;
           
-          if (hasOceanProfile) {
-            // Use advanced OCEAN-based personalization
+          // Try FastAPI ARC agent first
+          try {
+            console.log(`Using ARC agent personalization for ${profile.studentId}...`);
+            
             const subjectMastery = profile.subjectMastery?.find(s => s.subject === subject && s.grade === grade);
             const topicInfo = subjectMastery?.topics.find(t => t.name === topic);
             const topicMastery = topicInfo?.masteryScore || 50;
             const weaknesses = topicInfo?.weaknesses || profile.previousPerformance?.weaknesses || [];
             
-            console.log(`Using OCEAN personalization for ${profile.studentId} (mastery: ${topicMastery}%)`);
+            // Build mastery map
+            const currentMastery: Record<string, number> = {};
+            if (topicInfo) {
+              currentMastery[topic] = topicMastery;
+            }
+            
+            const arcResponse = await fetch('http://localhost:8000/api/arc/personalize-assignment', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                student_profile: {
+                  ocean: profile.oceanTraits || {
+                    openness: 50,
+                    conscientiousness: 50,
+                    extraversion: 50,
+                    agreeableness: 50,
+                    neuroticism: 50
+                  },
+                  learningPreferences: profile.learningPreferences || {
+                    visual: 50,
+                    auditory: 50,
+                    kinesthetic: 50,
+                    readingWriting: 50
+                  },
+                  currentMastery: currentMastery,
+                  weaknesses: weaknesses
+                },
+                questions: questionsList.map((q, idx) => ({
+                  _id: `q${idx + 1}`,
+                  text: q,
+                  marks: detailedQuestions[idx]?.marks || Math.floor(totalMarks / questionsList.length)
+                })),
+                subject: subject,
+                difficulty_level: difficulty
+              })
+            });
+
+            if (!arcResponse.ok) {
+              throw new Error(`ARC agent failed: ${arcResponse.statusText}`);
+            }
+
+            const arcResult = await arcResponse.json();
+            
+            console.log(`✓ ARC agent personalization complete for ${profile.studentId}`);
+            console.log(`Strategy: ${arcResult.strategy}`);
+
+            // Map ARC response to existing structure
+            const personalizedQuestions = arcResult.personalized_questions || [];
+            
+            return {
+              studentId: profile.studentId,
+              adaptedContent: {
+                questions: personalizedQuestions.map((pq: any) => pq.personalized_text || pq.original_question_id),
+                variations: personalizedQuestions.map((pq: any) => ({
+                  original: pq.original_question_id,
+                  personalized: pq.personalized_text,
+                  strategy: pq.personalization_strategy
+                })),
+                difficultyAdjustment: personalizedQuestions.some((pq: any) => pq.difficulty_adjusted) ? 'adjusted' : 'maintained',
+                visualAids: [],
+                hints: [],
+                remedialQuestions: [],
+                challengeQuestions: [],
+                encouragementNote: arcResult.strategy || 'Personalized for your learning style!'
+              },
+              personalizationReason: arcResult.strategy || 'Adaptive personalization using multi-agent AI system',
+              arcMetadata: {
+                estimatedTime: arcResult.estimated_time,
+                personalizationFactors: arcResult.personalization_factors
+              }
+            };
+            
+          } catch (arcError) {
+            console.warn('ARC agent personalization failed, falling back to local:', arcError);
+            
+            // Fallback to original personalization logic
+            if (hasOceanProfile) {
+              const subjectMastery = profile.subjectMastery?.find(s => s.subject === subject && s.grade === grade);
+              const topicInfo = subjectMastery?.topics.find(t => t.name === topic);
+              const topicMastery = topicInfo?.masteryScore || 50;
+              const weaknesses = topicInfo?.weaknesses || profile.previousPerformance?.weaknesses || [];
+              
+              console.log(`Using OCEAN personalization fallback for ${profile.studentId} (mastery: ${topicMastery}%)`);
             
             personalized = await personalizeAssignmentWithOcean({
               questions: questionsList,
@@ -367,6 +453,7 @@ export async function POST(request: NextRequest) {
               personalizationReason: 'personalizationReason' in personalized ? personalized.personalizationReason : 'Legacy personalization (OCEAN profile incomplete)'
             };
           }
+          }
         } catch (error) {
           console.error(`Failed to personalize for ${profile.studentId}:`, error);
           // Return original questions as fallback
@@ -392,6 +479,82 @@ export async function POST(request: NextRequest) {
     // Save assignment to database
     const assignmentsCollection = await getCollection(COLLECTIONS.ASSIGNMENTS);
     const result = await assignmentsCollection.insertOne(assignmentData);
+
+    // Auto-create event and notifications for the assignment
+    try {
+      const assignmentId = result.insertedId.toString();
+      
+      // Create event for assignment due date
+      if (dueDate) {
+        const eventsCollection = await getCollection(COLLECTIONS.EVENTS);
+        const event = {
+          eventType: 'assignment_due' as const,
+          title: `Assignment Due: ${title}`,
+          description: description || `Complete the assignment: ${title}`,
+          scheduledAt: new Date(dueDate),
+          duration: 60,
+          schoolId: classData.schoolId,
+          classId: classId,
+          assignmentId: assignmentId,
+          createdBy: teacherId,
+          targetAudience: {
+            role: ['student' as const],
+            specificUsers: assignedStudentsList,
+            classIds: [classId],
+          },
+          alerts: [],
+          priority: 'high' as const,
+          status: 'scheduled' as const,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        await eventsCollection.insertOne(event);
+        console.log(`✓ Created event for assignment ${assignmentId}`);
+      }
+      
+      // Create notifications for all assigned students
+      const notificationsCollection = await getCollection(COLLECTIONS.NOTIFICATIONS);
+      const notifications = assignedStudentsList.map(studentId => ({
+        type: 'assignment_created' as const,
+        userId: studentId,
+        schoolId: classData.schoolId,
+        classId: classId,
+        title: `New Assignment: ${title}`,
+        message: `Your teacher has assigned: ${title}. ${description || ''}${dueDate ? ` Due: ${new Date(dueDate).toLocaleDateString()}` : ''}`,
+        shortMessage: `New assignment: ${title}`,
+        data: {
+          assignmentId: assignmentId,
+          classId: classId,
+          link: `/assignments/${assignmentId}`,
+          action: {
+            label: 'View Assignment',
+            url: `/assignments/${assignmentId}`
+          }
+        },
+        channels: {
+          inApp: true,
+          email: true,
+        },
+        priority: dueDate ? 'high' as const : 'normal' as const,
+        status: 'pending' as const,
+        triggeredBy: {
+          event: 'assignment_created',
+          source: 'teacher' as const,
+          sourceId: teacherId
+        },
+        createdBy: teacherId,
+        createdAt: new Date(),
+      }));
+      
+      if (notifications.length > 0) {
+        await notificationsCollection.insertMany(notifications);
+        console.log(`✓ Created ${notifications.length} notifications for assignment ${assignmentId}`);
+      }
+    } catch (eventError) {
+      console.warn('Failed to create events/notifications, but assignment was created:', eventError);
+      // Don't fail the request if event/notification creation fails
+    }
 
     return NextResponse.json({
       success: true,

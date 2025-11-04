@@ -69,7 +69,7 @@ app = FastAPI(
     """,
     docs_url="/docs" if settings.is_development else None,  # Disable in production
     redoc_url="/redoc" if settings.is_development else None,
-    openapi_url=f"{settings.API_PREFIX}/openapi.json" if settings.is_development else None,
+    openapi_url=f"{settings.API_V1_PREFIX}/openapi.json" if settings.is_development else None,
     lifespan=lifespan
 )
 
@@ -142,7 +142,7 @@ async def root():
         "version": settings.APP_VERSION,
         "status": "healthy",
         "environment": settings.ENVIRONMENT,
-        "docs": f"{settings.API_PREFIX}/docs" if settings.is_development else "disabled",
+        "docs": f"{settings.API_V1_PREFIX}/docs" if settings.is_development else "disabled",
         "security": {
             "auth_provider": "Supabase",
             "rbac": "Row-Level Security (RLS)",
@@ -163,14 +163,14 @@ async def health_check():
 
 
 # Include routers
-app.include_router(auth_routes.router, prefix=settings.API_PREFIX)
-app.include_router(protected.router, prefix=settings.API_PREFIX)
+app.include_router(auth_routes.router, prefix=settings.API_V1_PREFIX)
+app.include_router(protected.router, prefix=settings.API_V1_PREFIX)
 
 
 # ==================== Development Helper ====================
 
 if settings.is_development:
-    @app.get(f"{settings.API_PREFIX}/debug/config", tags=["Debug"])
+    @app.get(f"{settings.API_V1_PREFIX}/debug/config", tags=["Debug"])
     async def debug_config():
         """Debug endpoint to verify configuration (DEV ONLY)"""
         return {

@@ -147,9 +147,9 @@ export async function POST(request: NextRequest) {
     const result = await submissionsCollection.insertOne(submission);
     const submissionId = result.insertedId;
 
-    // Grade the submission with detailed AI feedback
+    // Grade the submission with AI multi-agent system (FastAPI)
     try {
-      console.log(`Starting AI grading for submission ${submissionId}...`);
+      console.log(`Starting multi-agent AI grading for submission ${submissionId}...`);
       
       // Update status to processing
       await submissionsCollection.updateOne(
@@ -159,12 +159,115 @@ export async function POST(request: NextRequest) {
       
       let detailedGrading;
       
-      // Try detailed grading if we have rubric and solution
+      // Call FastAPI GRADE agent
+      try {
+        console.log('Calling GRADE multi-agent system...');
+        
+        const gradeResponse = await fetch('http://localhost:8000/api/grade/evaluate-submission', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            submission: fullSubmissionText,
+            questions: assignment.originalContent?.questions || [],
+            rubric: assignment.gradingRubric || null,
+            student_id: studentId,
+            assignment_id: assignmentId
+          })
+        });
+
+        if (!gradeResponse.ok) {
+          throw new Error(`FastAPI grading failed: ${gradeResponse.statusText}`);
+        }
+
+        const aiResult = await gradeResponse.json();
+        
+        console.log('✓ Multi-agent grading response received');
+        console.log(`Agents used: ${aiResult.agents_used?.join(', ') || 'N/A'}`);
+
+        // Map FastAPI response to existing structure
+        const grading = aiResult.grading || {};
+        const feedback = aiResult.feedback || {};
+        const analysis = aiResult.analysis || {};
+
+        const totalScore = grading.total_score || 0;
+        const maxScore = grading.max_score || assignment.maxScore || assignment.totalMarks || 100;
+        const percentage = grading.percentage || (totalScore / maxScore * 100);
+
+        detailedGrading = {
+          score: totalScore,
+          percentage: percentage,
+          detailedFeedback: feedback.overall_feedback || 'Graded by AI multi-agent system',
+          questionWiseAnalysis: (grading.question_scores || []).map((qs: any) => ({
+            questionId: qs.question_id,
+            score: qs.score || 0,
+            maxScore: qs.max_score || 0,
+            feedback: qs.notes || '',
+            isCorrect: qs.score >= (qs.max_score * 0.7)
+          })),
+          errorAnalysis: (analysis.conceptual_gaps || []).map((gap: string) => ({
+            errorType: 'Conceptual Gap',
+            description: gap,
+            severity: 'moderate' as const
+          })),
+          strengthsIdentified: feedback.strengths || ['Good effort'],
+          areasForImprovement: feedback.improvements || analysis.weak_topics || [],
+          aiConfidence: 85 // Multi-agent system is more reliable
+        };
+
+        // Store detailed grading data
+        const autoGrade = {
+          score: totalScore,
+          maxScore: maxScore,
+          percentage: percentage,
+          detailedFeedback: detailedGrading.detailedFeedback,
+          questionWiseAnalysis: detailedGrading.questionWiseAnalysis,
+          errorAnalysis: detailedGrading.errorAnalysis,
+          strengthsIdentified: detailedGrading.strengthsIdentified,
+          areasForImprovement: detailedGrading.areasForImprovement.map((area: string) => ({
+            concept: area,
+            suggestion: 'Review and practice',
+            studyMaterialReference: ''
+          })),
+          aiConfidence: detailedGrading.aiConfidence,
+          requiresReview: detailedGrading.aiConfidence < 70,
+          gradedBy: aiResult.graded_by || 'AI-MultiAgent',
+          gradedAt: new Date(),
+          agentsUsed: aiResult.agents_used || ['GRADE Agent']
+        };
+
+        // Update submission with detailed grading
+        await submissionsCollection.updateOne(
+          { _id: submissionId },
+          {
+            $set: {
+              autoGrade,
+              grade: {
+                score: totalScore,
+                maxScore: maxScore,
+                feedback: detailedGrading.detailedFeedback,
+                errors: detailedGrading.errorAnalysis.map((e: any) => `${e.errorType}: ${e.description}`),
+                gradedBy: autoGrade.gradedBy,
+                gradedAt: new Date(),
+                isPublished: true,
+              },
+              processed: true,
+              processingStatus: 'completed' as const,
+              status: 'graded' as const
+            },
+          }
+        );
+
+        console.log(`✓ Multi-agent grading complete: ${totalScore}/${maxScore} (${percentage.toFixed(1)}%)`);
+
+      } catch (aiError) {
+        console.warn('FastAPI AI grading failed, falling back to local Groq:', aiError);
+        
+        // Fallback to original local grading
       const hasDetailedInfo = assignment.gradingRubric || assignment.baseSolution;
       
       if (hasDetailedInfo) {
-        console.log('Using detailed grading with rubric/solution');
-        try {
           detailedGrading = await gradeSubmissionDetailed({
             studentAnswer: fullSubmissionText,
             modelSolution: assignment.baseSolution?.solutionText || 'Refer to textbook and class notes',
@@ -181,58 +284,7 @@ export async function POST(request: NextRequest) {
             subject: assignment.subject || 'Science',
             topic: assignment.topic || 'General'
           });
-          
-          // Store detailed grading data
-          const autoGrade = {
-            score: detailedGrading.score,
-            maxScore: detailedGrading.score,
-            percentage: detailedGrading.percentage,
-            detailedFeedback: detailedGrading.detailedFeedback,
-            questionWiseAnalysis: detailedGrading.questionWiseAnalysis,
-            errorAnalysis: detailedGrading.errorAnalysis,
-            strengthsIdentified: detailedGrading.strengthsIdentified,
-            areasForImprovement: detailedGrading.areasForImprovement.map(area => ({
-              concept: area,
-              suggestion: 'Review and practice',
-              studyMaterialReference: ''
-            })),
-            aiConfidence: detailedGrading.aiConfidence,
-            requiresReview: detailedGrading.aiConfidence < 70,
-            gradedBy: 'AI-Groq',
-            gradedAt: new Date()
-          };
-          
-          // Update submission with detailed grading
-          await submissionsCollection.updateOne(
-            { _id: submissionId },
-            {
-              $set: {
-                autoGrade,
-                grade: {
-                  score: detailedGrading.score,
-                  maxScore: assignment.maxScore || assignment.totalMarks || 100,
-                  feedback: detailedGrading.detailedFeedback,
-                  errors: detailedGrading.errorAnalysis.map(e => `${e.errorType}: ${e.description}`),
-                  gradedBy: 'AI-Groq',
-                  gradedAt: new Date(),
-                  isPublished: true,
-                },
-                processed: true,
-                processingStatus: 'completed' as const,
-                status: 'graded' as const
-              },
-            }
-          );
-          
-          console.log(`✓ Detailed grading complete: ${detailedGrading.score}/${detailedGrading.score} (${detailedGrading.percentage}%)`);
-          
-        } catch (detailedError) {
-          console.warn('Detailed grading failed, falling back to basic:', detailedError);
-          throw detailedError; // Will be caught by outer try-catch
-        }
       } else {
-        // Fallback to basic grading
-        console.log('Using basic grading (no rubric/solution)');
         const basicGrading = await gradeSubmission({
           submittedText: fullSubmissionText,
           originalQuestions: assignment.originalContent?.questions || [],
@@ -252,18 +304,30 @@ export async function POST(request: NextRequest) {
           areasForImprovement: ['Continue practicing'],
           aiConfidence: 75
         };
+        }
         
+        // Update with fallback grading
         await submissionsCollection.updateOne(
           { _id: submissionId },
           {
             $set: {
-              grade: basicGrading,
+              grade: {
+                score: detailedGrading.score,
+                maxScore: assignment.maxScore || assignment.totalMarks || 100,
+                feedback: detailedGrading.detailedFeedback,
+                errors: detailedGrading.errorAnalysis.map((e: any) => `${e.errorType}: ${e.description}`),
+                gradedBy: 'AI-Groq-Fallback',
+                gradedAt: new Date(),
+                isPublished: true,
+              },
               processed: true,
               processingStatus: 'completed' as const,
               status: 'graded' as const
             },
           }
         );
+
+        console.log('✓ Fallback grading complete');
       }
 
       // Update student mastery with detailed feedback

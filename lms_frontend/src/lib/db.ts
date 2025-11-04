@@ -75,6 +75,9 @@ export const COLLECTIONS = {
   TEACHER_QUESTION_SETS: 'teacherQuestionSets',
   STUDENT_QUESTION_VARIANTS: 'studentQuestionVariants',
   STUDENT_QUESTION_CHOICES: 'studentQuestionChoices',
+  EVENTS: 'events',
+  NOTIFICATIONS: 'notifications',
+  NOTIFICATION_PREFERENCES: 'notificationPreferences',
 } as const;
 
 // Database schemas/interfaces
@@ -1748,6 +1751,239 @@ export interface StudentQuestionChoice {
   // Status
   status: 'choosing' | 'finalized' | 'submitted';
   finalizedAt?: Date;
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Event Management System
+export interface Event {
+  _id?: ObjectId;
+  eventType: 'assignment_due' | 'test_scheduled' | 'class_session' | 'submission_graded' | 'deadline_reminder' | 'achievement_unlocked' | 'parent_meeting' | 'school_announcement' | 'study_session' | 'revision_due' | 'custom';
+  title: string;
+  description?: string;
+  
+  // Scheduling
+  scheduledAt: Date;
+  endsAt?: Date;
+  duration?: number; // minutes
+  timeZone?: string;
+  
+  // Recurrence
+  isRecurring?: boolean;
+  recurrence?: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
+    interval?: number; // e.g., every 2 weeks
+    daysOfWeek?: number[]; // 0-6 (Sunday-Saturday)
+    endsAfter?: Date;
+    occurrences?: number;
+  };
+  
+  // Context & References
+  schoolId?: ObjectId;
+  classId?: string;
+  assignmentId?: string;
+  submissionId?: string;
+  createdBy: string; // userId
+  
+  // Targeting
+  targetAudience: {
+    role?: ('student' | 'teacher' | 'admin')[];
+    specificUsers?: string[]; // userIds
+    classIds?: string[];
+    schoolIds?: ObjectId[];
+  };
+  
+  // Alert configuration
+  alerts: {
+    sendAt: Date;
+    type: 'email' | 'in_app' | 'push' | 'sms';
+    sent: boolean;
+    sentAt?: Date;
+    failed?: boolean;
+    error?: string;
+  }[];
+  
+  // AI-generated suggestions
+  aiGenerated?: boolean;
+  aiInsights?: {
+    optimalTiming: string;
+    expectedPreparationTime: number; // minutes
+    relatedTopics: string[];
+    suggestedReminders: Date[];
+    difficulty: 'easy' | 'medium' | 'hard';
+    studentReadiness: Record<string, number>; // studentId -> readiness score (0-100)
+  };
+  
+  // Metadata
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  category?: string;
+  tags?: string[];
+  color?: string;
+  icon?: string;
+  attachments?: string[];
+  
+  // Status
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  cancelledAt?: Date;
+  cancelledBy?: string;
+  cancellationReason?: string;
+  
+  // Engagement tracking
+  views?: {
+    userId: string;
+    viewedAt: Date;
+  }[];
+  responses?: {
+    userId: string;
+    response: 'going' | 'not_going' | 'maybe';
+    respondedAt: Date;
+  }[];
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Notification System
+export interface Notification {
+  _id?: ObjectId;
+  type: 'assignment_created' | 'assignment_due_soon' | 'assignment_graded' | 'feedback_available' | 'achievement_earned' | 'streak_milestone' | 'message_received' | 'class_update' | 'reminder' | 'system' | 'custom';
+  
+  // Recipients
+  userId: string; // Primary recipient
+  schoolId?: ObjectId;
+  classId?: string;
+  
+  // Content
+  title: string;
+  message: string;
+  shortMessage?: string; // For mobile/push notifications
+  
+  // Rich content
+  data?: {
+    assignmentId?: string;
+    submissionId?: string;
+    eventId?: string;
+    classId?: string;
+    score?: number;
+    badge?: string;
+    link?: string;
+    action?: {
+      label: string;
+      url: string;
+    };
+  };
+  
+  // Delivery channels
+  channels: {
+    inApp: boolean;
+    email?: boolean;
+    push?: boolean;
+    sms?: boolean;
+  };
+  
+  // Status tracking
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  sentAt?: Date;
+  deliveredAt?: Date;
+  readAt?: Date;
+  failureReason?: string;
+  
+  // Delivery attempts
+  attempts?: {
+    channel: 'email' | 'push' | 'sms';
+    attemptedAt: Date;
+    success: boolean;
+    error?: string;
+  }[];
+  
+  // Priority & scheduling
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  scheduledFor?: Date; // For delayed notifications
+  expiresAt?: Date; // Auto-delete after this date
+  
+  // Grouping & categorization
+  category?: string;
+  tags?: string[];
+  groupId?: string; // Group related notifications
+  
+  // AI-powered insights
+  aiEnhanced?: boolean;
+  aiInsights?: {
+    sentiment: 'positive' | 'neutral' | 'negative' | 'encouraging';
+    suggestedAction: string;
+    personalizedMessage?: string;
+    optimalDeliveryTime?: Date;
+    urgencyScore: number; // 0-100
+  };
+  
+  // Interaction tracking
+  clicked?: boolean;
+  clickedAt?: Date;
+  actionTaken?: string;
+  dismissed?: boolean;
+  dismissedAt?: Date;
+  
+  // Source tracking
+  triggeredBy?: {
+    event: string;
+    source: 'system' | 'teacher' | 'ai' | 'automated';
+    sourceId?: string;
+  };
+  
+  createdBy?: string; // If manually created
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+// Notification Preferences
+export interface NotificationPreferences {
+  _id?: ObjectId;
+  userId: string;
+  schoolId?: ObjectId;
+  
+  // Channel preferences
+  channels: {
+    inApp: boolean;
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+  };
+  
+  // Type-specific preferences
+  notificationTypes: {
+    assignments: boolean;
+    grading: boolean;
+    deadlines: boolean;
+    achievements: boolean;
+    messages: boolean;
+    classUpdates: boolean;
+    systemUpdates: boolean;
+    reminders: boolean;
+  };
+  
+  // Quiet hours
+  quietHours?: {
+    enabled: boolean;
+    start: string; // "22:00"
+    end: string; // "08:00"
+    timezone: string;
+  };
+  
+  // Digest mode
+  digest?: {
+    enabled: boolean;
+    frequency: 'daily' | 'weekly';
+    time: string; // "08:00"
+    daysOfWeek?: number[]; // For weekly digest
+  };
+  
+  // AI personalization
+  aiPersonalization: boolean;
+  
+  // Frequency limits
+  maxPerDay?: number;
+  maxPerHour?: number;
   
   createdAt: Date;
   updatedAt: Date;

@@ -95,10 +95,27 @@ class InsufficientPermissionsException(AuthorizationException):
 
 class SchoolAccessDeniedException(AuthorizationException):
     """User cannot access data from this school"""
-    def __init__(self, school_id: str, **kwargs):
+    def __init__(self, school_id: str = None, **kwargs):
+        message = f"Access denied to school {school_id}" if school_id else "School access denied"
         super().__init__(
-            message=f"Access denied to school {school_id}",
+            message=message,
             error_code=ErrorCode.SCHOOL_ACCESS_DENIED,
+            **kwargs
+        )
+
+
+class ForbiddenError(AuthorizationException):
+    """Generic forbidden access error (alias for compatibility)"""
+    def __init__(self, message: str = "Access forbidden", **kwargs):
+        super().__init__(message=message, **kwargs)
+
+
+class RoleHierarchyViolationException(AuthorizationException):
+    """User role doesn't meet minimum hierarchy requirement"""
+    def __init__(self, required_role: str, user_role: str, **kwargs):
+        super().__init__(
+            message=f"Insufficient role level. Required: {required_role}, User has: {user_role}",
+            error_code=ErrorCode.ROLE_HIERARCHY_VIOLATION,
             **kwargs
         )
 

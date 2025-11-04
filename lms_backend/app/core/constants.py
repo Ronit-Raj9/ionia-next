@@ -1,39 +1,61 @@
 """
-Application-wide constants
-Centralized location for all constant values
+Application Constants
+Centralized location for all constants used across the application
 """
 from enum import Enum
+from typing import List
 
 
-# ==================== User Roles ====================
+# ==================== User Roles with Hierarchy ====================
 
 class UserRole(str, Enum):
-    """User roles for RBAC"""
-    ADMIN = "admin"
-    PRINCIPAL = "principal"
+    """
+    User role enum for role-based access control (RBAC)
+    Hierarchy: SCHOOL_ADMIN (highest) → PRINCIPAL → CLASS_TEACHER → TEACHER → STUDENT (lowest)
+    """
+    STUDENT = "student"
     TEACHER = "teacher"
     CLASS_TEACHER = "class_teacher"
-    STUDENT = "student"
-
-
-# Role hierarchy - higher roles inherit permissions from lower roles
-ROLE_HIERARCHY = {
-    UserRole.ADMIN: [UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.CLASS_TEACHER, UserRole.STUDENT],
-    UserRole.PRINCIPAL: [UserRole.TEACHER, UserRole.CLASS_TEACHER, UserRole.STUDENT],
-    UserRole.TEACHER: [UserRole.STUDENT],
-    UserRole.CLASS_TEACHER: [UserRole.STUDENT],
-    UserRole.STUDENT: []
-}
+    PRINCIPAL = "principal"
+    SCHOOL_ADMIN = "school_admin"
+    
+    @classmethod
+    def get_hierarchy(cls) -> List['UserRole']:
+        """Return role hierarchy from lowest to highest"""
+        return [
+            cls.STUDENT,
+            cls.TEACHER,
+            cls.CLASS_TEACHER,
+            cls.PRINCIPAL,
+            cls.SCHOOL_ADMIN
+        ]
+    
+    def get_level(self) -> int:
+        """Get hierarchical level of role (higher = more permissions)"""
+        hierarchy = self.get_hierarchy()
+        return hierarchy.index(self)
+    
+    @classmethod
+    def get_roles_at_or_above(cls, min_role: 'UserRole') -> List['UserRole']:
+        """Get all roles at or above the minimum role in hierarchy"""
+        hierarchy = cls.get_hierarchy()
+        min_level = min_role.get_level()
+        return [role for role in hierarchy if role.get_level() >= min_level]
+    
+    @classmethod
+    def can_access(cls, user_role: 'UserRole', required_role: 'UserRole') -> bool:
+        """Check if user_role has sufficient level for required_role"""
+        return user_role.get_level() >= required_role.get_level()
 
 
 # ==================== User Status ====================
 
 class UserStatus(str, Enum):
     """User account status"""
-    PENDING = "pending"
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
+    PENDING = "pending"
 
 
 # ==================== Assignment Status ====================
@@ -41,9 +63,10 @@ class UserStatus(str, Enum):
 class AssignmentStatus(str, Enum):
     """Assignment status"""
     DRAFT = "draft"
-    PUBLISHED = "published"
     ACTIVE = "active"
-    COMPLETED = "completed"
+    PUBLISHED = "published"  # alias for active
+    CLOSED = "closed"
+    COMPLETED = "completed"  # alias for closed
     ARCHIVED = "archived"
 
 
@@ -51,6 +74,7 @@ class AssignmentStatus(str, Enum):
 
 class SubmissionStatus(str, Enum):
     """Submission status"""
+    PENDING = "pending"
     DRAFT = "draft"
     SUBMITTED = "submitted"
     GRADING = "grading"
@@ -112,6 +136,10 @@ class ResponseMessage:
     ROLE_ASSIGNED = "Role assigned successfully"
     ROLE_REMOVED = "Role removed successfully"
     PERMISSION_DENIED = "You don't have permission to perform this action"
+    
+    # RBAC messages
+    SCHOOL_ACCESS_DENIED = "Access denied to this school's data"
+    ROLE_HIERARCHY_VIOLATION = "Insufficient role level for this operation"
 
 
 # ==================== Pagination ====================
@@ -172,6 +200,8 @@ class AuditAction(str, Enum):
     LOGOUT = "logout"
     ROLE_CHANGE = "role_change"
     PERMISSION_CHANGE = "permission_change"
+    GRADE_OVERRIDE = "grade_override"
+    SCHOOL_ACCESS = "school_access"
 
 
 # ==================== Background Task Priorities ====================
@@ -218,6 +248,7 @@ UUID_REGEX = r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 
 class ErrorCode:
     """Application error codes"""
+    
     # Auth errors (1000-1099)
     AUTH_INVALID_CREDENTIALS = 1000
     AUTH_TOKEN_EXPIRED = 1001
@@ -234,6 +265,7 @@ class ErrorCode:
     # School errors (1200-1299)
     SCHOOL_NOT_FOUND = 1200
     SCHOOL_ACCESS_DENIED = 1201
+    ROLE_HIERARCHY_VIOLATION = 1202
     
     # Assignment errors (1300-1399)
     ASSIGNMENT_NOT_FOUND = 1300
@@ -256,3 +288,44 @@ class ErrorCode:
     DATABASE_ERROR = 1701
     EXTERNAL_SERVICE_ERROR = 1702
 
+
+# ==================== RBAC Permissions Matrix ====================
+
+ROLE_PERMISSIONS = {
+    UserRole.STUDENT: [
+        "view_own_assignments",
+        "submit_assignments",
+        "view_own_grades",
+        "view_own_progress"
+    ],
+    UserRole.TEACHER: [
+        "create_assignments",
+        "grade_assignments",
+        "view_class_students",
+        "view_student_submissions"
+    ],
+    UserRole.CLASS_TEACHER: [
+        "create_assignments",
+        "grade_assignments",
+        "view_class_students",
+        "view_student_submissions",
+        "manage_class",
+        "view_class_analytics"
+    ],
+    UserRole.PRINCIPAL: [
+        "view_all_classes",
+        "view_all_teachers",
+        "view_all_students",
+        "view_school_analytics",
+        "assign_teachers",
+        "manage_classes"
+    ],
+    UserRole.SCHOOL_ADMIN: [
+        "manage_school",
+        "manage_users",
+        "manage_roles",
+        "view_all_data",
+        "export_data",
+        "manage_subscription"
+    ]
+}
