@@ -65,6 +65,7 @@ export const COLLECTIONS = {
   CURRICULUM_PROGRESS: 'curriculumProgress',
   PROGRESS: 'progress',
   STUDY_MATERIALS: 'studyMaterials',
+  STUDY_MATERIAL_FOLDERS: 'studyMaterialFolders',
   ANALYTICS: 'analytics',
   CHAT_CONVERSATIONS: 'chatConversations',
   CLASS_CHATS: 'classChats',
@@ -739,66 +740,56 @@ export interface OneToOneChat {
   updatedAt: Date;
 }
 
-// Study Materials Collection (for NCERT textbooks, etc.)
+// Study Materials Collection (for broadcasting to students)
 export interface StudyMaterial {
   _id?: ObjectId;
-  classId: string;
-  schoolId: string;
-  subject: string; // Science, Math, etc.
-  grade: string; // 9, 10
-  bookTitle: string; // e.g., "NCERT Science Class 10"
-  publisher: string; // e.g., "NCERT"
-  fileUrl: string; // PDF URL
-  uploadedBy: string; // Teacher ID
-  uploadedAt: Date;
+  classId: string; // Required - class this material is broadcast to
+  schoolId: ObjectId; // Required - school this belongs to
+  teacherId: string; // Required - teacher who uploaded this
+  teacherName?: string; // Teacher's name for display
   
-  // AI Indexing
-  indexingStatus: 'pending' | 'processing' | 'completed' | 'failed';
-  indexingProgress?: number; // 0-100
-  indexingErrorMessage?: string;
+  // Material metadata
+  title: string; // Material title/name
+  description?: string; // Optional description
+  folderId?: ObjectId; // Optional - folder this belongs to (null for root)
+  folderName?: string; // Folder name for display
   
-  chapters: {
-    number: number;
-    title: string;
-    pageRange?: string; // e.g., "10-25"
-    
-    // AI-extracted content
-    topics: string[]; // Main topics covered
-    keyConceptsExtracted: {
-      concept: string;
-      definition: string;
-      importance: 'high' | 'medium' | 'low';
-    }[];
-    formulas: {
-      name: string;
-      formula: string;
-      explanation: string;
-      applicableScenarios: string[];
-    }[];
-    exampleProblems: {
-      problemText: string;
-      solution: string;
-      difficulty: 'basic' | 'intermediate' | 'advanced';
-    }[];
-    
-    // Difficulty progression
-    difficultyLevel: 'basic' | 'intermediate' | 'advanced';
-    prerequisites?: string[]; // Topics that should be learned first
-    
-    indexed: boolean;
-    indexedAt?: Date;
+  // Files (support multiple files)
+  files: {
+    fileName: string;
+    fileUrl: string;
+    fileType: string; // MIME type
+    fileSize: number; // in bytes
+    publicId?: string; // Cloudinary public ID for deletion
+    uploadedAt: Date;
   }[];
   
-  // Searchable index (for quick reference during personalization)
-  searchableContent?: {
-    allTopics: string[];
-    allConcepts: string[];
-    allFormulas: string[];
-  };
+  // Optional assignment link
+  linkedAssignmentId?: string; // Optional - link to assignment
   
-  totalPages?: number;
-  fileSize?: number;
-  isActive: boolean;
+  // Status
+  status: 'draft' | 'published'; // Draft = not visible to students, Published = visible
+  isActive: boolean; // Soft delete flag
+  
+  // Student interaction
+  bookmarkedBy?: string[]; // Array of student IDs who bookmarked this
+  downloadCount?: number; // Total download count
+  
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt?: Date; // When material was published
+}
+
+// Study Material Folders (for organization)
+export interface StudyMaterialFolder {
+  _id?: ObjectId;
+  classId: string;
+  schoolId: ObjectId;
+  teacherId: string;
+  folderName: string;
+  parentFolderId?: ObjectId; // For nested folders (null for root)
+  description?: string;
   createdAt: Date;
   updatedAt: Date;
 }

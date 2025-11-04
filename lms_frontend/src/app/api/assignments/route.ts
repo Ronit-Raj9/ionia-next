@@ -506,13 +506,20 @@ export async function GET(request: NextRequest) {
         query.createdBy = userId;
       }
       
-      if (classId) {
-        // Handle both ObjectId format and string format classId
-        query.$or = [
-          { classId: classId },
-          { classId: { $exists: false } }, // Handle assignments without classId
-          { classId: null }
-        ];
+      // Only add classId filter if it's valid and not empty
+      if (classId && classId.trim() !== '') {
+        // Validate classId is a valid ObjectId format (24 hex characters) if provided
+        // MongoDB can handle string comparisons, but we should validate to avoid issues
+        if (/^[0-9a-fA-F]{24}$/.test(classId)) {
+          query.$or = [
+            { classId: classId },
+            { classId: { $exists: false } }, // Handle assignments without classId
+            { classId: null }
+          ];
+        } else {
+          // If classId is invalid format, just log a warning but don't filter by it
+          console.warn(`Invalid classId format provided: ${classId}. Ignoring classId filter.`);
+        }
       }
 
       console.log(`🔍 Teacher fetching assignments:`, {
