@@ -31,6 +31,7 @@ import AcademicPlanner from '@/components/AcademicPlanner';
 import TeacherAssignmentCreator from '@/components/TeacherAssignmentCreator';
 import TeacherAnalyticsDashboard from '@/components/TeacherAnalyticsDashboard';
 import StudyMaterialManager from '@/components/StudyMaterialManager';
+import TeacherStudyMaterials from '@/components/TeacherStudyMaterials';
 import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 import { Assignment, Submission, Progress, User } from '@/lib/db';
 import { analyzeQuestion } from '@/lib/questionAnalyzer';
@@ -1323,14 +1324,7 @@ export default function TeacherDashboard() {
 
         {activeTab === 'study-materials' && (
           <div className="space-y-6 pb-24">
-            <StudyMaterialManager
-              subject={subject}
-              grade="10"
-              topic="General"
-              onMaterialsChange={setSelectedStudyMaterials}
-              selectedMaterials={selectedStudyMaterials}
-              isCreatingAssignment={true}
-            />
+            <TeacherStudyMaterials classId={selectedClassId || undefined} />
           </div>
         )}
 

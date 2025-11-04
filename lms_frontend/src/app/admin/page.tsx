@@ -107,7 +107,115 @@ export default function AdminDashboard() {
   const fetchProgressData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${user?.classId}`);
+      // For admins, we need to fetch progress for all classes in their school
+      // Since admins don't have a classId, we'll fetch all classes first
+      let progressUrl = `/api/progress?role=${user?.role}&userId=${user?.userId}`;
+      
+      // If admin, fetch all classes in school and aggregate progress
+      if (user?.role === 'admin' && user?.schoolId) {
+        // Fetch all classes for the school
+        const classesResponse = await fetch(`/api/classes/school?schoolId=${user.schoolId}&role=admin&userId=${user.userId}`);
+        const classesData = await classesResponse.json();
+        
+        if (classesData.success && classesData.data && classesData.data.length > 0) {
+          // Aggregate progress from all classes
+          const allProgressData = await Promise.all(
+            classesData.data.map(async (classItem: any) => {
+              try {
+                const classProgressResponse = await fetch(
+                  `/api/progress?role=${user?.role}&userId=${user?.userId}&classId=${classItem._id}&schoolId=${user.schoolId}`
+                );
+                const classProgressData = await classProgressResponse.json();
+                return classProgressData.success ? classProgressData.data : null;
+              } catch (err) {
+                console.error(`Error fetching progress for class ${classItem._id}:`, err);
+                return null;
+              }
+            })
+          );
+
+          // Aggregate all progress data
+          const aggregatedMetrics = {
+            totalStudents: 0,
+            averageScore: 0,
+            completionRate: 0,
+            totalSubmissions: 0,
+            totalTimeSaved: 0,
+          };
+          
+          const allHeatmap: Record<string, { percentage: number; studentCount: number }> = {};
+          const allStudentProgress: any[] = [];
+          let totalScore = 0;
+          let scoreCount = 0;
+          let totalCompletionRate = 0;
+          let completionRateCount = 0;
+
+          allProgressData.forEach((classData) => {
+            if (!classData) return;
+            
+            const metrics = classData.classMetrics || {};
+            aggregatedMetrics.totalStudents += metrics.totalStudents || 0;
+            aggregatedMetrics.totalSubmissions += metrics.totalSubmissions || 0;
+            aggregatedMetrics.totalTimeSaved += metrics.totalTimeSaved || 0;
+            
+            if (metrics.averageScore) {
+              totalScore += metrics.averageScore;
+              scoreCount++;
+            }
+            
+            // Aggregate completion rate
+            if (metrics.completionRate !== undefined) {
+              totalCompletionRate += metrics.completionRate;
+              completionRateCount++;
+            }
+            
+            // Aggregate heatmap
+            (classData.heatmap || []).forEach((item: any) => {
+              if (!allHeatmap[item.topic]) {
+                allHeatmap[item.topic] = { percentage: 0, studentCount: 0 };
+              }
+              allHeatmap[item.topic].studentCount += item.studentCount || 0;
+            });
+            
+            // Collect student progress
+            (classData.studentProgress || []).forEach((student: any) => {
+              allStudentProgress.push(student);
+            });
+          });
+
+          // Calculate averages
+          aggregatedMetrics.averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+          aggregatedMetrics.completionRate = completionRateCount > 0 
+            ? Math.round(totalCompletionRate / completionRateCount)
+            : 0;
+          
+          // Recalculate heatmap percentages
+          const heatmapArray = Object.entries(allHeatmap).map(([topic, data]) => ({
+            topic,
+            percentage: aggregatedMetrics.totalStudents > 0 
+              ? Math.round((data.studentCount / aggregatedMetrics.totalStudents) * 100)
+              : 0,
+            studentCount: data.studentCount,
+          })).sort((a, b) => b.percentage - a.percentage);
+
+          const processedData = {
+            classMetrics: aggregatedMetrics,
+            heatmap: heatmapArray,
+            studentProgress: allStudentProgress,
+          };
+          
+          setProgressData(processedData);
+          return;
+        }
+      } else {
+        // For teachers, use classId
+        progressUrl += `&classId=${user?.classId || ''}`;
+        if (user?.schoolId) {
+          progressUrl += `&schoolId=${user.schoolId}`;
+        }
+      }
+
+      const response = await fetch(progressUrl);
       const data = await response.json();
       
       if (data.success && data.data) {
@@ -162,26 +270,72 @@ export default function AdminDashboard() {
   const handleRefreshData = async () => {
     setRefreshing(true);
     try {
-      const response = await fetch('/api/progress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          role: user?.role,
-          userId: user?.userId,
-          classId: user?.classId,
-          action: 'refresh',
-        }),
-      });
+      // For admins, refresh all classes in their school
+      if (user?.role === 'admin' && user?.schoolId) {
+        // Fetch all classes for the school
+        const classesResponse = await fetch(`/api/classes/school?schoolId=${user.schoolId}&role=admin&userId=${user.userId}`);
+        const classesData = await classesResponse.json();
+        
+        if (classesData.success && classesData.data && classesData.data.length > 0) {
+          // Refresh progress for each class
+          const refreshPromises = classesData.data.map(async (classItem: any) => {
+            try {
+              const response = await fetch('/api/progress', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  role: user?.role,
+                  userId: user?.userId,
+                  classId: classItem._id,
+                  schoolId: user?.schoolId,
+                  action: 'refresh',
+                }),
+              });
+              return response.json();
+            } catch (err) {
+              console.error(`Error refreshing progress for class ${classItem._id}:`, err);
+              return { success: false };
+            }
+          });
 
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success('Progress data refreshed successfully');
-        fetchProgressData();
+          const results = await Promise.all(refreshPromises);
+          const successCount = results.filter(r => r.success).length;
+          
+          if (successCount > 0) {
+            toast.success(`Progress data refreshed successfully for ${successCount} class(es)`);
+            fetchProgressData(); // Refresh the displayed data
+          } else {
+            toast.error('Failed to refresh progress data for any classes');
+          }
+        } else {
+          toast.error('No classes found to refresh');
+        }
       } else {
-        toast.error('Failed to refresh progress data');
+        // For teachers, refresh single class
+        const response = await fetch('/api/progress', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            role: user?.role,
+            userId: user?.userId,
+            classId: user?.classId,
+            schoolId: user?.schoolId,
+            action: 'refresh',
+          }),
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          toast.success('Progress data refreshed successfully');
+          fetchProgressData();
+        } else {
+          toast.error(data.error || 'Failed to refresh progress data');
+        }
       }
     } catch (error) {
       console.error('Error refreshing progress:', error);

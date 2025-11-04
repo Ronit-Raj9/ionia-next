@@ -1,11 +1,33 @@
-import { v2 as cloudinary } from 'cloudinary';
+// Lazy load cloudinary to prevent client-side execution
+let cloudinary: any = null;
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+function getCloudinary() {
+  if (typeof window !== 'undefined') {
+    // Client-side: cloudinary should not be used
+    throw new Error('Cloudinary can only be used on the server side');
+  }
+  
+  if (!cloudinary) {
+    try {
+      const cloudinaryModule = require('cloudinary');
+      cloudinary = cloudinaryModule.v2;
+      
+      // Configure if environment variables are available
+      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to load cloudinary:', error);
+      throw error;
+    }
+  }
+  
+  return cloudinary;
+}
 
 export interface UploadResult {
   success: boolean;
@@ -17,19 +39,32 @@ export interface UploadResult {
 export async function uploadFile(
   fileBuffer: Buffer,
   fileName: string,
-  folder: 'assignments' | 'submissions' | 'chat' | 'class-chat'
+  folder: 'assignments' | 'submissions' | 'chat' | 'class-chat' | 'study-materials'
 ): Promise<UploadResult> {
   try {
+    // Ensure cloudinary is configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return {
+        success: false,
+        error: 'Cloudinary is not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.',
+      };
+    }
+
+    const cloudinary = getCloudinary();
+
+    // Sanitize fileName to prevent errors
+    const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
           folder: `ionia/${folder}`,
-          public_id: `${Date.now()}_${fileName.replace(/\.[^/.]+$/, '')}`, // Remove extension
+          public_id: `${Date.now()}_${sanitizedFileName.replace(/\.[^/.]+$/, '')}`, // Remove extension
           resource_type: 'auto', // Automatically detect file type
           quality: 'auto:good', // Optimize quality
           fetch_format: 'auto', // Optimize format
         },
-        (error, result) => {
+        (error: any, result: any) => {
           if (error) {
             reject(error);
           } else {
@@ -61,6 +96,14 @@ export async function uploadBase64Image(
   folder: 'assignments' | 'submissions'
 ): Promise<UploadResult> {
   try {
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return {
+        success: false,
+        error: 'Cloudinary is not configured.',
+      };
+    }
+
+    const cloudinary = getCloudinary();
     const result = await cloudinary.uploader.upload(base64Data, {
       folder: `ionia/${folder}`,
       public_id: `${Date.now()}_${fileName.replace(/\.[^/.]+$/, '')}`,
@@ -83,8 +126,19 @@ export async function uploadBase64Image(
   }
 }
 
-export async function deleteFile(publicId: string): Promise<boolean> {
+export async function deleteFile(publicId: string | null | undefined): Promise<boolean> {
   try {
+    if (!publicId || typeof publicId !== 'string') {
+      return false;
+    }
+
+    // Ensure cloudinary is configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.warn('Cloudinary not configured, cannot delete file');
+      return false;
+    }
+
+    const cloudinary = getCloudinary();
     const result = await cloudinary.uploader.destroy(publicId);
     return result.result === 'ok';
   } catch (error) {
@@ -99,6 +153,12 @@ export function getOptimizedImageUrl(
   height?: number,
   quality: 'auto' | 'auto:good' | 'auto:best' | number = 'auto:good'
 ): string {
+  if (typeof window !== 'undefined') {
+    // Client-side: return original URL or handle differently
+    return publicId;
+  }
+  
+  const cloudinary = getCloudinary();
   return cloudinary.url(publicId, {
     width,
     height,
@@ -109,8 +169,11 @@ export function getOptimizedImageUrl(
 }
 
 // Helper function to extract public ID from Cloudinary URL
-export function extractPublicId(cloudinaryUrl: string): string | null {
+export function extractPublicId(cloudinaryUrl: string | null | undefined): string | null {
   try {
+    if (!cloudinaryUrl || typeof cloudinaryUrl !== 'string') {
+      return null;
+    }
     const matches = cloudinaryUrl.match(/\/v\d+\/(.+)\.[^.]+$/);
     return matches ? matches[1] : null;
   } catch {
@@ -118,7 +181,22 @@ export function extractPublicId(cloudinaryUrl: string): string | null {
   }
 }
 
-// Validate file type and size
+// Validate file type and size for study materials (20MB limit)
+export function validateStudyMaterialFile(file: File): { valid: boolean; error?: string } {
+  const maxSize = 20 * 1024 * 1024; // 20MB
+  
+  if (file.size > maxSize) {
+    return {
+      valid: false,
+      error: 'File size must be less than 20MB',
+    };
+  }
+  
+  // Allow all file types for study materials
+  return { valid: true };
+}
+
+// Validate file type and size (original - 10MB for other uploads)
 export function validateFile(file: File): { valid: boolean; error?: string } {
   const maxSize = 10 * 1024 * 1024; // 10MB
   
@@ -154,4 +232,5 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-export default cloudinary;
+// Export getCloudinary for server-side usage only
+export { getCloudinary };

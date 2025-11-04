@@ -84,12 +84,10 @@ export async function POST(request: NextRequest) {
       type,
       userId,
       title,
-      message,
       shortMessage,
       data,
       channels,
       priority,
-      scheduledFor,
       expiresAt,
       category,
       tags,
@@ -98,6 +96,10 @@ export async function POST(request: NextRequest) {
       classId,
       useAI
     } = body;
+
+    // Extract message and scheduledFor as let variables so they can be reassigned
+    let message = body.message;
+    let scheduledFor = body.scheduledFor;
 
     // Validate required fields
     if (!userId || !title || !message) {

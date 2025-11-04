@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ClassChat from './ClassChat';
+import StudentStudyMaterials from './StudentStudyMaterials';
 
 interface Assignment {
   _id: string;
@@ -129,7 +130,7 @@ export default function StudentClassroom({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   
   // View state
-  const [view, setView] = useState<'assignments' | 'grades' | 'submission' | 'chat'>('assignments');
+  const [view, setView] = useState<'assignments' | 'grades' | 'submission' | 'chat' | 'study-materials'>('assignments');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
 
   useEffect(() => {
@@ -412,6 +413,17 @@ export default function StudentClassroom({
           >
             <MessageSquare className="w-4 h-4 inline mr-2" />
             Chat
+          </button>
+          <button
+            onClick={() => setView('study-materials')}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              view === 'study-materials'
+                ? 'bg-white text-emerald-600 shadow-sm font-medium'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <FileText className="w-4 h-4 inline mr-2" />
+            Study Materials
           </button>
         </div>
 
@@ -963,6 +975,13 @@ export default function StudentClassroom({
             userRole="student"
             userName={studentName}
           />
+        </div>
+      )}
+
+      {/* Study Materials View */}
+      {view === 'study-materials' && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <StudentStudyMaterials classId={classId} />
         </div>
       )}
     </div>
