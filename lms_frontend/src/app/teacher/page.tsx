@@ -20,7 +20,11 @@ import {
   MessageCircle,
   Plus,
   Trash2,
-  Brain
+  Brain,
+  Search,
+  X,
+  Mail,
+  GraduationCap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import GradingInterface from '@/components/GradingInterface';
@@ -32,6 +36,7 @@ import TeacherAssignmentCreator from '@/components/TeacherAssignmentCreator';
 import TeacherAnalyticsDashboard from '@/components/TeacherAnalyticsDashboard';
 import StudyMaterialManager from '@/components/StudyMaterialManager';
 import TeacherStudyMaterials from '@/components/TeacherStudyMaterials';
+import OneToOneChat from '@/components/OneToOneChat';
 import { getUserDisplayName, getUserId } from '@/lib/userUtils';
 import { Assignment, Submission, Progress, User } from '@/lib/db';
 import { analyzeQuestion } from '@/lib/questionAnalyzer';
@@ -120,6 +125,17 @@ export default function TeacherDashboard() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials' | 'chats'>('overview');
 
+  // Chat state
+  const [chats, setChats] = useState<any[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [selectedChat, setSelectedChat] = useState<any | null>(null);
+  const [chatsLoading, setChatsLoading] = useState(false);
+  const [showAvailableUsers, setShowAvailableUsers] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+
   // Check if user is teacher
   useEffect(() => {
     if (user && user.role !== 'teacher') {
@@ -153,6 +169,14 @@ export default function TeacherDashboard() {
 
     return () => clearInterval(interval);
   }, [user, selectedClassId]);
+
+  // Fetch chats when chats tab is active
+  useEffect(() => {
+    if (activeTab === 'chats' && user) {
+      fetchChats();
+      fetchAvailableUsers();
+    }
+  }, [activeTab, user]);
 
   const fetchAssignments = async () => {
     try {
@@ -203,6 +227,95 @@ export default function TeacherDashboard() {
       console.error('Error fetching progress:', error);
       // Don't show error toast for permission issues
     }
+  };
+
+  const fetchChats = async () => {
+    if (!user) return;
+    setChatsLoading(true);
+    try {
+      const response = await fetch('/api/chats');
+      const data = await response.json();
+      if (data.success) {
+        setChats(data.data.chats || []);
+      }
+    } catch (error) {
+      console.error('Error fetching chats:', error);
+      toast.error('Failed to load chats');
+    } finally {
+      setChatsLoading(false);
+    }
+  };
+
+  const fetchAvailableUsers = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch('/api/chats/available-users');
+      const data = await response.json();
+      if (data.success) {
+        setAvailableUsers(data.data.users || []);
+      }
+    } catch (error) {
+      console.error('Error fetching available users:', error);
+    }
+  };
+
+  const startChat = async (targetUserId: string) => {
+    try {
+      const response = await fetch('/api/chats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ targetUserId })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        const newChat = data.data.chat;
+        setSelectedChat(newChat);
+        setSelectedChatId(newChat.chatId);
+        setShowUserProfile(false);
+        setShowAvailableUsers(false);
+        await fetchChats();
+      } else {
+        toast.error(data.error || 'Failed to start chat');
+      }
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      toast.error('Failed to start chat');
+    }
+  };
+
+  const deleteChat = async (chatId: string) => {
+    if (!confirm('Are you sure you want to delete this chat?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Chat deleted');
+        if (selectedChatId === chatId) {
+          setSelectedChatId(null);
+          setSelectedChat(null);
+        }
+        await fetchChats();
+      } else {
+        toast.error(data.error || 'Failed to delete chat');
+      }
+    } catch (error) {
+      console.error('Error deleting chat:', error);
+      toast.error('Failed to delete chat');
+    }
+  };
+
+  const handleChatSelect = (chat: any) => {
+    setSelectedChatId(chat.chatId);
+    setSelectedChat(chat);
   };
 
   const fetchEnhancedDashboardData = async () => {
@@ -557,7 +670,7 @@ export default function TeacherDashboard() {
                 Study Materials
               </button>
               <button
-                onClick={() => router.push('/teacher/chats')}
+                onClick={() => setActiveTab('chats')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === 'chats'
                     ? 'border-emerald-500 text-emerald-600'
@@ -1325,6 +1438,258 @@ export default function TeacherDashboard() {
         {activeTab === 'study-materials' && (
           <div className="space-y-6 pb-24">
             <TeacherStudyMaterials classId={selectedClassId || undefined} />
+          </div>
+        )}
+
+        {/* Chats Tab Content */}
+        {activeTab === 'chats' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="flex h-[calc(100vh-16rem)]">
+                {/* Chat List Sidebar */}
+                <div className="w-80 border-r bg-gray-50 flex flex-col">
+                  <div className="p-4 border-b bg-white">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">My Chats</h3>
+                      <button
+                        onClick={() => setShowAvailableUsers(true)}
+                        className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-sm"
+                      >
+                        New Chat
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search chats..."
+                        value={chatSearchQuery}
+                        onChange={(e) => setChatSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Chat List */}
+                  <div className="flex-1 overflow-y-auto">
+                    {chatsLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                      </div>
+                    ) : chats.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-32 text-gray-500 px-4">
+                        <MessageCircle className="w-12 h-12 mb-2 text-gray-400" />
+                        <p className="text-sm text-center">No chats yet</p>
+                        <button
+                          onClick={() => setShowAvailableUsers(true)}
+                          className="mt-2 text-emerald-600 hover:text-emerald-700 text-sm"
+                        >
+                          Start your first chat
+                        </button>
+                      </div>
+                    ) : (
+                      chats
+                        .filter(chat => chat.otherUser.name.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                        .map((chat) => (
+                          <div
+                            key={chat.chatId}
+                            onClick={() => handleChatSelect(chat)}
+                            className={`p-4 border-b hover:bg-gray-100 cursor-pointer transition-colors ${
+                              selectedChatId === chat.chatId ? 'bg-emerald-50 border-l-4 border-l-emerald-500' : ''
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                                {chat.otherUser.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-semibold text-gray-900 truncate">{chat.otherUser.name}</p>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteChat(chat.chatId);
+                                    }}
+                                    className="p-1 hover:bg-red-100 rounded text-red-600"
+                                    title="Delete chat"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-1">Student</p>
+                                {chat.lastMessage && (
+                                  <p className="text-sm text-gray-500 truncate">{chat.lastMessage.content}</p>
+                                )}
+                                {chat.isBlocked && (
+                                  <p className="text-xs text-red-600 mt-1">Chat blocked</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Chat Area */}
+                <div className="flex-1 flex flex-col bg-white">
+                  {selectedChatId && selectedChat ? (
+                    <OneToOneChat
+                      chatId={selectedChatId}
+                      otherUser={selectedChat.otherUser}
+                      currentUserId={user?.userId || ''}
+                      currentUserRole="teacher"
+                      isBlocked={selectedChat.isBlocked}
+                      blockedBy={selectedChat.blockedBy}
+                    />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-emerald-50">
+                      <div className="text-center px-4">
+                        <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                        <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                          {chats.length === 0 ? "Start Your First Conversation" : "Select a chat to start messaging"}
+                        </h3>
+                        <p className="text-gray-500 mb-6 italic">
+                          "{[
+                            "Teaching is the one profession that creates all other professions.",
+                            "A good teacher can inspire hope, ignite the imagination, and instill a love of learning.",
+                            "The art of teaching is the art of assisting discovery.",
+                            "To teach is to touch a life forever.",
+                            "Education is not the filling of a pail, but the lighting of a fire."
+                          ][Math.floor(Math.random() * 5)]}"
+                        </p>
+                        {chats.length === 0 && (
+                          <button
+                            onClick={() => setShowAvailableUsers(true)}
+                            className="px-6 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                          >
+                            Start a Chat
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Available Users Modal */}
+        {showAvailableUsers && activeTab === 'chats' && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Start New Chat</h2>
+                <button
+                  onClick={() => {
+                    setShowAvailableUsers(false);
+                    setSelectedUser(null);
+                    setShowUserProfile(false);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Search students..."
+                  value={chatSearchQuery}
+                  onChange={(e) => setChatSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {showUserProfile && selectedUser ? (
+                <div className="space-y-4">
+                  <button
+                    onClick={() => {
+                      setShowUserProfile(false);
+                      setSelectedUser(null);
+                    }}
+                    className="text-emerald-600 hover:text-emerald-700"
+                  >
+                    ← Back to list
+                  </button>
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-white text-2xl font-bold">
+                        {selectedUser.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">{selectedUser.name}</h3>
+                        <p className="text-gray-600">{selectedUser.email}</p>
+                      </div>
+                    </div>
+                    <div className="mb-4">
+                      <h4 className="font-semibold mb-2 flex items-center">
+                        <GraduationCap className="w-5 h-5 mr-2" />
+                        Classes
+                      </h4>
+                      {selectedUser.classes?.length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedUser.classes.map((cls: any, idx: number) => (
+                            <div key={idx} className="p-2 bg-gray-50 rounded">
+                              <p className="font-medium">{cls.className}</p>
+                              <p className="text-sm text-gray-600">{cls.subject}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500">No classes assigned</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => startChat(selectedUser.userId)}
+                      className="w-full px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                    >
+                      Start Chat
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {availableUsers
+                    .filter(student => 
+                      student.name.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
+                      student.email.toLowerCase().includes(chatSearchQuery.toLowerCase())
+                    )
+                    .length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No students found</p>
+                  ) : (
+                    availableUsers
+                      .filter(student => 
+                        student.name.toLowerCase().includes(chatSearchQuery.toLowerCase()) ||
+                        student.email.toLowerCase().includes(chatSearchQuery.toLowerCase())
+                      )
+                      .map((student) => (
+                        <div
+                          key={student.userId}
+                          onClick={() => {
+                            setSelectedUser(student);
+                            setShowUserProfile(true);
+                          }}
+                          className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
+                            {student.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold">{student.name}</p>
+                            <p className="text-sm text-gray-600">{student.email}</p>
+                            {student.hasChatted && (
+                              <span className="text-xs text-emerald-600">Has existing chat</span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

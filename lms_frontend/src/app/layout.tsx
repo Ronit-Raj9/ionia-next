@@ -4,7 +4,6 @@
 import { Inter } from "next/font/google";
 import type { Viewport } from "next";
 import Navbar from "@/shared/components/common/Navbar";
-import Footer from "@/shared/components/common/Footer";
 import Notifications from "@/shared/components/common/Notifications";
 import CookieConsent from "@/shared/components/common/CookieConsent";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -100,8 +99,6 @@ export default function RootLayout({
               <main className="flex-1 pt-16">
                 {children}
               </main>
-              
-              <Footer />
             </div>
             
             {/* Global components */}

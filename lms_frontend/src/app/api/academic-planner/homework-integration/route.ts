@@ -3,6 +3,8 @@ import { getCollection, COLLECTIONS, Assignment, AcademicPlan } from '@/lib/db';
 import { ObjectId } from 'mongodb';
 import { getHomeworkIntegrationSuggestions } from '@/lib/academicPlanGenerator';
 
+export const runtime = 'nodejs';
+
 // GET - Get homework integration suggestions for a topic
 export async function GET(request: NextRequest) {
   try {
