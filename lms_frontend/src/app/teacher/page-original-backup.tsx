@@ -128,9 +128,9 @@ export default function TeacherDashboard() {
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'create' | 'grading' | 'analytics' | 'classrooms' | 'academic-planner' | 'adaptive-assignments' | 'study-materials' | 'chats'>('overview');
-  
+
   // Sidebar state
-  const [sidebarExpanded, setSidebarExpanded] = useState(false); // Start collapsed (icons only)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   // Chat state (must be declared before sidebarSections that references it)
   const [chats, setChats] = useState<any[]>([]);
@@ -143,7 +143,7 @@ export default function TeacherDashboard() {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState('');
 
-  // Define sidebar sections and items (after state declarations)
+  // Define sidebar sections and items (after chat state declarations)
   const sidebarSections: SidebarSection[] = [
     {
       items: [

@@ -93,7 +93,7 @@ export default function StudentDashboard() {
   const [chatSearchQuery, setChatSearchQuery] = useState('');
 
   // Sidebar state
-  const [sidebarExpanded, setSidebarExpanded] = useState(false); // Start collapsed (icons only)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   // Define sidebar sections for Student
   const sidebarSections: SidebarSection[] = [

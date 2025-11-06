@@ -93,7 +93,7 @@ export default function AdminDashboard() {
   const [deleting, setDeleting] = useState(false);
 
   // Sidebar state
-  const [sidebarExpanded, setSidebarExpanded] = useState(false); // Start collapsed (icons only)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   // Define sidebar sections for Admin
   const sidebarSections: SidebarSection[] = [
