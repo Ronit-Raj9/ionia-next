@@ -3,50 +3,38 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { 
-  BookOpen, 
-  Users, 
-  Target, 
-  TrendingUp, 
+  ArrowRight,
   Brain, 
   Zap, 
   Shield, 
-  Globe,
-  ArrowRight,
-  CheckCircle,
-  Star,
-  Lightbulb
+  Globe
 } from 'lucide-react';
 import { useRole } from '@/contexts/RoleContext';
 import toast from 'react-hot-toast';
 
 const features = [
   {
-    icon: <Brain className="w-8 h-8 text-emerald-500" />,
+    icon: <Brain className="w-6 h-6 text-white" />,
     title: "AI-Powered Learning",
-    description: "Personalized learning paths adapted to each student's unique needs and learning style."
+    description: "Personalized learning paths adapted to each student's unique needs."
   },
   {
-    icon: <Zap className="w-8 h-8 text-emerald-400" />,
+    icon: <Zap className="w-6 h-6 text-white" />,
     title: "Instant Feedback",
-    description: "Real-time grading and feedback to accelerate learning and improve performance."
+    description: "Real-time grading and feedback to accelerate learning."
   },
   {
-    icon: <Shield className="w-8 h-8 text-emerald-600" />,
+    icon: <Shield className="w-6 h-6 text-white" />,
     title: "Secure & Reliable",
-    description: "Enterprise-grade security with 99.9% uptime for uninterrupted learning."
+    description: "Enterprise-grade security with 99.9% uptime."
   },
   {
-    icon: <Globe className="w-8 h-8 text-emerald-500" />,
+    icon: <Globe className="w-6 h-6 text-white" />,
     title: "Global Access",
-    description: "Access your learning materials and progress from anywhere, anytime."
+    description: "Access your learning materials from anywhere, anytime."
   }
-];
-
-const stats = [
-  { label: 'Active Learners', value: '10K+', icon: <Users className="w-6 h-6" /> },
-  { label: 'Learning Paths', value: '500+', icon: <Target className="w-6 h-6" /> },
-  { label: 'Success Rate', value: '95%', icon: <TrendingUp className="w-6 h-6" /> }
 ];
 
 export default function Home() {
@@ -99,148 +87,241 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-900 via-emerald-700 to-emerald-500">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-700 to-teal-600 relative">
+      {/* Grid Background Pattern - Fixed to cover entire page */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+          backgroundPosition: '0 0',
+          opacity: 0.3
+        }}
+      />
+      
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-                Enquire
-                <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-300 bg-clip-text text-transparent block">
-                  Beyond Horizon
-                </span>
-              </h1>
-              <p className="text-xl text-emerald-50 mb-8 max-w-3xl mx-auto">
-                Transform learning with AI-powered personalization, instant feedback, and adaptive curriculum designed for the modern classroom.
-              </p>
-            </motion.div>
+      <section className="relative overflow-hidden min-h-screen flex items-center justify-center z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8 }}
+            className="mb-12 flex justify-center"
+          >
+            <Image
+              src="/ionialogo.png"
+              alt="IONIA Logo"
+              width={400}
+              height={160}
+              className="w-auto h-40 md:h-56 lg:h-64 object-contain"
+              priority
+            />
+          </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
-            >
-              <button
-                onClick={handleGetStarted}
-                className="bg-white text-emerald-700 border border-emerald-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-50 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
-              >
-                <span>Start Free</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleLearnMore}
-                className="bg-transparent text-white border border-white/30 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/10 transition-all duration-200 flex items-center space-x-2"
-              >
-                <span>Learn More</span>
-                <Lightbulb className="w-5 h-5" />
-              </button>
-            </motion.div>
+          {/* Description */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="mb-8"
+          >
+            <p className="text-lg md:text-xl text-emerald-100 max-w-2xl mx-auto leading-relaxed">
+              Transform learning with AI-powered personalization, instant feedback, and adaptive curriculum designed for the modern classroom.
+            </p>
+          </motion.div>
 
-            {/* Stats */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto"
+          {/* CTA Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+          >
+            <button
+              onClick={handleGetStarted}
+              className="bg-white text-emerald-800 px-8 py-3 rounded-lg text-base font-semibold hover:bg-emerald-50 transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl"
             >
-              {stats.map((stat, index) => (
-                <div key={index} className="bg-white/20 backdrop-blur-sm rounded-xl p-6 border border-emerald-300/30">
-                  <div className="flex items-center justify-center w-12 h-12 bg-emerald-100/30 rounded-lg mx-auto mb-4">
-                    {stat.icon}
-                  </div>
-                  <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
-                  <div className="text-emerald-50">{stat.label}</div>
-                </div>
-              ))}
-            </motion.div>
-          </div>
+              <span>Get Started</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleLearnMore}
+              className="bg-transparent text-white border-2 border-white/40 px-8 py-3 rounded-lg text-base font-semibold hover:bg-white/10 hover:border-white/60 transition-all duration-200"
+            >
+              Learn More
+            </button>
+          </motion.div>
+
+          {/* Stats - Minimalistic */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mb-20"
+          >
+            <div className="text-center">
+              <div className="text-3xl md:text-4xl font-bold text-white mb-1">10K+</div>
+              <div className="text-sm text-emerald-200">Active Learners</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl md:text-4xl font-bold text-white mb-1">500+</div>
+              <div className="text-sm text-emerald-200">Learning Paths</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl md:text-4xl font-bold text-white mb-1">95%</div>
+              <div className="text-sm text-emerald-200">Success Rate</div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+      {/* Features Section - Minimalistic */}
+      <section id="features" className="py-20 relative z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Why Choose IONIA?
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-lg text-emerald-100 max-w-2xl mx-auto">
               Experience the next generation of educational technology with features designed to enhance learning outcomes.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-xl p-6 border border-emerald-200 hover:shadow-lg transition-all duration-300"
+                className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all duration-300"
               >
-                <div className="flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-xl mb-4">
+                <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-lg mb-4">
                   {feature.icon}
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                <p className="text-sm text-emerald-100 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-emerald-700 to-emerald-600">
+      {/* CTA Section - Minimalistic */}
+      <section className="py-20 relative z-10">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-4xl font-bold text-white mb-6">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
               Ready to Transform Your Learning?
             </h2>
-            <p className="text-xl text-emerald-100 mb-8">
+            <p className="text-lg text-emerald-100 mb-8 max-w-2xl mx-auto">
               Join thousands of students and teachers who are already experiencing the future of education.
             </p>
             <button
               onClick={handleGetStarted}
-              className="bg-white text-emerald-700 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-50 transition-all duration-200 flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl"
+              className="bg-white text-emerald-800 px-8 py-3 rounded-lg text-base font-semibold hover:bg-emerald-50 transition-all duration-200 flex items-center space-x-2 mx-auto shadow-lg hover:shadow-xl"
             >
               <span>Start Your Journey</span>
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4" />
             </button>
           </motion.div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-r from-emerald-600 to-emerald-500 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold">IONIA</span>
+      {/* Footer - Landing Page Only */}
+      <footer className="relative z-10 bg-gray-900/80 backdrop-blur-sm text-white py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+            {/* LMS Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">LMS</h3>
+              <p className="text-sm text-gray-300 mb-4">
+                Intelligent Learning Management System with adaptive question chaining for enhanced learning experience.
+              </p>
             </div>
-            <p className="text-gray-400 mb-4">
-              Empowering the future of education through AI and innovation.
-            </p>
-            <div className="flex justify-center space-x-6">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Terms</a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">Support</a>
+
+            {/* Quick Links */}
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">Quick Links</h3>
+              <ul className="space-y-2">
+                <li>
+                  <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors">
+                    Start Learning
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors">
+                    Track Progress
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors">
+                    Analytics
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="text-sm text-gray-300 hover:text-emerald-400 transition-colors">
+                    Help Center
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">Contact</h3>
+              <ul className="space-y-2">
+                <li>
+                  <span className="text-sm text-gray-300">support@lms.ionia.sbs</span>
+                </li>
+                <li>
+                  <span className="text-sm text-gray-300">+1 (555) 123-4567</span>
+                </li>
+                <li>
+                  <span className="text-sm text-gray-300">Education Hub, Learning City</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Section */}
+          <div className="border-t border-gray-800 pt-8">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="text-sm text-gray-400 mb-4 md:mb-0">
+                © 2024 IONIA - Learning Management System. All rights reserved.
+              </div>
+              <div className="flex space-x-6 text-sm">
+                <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
+                  Privacy Policy
+                </a>
+                <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
+                  Terms of Service
+                </a>
+                <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">
+                  Cookie Policy
+                </a>
+              </div>
             </div>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
