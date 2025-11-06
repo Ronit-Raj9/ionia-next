@@ -181,7 +181,3 @@ All features (grading, student feed, insights) inherit this security.
 This is the **industry-standard pattern** used by Vercel, Clerk, and top EdTechs. It’s **faster, safer, and easier to integrate into schools**.
 
 Once this is done, **Phase 1 becomes trivial** — every endpoint is pre-secured.
-
-**Next Step**: Open Supabase → create your `profiles` table → write your first RLS policy.  
-I can give you the exact policy SQL if you want. Ready when you are.
-
