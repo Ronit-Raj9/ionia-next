@@ -179,5 +179,3 @@ All features (grading, student feed, insights) inherit this security.
 > **THEN use FastAPI as a lightweight, role-aware proxy.**
 
 This is the **industry-standard pattern** used by Vercel, Clerk, and top EdTechs. It’s **faster, safer, and easier to integrate into schools**.
-
-Once this is done, **Phase 1 becomes trivial** — every endpoint is pre-secured.
