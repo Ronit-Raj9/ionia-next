@@ -606,6 +606,11 @@ export default function StudentDashboard() {
         {/* Dashboard Tab Content */}
         {activeTab === 'assignments' && (
           <>
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            </div>
+
             {/* Personality Quiz Prompt */}
             {!hasCompletedQuiz && (
               <div className="mb-8">
@@ -1194,6 +1199,10 @@ export default function StudentDashboard() {
         {/* Classes Tab Content */}
         {activeTab === 'classes' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">My Classes</h1>
+            </div>
             {selectedClassId ? (
               /* Show detailed classroom view */
               <StudentClassroom
@@ -1321,6 +1330,10 @@ export default function StudentDashboard() {
         {/* Discover Classes Tab Content */}
         {activeTab === 'discover' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Discover Classes</h1>
+            </div>
             {/* Join Classroom Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="flex items-center space-x-2 mb-4">
@@ -1373,6 +1386,10 @@ export default function StudentDashboard() {
         {/* Adaptive Assignments Tab Content */}
         {activeTab === 'adaptive-assignments' && (
           <div className="space-y-8 pb-24">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Adaptive Assignments</h1>
+            </div>
             <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
               <div className="flex items-center space-x-3 mb-2">
                 <Brain className="w-6 h-6 text-emerald-600" />
@@ -1422,6 +1439,10 @@ export default function StudentDashboard() {
         {/* Settings Tab Content */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+            </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Notification Settings</h3>
               
@@ -1492,6 +1513,10 @@ export default function StudentDashboard() {
         {/* Chats Tab Content */}
         {activeTab === 'chats' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
+            </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="flex h-[calc(100vh-16rem)]">
                 {/* Chat List Sidebar */}

@@ -21,7 +21,7 @@ export default function RoleLayout({
         ${sidebarExpanded ? 'lg:pl-[280px]' : 'lg:pl-[80px]'}
       `}
     >
-      <div className="pt-20 lg:pt-20">
+      <div className="pt-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeSection}
@@ -32,7 +32,7 @@ export default function RoleLayout({
               duration: 0.3,
               ease: 'easeInOut',
             }}
-            className="p-6 lg:p-8"
+            className="px-6 lg:px-8 pb-6 lg:pb-8"
           >
             {children}
           </motion.div>
