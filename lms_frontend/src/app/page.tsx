@@ -304,7 +304,7 @@ export default function Home() {
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <div className="text-sm text-gray-400 mb-4 md:mb-0">
-                © 2024 IONIA - Learning Management System. All rights reserved.
+                © 2025 IONIA - Learning Management System. All rights reserved.
               </div>
               <div className="flex space-x-6 text-sm">
                 <a href="#" className="text-gray-400 hover:text-emerald-400 transition-colors">

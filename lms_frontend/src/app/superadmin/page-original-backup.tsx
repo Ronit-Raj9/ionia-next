@@ -184,7 +184,7 @@ export default function SuperadminDashboard() {
   });
 
   // Sidebar state
-  const [sidebarExpanded, setSidebarExpanded] = useState(false); // Start collapsed (icons only)
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   // Define sidebar sections for Superadmin
   const sidebarSections: SidebarSection[] = [

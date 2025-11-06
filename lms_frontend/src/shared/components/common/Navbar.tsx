@@ -51,55 +51,42 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-white shadow-lg border-b border-gray-200 fixed w-full top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="bg-white shadow-lg border-b border-gray-200 fixed w-full top-0 z-[200]">
+      <div className="w-full px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+          {/* Logo - Left aligned */}
           <Link href="/" className="flex items-center">
-            <span className="text-xl font-bold text-emerald-700">IONIA</span>
+            <span className="text-2xl font-bold text-emerald-700">IONIA</span>
           </Link>
 
-          {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          {/* User Menu - Right aligned with more spacing */}
+          <div className="flex items-center space-x-6">
             {isLoading ? (
               <div className="flex items-center space-x-2">
                 <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                 <span className="text-sm text-gray-600">Loading...</span>
               </div>
             ) : user ? (
-              <div className="flex items-center space-x-4">
-                <div className="hidden md:block text-sm text-gray-600">
-                  Welcome, <span className="font-medium text-gray-900">{user.name || user.displayName || 'User'}</span>
-                  <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full capitalize">
+              <div className="flex items-center space-x-6">
+                <div className="hidden md:flex items-center space-x-3">
+                  <span className="text-sm text-gray-600">Welcome,</span>
+                  <span className="text-sm font-semibold text-gray-900">{user.name || user.displayName || 'User'}</span>
+                  <span className="px-3 py-1 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full capitalize">
                     {user.role}
                   </span>
-                  {user.schoolId && (
-                    <span className="ml-2 px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-full">
-                      {user.schoolId?.toString()}
-                    </span>
-                  )}
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Link
-                    href="/profile"
-                    className="p-2 text-gray-600 hover:text-emerald-600 transition-colors duration-200"
-                    title="Profile"
-                  >
-                    <User className="w-5 h-5" />
-                  </Link>
-                  
-                  {/* Logout Dropdown */}
+                <div className="flex items-center space-x-3">
+                  {/* User Avatar/Initial - Clickable for menu */}
                   <div className="relative" ref={logoutDropdownRef}>
                     <button
                       onClick={() => setIsLogoutDropdownOpen(!isLogoutDropdownOpen)}
-                      className="p-2 text-gray-600 hover:text-red-600 transition-colors duration-200 flex items-center space-x-1"
-                      title="Logout"
+                      className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold hover:bg-emerald-600 transition-colors duration-200 ring-2 ring-emerald-200 hover:ring-emerald-300"
+                      title={`${user.name || user.displayName || 'User'} - Click for menu`}
                     >
-                      <LogOut className="w-5 h-5" />
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isLogoutDropdownOpen ? 'rotate-180' : ''}`} />
+                      {(user.name || user.displayName || 'User').charAt(0).toUpperCase()}
                     </button>
                     
-                    {/* Logout Confirmation Dropdown */}
+                    {/* User Menu Dropdown */}
                     <AnimatePresence>
                       {isLogoutDropdownOpen && (
                         <motion.div
@@ -107,25 +94,33 @@ export default function Navbar() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -10, scale: 0.95 }}
                           transition={{ duration: 0.2 }}
-                          className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-3 z-50"
+                          className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
                         >
-                          <div className="px-4 py-2">
-                            <p className="text-sm font-medium text-gray-900 mb-1">Do you want to logout?</p>
-                            <p className="text-xs text-gray-500">You'll need to sign in again to access your account.</p>
+                          {/* User Info */}
+                          <div className="px-4 py-3 border-b border-gray-100">
+                            <p className="text-sm font-semibold text-gray-900">{user.name || user.displayName || 'User'}</p>
+                            {user.email && (
+                              <p className="text-xs text-gray-500">{user.email}</p>
+                            )}
+                            <p className="text-xs text-emerald-600 capitalize mt-1">{user.role}</p>
                           </div>
-                          <div className="flex items-center space-x-2 px-4 pt-2 border-t border-gray-100">
+                          
+                          {/* Menu Items */}
+                          <div className="py-1">
+                            <Link
+                              href="/profile"
+                              onClick={() => setIsLogoutDropdownOpen(false)}
+                              className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                              <User className="w-4 h-4" />
+                              <span>Profile</span>
+                            </Link>
                             <button
                               onClick={handleLogoutConfirm}
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
+                              className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                             >
                               <LogOut className="w-4 h-4" />
                               <span>Logout</span>
-                            </button>
-                            <button
-                              onClick={handleLogoutCancel}
-                              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                            >
-                              Cancel
                             </button>
                           </div>
                         </motion.div>
