@@ -213,40 +213,56 @@ export default function StudentDashboard() {
         role: user?.role
       });
       
-      // Skip assignment fetching if student has no valid classId
-      if (!user?.classId || user.classId === 'default-class') {
-        console.log('⚠️ Skipping assignment fetch - no valid classId');
+      // Fetch all enrolled classes first to get all assignments
+      const classesResponse = await fetch(`/api/classes/student?studentId=${user?.userId}&role=student`);
+      const classesData = await classesResponse.json();
+      
+      if (!classesData.success || classesData.data.length === 0) {
+        console.log('⚠️ No classes found for student');
         setAssignments([]);
         return;
       }
       
-      // Fetch assignments for all classes the student is enrolled in
-      const url = `/api/assignments?role=${user?.role}&userId=${user?.userId}&studentId=${user?.userId}&classId=${user.classId}`;
-      console.log('🔍 Student fetching assignments from:', url);
+      const enrolledClasses = classesData.data;
+      const classIds = enrolledClasses.map((c: any) => c._id?.toString() || c._id);
+      console.log(`📚 Fetching assignments from ${classIds.length} classes:`, classIds);
       
-      const response = await fetch(url);
-      const data = await response.json();
+      // Fetch assignments from ALL enrolled classes
+      const assignmentPromises = classIds.map(async (classId: string) => {
+        const url = `/api/assignments?role=${user?.role}&userId=${user?.userId}&studentId=${user?.userId}&classId=${classId}`;
+        console.log(`🔍 Fetching from: ${url}`);
+        const response = await fetch(url);
+        const data = await response.json();
+        console.log(`📊 Response for class ${classId}:`, data);
+        return data.success ? data.data : [];
+      });
       
-      console.log('📊 Student assignments response:', data);
+      const assignmentArrays = await Promise.all(assignmentPromises);
+      const allAssignments = assignmentArrays.flat();
       
-      if (data.success) {
-        setAssignments(data.data);
-        console.log(`✅ Loaded ${data.data.length} assignments for student`);
-        
-        // Debug: Log each assignment found
-        if (data.data.length > 0) {
-          console.log('📋 Assignments found:', data.data.map((a: any) => ({
-            id: a._id,
-            title: a.title,
-            classId: a.classId,
-            assignedTo: a.assignedTo
-          })));
-        } else {
-          console.log('❌ No assignments found for student');
-        }
+      // Remove duplicates by assignment ID
+      const uniqueAssignments = Array.from(
+        new Map(allAssignments.map((a: any) => [a._id?.toString(), a])).values()
+      );
+      
+      console.log('📊 Student assignments from all classes:', {
+        totalClasses: classIds.length,
+        totalAssignments: uniqueAssignments.length
+      });
+      
+      setAssignments(uniqueAssignments);
+      console.log(`✅ Loaded ${uniqueAssignments.length} assignments for student across all classes`);
+      
+      // Debug: Log each assignment found
+      if (uniqueAssignments.length > 0) {
+        console.log('📋 Assignments found:', uniqueAssignments.map((a: any) => ({
+          id: a._id,
+          title: a.title,
+          classId: a.classId,
+          assignedTo: a.assignedTo
+        })));
       } else {
-        console.error('❌ Failed to fetch assignments:', data.error);
-        toast.error('Failed to fetch assignments');
+        console.log('❌ No assignments found for student');
       }
     } catch (error) {
       console.error('Error fetching assignments:', error);
@@ -889,6 +905,15 @@ export default function StudentDashboard() {
                                     <span className="text-xs md:text-sm text-gray-500">
                                       {new Date(assignment.createdAt).toLocaleDateString()}
                                     </span>
+                                    {assignment.classId && (() => {
+                                      const assignmentClass = classes.find((c: any) => c._id === assignment.classId);
+                                      return assignmentClass ? (
+                                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1">
+                                          <Users className="w-3 h-3" />
+                                          {assignmentClass.className}
+                                        </span>
+                                      ) : null;
+                                    })()}
                                     {assignment.subject && (
                                       <span className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full">
                                         {assignment.subject}
