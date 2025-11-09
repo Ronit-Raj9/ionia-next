@@ -723,6 +723,10 @@ export default function AdminDashboard() {
         {/* Overview Section */}
         {activeSection === 'overview' && progressData ? (
           <>
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            </div>
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow duration-200">
@@ -1094,6 +1098,10 @@ export default function AdminDashboard() {
         {/* Classrooms Section */}
         {activeSection === 'classrooms' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Classrooms</h1>
+            </div>
             <ClassroomManager
               userId={user?.userId || ''}
               userName={user?.name || user?.displayName || 'Admin'}
@@ -1109,6 +1117,10 @@ export default function AdminDashboard() {
         {/* Analytics Section */}
         {activeSection === 'analytics' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+            </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Advanced Analytics</h2>
               <p className="text-gray-600">
@@ -1121,6 +1133,10 @@ export default function AdminDashboard() {
         {/* User Management Section */}
         {activeSection === 'users' && user && user.schoolId && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+            </div>
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-6 mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">User Management</h2>
               <p className="text-gray-600">
@@ -1500,6 +1516,10 @@ export default function AdminDashboard() {
         {/* School Management Section */}
         {activeSection === 'school' && user && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">School Dashboard</h1>
+            </div>
             <SchoolAdminDashboard userId={user.userId || ''} />
           </div>
         )}
