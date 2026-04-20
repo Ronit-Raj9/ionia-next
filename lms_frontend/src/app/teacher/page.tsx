@@ -672,6 +672,10 @@ export default function TeacherDashboard() {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <>
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            </div>
         {/* Quick Stats */}
         {progressData && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -800,6 +804,11 @@ export default function TeacherDashboard() {
 
         {/* Create Assignment Tab */}
         {activeTab === 'create' && (
+        <div className="space-y-6">
+          {/* Page Title */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Create Assignment</h1>
+          </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Assignment Creation */}
           <div className="lg:col-span-2">
@@ -1206,89 +1215,95 @@ export default function TeacherDashboard() {
                   No data available yet. Create assignments to see class weaknesses.
                 </p>
               )}
-        </div>
-
-        {/* AI-Powered Assignment Suggestions */}
-        {aiSuggestions.length > 0 && (
-          <div className="mt-8">
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
-                    <BookOpen className="w-4 h-4 text-white" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-gray-900">AI Assignment Suggestions</h2>
-                </div>
-                <button
-                  onClick={() => setShowSuggestions(!showSuggestions)}
-                  className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
-                >
-                  {showSuggestions ? 'Hide' : 'Show'} Suggestions
-                </button>
-              </div>
-              
-              {showSuggestions && (
-                <div className="space-y-4">
-                  {aiSuggestions.map((suggestion, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-white rounded-lg p-4 border border-emerald-100"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900 mb-2">
-                            {suggestion.recommendedTask}
-                          </h3>
-                          <p className="text-sm text-gray-600 mb-3">
-                            Based on: {suggestion.basedOn}
-                          </p>
-                          <div className="flex items-center space-x-4 text-xs">
-                            <span className={`px-2 py-1 rounded-full ${
-                              suggestion.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                              suggestion.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {suggestion.difficulty.toUpperCase()}
-                            </span>
-                            <span className="text-gray-500">
-                              ⏱️ {suggestion.estimatedTime} min
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setQuestions(suggestion.recommendedTask);
-                            toast.success('Suggestion added to assignment form!');
-                          }}
-                          className="ml-4 px-3 py-1 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors"
-                        >
-                          Use This
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-              
-              <div className="mt-4 p-3 bg-emerald-100 rounded-lg">
-                <p className="text-sm text-emerald-700">
-                  💡 These suggestions are generated based on your class's learning patterns and weaknesses. 
-                  Click "Use This" to automatically fill the assignment form.
-                </p>
-              </div>
             </div>
           </div>
-                          )}
-                        </div>
+          </div>
+
+          {/* AI-Powered Assignment Suggestions */}
+          {aiSuggestions.length > 0 && (
+            <div className="mt-8">
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+                      <BookOpen className="w-4 h-4 text-white" />
+                    </div>
+                    <h2 className="text-xl font-semibold text-gray-900">AI Assignment Suggestions</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowSuggestions(!showSuggestions)}
+                    className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
+                  >
+                    {showSuggestions ? 'Hide' : 'Show'} Suggestions
+                  </button>
+                </div>
+                
+                {showSuggestions && (
+                  <div className="space-y-4">
+                    {aiSuggestions.map((suggestion, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-white rounded-lg p-4 border border-emerald-100"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="font-medium text-gray-900 mb-2">
+                              {suggestion.recommendedTask}
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Based on: {suggestion.basedOn}
+                            </p>
+                            <div className="flex items-center space-x-4 text-xs">
+                              <span className={`px-2 py-1 rounded-full ${
+                                suggestion.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                                suggestion.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {suggestion.difficulty.toUpperCase()}
+                              </span>
+                              <span className="text-gray-500">
+                                ⏱️ {suggestion.estimatedTime} min
+                              </span>
+                            </div>
                           </div>
-                        )}
+                          <button
+                            onClick={() => {
+                              setQuestions(suggestion.recommendedTask);
+                              toast.success('Suggestion added to assignment form!');
+                            }}
+                            className="ml-4 px-3 py-1 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors"
+                          >
+                            Use This
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="mt-4 p-3 bg-emerald-100 rounded-lg">
+                  <p className="text-sm text-emerald-700">
+                    💡 These suggestions are generated based on your class's learning patterns and weaknesses. 
+                    Click "Use This" to automatically fill the assignment form.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        )}
 
         {/* Grading Tab */}
         {activeTab === 'grading' && (
-          <div className="h-screen">
+          <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Grading</h1>
+            </div>
+            <div className="h-screen">
             <GradingInterface
               teacherId={user?.userId || ''}
               teacherName={user?.name || user?.displayName || 'Teacher'}
@@ -1296,11 +1311,17 @@ export default function TeacherDashboard() {
                 toast.success('Grade updated successfully!');
               }}
             />
+            </div>
           </div>
         )}
 
         {/* Analytics Tab */}
         {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+            </div>
           <div className="p-6">
             <AdvancedAnalytics
               studentId="class-overview"
@@ -1310,12 +1331,17 @@ export default function TeacherDashboard() {
                 toast.success('Analytics report exported successfully!');
               }}
             />
+            </div>
           </div>
         )}
 
         {/* Classrooms Tab */}
         {activeTab === 'classrooms' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Classrooms</h1>
+            </div>
             {!user?.userId || !user?.schoolId ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
                 <p className="text-red-800 mb-4">
@@ -1370,15 +1396,25 @@ export default function TeacherDashboard() {
         )}
 
         {activeTab === 'academic-planner' && (
+          <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Academic Planner</h1>
+            </div>
           <div className="min-h-screen pb-24">
             <AcademicPlanner
               classId={user?.classId || 'default-class'}
             />
+            </div>
           </div>
         )}
 
         {activeTab === 'adaptive-assignments' && (
           <div className="space-y-8 pb-24">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Adaptive Assignments</h1>
+            </div>
             <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl border border-emerald-200 p-6">
               <div className="flex items-center space-x-3 mb-2">
                 <Brain className="w-6 h-6 text-emerald-600" />
@@ -1422,6 +1458,10 @@ export default function TeacherDashboard() {
 
         {activeTab === 'study-materials' && (
           <div className="space-y-6 pb-24">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Study Materials</h1>
+            </div>
             <TeacherStudyMaterials classId={selectedClassId || undefined} />
           </div>
         )}
@@ -1429,6 +1469,10 @@ export default function TeacherDashboard() {
         {/* Chats Tab Content */}
         {activeTab === 'chats' && (
           <div className="space-y-6">
+            {/* Page Title */}
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
+            </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="flex h-[calc(100vh-16rem)]">
                 {/* Chat List Sidebar */}

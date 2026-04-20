@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useRole } from '@/contexts/RoleContext';
 import { 
   User, 
@@ -17,9 +17,13 @@ import toast from 'react-hot-toast';
 export default function Navbar() {
   const { user, clearRole, isLoading } = useRole();
   const router = useRouter();
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLogoutDropdownOpen, setIsLogoutDropdownOpen] = useState(false);
   const logoutDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Check if we're on the login page
+  const isLoginPage = pathname === '/login';
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -130,14 +134,16 @@ export default function Navbar() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/login"
-                  className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-6 py-2 rounded-lg transition-all duration-200 shadow-md"
-                >
-                  Login
-                </Link>
-              </div>
+              !isLoginPage && (
+                <div className="flex items-center space-x-4">
+                  <Link
+                    href="/login"
+                    className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-6 py-2 rounded-lg transition-all duration-200 shadow-md"
+                  >
+                    Login
+                  </Link>
+                </div>
+              )
             )}
           </div>
 
@@ -230,20 +236,22 @@ export default function Navbar() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Link
-                    href="/login"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-4 py-3 rounded-lg transition-all duration-200 text-center font-medium shadow-md"
-                  >
-                    Login
-                  </Link>
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                    <p className="text-xs text-gray-700 text-center">
-                      <strong>Need an account?</strong> Contact your school administrator
-                    </p>
+                !isLoginPage && (
+                  <div className="space-y-2">
+                    <Link
+                      href="/login"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-4 py-3 rounded-lg transition-all duration-200 text-center font-medium shadow-md"
+                    >
+                      Login
+                    </Link>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                      <p className="text-xs text-gray-700 text-center">
+                        <strong>Need an account?</strong> Contact your school administrator
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )
               )}
             </div>
           </div>
