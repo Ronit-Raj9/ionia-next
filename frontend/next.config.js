@@ -1,4 +1,22 @@
 /** @type {import('next').NextConfig} */
+const isProduction = process.env.NODE_ENV === 'production';
+const rawBackendUrl = process.env.BACKEND_URL || (isProduction ? '' : 'http://localhost:4000/api/v1');
+const normalizedBackendUrl = rawBackendUrl.replace(/\/$/, '');
+
+if (isProduction && !normalizedBackendUrl) {
+  throw new Error('BACKEND_URL must be set in production and must point to your HTTPS backend API base URL');
+}
+
+if (isProduction && normalizedBackendUrl && !normalizedBackendUrl.startsWith('https://')) {
+  throw new Error('BACKEND_URL must use https:// in production');
+}
+
+const rawPublicApiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+const normalizedPublicApiUrl = rawPublicApiUrl.replace(/\/$/, '');
+const safePublicApiUrl = isProduction
+  ? normalizedPublicApiUrl.replace(/^http:\/\//i, 'https://')
+  : normalizedPublicApiUrl;
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -16,25 +34,25 @@ const nextConfig = {
       // API proxy to backend - ensure all API requests go through Next.js
       {
         source: '/api/v1/:path*',
-        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/:path*`,
+        destination: `${normalizedBackendUrl}/:path*`,
       },
       // Admin routes
       {
         source: '/api/v1/admin/:path*',
-        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/admin/:path*`,
+        destination: `${normalizedBackendUrl}/admin/:path*`,
       },
       // More specific routes for other endpoints
       {
         source: '/users/:path*',
-        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/users/:path*`,
+        destination: `${normalizedBackendUrl}/users/:path*`,
       },
       {
         source: '/questions/:path*',
-        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/questions/:path*`,
+        destination: `${normalizedBackendUrl}/questions/:path*`,
       },
       {
         source: '/tests/:path*',
-        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/tests/:path*`,
+        destination: `${normalizedBackendUrl}/tests/:path*`,
       }
     ];
   },
@@ -54,7 +72,7 @@ const nextConfig = {
 
   // Environment variables
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
+    NEXT_PUBLIC_API_URL: safePublicApiUrl,
   },
 
   // Your original headers with some security improvements
@@ -81,7 +99,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; connect-src 'self' http://34.45.23.250/ https://ionia.sbs https://www.ionia.sbs https://apii.ionia.sbs http://3.7.73.172 http://44.220.52.205:* http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* https://www.google-analytics.com https://analytics.google.com https://api.yourdomain.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; img-src 'self' data: blob: https: http: https://res.cloudinary.com https://www.google-analytics.com https://www.googletagmanager.com;"
+            value: "default-src 'self'; connect-src 'self' http://34.45.23.250/ https://ionia.sbs https://www.ionia.sbs https://apii.ionia.sbs http://3.7.73.172 http://44.220.52.205:* https://44.220.52.205 http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* https://www.google-analytics.com https://analytics.google.com https://api.yourdomain.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; img-src 'self' data: blob: https: http: https://res.cloudinary.com https://www.google-analytics.com https://www.googletagmanager.com;"
           },
           // Added some basic security headers from new config
           {

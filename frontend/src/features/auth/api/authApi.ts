@@ -4,15 +4,9 @@
 
 import { User, LoginResponse, RefreshResponse, ApiResponse, RegisterData } from '../types';
 import { authLogger } from '../utils/logger';
+import { getAuthApiBaseUrl } from '../utils/apiBaseUrl';
 
-// Get the API base URL
-const getApiBaseUrl = (): string => {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-  return cleanBaseUrl.endsWith('/v1') ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
-};
-
-const API_BASE = getApiBaseUrl();
+const API_BASE = getAuthApiBaseUrl();
 
 // 🔥 CSRF TOKEN HANDLING
 const getCSRFToken = (): string | null => {

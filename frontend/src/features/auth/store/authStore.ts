@@ -8,6 +8,7 @@ import { createAuthError, getTokenExpiry, isTokenExpiringSoon, getTimeUntilExpir
 import { authLogger, errorTracker } from '../utils/logger';
 import { AuthErrorHandler } from '../utils/errorHandler';
 import { tokenManager, TokenExpiry } from '../utils/tokenManager';
+import { getAuthApiBaseUrl } from '../utils/apiBaseUrl';
 import type { 
   User, 
   UserRole, 
@@ -516,10 +517,7 @@ export const useAuthStore = create<AuthState>()((set, get) => {
       
       // 🔥 GET CSRF TOKEN FIRST
       try {
-        // Use same logic as authApi.ts to construct API base URL
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-        const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-        const apiBase = cleanBaseUrl.endsWith('/v1') ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
+        const apiBase = getAuthApiBaseUrl();
         
         const response = await fetch(`${apiBase}/users/refresh-csrf`, {
           method: 'GET',

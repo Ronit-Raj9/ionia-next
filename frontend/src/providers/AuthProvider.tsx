@@ -8,6 +8,7 @@ import React, { ReactNode, useEffect } from 'react';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import AuthErrorBoundary from '@/features/auth/components/AuthErrorBoundary';
 import { authLogger } from '@/features/auth/utils/logger';
+import { getAuthApiBaseUrl } from '@/features/auth/utils/apiBaseUrl';
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -134,10 +135,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const handleBeforeUnload = () => {
       // Use sendBeacon for reliable logout on page unload
       if (isAuthenticated && typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        // Use same logic as authApi.ts to construct API base URL
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-        const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-        const apiBase = cleanBaseUrl.endsWith('/v1') ? cleanBaseUrl : `${cleanBaseUrl}/v1`;
+        const apiBase = getAuthApiBaseUrl();
         const logoutUrl = `${apiBase}/users/logout`;
         
         authLogger.info('Sending logout beacon on page unload', {});
