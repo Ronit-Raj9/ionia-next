@@ -39,7 +39,7 @@
     "express-validator": "^7.0.1",
     "helmet": "^8.1.0",
     "isomorphic-dompurify": "^2.9.0",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "^9.0.3",
     "mailtrap": "^4.1.0",
     "mongodb": "^6.8.0",
     "mongoose": "^8.4.4",

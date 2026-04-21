@@ -3,9 +3,11 @@ const isProduction = process.env.NODE_ENV === 'production';
 const rawBackendUrl = process.env.BACKEND_URL || (isProduction ? 'https://44.220.52.205/api/v1' : 'http://localhost:4000/api/v1');
 const normalizedBackendUrl = rawBackendUrl.replace(/\/$/, '');
 
-const rawPublicApiUrl = isProduction ? '/api/v1' : (process.env.NEXT_PUBLIC_API_URL || '/api/v1');
+const rawPublicApiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 const normalizedPublicApiUrl = rawPublicApiUrl.replace(/\/$/, '');
-const safePublicApiUrl = normalizedPublicApiUrl;
+const safePublicApiUrl = isProduction
+  ? normalizedPublicApiUrl.replace(/^http:\/\//i, 'https://')
+  : normalizedPublicApiUrl;
 
 const nextConfig = {
   reactStrictMode: true,
