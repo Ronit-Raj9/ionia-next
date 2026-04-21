@@ -1,15 +1,7 @@
 /** @type {import('next').NextConfig} */
 const isProduction = process.env.NODE_ENV === 'production';
-const rawBackendUrl = process.env.BACKEND_URL || (isProduction ? '' : 'http://localhost:4000/api/v1');
+const rawBackendUrl = process.env.BACKEND_URL || (isProduction ? 'https://44.220.52.205/api/v1' : 'http://localhost:4000/api/v1');
 const normalizedBackendUrl = rawBackendUrl.replace(/\/$/, '');
-
-if (isProduction && !normalizedBackendUrl) {
-  throw new Error('BACKEND_URL must be set in production and must point to your HTTPS backend API base URL');
-}
-
-if (isProduction && normalizedBackendUrl && !normalizedBackendUrl.startsWith('https://')) {
-  throw new Error('BACKEND_URL must use https:// in production');
-}
 
 const rawPublicApiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
 const normalizedPublicApiUrl = rawPublicApiUrl.replace(/\/$/, '');
