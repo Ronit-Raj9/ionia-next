@@ -117,6 +117,7 @@ app.use(helmet({
         "https://analytics.google.com",
         "https://apii.ionia.sbs",
         "https://www.ionia.sbs",
+        "https://ionia-app.vercel.app",
         "http://localhost:*",
         "https://localhost:*",
         "http://127.0.0.1:*",
