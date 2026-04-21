@@ -16,25 +16,25 @@ const nextConfig = {
       // API proxy to backend - ensure all API requests go through Next.js
       {
         source: '/api/v1/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'https://apii.ionia.sbs/api/v1')}/:path*`,
+        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/:path*`,
       },
       // Admin routes
       {
         source: '/api/v1/admin/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'https://apii.ionia.sbs/api/v1')}/admin/:path*`,
+        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/admin/:path*`,
       },
       // More specific routes for other endpoints
       {
         source: '/users/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'https://apii.ionia.sbs/api/v1')}/users/:path*`,
+        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/users/:path*`,
       },
       {
         source: '/questions/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'https://apii.ionia.sbs/api/v1')}/questions/:path*`,
+        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/questions/:path*`,
       },
       {
         source: '/tests/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'https://apii.ionia.sbs/api/v1')}/tests/:path*`,
+        destination: `${process.env.BACKEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'http://44.220.52.205:4000/api/v1')}/tests/:path*`,
       }
     ];
   },
@@ -54,7 +54,7 @@ const nextConfig = {
 
   // Environment variables
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:4000/api/v1' : 'https://apii.ionia.sbs/api/v1'),
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
   },
 
   // Your original headers with some security improvements
