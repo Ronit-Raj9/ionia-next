@@ -81,7 +81,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; connect-src 'self' http://34.45.23.250/ https://ionia.sbs https://www.ionia.sbs https://apii.ionia.sbs http://3.7.73.172 http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* https://www.google-analytics.com https://analytics.google.com https://api.yourdomain.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; img-src 'self' data: blob: https: http: https://res.cloudinary.com https://www.google-analytics.com https://www.googletagmanager.com;"
+            value: "default-src 'self'; connect-src 'self' http://34.45.23.250/ https://ionia.sbs https://www.ionia.sbs https://apii.ionia.sbs http://3.7.73.172 http://44.220.52.205:* http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* https://www.google-analytics.com https://analytics.google.com https://api.yourdomain.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; img-src 'self' data: blob: https: http: https://res.cloudinary.com https://www.google-analytics.com https://www.googletagmanager.com;"
           },
           // Added some basic security headers from new config
           {

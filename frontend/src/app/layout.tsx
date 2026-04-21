@@ -134,7 +134,7 @@ export default function RootLayout({
           <Toaster position="bottom-right" />
         </AuthProvider>
         
-        {/* Service Worker registration - disabled in development */}
+        {/* Service Worker registration - disabled because sw.js is not present
         {process.env.NODE_ENV === 'production' && (
           <script dangerouslySetInnerHTML={{
             __html: `
@@ -152,6 +152,7 @@ export default function RootLayout({
             `
           }} />
         )}
+        */}
         
         {/* Performance observer script - removed due to CSP issues */}
         
